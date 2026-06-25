@@ -1,0 +1,24 @@
+import '../../../../shared/enums/user_role.dart';
+import '../entities/user_entities.dart';
+
+abstract class UserRepository {
+  Future<List<ShopUser>> listShopUsers();
+
+  Future<UserAssignment> getUserAssignment(int userId);
+
+  Future<ShopUser> createShopUser(CreateShopUserInput input);
+
+  Future<ShopUser> changeUserRole({
+    required int userId,
+    required UserRole role,
+    String? reason,
+  });
+
+  Future<void> deactivateUser(int userId, {String? reason});
+
+  Future<void> assignUserShop({
+    required int userId,
+    required int shopId,
+    String? reason,
+  });
+}
