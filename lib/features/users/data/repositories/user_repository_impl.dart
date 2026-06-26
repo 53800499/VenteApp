@@ -1,7 +1,7 @@
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/phone_util.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/network/network_info.dart';
-import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/user_entities.dart';
@@ -55,6 +55,7 @@ class UserRepositoryImpl implements UserRepository {
     }
     final dto = await _remote.createShopUser(
       name: input.name,
+      phone: normalizePhone(input.phone),
       pin: input.pin,
       role: input.role,
     );

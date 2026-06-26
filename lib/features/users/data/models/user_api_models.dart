@@ -1,5 +1,4 @@
 import '../../../../shared/enums/permission.dart';
-import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 
 class ShopUserItemDto {

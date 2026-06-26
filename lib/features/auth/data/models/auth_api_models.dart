@@ -249,6 +249,74 @@ class SwitchShopTargetDto {
   }
 }
 
+class WhatsappOtpRequestDataDto {
+  const WhatsappOtpRequestDataDto({
+    required this.maskedPhone,
+    required this.expiresInSeconds,
+    required this.message,
+  });
+
+  final String maskedPhone;
+  final int expiresInSeconds;
+  final String message;
+
+  factory WhatsappOtpRequestDataDto.fromJson(Map<String, dynamic> json) {
+    return WhatsappOtpRequestDataDto(
+      maskedPhone: json['maskedPhone'] as String,
+      expiresInSeconds: json['expiresInSeconds'] as int? ?? 300,
+      message: json['message'] as String? ?? 'Code envoyé sur WhatsApp.',
+    );
+  }
+}
+
+class ShopMembershipDto {
+  const ShopMembershipDto({
+    required this.userId,
+    required this.shopId,
+    required this.shopName,
+    required this.role,
+    required this.roleLabel,
+    required this.isDefault,
+  });
+
+  final int userId;
+  final int shopId;
+  final String shopName;
+  final String role;
+  final String roleLabel;
+  final bool isDefault;
+
+  factory ShopMembershipDto.fromJson(Map<String, dynamic> json) {
+    return ShopMembershipDto(
+      userId: json['userId'] as int,
+      shopId: json['shopId'] as int,
+      shopName: json['shopName'] as String,
+      role: json['role'] as String,
+      roleLabel: json['roleLabel'] as String? ?? json['role'] as String,
+      isDefault: json['isDefault'] as bool? ?? false,
+    );
+  }
+}
+
+class WhatsappOtpVerifyDataDto {
+  const WhatsappOtpVerifyDataDto({
+    required this.verificationToken,
+    required this.memberships,
+  });
+
+  final String verificationToken;
+  final List<ShopMembershipDto> memberships;
+
+  factory WhatsappOtpVerifyDataDto.fromJson(Map<String, dynamic> json) {
+    return WhatsappOtpVerifyDataDto(
+      verificationToken: json['verificationToken'] as String,
+      memberships: (json['memberships'] as List<dynamic>)
+          .map((e) => ShopMembershipDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 class LockScreenUserDto {
   const LockScreenUserDto({
     required this.id,

@@ -97,8 +97,8 @@ class MorePage extends StatelessWidget {
         title: const Text('Déconnexion'),
         content: Text(
           'Quitter la boutique « $shopName » ?\n\n'
-          'Votre session en ligne sera fermée. Pour accéder à nouveau aux '
-          'données serveur, reconnectez-vous avec votre PIN (internet requis).',
+          'Votre session sera fermée. Reconnectez-vous via WhatsApp pour '
+          'accéder à nouveau à votre compte.',
         ),
         actions: [
           TextButton(
@@ -143,7 +143,7 @@ class _LogoutTile extends StatelessWidget {
           'Déconnexion',
           style: TextStyle(color: colorScheme.error),
         ),
-        subtitle: Text('Quitter $shopName'),
+        subtitle: const Text('Quitter le compte — reconnexion WhatsApp'),
         trailing: Icon(Icons.chevron_right, color: colorScheme.error),
         onTap: onLogout,
       ),

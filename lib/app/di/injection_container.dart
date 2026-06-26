@@ -13,6 +13,7 @@ import '../../core/security/pin_hasher.dart';
 import '../../core/security/recovery_token_service.dart';
 import '../../core/storage/api_settings_storage.dart';
 import '../../core/storage/auth_credentials_storage.dart';
+import '../../core/storage/auth_flow_storage.dart';
 import '../../core/storage/device_id_storage.dart';
 import '../../core/storage/last_shop_storage.dart';
 import '../../core/storage/onboarding_storage.dart';
@@ -42,6 +43,11 @@ import '../../features/users/data/datasources/remote/user_remote_datasource.dart
 import '../../features/users/data/repositories/user_repository_impl.dart';
 import '../../features/users/domain/repositories/user_repository.dart';
 import '../../features/users/domain/usecases/user_usecases.dart';
+import '../../features/sales/data/datasources/local/sales_local_datasource.dart';
+import '../../features/sales/data/repositories/sale_repository_impl.dart';
+import '../../features/sales/domain/repositories/sale_repository.dart';
+import '../../features/sales/domain/services/sale_validation_service.dart';
+import '../../features/sales/domain/usecases/sale_usecases.dart';
 import 'package:get_it/get_it.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -51,6 +57,7 @@ Future<void> initDependencies() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(sharedPreferences);
   sl.registerLazySingleton(() => OnboardingStorage(sl()));
+  sl.registerLazySingleton(() => AuthFlowStorage(sl()));
   sl.registerLazySingleton(() => LastShopStorage(sl()));
   sl.registerLazySingleton(() => ApiSettingsStorage(sl()));
 
@@ -93,6 +100,7 @@ Future<void> initDependencies() async {
       recoveryTokenService: sl(),
       sessionStorage: sl(),
       credentialsStorage: sl(),
+      authFlowStorage: sl(),
       deviceIdStorage: sl(),
       activeShopContext: sl(),
       remote: sl(),
@@ -101,11 +109,15 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton(() => IsSetupComplete(sl()));
+  sl.registerLazySingleton(() => WasLoggedOut(sl()));
   sl.registerLazySingleton(() => RestoreSession(sl()));
   sl.registerLazySingleton(() => GetLockScreen(sl()));
   sl.registerLazySingleton(() => LoginWithPin(sl()));
   sl.registerLazySingleton(() => LoginWithBiometric(sl(), sl()));
   sl.registerLazySingleton(() => SetupOwner(sl()));
+  sl.registerLazySingleton(() => RequestWhatsappOtp(sl()));
+  sl.registerLazySingleton(() => VerifyWhatsappOtp(sl()));
+  sl.registerLazySingleton(() => CompleteWhatsappLogin(sl()));
   sl.registerLazySingleton(() => EmergencyUnlock(sl()));
   sl.registerLazySingleton(() => EnableBiometric(sl()));
   sl.registerLazySingleton(() => TouchSession(sl()));
@@ -167,9 +179,22 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => ArchiveProduct(sl()));
   sl.registerLazySingleton(() => AdjustProductStock(sl()));
 
+  sl.registerLazySingleton(() => const SaleValidationService());
+  sl.registerLazySingleton(() => SalesLocalDatasource(sl()));
+  sl.registerLazySingleton<SaleRepository>(
+    () => SaleRepositoryImpl(local: sl(), validation: sl()),
+  );
+  sl.registerLazySingleton(() => ListSales(sl()));
+  sl.registerLazySingleton(() => GetSale(sl()));
+  sl.registerLazySingleton(() => ListSaleCustomers(sl()));
+  sl.registerLazySingleton(() => CreateStandardSale(sl()));
+  sl.registerLazySingleton(() => CreateQuickSale(sl()));
+  sl.registerLazySingleton(() => CancelSale(sl()));
+
   sl.registerFactory(
     () => AuthBloc(
       isSetupComplete: sl(),
+      wasLoggedOut: sl(),
       restoreSession: sl(),
       getLockScreen: sl(),
       loginWithPin: sl(),
@@ -180,6 +205,9 @@ Future<void> initDependencies() async {
       logout: sl(),
       listOwnedShops: sl(),
       switchShop: sl(),
+      requestWhatsappOtp: sl(),
+      verifyWhatsappOtp: sl(),
+      completeWhatsappLogin: sl(),
       lastShopStorage: sl(),
     ),
   );

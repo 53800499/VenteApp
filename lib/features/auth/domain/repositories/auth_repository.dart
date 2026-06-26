@@ -20,6 +20,7 @@ abstract class AuthRepository {
     required String ownerName,
     required String shopName,
     required String pin,
+    required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
   });
@@ -48,7 +49,23 @@ abstract class AuthRepository {
 
   Future<void> logout();
 
+  /// `true` après une déconnexion explicite (≠ verrouillage PIN).
+  Future<bool> wasLoggedOut();
+
   Future<OwnedShopList> listOwnedShops();
 
   Future<AuthSession> switchShop({required int shopId});
+
+  Future<WhatsappOtpRequestResult> requestWhatsappOtp({required String phone});
+
+  Future<WhatsappOtpVerifyResult> verifyWhatsappOtp({
+    required String phone,
+    required String code,
+  });
+
+  Future<AuthSession> completeWhatsappLogin({
+    required String verificationToken,
+    required int shopId,
+    required int userId,
+  });
 }

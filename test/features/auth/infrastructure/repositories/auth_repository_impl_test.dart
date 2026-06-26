@@ -163,6 +163,7 @@ void main() {
         ownerName: 'Awa Mensah',
         shopName: 'Boutique Ganhi',
         pin: '5678',
+        ownerPhone: '97000000',
         shopPhone: '+22990123456',
       );
 
@@ -178,15 +179,27 @@ void main() {
       await emptyDb.close();
     });
 
-    test('lève ConflictFailure si déjà installé', () async {
-      expect(
-        () => repository.setupOwner(
-          ownerName: 'Autre',
-          shopName: 'Autre boutique',
-          pin: '5678',
-        ),
-        throwsA(isA<ConflictFailure>()),
+    test('remplace une installation locale existante', () async {
+      final first = await repository.setupOwner(
+        ownerName: 'Premier',
+        shopName: 'Boutique A',
+        pin: '5678',
+        ownerPhone: '97000001',
       );
+
+      final second = await repository.setupOwner(
+        ownerName: 'Autre',
+        shopName: 'Autre boutique',
+        pin: '5678',
+        ownerPhone: '97000002',
+      );
+
+      expect(second.shopId, isNot(equals(first.shopId)));
+      expect(second.userId, isNot(equals(first.userId)));
+
+      final lockScreen = await repository.getLockScreen(shopId: second.shopId);
+      expect(lockScreen.shopName, 'Autre boutique');
+      expect(lockScreen.users.first.name, 'Autre');
     });
   });
 

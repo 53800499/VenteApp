@@ -39,6 +39,7 @@ class AuthRemoteDatasource {
     required String ownerName,
     required String shopName,
     required String pin,
+    required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
   }) async {
@@ -48,11 +49,50 @@ class AuthRemoteDatasource {
         'ownerName': ownerName,
         'shopName': shopName,
         'pin': pin,
+        'ownerPhone': ownerPhone,
         if (shopAddress != null) 'shopAddress': shopAddress,
         if (shopPhone != null) 'shopPhone': shopPhone,
       },
     );
     return SetupOwnerData.fromJson(data);
+  }
+
+  Future<WhatsappOtpRequestDataDto> requestWhatsappOtp({
+    required String phone,
+  }) async {
+    final data = await _postData('/auth/whatsapp/otp/request', {'phone': phone});
+    return WhatsappOtpRequestDataDto.fromJson(data);
+  }
+
+  Future<WhatsappOtpVerifyDataDto> verifyWhatsappOtp({
+    required String phone,
+    required String code,
+  }) async {
+    final data = await _postData(
+      '/auth/whatsapp/otp/verify',
+      {'phone': phone, 'code': code},
+    );
+    return WhatsappOtpVerifyDataDto.fromJson(data);
+  }
+
+  Future<LoginSuccessData> completeWhatsappLogin({
+    required String verificationToken,
+    required int shopId,
+    required int userId,
+    required String deviceId,
+    String? deviceLabel,
+  }) async {
+    final data = await _postData(
+      '/auth/whatsapp/otp/complete',
+      {
+        'verificationToken': verificationToken,
+        'shopId': shopId,
+        'userId': userId,
+        'deviceId': deviceId,
+        if (deviceLabel != null) 'deviceLabel': deviceLabel,
+      },
+    );
+    return LoginSuccessData.fromJson(data);
   }
 
   Future<LoginSuccessData> emergencyUnlock({

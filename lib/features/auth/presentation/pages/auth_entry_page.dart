@@ -5,7 +5,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 
-/// Choix initial : créer une boutique ou se connecter avec le PIN.
+/// Choix initial : créer une boutique ou se connecter via WhatsApp.
 class AuthEntryPage extends StatelessWidget {
   const AuthEntryPage({
     super.key,
@@ -29,22 +29,22 @@ class AuthEntryPage extends StatelessWidget {
                   icon: Icons.storefront_outlined,
                   title: 'Comment utilisez-vous VenteApp ?',
                   subtitle:
-                      'Créez votre première boutique ou connectez-vous avec votre code PIN.',
+                      'Créez une boutique ou connectez-vous avec votre numéro WhatsApp.',
                 ),
                 const Spacer(),
                 _EntryCard(
                   icon: Icons.add_business_outlined,
                   title: 'Créer une boutique',
                   description:
-                      'Première installation pour le patron. Connexion internet requise.',
+                      'Nouveau patron : configurez votre boutique. Connexion internet requise.',
                   onTap: onCreateShop,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _EntryCard(
-                  icon: Icons.login_rounded,
+                  icon: Icons.chat_outlined,
                   title: 'Se connecter',
                   description:
-                      'Vous avez déjà un compte ? Entrez votre code PIN sur l\'écran suivant.',
+                      'Déjà un compte ? Recevez un code sur WhatsApp. Le PIN sert au verrouillage local.',
                   onTap: onLogin,
                   accent: AppColors.secondary,
                 ),

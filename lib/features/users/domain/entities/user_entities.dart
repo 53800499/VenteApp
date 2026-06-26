@@ -26,11 +26,13 @@ class ShopUser {
 class CreateShopUserInput {
   const CreateShopUserInput({
     required this.name,
+    required this.phone,
     required this.pin,
     required this.role,
   });
 
   final String name;
+  final String phone;
   final String pin;
   final UserRole role;
 }

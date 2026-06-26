@@ -31,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -52,6 +52,22 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(products, products.categoryId);
             await m.addColumn(products, products.sku);
             await _seedDefaultCategories(this);
+          }
+          if (from < 4) {
+            await m.addColumn(sales, sales.receiptNumber);
+            await m.addColumn(sales, sales.saleType);
+            await m.addColumn(sales, sales.subtotal);
+            await m.addColumn(sales, sales.discountAmount);
+            await m.addColumn(sales, sales.amountPaid);
+            await m.addColumn(sales, sales.paymentMethod);
+            await m.addColumn(sales, sales.note);
+            await m.addColumn(sales, sales.updatedAt);
+            await m.addColumn(sales, sales.cancelledByUserId);
+            await m.addColumn(sales, sales.cancelReason);
+            await m.addColumn(sales, sales.serverId);
+            await m.addColumn(sales, sales.syncedAt);
+            await m.addColumn(sales, sales.syncStatus);
+            await m.addColumn(saleItems, saleItems.discountAmount);
           }
         },
       );

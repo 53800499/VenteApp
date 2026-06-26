@@ -2,22 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/user_entities.dart';
 
 class UserFormResult {
   const UserFormResult({
     required this.name,
+    required this.phone,
     required this.pin,
     required this.role,
   });
 
   final String name;
+  final String phone;
   final String pin;
   final UserRole role;
 
   CreateShopUserInput toInput() => CreateShopUserInput(
         name: name,
+        phone: phone,
         pin: pin,
         role: role,
       );
@@ -33,12 +37,14 @@ class UserFormPage extends StatefulWidget {
 class _UserFormPageState extends State<UserFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
   UserRole _role = UserRole.seller;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _phoneController.dispose();
     _pinController.dispose();
     super.dispose();
   }
@@ -49,6 +55,7 @@ class _UserFormPageState extends State<UserFormPage> {
       context,
       UserFormResult(
         name: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
         pin: _pinController.text.trim(),
         role: _role,
       ),
@@ -74,6 +81,24 @@ class _UserFormPageState extends State<UserFormPage> {
               validator: (value) {
                 if (value == null || value.trim().length < 2) {
                   return 'Le nom doit contenir au moins 2 caractères.';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _phoneController,
+              decoration: const InputDecoration(
+                labelText: 'WhatsApp',
+                hintText: '+229 01 97 00 00 00',
+              ),
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Le numéro WhatsApp est requis.';
+                }
+                if (!isValidPhone(value)) {
+                  return 'Numéro invalide (indicatif pays requis, ex. +229…).';
                 }
                 return null;
               },

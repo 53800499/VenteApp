@@ -11,6 +11,14 @@ class IsSetupComplete {
   Future<bool> call() => _repository.isSetupComplete();
 }
 
+class WasLoggedOut {
+  const WasLoggedOut(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<bool> call() => _repository.wasLoggedOut();
+}
+
 class GetLockScreen {
   const GetLockScreen(this._repository);
 
@@ -68,6 +76,7 @@ class SetupOwner {
     required String ownerName,
     required String shopName,
     required String pin,
+    required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
   }) =>
@@ -75,8 +84,47 @@ class SetupOwner {
         ownerName: ownerName,
         shopName: shopName,
         pin: pin,
+        ownerPhone: ownerPhone,
         shopAddress: shopAddress,
         shopPhone: shopPhone,
+      );
+}
+
+class RequestWhatsappOtp {
+  const RequestWhatsappOtp(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<WhatsappOtpRequestResult> call({required String phone}) =>
+      _repository.requestWhatsappOtp(phone: phone);
+}
+
+class VerifyWhatsappOtp {
+  const VerifyWhatsappOtp(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<WhatsappOtpVerifyResult> call({
+    required String phone,
+    required String code,
+  }) =>
+      _repository.verifyWhatsappOtp(phone: phone, code: code);
+}
+
+class CompleteWhatsappLogin {
+  const CompleteWhatsappLogin(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<AuthSession> call({
+    required String verificationToken,
+    required int shopId,
+    required int userId,
+  }) =>
+      _repository.completeWhatsappLogin(
+        verificationToken: verificationToken,
+        shopId: shopId,
+        userId: userId,
       );
 }
 

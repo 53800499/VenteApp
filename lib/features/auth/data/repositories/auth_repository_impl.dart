@@ -11,8 +11,10 @@ import '../../../../core/security/lockout_policy.dart';
 import '../../../../core/security/pin_hasher.dart';
 import '../../../../core/security/recovery_token_service.dart';
 import '../../../../core/storage/auth_credentials_storage.dart';
+import '../../../../core/storage/auth_flow_storage.dart';
 import '../../../../core/storage/device_id_storage.dart';
 import '../../../../core/storage/session_storage.dart';
+import '../../../../core/utils/phone_util.dart';
 import '../../../../core/utils/time.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -30,6 +32,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required RecoveryTokenService recoveryTokenService,
     required SessionStorage sessionStorage,
     required AuthCredentialsStorage credentialsStorage,
+    AuthFlowStorage? authFlowStorage,
     DeviceIdStorage? deviceIdStorage,
     ActiveShopContext? activeShopContext,
     AuthRemoteDatasource? remote,
@@ -41,6 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
         _recoveryTokenService = recoveryTokenService,
         _sessionStorage = sessionStorage,
         _credentials = credentialsStorage,
+        _authFlow = authFlowStorage,
         _deviceIds = deviceIdStorage ?? DeviceIdStorage.inMemory(),
         _activeShop = activeShopContext ?? ActiveShopContext(),
         _remote = remote,
@@ -53,6 +57,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final RecoveryTokenService _recoveryTokenService;
   final SessionStorage _sessionStorage;
   final AuthCredentialsStorage _credentials;
+  final AuthFlowStorage? _authFlow;
   final DeviceIdStorage _deviceIds;
   final ActiveShopContext _activeShop;
   final AuthRemoteDatasource? _remote;
@@ -66,6 +71,9 @@ class AuthRepositoryImpl implements AuthRepository {
     if (await _credentials.hasCredentials()) return true;
     return _hasLocalOwnerInstallation();
   }
+
+  @override
+  Future<bool> wasLoggedOut() async => _authFlow?.wasLoggedOut() ?? false;
 
   Future<bool> _hasLocalOwnerInstallation() async {
     final owners = await (_db.select(_db.users)
@@ -151,6 +159,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String ownerName,
     required String shopName,
     required String pin,
+    required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
   }) async {
@@ -167,6 +176,7 @@ class AuthRepositoryImpl implements AuthRepository {
         ownerName: ownerName,
         shopName: shopName,
         pin: pin,
+        ownerPhone: ownerPhone,
         shopAddress: shopAddress,
         shopPhone: shopPhone,
       );
@@ -176,6 +186,7 @@ class AuthRepositoryImpl implements AuthRepository {
         ownerName: ownerName,
         shopName: shopName,
         pin: pin,
+        ownerPhone: ownerPhone,
         shopAddress: shopAddress,
         shopPhone: shopPhone,
       );
@@ -425,6 +436,7 @@ class AuthRepositoryImpl implements AuthRepository {
     await lockActiveSession();
     await _credentials.clear();
     _activeShop.clear();
+    await _authFlow?.markLoggedOut();
   }
 
   @override
@@ -484,6 +496,71 @@ class AuthRepositoryImpl implements AuthRepository {
       expiresAt: dbSession.expiresAt,
       result: result,
     );
+  }
+
+  @override
+  Future<WhatsappOtpRequestResult> requestWhatsappOtp({
+    required String phone,
+  }) async {
+    if (_remote == null || !await _networkInfo.isConnected) {
+      throw const NetworkFailure(
+        'Connexion internet requise pour recevoir le code WhatsApp.',
+      );
+    }
+    final normalized = normalizePhone(phone);
+    final dto = await _remote!.requestWhatsappOtp(phone: normalized);
+    return WhatsappOtpRequestResult(
+      maskedPhone: dto.maskedPhone,
+      expiresInSeconds: dto.expiresInSeconds,
+      message: dto.message,
+    );
+  }
+
+  @override
+  Future<WhatsappOtpVerifyResult> verifyWhatsappOtp({
+    required String phone,
+    required String code,
+  }) async {
+    if (_remote == null || !await _networkInfo.isConnected) {
+      throw const NetworkFailure('Connexion internet requise.');
+    }
+    final normalized = normalizePhone(phone);
+    final dto = await _remote!.verifyWhatsappOtp(phone: normalized, code: code);
+    return WhatsappOtpVerifyResult(
+      verificationToken: dto.verificationToken,
+      memberships: dto.memberships
+          .map(
+            (m) => AuthMembership(
+              userId: m.userId,
+              shopId: m.shopId,
+              shopName: m.shopName,
+              role: UserRole.fromCode(m.role),
+              roleLabel: m.roleLabel,
+              isDefault: m.isDefault,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  Future<AuthSession> completeWhatsappLogin({
+    required String verificationToken,
+    required int shopId,
+    required int userId,
+  }) async {
+    if (_remote == null || !await _networkInfo.isConnected) {
+      throw const NetworkFailure('Connexion internet requise.');
+    }
+    final device = await _deviceIds.getAuthDevice();
+    final result = await _remote!.completeWhatsappLogin(
+      verificationToken: verificationToken,
+      shopId: shopId,
+      userId: userId,
+      deviceId: device.deviceId,
+      deviceLabel: device.deviceLabel,
+    );
+    return _finalizeOnlineLogin(result);
   }
 
   Future<AuthSession> _applyShopSwitch({
@@ -616,6 +693,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String ownerName,
     required String shopName,
     required String pin,
+    required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
   }) async {
@@ -984,21 +1062,8 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   Future<void> _prepareForOwnerSetup() async {
-    if (await _credentials.hasCredentials()) {
-      throw const ConflictFailure(
-        'L\'installation a déjà été effectuée sur cet appareil.',
-      );
-    }
-
-    final owners = await (_db.select(_db.users)
-          ..where((u) => u.role.equals('owner')))
-        .get();
-    if (owners.isNotEmpty) {
-      throw const ConflictFailure(
-        'L\'installation a déjà été effectuée sur cet appareil.',
-      );
-    }
-
+    await _credentials.clear();
+    _activeShop.clear();
     await _clearOrphanLocalAuthData();
   }
 
@@ -1231,6 +1296,7 @@ class AuthRepositoryImpl implements AuthRepository {
     int? serverUserId,
     int? serverShopId,
   }) async {
+    await _authFlow?.clearLoggedOut();
     final timestamp = nowMs();
     final expiresAt = timestamp + msFromMinutes(settings.autoLockMinutes);
     final token = _uuid.v4();

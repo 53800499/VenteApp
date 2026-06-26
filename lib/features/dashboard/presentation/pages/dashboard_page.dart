@@ -18,10 +18,14 @@ class DashboardPage extends StatefulWidget {
     super.key,
     required this.session,
     this.onLowStockTap,
+    this.onNewSaleTap,
+    this.onSalesHistoryTap,
   });
 
   final AuthSession session;
   final VoidCallback? onLowStockTap;
+  final VoidCallback? onNewSaleTap;
+  final VoidCallback? onSalesHistoryTap;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -111,7 +115,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       RevenueHeroCard(
                         revenue: data.kpis.totalRevenue,
                         saleCount: data.kpis.saleCount,
-                        onTap: () => _showComingSoon('Historique des ventes'),
+                        onTap: widget.onSalesHistoryTap ??
+                            () => _showComingSoon('Historique des ventes'),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       if (data.financial != null) ...[

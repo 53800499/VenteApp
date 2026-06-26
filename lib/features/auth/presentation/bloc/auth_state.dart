@@ -66,6 +66,52 @@ class AuthLocked extends AuthState {
       ];
 }
 
+/// Connexion WhatsApp : saisie numéro puis code OTP.
+class AuthWhatsappLogin extends AuthState {
+  const AuthWhatsappLogin({
+    this.phone,
+    this.step = WhatsappLoginStep.phone,
+    this.isSubmitting = false,
+    this.errorMessage,
+    this.infoMessage,
+    this.maskedPhone,
+  });
+
+  final String? phone;
+  final WhatsappLoginStep step;
+  final bool isSubmitting;
+  final String? errorMessage;
+  final String? infoMessage;
+  final String? maskedPhone;
+
+  @override
+  List<Object?> get props =>
+      [phone, step, isSubmitting, errorMessage, infoMessage, maskedPhone];
+}
+
+enum WhatsappLoginStep { phone, code }
+
+/// Sélection du contexte boutique après OTP (tous rôles).
+class AuthMembershipSelection extends AuthState {
+  const AuthMembershipSelection({
+    required this.phone,
+    required this.verificationToken,
+    required this.memberships,
+    this.isSubmitting = false,
+    this.errorMessage,
+  });
+
+  final String phone;
+  final String verificationToken;
+  final List<AuthMembership> memberships;
+  final bool isSubmitting;
+  final String? errorMessage;
+
+  @override
+  List<Object?> get props =>
+      [phone, verificationToken, memberships, isSubmitting, errorMessage];
+}
+
 /// Sélection de boutique après connexion (patron multi-boutiques).
 class AuthShopSelection extends AuthState {
   const AuthShopSelection({

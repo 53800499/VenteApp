@@ -133,3 +133,44 @@ class OwnedShopList {
   List<OwnedShop> get activeShops =>
       shops.where((shop) => shop.isActive).toList();
 }
+
+/// Accès boutique après vérification WhatsApp (tous rôles).
+class AuthMembership {
+  const AuthMembership({
+    required this.userId,
+    required this.shopId,
+    required this.shopName,
+    required this.role,
+    required this.roleLabel,
+    required this.isDefault,
+  });
+
+  final int userId;
+  final int shopId;
+  final String shopName;
+  final UserRole role;
+  final String roleLabel;
+  final bool isDefault;
+}
+
+class WhatsappOtpRequestResult {
+  const WhatsappOtpRequestResult({
+    required this.maskedPhone,
+    required this.expiresInSeconds,
+    required this.message,
+  });
+
+  final String maskedPhone;
+  final int expiresInSeconds;
+  final String message;
+}
+
+class WhatsappOtpVerifyResult {
+  const WhatsappOtpVerifyResult({
+    required this.verificationToken,
+    required this.memberships,
+  });
+
+  final String verificationToken;
+  final List<AuthMembership> memberships;
+}

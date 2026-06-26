@@ -7,7 +7,7 @@ import 'setup_page.dart';
 
 enum _FirstLaunchStep { entry, setup }
 
-/// Parcours première utilisation : création boutique ou connexion PIN.
+/// Parcours première utilisation : création boutique ou connexion WhatsApp.
 class FirstLaunchFlow extends StatefulWidget {
   const FirstLaunchFlow({super.key});
 

@@ -15,6 +15,58 @@ class AuthProceedToLoginRequested extends AuthEvent {
   const AuthProceedToLoginRequested();
 }
 
+class AuthWhatsappOtpRequested extends AuthEvent {
+  const AuthWhatsappOtpRequested({required this.phone});
+
+  final String phone;
+
+  @override
+  List<Object?> get props => [phone];
+}
+
+class AuthWhatsappOtpVerifyRequested extends AuthEvent {
+  const AuthWhatsappOtpVerifyRequested({
+    required this.phone,
+    required this.code,
+  });
+
+  final String phone;
+  final String code;
+
+  @override
+  List<Object?> get props => [phone, code];
+}
+
+class AuthWhatsappOtpResendRequested extends AuthEvent {
+  const AuthWhatsappOtpResendRequested({required this.phone});
+
+  final String phone;
+
+  @override
+  List<Object?> get props => [phone];
+}
+
+class AuthWhatsappLoginCancelled extends AuthEvent {
+  const AuthWhatsappLoginCancelled();
+}
+
+class AuthWhatsappPhoneEditRequested extends AuthEvent {
+  const AuthWhatsappPhoneEditRequested();
+}
+
+class AuthMembershipSelected extends AuthEvent {
+  const AuthMembershipSelected({
+    required this.shopId,
+    required this.userId,
+  });
+
+  final int shopId;
+  final int userId;
+
+  @override
+  List<Object?> get props => [shopId, userId];
+}
+
 class AuthLockScreenRequested extends AuthEvent {
   const AuthLockScreenRequested({this.shopId});
 
@@ -72,6 +124,7 @@ class AuthSetupRequested extends AuthEvent {
     required this.ownerName,
     required this.shopName,
     required this.pin,
+    required this.ownerPhone,
     this.shopAddress,
     this.shopPhone,
   });
@@ -79,12 +132,13 @@ class AuthSetupRequested extends AuthEvent {
   final String ownerName;
   final String shopName;
   final String pin;
+  final String ownerPhone;
   final String? shopAddress;
   final String? shopPhone;
 
   @override
   List<Object?> get props =>
-      [ownerName, shopName, pin, shopAddress, shopPhone];
+      [ownerName, shopName, pin, ownerPhone, shopAddress, shopPhone];
 }
 
 class AuthEmergencyUnlockRequested extends AuthEvent {

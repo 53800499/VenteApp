@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../domain/entities/auth_entities.dart';
+import '../bloc/auth_bloc.dart';
 
 class RecoveryTokenPage extends StatelessWidget {
   const RecoveryTokenPage({super.key, required this.result});
@@ -100,8 +101,9 @@ class RecoveryTokenPage extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 FilledButton(
-                  onPressed: () => Navigator.of(context)
-                      .pushReplacementNamed(AppRouter.lock),
+                  onPressed: () => context.read<AuthBloc>().add(
+                        AuthLockScreenRequested(shopId: result.shopId),
+                      ),
                   child: const Text('Continuer vers l\'écran PIN'),
                 ),
               ],

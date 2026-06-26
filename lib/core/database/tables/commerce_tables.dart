@@ -44,14 +44,28 @@ class Sales extends Table {
   IntColumn get shopId => integer().references(Shops, #id)();
   IntColumn get customerId => integer().nullable().references(Customers, #id)();
   IntColumn get userId => integer().references(Users, #id)();
+  TextColumn get receiptNumber => text().nullable()();
+  TextColumn get saleType =>
+      text().withDefault(const Constant('standard'))();
+  IntColumn get subtotal => integer().withDefault(const Constant(0))();
+  IntColumn get discountAmount => integer().withDefault(const Constant(0))();
   IntColumn get totalAmount => integer()();
+  IntColumn get amountPaid => integer().withDefault(const Constant(0))();
   IntColumn get amountCash => integer().withDefault(const Constant(0))();
   IntColumn get amountMomo => integer().withDefault(const Constant(0))();
   IntColumn get amountCredit => integer().withDefault(const Constant(0))();
+  TextColumn get paymentMethod => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('completed'))();
+  TextColumn get note => text().nullable()();
   IntColumn get createdAt => integer()();
+  IntColumn get updatedAt => integer().nullable()();
   IntColumn get cancelledAt => integer().nullable()();
+  IntColumn get cancelledByUserId => integer().nullable().references(Users, #id)();
+  TextColumn get cancelReason => text().nullable()();
   IntColumn get version => integer().withDefault(const Constant(1))();
+  TextColumn get serverId => text().nullable()();
+  IntColumn get syncedAt => integer().nullable()();
+  TextColumn get syncStatus => text().nullable()();
 }
 
 class SaleItems extends Table {
@@ -63,6 +77,7 @@ class SaleItems extends Table {
   RealColumn get quantity => real()();
   IntColumn get unitPrice => integer()();
   IntColumn get unitCost => integer().nullable()();
+  IntColumn get discountAmount => integer().withDefault(const Constant(0))();
   IntColumn get lineTotal => integer()();
   IntColumn get createdAt => integer()();
 }

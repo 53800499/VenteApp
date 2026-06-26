@@ -13,6 +13,8 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../shop/presentation/widgets/shop_switcher_sheet.dart';
+import '../../../sales/presentation/pages/new_sale_page.dart';
+import '../../../sales/presentation/pages/sale_list_page.dart';
 import '../../../inventory/presentation/pages/product_list_page.dart';
 import '../../../shop/presentation/pages/more_page.dart';
 import '../../../../shared/components/coming_soon_placeholder.dart';
@@ -33,10 +35,21 @@ class _HomeShellPageState extends State<HomeShellPage> {
   bool _lowStockFilter = false;
   int _stockTabKey = 0;
 
-  void _showComingSoon(String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label — bientôt disponible')),
-    );
+  void _openNewSale() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NewSalePage(session: widget.session),
+      ),
+    ).then((created) {
+      if (created == true && mounted) {
+        context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+        setState(() => _currentIndex = 1);
+      }
+    });
+  }
+
+  void _openSalesTab() {
+    setState(() => _currentIndex = 1);
   }
 
   void _openLowStockProducts() {
@@ -80,6 +93,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
             stockTabKey: _stockTabKey,
             lowStockFilter: _lowStockFilter,
             onLowStockTap: _openLowStockProducts,
+            onNewSaleTap: _openNewSale,
+            onSalesHistoryTap: _openSalesTab,
           );
 
           if (useRail) {
@@ -193,7 +208,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                     child: SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: () => _showComingSoon('Nouvelle vente'),
+                        onPressed: _openNewSale,
                         icon: const Icon(Icons.add_rounded),
                         label: const Text('Nouvelle vente'),
                       ),
@@ -264,6 +279,8 @@ class _ShellContent extends StatelessWidget {
     required this.stockTabKey,
     required this.lowStockFilter,
     required this.onLowStockTap,
+    required this.onNewSaleTap,
+    required this.onSalesHistoryTap,
   });
 
   final AuthSession session;
@@ -271,6 +288,8 @@ class _ShellContent extends StatelessWidget {
   final int stockTabKey;
   final bool lowStockFilter;
   final VoidCallback onLowStockTap;
+  final VoidCallback onNewSaleTap;
+  final VoidCallback onSalesHistoryTap;
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +298,13 @@ class _ShellContent extends StatelessWidget {
       child: IndexedStack(
         index: currentIndex,
         children: [
-          DashboardPage(session: session, onLowStockTap: onLowStockTap),
-          const ComingSoonPlaceholder(
-            icon: Icons.point_of_sale_outlined,
-            title: 'Ventes',
-            description: 'Historique et nouvelle vente',
+          DashboardPage(
+            session: session,
+            onLowStockTap: onLowStockTap,
+            onNewSaleTap: onNewSaleTap,
+            onSalesHistoryTap: onSalesHistoryTap,
           ),
+          SaleListPage(session: session),
           ProductListPage(
             key: ValueKey('stock-$stockTabKey'),
             session: session,

@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../bloc/auth_bloc.dart';
 
@@ -23,6 +24,7 @@ class SetupPage extends StatefulWidget {
 class _SetupPageState extends State<SetupPage> {
   final _formKey = GlobalKey<FormState>();
   final _ownerNameController = TextEditingController();
+  final _ownerPhoneController = TextEditingController();
   final _shopNameController = TextEditingController();
   final _shopAddressController = TextEditingController();
   final _shopPhoneController = TextEditingController();
@@ -32,6 +34,7 @@ class _SetupPageState extends State<SetupPage> {
   @override
   void dispose() {
     _ownerNameController.dispose();
+    _ownerPhoneController.dispose();
     _shopNameController.dispose();
     _shopAddressController.dispose();
     _shopPhoneController.dispose();
@@ -48,6 +51,7 @@ class _SetupPageState extends State<SetupPage> {
             ownerName: _ownerNameController.text.trim(),
             shopName: _shopNameController.text.trim(),
             pin: _pinController.text.trim(),
+            ownerPhone: _ownerPhoneController.text.trim(),
             shopAddress: _shopAddressController.text.trim().isEmpty
                 ? null
                 : _shopAddressController.text.trim(),
@@ -60,15 +64,7 @@ class _SetupPageState extends State<SetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthSetupCompleted) {
-          Navigator.of(context).pushReplacementNamed(
-            '/recovery',
-            arguments: state.result,
-          );
-        }
-      },
+    return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final isLoading = state is AuthSetupInProgress;
 
@@ -124,6 +120,26 @@ class _SetupPageState extends State<SetupPage> {
                                     if (value == null ||
                                         value.trim().length < 2) {
                                       return 'Le nom doit comporter au moins 2 caractères.';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                TextFormField(
+                                  controller: _ownerPhoneController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'WhatsApp du patron',
+                                    hintText: '+229 01 97 00 00 00',
+                                    prefixIcon: Icon(Icons.chat_outlined),
+                                  ),
+                                  keyboardType: TextInputType.phone,
+                                  textInputAction: TextInputAction.next,
+                                  validator: (value) {
+                                    if (value == null || value.trim().isEmpty) {
+                                      return 'Le numéro WhatsApp est requis.';
+                                    }
+                                    if (!isValidPhone(value)) {
+                                      return 'Numéro invalide (indicatif pays requis, ex. +229…).';
                                     }
                                     return null;
                                   },

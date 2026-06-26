@@ -25,6 +25,7 @@ class UserRemoteDatasource {
 
   Future<CreateShopUserResponseDto> createShopUser({
     required String name,
+    required String phone,
     required String pin,
     required UserRole role,
   }) async {
@@ -32,6 +33,7 @@ class UserRemoteDatasource {
       '/users',
       {
         'name': name,
+        'phone': phone,
         'pin': pin,
         'role': role.code,
       },

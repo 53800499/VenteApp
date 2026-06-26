@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/responsive/responsive_builder.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/first_launch_flow.dart';
+import '../../features/auth/presentation/pages/membership_selection_page.dart';
+import '../../features/auth/presentation/pages/whatsapp_login_page.dart';
 import '../../features/auth/presentation/pages/shop_selection_page.dart';
 import '../../features/auth/presentation/pages/lock_screen_page.dart';
 import '../../features/auth/presentation/pages/recovery_token_page.dart';
@@ -26,6 +28,8 @@ class AuthGate extends StatelessWidget {
           AuthSetupCompleted(:final result) =>
             RecoveryTokenPage(result: result),
           AuthLocked() => const LockScreenPage(),
+          AuthWhatsappLogin() => const WhatsappLoginPage(),
+          AuthMembershipSelection() => const MembershipSelectionPage(),
           AuthShopSelection() => const ShopSelectionPage(),
           AuthAuthenticated(:final session) =>
             HomeShellPage(

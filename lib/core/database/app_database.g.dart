@@ -5865,6 +5865,53 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
       'REFERENCES users (id)',
     ),
   );
+  static const VerificationMeta _receiptNumberMeta = const VerificationMeta(
+    'receiptNumber',
+  );
+  @override
+  late final GeneratedColumn<String> receiptNumber = GeneratedColumn<String>(
+    'receipt_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _saleTypeMeta = const VerificationMeta(
+    'saleType',
+  );
+  @override
+  late final GeneratedColumn<String> saleType = GeneratedColumn<String>(
+    'sale_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('standard'),
+  );
+  static const VerificationMeta _subtotalMeta = const VerificationMeta(
+    'subtotal',
+  );
+  @override
+  late final GeneratedColumn<int> subtotal = GeneratedColumn<int>(
+    'subtotal',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _discountAmountMeta = const VerificationMeta(
+    'discountAmount',
+  );
+  @override
+  late final GeneratedColumn<int> discountAmount = GeneratedColumn<int>(
+    'discount_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _totalAmountMeta = const VerificationMeta(
     'totalAmount',
   );
@@ -5875,6 +5922,18 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountPaidMeta = const VerificationMeta(
+    'amountPaid',
+  );
+  @override
+  late final GeneratedColumn<int> amountPaid = GeneratedColumn<int>(
+    'amount_paid',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
   static const VerificationMeta _amountCashMeta = const VerificationMeta(
     'amountCash',
@@ -5912,6 +5971,17 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _paymentMethodMeta = const VerificationMeta(
+    'paymentMethod',
+  );
+  @override
+  late final GeneratedColumn<String> paymentMethod = GeneratedColumn<String>(
+    'payment_method',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -5921,6 +5991,15 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
     defaultValue: const Constant('completed'),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -5933,6 +6012,17 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _cancelledAtMeta = const VerificationMeta(
     'cancelledAt',
   );
@@ -5942,6 +6032,31 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     aliasedName,
     true,
     type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cancelledByUserIdMeta = const VerificationMeta(
+    'cancelledByUserId',
+  );
+  @override
+  late final GeneratedColumn<int> cancelledByUserId = GeneratedColumn<int>(
+    'cancelled_by_user_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _cancelReasonMeta = const VerificationMeta(
+    'cancelReason',
+  );
+  @override
+  late final GeneratedColumn<String> cancelReason = GeneratedColumn<String>(
+    'cancel_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
   static const VerificationMeta _versionMeta = const VerificationMeta(
@@ -5956,20 +6071,66 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     requiredDuringInsert: false,
     defaultValue: const Constant(1),
   );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
     shopId,
     customerId,
     userId,
+    receiptNumber,
+    saleType,
+    subtotal,
+    discountAmount,
     totalAmount,
+    amountPaid,
     amountCash,
     amountMomo,
     amountCredit,
+    paymentMethod,
     status,
+    note,
     createdAt,
+    updatedAt,
     cancelledAt,
+    cancelledByUserId,
+    cancelReason,
     version,
+    serverId,
+    syncedAt,
+    syncStatus,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6008,6 +6169,36 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     } else if (isInserting) {
       context.missing(_userIdMeta);
     }
+    if (data.containsKey('receipt_number')) {
+      context.handle(
+        _receiptNumberMeta,
+        receiptNumber.isAcceptableOrUnknown(
+          data['receipt_number']!,
+          _receiptNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sale_type')) {
+      context.handle(
+        _saleTypeMeta,
+        saleType.isAcceptableOrUnknown(data['sale_type']!, _saleTypeMeta),
+      );
+    }
+    if (data.containsKey('subtotal')) {
+      context.handle(
+        _subtotalMeta,
+        subtotal.isAcceptableOrUnknown(data['subtotal']!, _subtotalMeta),
+      );
+    }
+    if (data.containsKey('discount_amount')) {
+      context.handle(
+        _discountAmountMeta,
+        discountAmount.isAcceptableOrUnknown(
+          data['discount_amount']!,
+          _discountAmountMeta,
+        ),
+      );
+    }
     if (data.containsKey('total_amount')) {
       context.handle(
         _totalAmountMeta,
@@ -6018,6 +6209,12 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
       );
     } else if (isInserting) {
       context.missing(_totalAmountMeta);
+    }
+    if (data.containsKey('amount_paid')) {
+      context.handle(
+        _amountPaidMeta,
+        amountPaid.isAcceptableOrUnknown(data['amount_paid']!, _amountPaidMeta),
+      );
     }
     if (data.containsKey('amount_cash')) {
       context.handle(
@@ -6040,10 +6237,25 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
         ),
       );
     }
+    if (data.containsKey('payment_method')) {
+      context.handle(
+        _paymentMethodMeta,
+        paymentMethod.isAcceptableOrUnknown(
+          data['payment_method']!,
+          _paymentMethodMeta,
+        ),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -6054,6 +6266,12 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
     if (data.containsKey('cancelled_at')) {
       context.handle(
         _cancelledAtMeta,
@@ -6063,10 +6281,46 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
         ),
       );
     }
+    if (data.containsKey('cancelled_by_user_id')) {
+      context.handle(
+        _cancelledByUserIdMeta,
+        cancelledByUserId.isAcceptableOrUnknown(
+          data['cancelled_by_user_id']!,
+          _cancelledByUserIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cancel_reason')) {
+      context.handle(
+        _cancelReasonMeta,
+        cancelReason.isAcceptableOrUnknown(
+          data['cancel_reason']!,
+          _cancelReasonMeta,
+        ),
+      );
+    }
     if (data.containsKey('version')) {
       context.handle(
         _versionMeta,
         version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
       );
     }
     return context;
@@ -6094,9 +6348,29 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
         DriftSqlType.int,
         data['${effectivePrefix}user_id'],
       )!,
+      receiptNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}receipt_number'],
+      ),
+      saleType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sale_type'],
+      )!,
+      subtotal: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}subtotal'],
+      )!,
+      discountAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}discount_amount'],
+      )!,
       totalAmount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}total_amount'],
+      )!,
+      amountPaid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount_paid'],
       )!,
       amountCash: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -6110,22 +6384,54 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
         DriftSqlType.int,
         data['${effectivePrefix}amount_credit'],
       )!,
+      paymentMethod: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_method'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
       )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      ),
       cancelledAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}cancelled_at'],
+      ),
+      cancelledByUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}cancelled_by_user_id'],
+      ),
+      cancelReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cancel_reason'],
       ),
       version: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}version'],
       )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
     );
   }
 
@@ -6140,27 +6446,53 @@ class Sale extends DataClass implements Insertable<Sale> {
   final int shopId;
   final int? customerId;
   final int userId;
+  final String? receiptNumber;
+  final String saleType;
+  final int subtotal;
+  final int discountAmount;
   final int totalAmount;
+  final int amountPaid;
   final int amountCash;
   final int amountMomo;
   final int amountCredit;
+  final String? paymentMethod;
   final String status;
+  final String? note;
   final int createdAt;
+  final int? updatedAt;
   final int? cancelledAt;
+  final int? cancelledByUserId;
+  final String? cancelReason;
   final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
   const Sale({
     required this.id,
     required this.shopId,
     this.customerId,
     required this.userId,
+    this.receiptNumber,
+    required this.saleType,
+    required this.subtotal,
+    required this.discountAmount,
     required this.totalAmount,
+    required this.amountPaid,
     required this.amountCash,
     required this.amountMomo,
     required this.amountCredit,
+    this.paymentMethod,
     required this.status,
+    this.note,
     required this.createdAt,
+    this.updatedAt,
     this.cancelledAt,
+    this.cancelledByUserId,
+    this.cancelReason,
     required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6171,16 +6503,47 @@ class Sale extends DataClass implements Insertable<Sale> {
       map['customer_id'] = Variable<int>(customerId);
     }
     map['user_id'] = Variable<int>(userId);
+    if (!nullToAbsent || receiptNumber != null) {
+      map['receipt_number'] = Variable<String>(receiptNumber);
+    }
+    map['sale_type'] = Variable<String>(saleType);
+    map['subtotal'] = Variable<int>(subtotal);
+    map['discount_amount'] = Variable<int>(discountAmount);
     map['total_amount'] = Variable<int>(totalAmount);
+    map['amount_paid'] = Variable<int>(amountPaid);
     map['amount_cash'] = Variable<int>(amountCash);
     map['amount_momo'] = Variable<int>(amountMomo);
     map['amount_credit'] = Variable<int>(amountCredit);
+    if (!nullToAbsent || paymentMethod != null) {
+      map['payment_method'] = Variable<String>(paymentMethod);
+    }
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
     map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<int>(updatedAt);
+    }
     if (!nullToAbsent || cancelledAt != null) {
       map['cancelled_at'] = Variable<int>(cancelledAt);
     }
+    if (!nullToAbsent || cancelledByUserId != null) {
+      map['cancelled_by_user_id'] = Variable<int>(cancelledByUserId);
+    }
+    if (!nullToAbsent || cancelReason != null) {
+      map['cancel_reason'] = Variable<String>(cancelReason);
+    }
     map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
     return map;
   }
 
@@ -6192,16 +6555,45 @@ class Sale extends DataClass implements Insertable<Sale> {
           ? const Value.absent()
           : Value(customerId),
       userId: Value(userId),
+      receiptNumber: receiptNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receiptNumber),
+      saleType: Value(saleType),
+      subtotal: Value(subtotal),
+      discountAmount: Value(discountAmount),
       totalAmount: Value(totalAmount),
+      amountPaid: Value(amountPaid),
       amountCash: Value(amountCash),
       amountMomo: Value(amountMomo),
       amountCredit: Value(amountCredit),
+      paymentMethod: paymentMethod == null && nullToAbsent
+          ? const Value.absent()
+          : Value(paymentMethod),
       status: Value(status),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
       cancelledAt: cancelledAt == null && nullToAbsent
           ? const Value.absent()
           : Value(cancelledAt),
+      cancelledByUserId: cancelledByUserId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cancelledByUserId),
+      cancelReason: cancelReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cancelReason),
       version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
     );
   }
 
@@ -6215,14 +6607,27 @@ class Sale extends DataClass implements Insertable<Sale> {
       shopId: serializer.fromJson<int>(json['shopId']),
       customerId: serializer.fromJson<int?>(json['customerId']),
       userId: serializer.fromJson<int>(json['userId']),
+      receiptNumber: serializer.fromJson<String?>(json['receiptNumber']),
+      saleType: serializer.fromJson<String>(json['saleType']),
+      subtotal: serializer.fromJson<int>(json['subtotal']),
+      discountAmount: serializer.fromJson<int>(json['discountAmount']),
       totalAmount: serializer.fromJson<int>(json['totalAmount']),
+      amountPaid: serializer.fromJson<int>(json['amountPaid']),
       amountCash: serializer.fromJson<int>(json['amountCash']),
       amountMomo: serializer.fromJson<int>(json['amountMomo']),
       amountCredit: serializer.fromJson<int>(json['amountCredit']),
+      paymentMethod: serializer.fromJson<String?>(json['paymentMethod']),
       status: serializer.fromJson<String>(json['status']),
+      note: serializer.fromJson<String?>(json['note']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int?>(json['updatedAt']),
       cancelledAt: serializer.fromJson<int?>(json['cancelledAt']),
+      cancelledByUserId: serializer.fromJson<int?>(json['cancelledByUserId']),
+      cancelReason: serializer.fromJson<String?>(json['cancelReason']),
       version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
     );
   }
   @override
@@ -6233,14 +6638,27 @@ class Sale extends DataClass implements Insertable<Sale> {
       'shopId': serializer.toJson<int>(shopId),
       'customerId': serializer.toJson<int?>(customerId),
       'userId': serializer.toJson<int>(userId),
+      'receiptNumber': serializer.toJson<String?>(receiptNumber),
+      'saleType': serializer.toJson<String>(saleType),
+      'subtotal': serializer.toJson<int>(subtotal),
+      'discountAmount': serializer.toJson<int>(discountAmount),
       'totalAmount': serializer.toJson<int>(totalAmount),
+      'amountPaid': serializer.toJson<int>(amountPaid),
       'amountCash': serializer.toJson<int>(amountCash),
       'amountMomo': serializer.toJson<int>(amountMomo),
       'amountCredit': serializer.toJson<int>(amountCredit),
+      'paymentMethod': serializer.toJson<String?>(paymentMethod),
       'status': serializer.toJson<String>(status),
+      'note': serializer.toJson<String?>(note),
       'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int?>(updatedAt),
       'cancelledAt': serializer.toJson<int?>(cancelledAt),
+      'cancelledByUserId': serializer.toJson<int?>(cancelledByUserId),
+      'cancelReason': serializer.toJson<String?>(cancelReason),
       'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
     };
   }
 
@@ -6249,27 +6667,59 @@ class Sale extends DataClass implements Insertable<Sale> {
     int? shopId,
     Value<int?> customerId = const Value.absent(),
     int? userId,
+    Value<String?> receiptNumber = const Value.absent(),
+    String? saleType,
+    int? subtotal,
+    int? discountAmount,
     int? totalAmount,
+    int? amountPaid,
     int? amountCash,
     int? amountMomo,
     int? amountCredit,
+    Value<String?> paymentMethod = const Value.absent(),
     String? status,
+    Value<String?> note = const Value.absent(),
     int? createdAt,
+    Value<int?> updatedAt = const Value.absent(),
     Value<int?> cancelledAt = const Value.absent(),
+    Value<int?> cancelledByUserId = const Value.absent(),
+    Value<String?> cancelReason = const Value.absent(),
     int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
   }) => Sale(
     id: id ?? this.id,
     shopId: shopId ?? this.shopId,
     customerId: customerId.present ? customerId.value : this.customerId,
     userId: userId ?? this.userId,
+    receiptNumber: receiptNumber.present
+        ? receiptNumber.value
+        : this.receiptNumber,
+    saleType: saleType ?? this.saleType,
+    subtotal: subtotal ?? this.subtotal,
+    discountAmount: discountAmount ?? this.discountAmount,
     totalAmount: totalAmount ?? this.totalAmount,
+    amountPaid: amountPaid ?? this.amountPaid,
     amountCash: amountCash ?? this.amountCash,
     amountMomo: amountMomo ?? this.amountMomo,
     amountCredit: amountCredit ?? this.amountCredit,
+    paymentMethod: paymentMethod.present
+        ? paymentMethod.value
+        : this.paymentMethod,
     status: status ?? this.status,
+    note: note.present ? note.value : this.note,
     createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
     cancelledAt: cancelledAt.present ? cancelledAt.value : this.cancelledAt,
+    cancelledByUserId: cancelledByUserId.present
+        ? cancelledByUserId.value
+        : this.cancelledByUserId,
+    cancelReason: cancelReason.present ? cancelReason.value : this.cancelReason,
     version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
   );
   Sale copyWithCompanion(SalesCompanion data) {
     return Sale(
@@ -6279,9 +6729,20 @@ class Sale extends DataClass implements Insertable<Sale> {
           ? data.customerId.value
           : this.customerId,
       userId: data.userId.present ? data.userId.value : this.userId,
+      receiptNumber: data.receiptNumber.present
+          ? data.receiptNumber.value
+          : this.receiptNumber,
+      saleType: data.saleType.present ? data.saleType.value : this.saleType,
+      subtotal: data.subtotal.present ? data.subtotal.value : this.subtotal,
+      discountAmount: data.discountAmount.present
+          ? data.discountAmount.value
+          : this.discountAmount,
       totalAmount: data.totalAmount.present
           ? data.totalAmount.value
           : this.totalAmount,
+      amountPaid: data.amountPaid.present
+          ? data.amountPaid.value
+          : this.amountPaid,
       amountCash: data.amountCash.present
           ? data.amountCash.value
           : this.amountCash,
@@ -6291,12 +6752,28 @@ class Sale extends DataClass implements Insertable<Sale> {
       amountCredit: data.amountCredit.present
           ? data.amountCredit.value
           : this.amountCredit,
+      paymentMethod: data.paymentMethod.present
+          ? data.paymentMethod.value
+          : this.paymentMethod,
       status: data.status.present ? data.status.value : this.status,
+      note: data.note.present ? data.note.value : this.note,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       cancelledAt: data.cancelledAt.present
           ? data.cancelledAt.value
           : this.cancelledAt,
+      cancelledByUserId: data.cancelledByUserId.present
+          ? data.cancelledByUserId.value
+          : this.cancelledByUserId,
+      cancelReason: data.cancelReason.present
+          ? data.cancelReason.value
+          : this.cancelReason,
       version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
     );
   }
 
@@ -6307,33 +6784,59 @@ class Sale extends DataClass implements Insertable<Sale> {
           ..write('shopId: $shopId, ')
           ..write('customerId: $customerId, ')
           ..write('userId: $userId, ')
+          ..write('receiptNumber: $receiptNumber, ')
+          ..write('saleType: $saleType, ')
+          ..write('subtotal: $subtotal, ')
+          ..write('discountAmount: $discountAmount, ')
           ..write('totalAmount: $totalAmount, ')
+          ..write('amountPaid: $amountPaid, ')
           ..write('amountCash: $amountCash, ')
           ..write('amountMomo: $amountMomo, ')
           ..write('amountCredit: $amountCredit, ')
+          ..write('paymentMethod: $paymentMethod, ')
           ..write('status: $status, ')
+          ..write('note: $note, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('cancelledAt: $cancelledAt, ')
-          ..write('version: $version')
+          ..write('cancelledByUserId: $cancelledByUserId, ')
+          ..write('cancelReason: $cancelReason, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     shopId,
     customerId,
     userId,
+    receiptNumber,
+    saleType,
+    subtotal,
+    discountAmount,
     totalAmount,
+    amountPaid,
     amountCash,
     amountMomo,
     amountCredit,
+    paymentMethod,
     status,
+    note,
     createdAt,
+    updatedAt,
     cancelledAt,
+    cancelledByUserId,
+    cancelReason,
     version,
-  );
+    serverId,
+    syncedAt,
+    syncStatus,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6342,14 +6845,27 @@ class Sale extends DataClass implements Insertable<Sale> {
           other.shopId == this.shopId &&
           other.customerId == this.customerId &&
           other.userId == this.userId &&
+          other.receiptNumber == this.receiptNumber &&
+          other.saleType == this.saleType &&
+          other.subtotal == this.subtotal &&
+          other.discountAmount == this.discountAmount &&
           other.totalAmount == this.totalAmount &&
+          other.amountPaid == this.amountPaid &&
           other.amountCash == this.amountCash &&
           other.amountMomo == this.amountMomo &&
           other.amountCredit == this.amountCredit &&
+          other.paymentMethod == this.paymentMethod &&
           other.status == this.status &&
+          other.note == this.note &&
           other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
           other.cancelledAt == this.cancelledAt &&
-          other.version == this.version);
+          other.cancelledByUserId == this.cancelledByUserId &&
+          other.cancelReason == this.cancelReason &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
 }
 
 class SalesCompanion extends UpdateCompanion<Sale> {
@@ -6357,41 +6873,80 @@ class SalesCompanion extends UpdateCompanion<Sale> {
   final Value<int> shopId;
   final Value<int?> customerId;
   final Value<int> userId;
+  final Value<String?> receiptNumber;
+  final Value<String> saleType;
+  final Value<int> subtotal;
+  final Value<int> discountAmount;
   final Value<int> totalAmount;
+  final Value<int> amountPaid;
   final Value<int> amountCash;
   final Value<int> amountMomo;
   final Value<int> amountCredit;
+  final Value<String?> paymentMethod;
   final Value<String> status;
+  final Value<String?> note;
   final Value<int> createdAt;
+  final Value<int?> updatedAt;
   final Value<int?> cancelledAt;
+  final Value<int?> cancelledByUserId;
+  final Value<String?> cancelReason;
   final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
   const SalesCompanion({
     this.id = const Value.absent(),
     this.shopId = const Value.absent(),
     this.customerId = const Value.absent(),
     this.userId = const Value.absent(),
+    this.receiptNumber = const Value.absent(),
+    this.saleType = const Value.absent(),
+    this.subtotal = const Value.absent(),
+    this.discountAmount = const Value.absent(),
     this.totalAmount = const Value.absent(),
+    this.amountPaid = const Value.absent(),
     this.amountCash = const Value.absent(),
     this.amountMomo = const Value.absent(),
     this.amountCredit = const Value.absent(),
+    this.paymentMethod = const Value.absent(),
     this.status = const Value.absent(),
+    this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
     this.cancelledAt = const Value.absent(),
+    this.cancelledByUserId = const Value.absent(),
+    this.cancelReason = const Value.absent(),
     this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
   });
   SalesCompanion.insert({
     this.id = const Value.absent(),
     required int shopId,
     this.customerId = const Value.absent(),
     required int userId,
+    this.receiptNumber = const Value.absent(),
+    this.saleType = const Value.absent(),
+    this.subtotal = const Value.absent(),
+    this.discountAmount = const Value.absent(),
     required int totalAmount,
+    this.amountPaid = const Value.absent(),
     this.amountCash = const Value.absent(),
     this.amountMomo = const Value.absent(),
     this.amountCredit = const Value.absent(),
+    this.paymentMethod = const Value.absent(),
     this.status = const Value.absent(),
+    this.note = const Value.absent(),
     required int createdAt,
+    this.updatedAt = const Value.absent(),
     this.cancelledAt = const Value.absent(),
+    this.cancelledByUserId = const Value.absent(),
+    this.cancelReason = const Value.absent(),
     this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
   }) : shopId = Value(shopId),
        userId = Value(userId),
        totalAmount = Value(totalAmount),
@@ -6401,28 +6956,54 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     Expression<int>? shopId,
     Expression<int>? customerId,
     Expression<int>? userId,
+    Expression<String>? receiptNumber,
+    Expression<String>? saleType,
+    Expression<int>? subtotal,
+    Expression<int>? discountAmount,
     Expression<int>? totalAmount,
+    Expression<int>? amountPaid,
     Expression<int>? amountCash,
     Expression<int>? amountMomo,
     Expression<int>? amountCredit,
+    Expression<String>? paymentMethod,
     Expression<String>? status,
+    Expression<String>? note,
     Expression<int>? createdAt,
+    Expression<int>? updatedAt,
     Expression<int>? cancelledAt,
+    Expression<int>? cancelledByUserId,
+    Expression<String>? cancelReason,
     Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (shopId != null) 'shop_id': shopId,
       if (customerId != null) 'customer_id': customerId,
       if (userId != null) 'user_id': userId,
+      if (receiptNumber != null) 'receipt_number': receiptNumber,
+      if (saleType != null) 'sale_type': saleType,
+      if (subtotal != null) 'subtotal': subtotal,
+      if (discountAmount != null) 'discount_amount': discountAmount,
       if (totalAmount != null) 'total_amount': totalAmount,
+      if (amountPaid != null) 'amount_paid': amountPaid,
       if (amountCash != null) 'amount_cash': amountCash,
       if (amountMomo != null) 'amount_momo': amountMomo,
       if (amountCredit != null) 'amount_credit': amountCredit,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
       if (status != null) 'status': status,
+      if (note != null) 'note': note,
       if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
       if (cancelledAt != null) 'cancelled_at': cancelledAt,
+      if (cancelledByUserId != null) 'cancelled_by_user_id': cancelledByUserId,
+      if (cancelReason != null) 'cancel_reason': cancelReason,
       if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
     });
   }
 
@@ -6431,28 +7012,54 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     Value<int>? shopId,
     Value<int?>? customerId,
     Value<int>? userId,
+    Value<String?>? receiptNumber,
+    Value<String>? saleType,
+    Value<int>? subtotal,
+    Value<int>? discountAmount,
     Value<int>? totalAmount,
+    Value<int>? amountPaid,
     Value<int>? amountCash,
     Value<int>? amountMomo,
     Value<int>? amountCredit,
+    Value<String?>? paymentMethod,
     Value<String>? status,
+    Value<String?>? note,
     Value<int>? createdAt,
+    Value<int?>? updatedAt,
     Value<int?>? cancelledAt,
+    Value<int?>? cancelledByUserId,
+    Value<String?>? cancelReason,
     Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
   }) {
     return SalesCompanion(
       id: id ?? this.id,
       shopId: shopId ?? this.shopId,
       customerId: customerId ?? this.customerId,
       userId: userId ?? this.userId,
+      receiptNumber: receiptNumber ?? this.receiptNumber,
+      saleType: saleType ?? this.saleType,
+      subtotal: subtotal ?? this.subtotal,
+      discountAmount: discountAmount ?? this.discountAmount,
       totalAmount: totalAmount ?? this.totalAmount,
+      amountPaid: amountPaid ?? this.amountPaid,
       amountCash: amountCash ?? this.amountCash,
       amountMomo: amountMomo ?? this.amountMomo,
       amountCredit: amountCredit ?? this.amountCredit,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       status: status ?? this.status,
+      note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       cancelledAt: cancelledAt ?? this.cancelledAt,
+      cancelledByUserId: cancelledByUserId ?? this.cancelledByUserId,
+      cancelReason: cancelReason ?? this.cancelReason,
       version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
     );
   }
 
@@ -6471,8 +7078,23 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     if (userId.present) {
       map['user_id'] = Variable<int>(userId.value);
     }
+    if (receiptNumber.present) {
+      map['receipt_number'] = Variable<String>(receiptNumber.value);
+    }
+    if (saleType.present) {
+      map['sale_type'] = Variable<String>(saleType.value);
+    }
+    if (subtotal.present) {
+      map['subtotal'] = Variable<int>(subtotal.value);
+    }
+    if (discountAmount.present) {
+      map['discount_amount'] = Variable<int>(discountAmount.value);
+    }
     if (totalAmount.present) {
       map['total_amount'] = Variable<int>(totalAmount.value);
+    }
+    if (amountPaid.present) {
+      map['amount_paid'] = Variable<int>(amountPaid.value);
     }
     if (amountCash.present) {
       map['amount_cash'] = Variable<int>(amountCash.value);
@@ -6483,17 +7105,41 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     if (amountCredit.present) {
       map['amount_credit'] = Variable<int>(amountCredit.value);
     }
+    if (paymentMethod.present) {
+      map['payment_method'] = Variable<String>(paymentMethod.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
     if (cancelledAt.present) {
       map['cancelled_at'] = Variable<int>(cancelledAt.value);
     }
+    if (cancelledByUserId.present) {
+      map['cancelled_by_user_id'] = Variable<int>(cancelledByUserId.value);
+    }
+    if (cancelReason.present) {
+      map['cancel_reason'] = Variable<String>(cancelReason.value);
+    }
     if (version.present) {
       map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
     }
     return map;
   }
@@ -6505,14 +7151,27 @@ class SalesCompanion extends UpdateCompanion<Sale> {
           ..write('shopId: $shopId, ')
           ..write('customerId: $customerId, ')
           ..write('userId: $userId, ')
+          ..write('receiptNumber: $receiptNumber, ')
+          ..write('saleType: $saleType, ')
+          ..write('subtotal: $subtotal, ')
+          ..write('discountAmount: $discountAmount, ')
           ..write('totalAmount: $totalAmount, ')
+          ..write('amountPaid: $amountPaid, ')
           ..write('amountCash: $amountCash, ')
           ..write('amountMomo: $amountMomo, ')
           ..write('amountCredit: $amountCredit, ')
+          ..write('paymentMethod: $paymentMethod, ')
           ..write('status: $status, ')
+          ..write('note: $note, ')
           ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
           ..write('cancelledAt: $cancelledAt, ')
-          ..write('version: $version')
+          ..write('cancelledByUserId: $cancelledByUserId, ')
+          ..write('cancelReason: $cancelReason, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
   }
@@ -6619,6 +7278,18 @@ class $SaleItemsTable extends SaleItems
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _discountAmountMeta = const VerificationMeta(
+    'discountAmount',
+  );
+  @override
+  late final GeneratedColumn<int> discountAmount = GeneratedColumn<int>(
+    'discount_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _lineTotalMeta = const VerificationMeta(
     'lineTotal',
   );
@@ -6651,6 +7322,7 @@ class $SaleItemsTable extends SaleItems
     quantity,
     unitPrice,
     unitCost,
+    discountAmount,
     lineTotal,
     createdAt,
   ];
@@ -6724,6 +7396,15 @@ class $SaleItemsTable extends SaleItems
         unitCost.isAcceptableOrUnknown(data['unit_cost']!, _unitCostMeta),
       );
     }
+    if (data.containsKey('discount_amount')) {
+      context.handle(
+        _discountAmountMeta,
+        discountAmount.isAcceptableOrUnknown(
+          data['discount_amount']!,
+          _discountAmountMeta,
+        ),
+      );
+    }
     if (data.containsKey('line_total')) {
       context.handle(
         _lineTotalMeta,
@@ -6781,6 +7462,10 @@ class $SaleItemsTable extends SaleItems
         DriftSqlType.int,
         data['${effectivePrefix}unit_cost'],
       ),
+      discountAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}discount_amount'],
+      )!,
       lineTotal: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}line_total'],
@@ -6807,6 +7492,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
   final double quantity;
   final int unitPrice;
   final int? unitCost;
+  final int discountAmount;
   final int lineTotal;
   final int createdAt;
   const SaleItem({
@@ -6818,6 +7504,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
     required this.quantity,
     required this.unitPrice,
     this.unitCost,
+    required this.discountAmount,
     required this.lineTotal,
     required this.createdAt,
   });
@@ -6836,6 +7523,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
     if (!nullToAbsent || unitCost != null) {
       map['unit_cost'] = Variable<int>(unitCost);
     }
+    map['discount_amount'] = Variable<int>(discountAmount);
     map['line_total'] = Variable<int>(lineTotal);
     map['created_at'] = Variable<int>(createdAt);
     return map;
@@ -6855,6 +7543,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
       unitCost: unitCost == null && nullToAbsent
           ? const Value.absent()
           : Value(unitCost),
+      discountAmount: Value(discountAmount),
       lineTotal: Value(lineTotal),
       createdAt: Value(createdAt),
     );
@@ -6874,6 +7563,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
       quantity: serializer.fromJson<double>(json['quantity']),
       unitPrice: serializer.fromJson<int>(json['unitPrice']),
       unitCost: serializer.fromJson<int?>(json['unitCost']),
+      discountAmount: serializer.fromJson<int>(json['discountAmount']),
       lineTotal: serializer.fromJson<int>(json['lineTotal']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
     );
@@ -6890,6 +7580,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
       'quantity': serializer.toJson<double>(quantity),
       'unitPrice': serializer.toJson<int>(unitPrice),
       'unitCost': serializer.toJson<int?>(unitCost),
+      'discountAmount': serializer.toJson<int>(discountAmount),
       'lineTotal': serializer.toJson<int>(lineTotal),
       'createdAt': serializer.toJson<int>(createdAt),
     };
@@ -6904,6 +7595,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
     double? quantity,
     int? unitPrice,
     Value<int?> unitCost = const Value.absent(),
+    int? discountAmount,
     int? lineTotal,
     int? createdAt,
   }) => SaleItem(
@@ -6915,6 +7607,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
     quantity: quantity ?? this.quantity,
     unitPrice: unitPrice ?? this.unitPrice,
     unitCost: unitCost.present ? unitCost.value : this.unitCost,
+    discountAmount: discountAmount ?? this.discountAmount,
     lineTotal: lineTotal ?? this.lineTotal,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -6930,6 +7623,9 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
       quantity: data.quantity.present ? data.quantity.value : this.quantity,
       unitPrice: data.unitPrice.present ? data.unitPrice.value : this.unitPrice,
       unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
+      discountAmount: data.discountAmount.present
+          ? data.discountAmount.value
+          : this.discountAmount,
       lineTotal: data.lineTotal.present ? data.lineTotal.value : this.lineTotal,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -6946,6 +7642,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
           ..write('quantity: $quantity, ')
           ..write('unitPrice: $unitPrice, ')
           ..write('unitCost: $unitCost, ')
+          ..write('discountAmount: $discountAmount, ')
           ..write('lineTotal: $lineTotal, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -6962,6 +7659,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
     quantity,
     unitPrice,
     unitCost,
+    discountAmount,
     lineTotal,
     createdAt,
   );
@@ -6977,6 +7675,7 @@ class SaleItem extends DataClass implements Insertable<SaleItem> {
           other.quantity == this.quantity &&
           other.unitPrice == this.unitPrice &&
           other.unitCost == this.unitCost &&
+          other.discountAmount == this.discountAmount &&
           other.lineTotal == this.lineTotal &&
           other.createdAt == this.createdAt);
 }
@@ -6990,6 +7689,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
   final Value<double> quantity;
   final Value<int> unitPrice;
   final Value<int?> unitCost;
+  final Value<int> discountAmount;
   final Value<int> lineTotal;
   final Value<int> createdAt;
   const SaleItemsCompanion({
@@ -7001,6 +7701,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
     this.quantity = const Value.absent(),
     this.unitPrice = const Value.absent(),
     this.unitCost = const Value.absent(),
+    this.discountAmount = const Value.absent(),
     this.lineTotal = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
@@ -7013,6 +7714,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
     required double quantity,
     required int unitPrice,
     this.unitCost = const Value.absent(),
+    this.discountAmount = const Value.absent(),
     required int lineTotal,
     required int createdAt,
   }) : shopId = Value(shopId),
@@ -7031,6 +7733,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
     Expression<double>? quantity,
     Expression<int>? unitPrice,
     Expression<int>? unitCost,
+    Expression<int>? discountAmount,
     Expression<int>? lineTotal,
     Expression<int>? createdAt,
   }) {
@@ -7043,6 +7746,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
       if (quantity != null) 'quantity': quantity,
       if (unitPrice != null) 'unit_price': unitPrice,
       if (unitCost != null) 'unit_cost': unitCost,
+      if (discountAmount != null) 'discount_amount': discountAmount,
       if (lineTotal != null) 'line_total': lineTotal,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -7057,6 +7761,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
     Value<double>? quantity,
     Value<int>? unitPrice,
     Value<int?>? unitCost,
+    Value<int>? discountAmount,
     Value<int>? lineTotal,
     Value<int>? createdAt,
   }) {
@@ -7069,6 +7774,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       unitCost: unitCost ?? this.unitCost,
+      discountAmount: discountAmount ?? this.discountAmount,
       lineTotal: lineTotal ?? this.lineTotal,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -7101,6 +7807,9 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
     if (unitCost.present) {
       map['unit_cost'] = Variable<int>(unitCost.value);
     }
+    if (discountAmount.present) {
+      map['discount_amount'] = Variable<int>(discountAmount.value);
+    }
     if (lineTotal.present) {
       map['line_total'] = Variable<int>(lineTotal.value);
     }
@@ -7121,6 +7830,7 @@ class SaleItemsCompanion extends UpdateCompanion<SaleItem> {
           ..write('quantity: $quantity, ')
           ..write('unitPrice: $unitPrice, ')
           ..write('unitCost: $unitCost, ')
+          ..write('discountAmount: $discountAmount, ')
           ..write('lineTotal: $lineTotal, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -9922,25 +10632,6 @@ final class $$UsersTableReferences
     );
   }
 
-  static MultiTypedResultKey<$SalesTable, List<Sale>> _salesRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.sales,
-    aliasName: $_aliasNameGenerator(db.users.id, db.sales.userId),
-  );
-
-  $$SalesTableProcessedTableManager get salesRefs {
-    final manager = $$SalesTableTableManager(
-      $_db,
-      $_db.sales,
-    ).filter((f) => f.userId.id.sqlEquals($_itemColumn<int>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_salesRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-
   static MultiTypedResultKey<$StockMovementsTable, List<StockMovement>>
   _stockMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.stockMovements,
@@ -10122,31 +10813,6 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
           }) => $$AuditLogsTableFilterComposer(
             $db: $db,
             $table: $db.auditLogs,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
-  Expression<bool> salesRefs(
-    Expression<bool> Function($$SalesTableFilterComposer f) f,
-  ) {
-    final $$SalesTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.sales,
-      getReferencedColumn: (t) => t.userId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SalesTableFilterComposer(
-            $db: $db,
-            $table: $db.sales,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -10457,31 +11123,6 @@ class $$UsersTableAnnotationComposer
     return f(composer);
   }
 
-  Expression<T> salesRefs<T extends Object>(
-    Expression<T> Function($$SalesTableAnnotationComposer a) f,
-  ) {
-    final $$SalesTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.sales,
-      getReferencedColumn: (t) => t.userId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$SalesTableAnnotationComposer(
-            $db: $db,
-            $table: $db.sales,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-
   Expression<T> stockMovementsRefs<T extends Object>(
     Expression<T> Function($$StockMovementsTableAnnotationComposer a) f,
   ) {
@@ -10525,7 +11166,6 @@ class $$UsersTableTableManager
             bool shopId,
             bool authSessionsRefs,
             bool auditLogsRefs,
-            bool salesRefs,
             bool stockMovementsRefs,
           })
         > {
@@ -10635,7 +11275,6 @@ class $$UsersTableTableManager
                 shopId = false,
                 authSessionsRefs = false,
                 auditLogsRefs = false,
-                salesRefs = false,
                 stockMovementsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -10643,7 +11282,6 @@ class $$UsersTableTableManager
                   explicitlyWatchedTables: [
                     if (authSessionsRefs) db.authSessions,
                     if (auditLogsRefs) db.auditLogs,
-                    if (salesRefs) db.sales,
                     if (stockMovementsRefs) db.stockMovements,
                   ],
                   addJoins:
@@ -10718,19 +11356,6 @@ class $$UsersTableTableManager
                               ),
                           typedResults: items,
                         ),
-                      if (salesRefs)
-                        await $_getPrefetchedData<User, $UsersTable, Sale>(
-                          currentTable: table,
-                          referencedTable: $$UsersTableReferences
-                              ._salesRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$UsersTableReferences(db, table, p0).salesRefs,
-                          referencedItemsForCurrentItem:
-                              (item, referencedItems) => referencedItems.where(
-                                (e) => e.userId == item.id,
-                              ),
-                          typedResults: items,
-                        ),
                       if (stockMovementsRefs)
                         await $_getPrefetchedData<
                           User,
@@ -10776,7 +11401,6 @@ typedef $$UsersTableProcessedTableManager =
         bool shopId,
         bool authSessionsRefs,
         bool auditLogsRefs,
-        bool salesRefs,
         bool stockMovementsRefs,
       })
     >;
@@ -14186,14 +14810,27 @@ typedef $$SalesTableCreateCompanionBuilder =
       required int shopId,
       Value<int?> customerId,
       required int userId,
+      Value<String?> receiptNumber,
+      Value<String> saleType,
+      Value<int> subtotal,
+      Value<int> discountAmount,
       required int totalAmount,
+      Value<int> amountPaid,
       Value<int> amountCash,
       Value<int> amountMomo,
       Value<int> amountCredit,
+      Value<String?> paymentMethod,
       Value<String> status,
+      Value<String?> note,
       required int createdAt,
+      Value<int?> updatedAt,
       Value<int?> cancelledAt,
+      Value<int?> cancelledByUserId,
+      Value<String?> cancelReason,
       Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
     });
 typedef $$SalesTableUpdateCompanionBuilder =
     SalesCompanion Function({
@@ -14201,14 +14838,27 @@ typedef $$SalesTableUpdateCompanionBuilder =
       Value<int> shopId,
       Value<int?> customerId,
       Value<int> userId,
+      Value<String?> receiptNumber,
+      Value<String> saleType,
+      Value<int> subtotal,
+      Value<int> discountAmount,
       Value<int> totalAmount,
+      Value<int> amountPaid,
       Value<int> amountCash,
       Value<int> amountMomo,
       Value<int> amountCredit,
+      Value<String?> paymentMethod,
       Value<String> status,
+      Value<String?> note,
       Value<int> createdAt,
+      Value<int?> updatedAt,
       Value<int?> cancelledAt,
+      Value<int?> cancelledByUserId,
+      Value<String?> cancelReason,
       Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
     });
 
 final class $$SalesTableReferences
@@ -14260,6 +14910,25 @@ final class $$SalesTableReferences
       $_db.users,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_userIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _cancelledByUserIdTable(_$AppDatabase db) =>
+      db.users.createAlias(
+        $_aliasNameGenerator(db.sales.cancelledByUserId, db.users.id),
+      );
+
+  $$UsersTableProcessedTableManager? get cancelledByUserId {
+    final $_column = $_itemColumn<int>('cancelled_by_user_id');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cancelledByUserIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -14335,8 +15004,33 @@ class $$SalesTableFilterComposer extends Composer<_$AppDatabase, $SalesTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get receiptNumber => $composableBuilder(
+    column: $table.receiptNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get saleType => $composableBuilder(
+    column: $table.saleType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get subtotal => $composableBuilder(
+    column: $table.subtotal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amountPaid => $composableBuilder(
+    column: $table.amountPaid,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14355,8 +15049,18 @@ class $$SalesTableFilterComposer extends Composer<_$AppDatabase, $SalesTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14365,13 +15069,38 @@ class $$SalesTableFilterComposer extends Composer<_$AppDatabase, $SalesTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get cancelledAt => $composableBuilder(
     column: $table.cancelledAt,
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get cancelReason => $composableBuilder(
+    column: $table.cancelReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get version => $composableBuilder(
     column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -14425,6 +15154,29 @@ class $$SalesTableFilterComposer extends Composer<_$AppDatabase, $SalesTable> {
     final $$UsersTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.userId,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get cancelledByUserId {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cancelledByUserId,
       referencedTable: $db.users,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -14534,8 +15286,33 @@ class $$SalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get receiptNumber => $composableBuilder(
+    column: $table.receiptNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get saleType => $composableBuilder(
+    column: $table.saleType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get subtotal => $composableBuilder(
+    column: $table.subtotal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amountPaid => $composableBuilder(
+    column: $table.amountPaid,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14554,8 +15331,18 @@ class $$SalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14564,13 +15351,38 @@ class $$SalesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get cancelledAt => $composableBuilder(
     column: $table.cancelledAt,
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get cancelReason => $composableBuilder(
+    column: $table.cancelReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get version => $composableBuilder(
     column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -14642,6 +15454,29 @@ class $$SalesTableOrderingComposer
     );
     return composer;
   }
+
+  $$UsersTableOrderingComposer get cancelledByUserId {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cancelledByUserId,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$SalesTableAnnotationComposer
@@ -14656,8 +15491,29 @@ class $$SalesTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get receiptNumber => $composableBuilder(
+    column: $table.receiptNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get saleType =>
+      $composableBuilder(column: $table.saleType, builder: (column) => column);
+
+  GeneratedColumn<int> get subtotal =>
+      $composableBuilder(column: $table.subtotal, builder: (column) => column);
+
+  GeneratedColumn<int> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get amountPaid => $composableBuilder(
+    column: $table.amountPaid,
     builder: (column) => column,
   );
 
@@ -14676,19 +15532,46 @@ class $$SalesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
   GeneratedColumn<int> get cancelledAt => $composableBuilder(
     column: $table.cancelledAt,
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get cancelReason => $composableBuilder(
+    column: $table.cancelReason,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get version =>
       $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
 
   $$ShopsTableAnnotationComposer get shopId {
     final $$ShopsTableAnnotationComposer composer = $composerBuilder(
@@ -14740,6 +15623,29 @@ class $$SalesTableAnnotationComposer
     final $$UsersTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.userId,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get cancelledByUserId {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cancelledByUserId,
       referencedTable: $db.users,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -14852,6 +15758,7 @@ class $$SalesTableTableManager
             bool shopId,
             bool customerId,
             bool userId,
+            bool cancelledByUserId,
             bool saleItemsRefs,
             bool debtsRefs,
             bool stockMovementsRefs,
@@ -14874,27 +15781,53 @@ class $$SalesTableTableManager
                 Value<int> shopId = const Value.absent(),
                 Value<int?> customerId = const Value.absent(),
                 Value<int> userId = const Value.absent(),
+                Value<String?> receiptNumber = const Value.absent(),
+                Value<String> saleType = const Value.absent(),
+                Value<int> subtotal = const Value.absent(),
+                Value<int> discountAmount = const Value.absent(),
                 Value<int> totalAmount = const Value.absent(),
+                Value<int> amountPaid = const Value.absent(),
                 Value<int> amountCash = const Value.absent(),
                 Value<int> amountMomo = const Value.absent(),
                 Value<int> amountCredit = const Value.absent(),
+                Value<String?> paymentMethod = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> note = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
+                Value<int?> updatedAt = const Value.absent(),
                 Value<int?> cancelledAt = const Value.absent(),
+                Value<int?> cancelledByUserId = const Value.absent(),
+                Value<String?> cancelReason = const Value.absent(),
                 Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
               }) => SalesCompanion(
                 id: id,
                 shopId: shopId,
                 customerId: customerId,
                 userId: userId,
+                receiptNumber: receiptNumber,
+                saleType: saleType,
+                subtotal: subtotal,
+                discountAmount: discountAmount,
                 totalAmount: totalAmount,
+                amountPaid: amountPaid,
                 amountCash: amountCash,
                 amountMomo: amountMomo,
                 amountCredit: amountCredit,
+                paymentMethod: paymentMethod,
                 status: status,
+                note: note,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 cancelledAt: cancelledAt,
+                cancelledByUserId: cancelledByUserId,
+                cancelReason: cancelReason,
                 version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
               ),
           createCompanionCallback:
               ({
@@ -14902,27 +15835,53 @@ class $$SalesTableTableManager
                 required int shopId,
                 Value<int?> customerId = const Value.absent(),
                 required int userId,
+                Value<String?> receiptNumber = const Value.absent(),
+                Value<String> saleType = const Value.absent(),
+                Value<int> subtotal = const Value.absent(),
+                Value<int> discountAmount = const Value.absent(),
                 required int totalAmount,
+                Value<int> amountPaid = const Value.absent(),
                 Value<int> amountCash = const Value.absent(),
                 Value<int> amountMomo = const Value.absent(),
                 Value<int> amountCredit = const Value.absent(),
+                Value<String?> paymentMethod = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> note = const Value.absent(),
                 required int createdAt,
+                Value<int?> updatedAt = const Value.absent(),
                 Value<int?> cancelledAt = const Value.absent(),
+                Value<int?> cancelledByUserId = const Value.absent(),
+                Value<String?> cancelReason = const Value.absent(),
                 Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
               }) => SalesCompanion.insert(
                 id: id,
                 shopId: shopId,
                 customerId: customerId,
                 userId: userId,
+                receiptNumber: receiptNumber,
+                saleType: saleType,
+                subtotal: subtotal,
+                discountAmount: discountAmount,
                 totalAmount: totalAmount,
+                amountPaid: amountPaid,
                 amountCash: amountCash,
                 amountMomo: amountMomo,
                 amountCredit: amountCredit,
+                paymentMethod: paymentMethod,
                 status: status,
+                note: note,
                 createdAt: createdAt,
+                updatedAt: updatedAt,
                 cancelledAt: cancelledAt,
+                cancelledByUserId: cancelledByUserId,
+                cancelReason: cancelReason,
                 version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -14935,6 +15894,7 @@ class $$SalesTableTableManager
                 shopId = false,
                 customerId = false,
                 userId = false,
+                cancelledByUserId = false,
                 saleItemsRefs = false,
                 debtsRefs = false,
                 stockMovementsRefs = false,
@@ -14997,6 +15957,19 @@ class $$SalesTableTableManager
                                         ._userIdTable(db),
                                     referencedColumn: $$SalesTableReferences
                                         ._userIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (cancelledByUserId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cancelledByUserId,
+                                    referencedTable: $$SalesTableReferences
+                                        ._cancelledByUserIdTable(db),
+                                    referencedColumn: $$SalesTableReferences
+                                        ._cancelledByUserIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -15081,6 +16054,7 @@ typedef $$SalesTableProcessedTableManager =
         bool shopId,
         bool customerId,
         bool userId,
+        bool cancelledByUserId,
         bool saleItemsRefs,
         bool debtsRefs,
         bool stockMovementsRefs,
@@ -15096,6 +16070,7 @@ typedef $$SaleItemsTableCreateCompanionBuilder =
       required double quantity,
       required int unitPrice,
       Value<int?> unitCost,
+      Value<int> discountAmount,
       required int lineTotal,
       required int createdAt,
     });
@@ -15109,6 +16084,7 @@ typedef $$SaleItemsTableUpdateCompanionBuilder =
       Value<double> quantity,
       Value<int> unitPrice,
       Value<int?> unitCost,
+      Value<int> discountAmount,
       Value<int> lineTotal,
       Value<int> createdAt,
     });
@@ -15204,6 +16180,11 @@ class $$SaleItemsTableFilterComposer
 
   ColumnFilters<int> get unitCost => $composableBuilder(
     column: $table.unitCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15321,6 +16302,11 @@ class $$SaleItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get lineTotal => $composableBuilder(
     column: $table.lineTotal,
     builder: (column) => ColumnOrderings(column),
@@ -15426,6 +16412,11 @@ class $$SaleItemsTableAnnotationComposer
 
   GeneratedColumn<int> get unitCost =>
       $composableBuilder(column: $table.unitCost, builder: (column) => column);
+
+  GeneratedColumn<int> get discountAmount => $composableBuilder(
+    column: $table.discountAmount,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get lineTotal =>
       $composableBuilder(column: $table.lineTotal, builder: (column) => column);
@@ -15539,6 +16530,7 @@ class $$SaleItemsTableTableManager
                 Value<double> quantity = const Value.absent(),
                 Value<int> unitPrice = const Value.absent(),
                 Value<int?> unitCost = const Value.absent(),
+                Value<int> discountAmount = const Value.absent(),
                 Value<int> lineTotal = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
               }) => SaleItemsCompanion(
@@ -15550,6 +16542,7 @@ class $$SaleItemsTableTableManager
                 quantity: quantity,
                 unitPrice: unitPrice,
                 unitCost: unitCost,
+                discountAmount: discountAmount,
                 lineTotal: lineTotal,
                 createdAt: createdAt,
               ),
@@ -15563,6 +16556,7 @@ class $$SaleItemsTableTableManager
                 required double quantity,
                 required int unitPrice,
                 Value<int?> unitCost = const Value.absent(),
+                Value<int> discountAmount = const Value.absent(),
                 required int lineTotal,
                 required int createdAt,
               }) => SaleItemsCompanion.insert(
@@ -15574,6 +16568,7 @@ class $$SaleItemsTableTableManager
                 quantity: quantity,
                 unitPrice: unitPrice,
                 unitCost: unitCost,
+                discountAmount: discountAmount,
                 lineTotal: lineTotal,
                 createdAt: createdAt,
               ),
