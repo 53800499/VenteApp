@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
-import 'package:frontend/core/database/app_database.dart';
-import 'package:frontend/shared/enums/permission.dart';
-import 'package:frontend/core/utils/benin_day_range.dart';
-import 'package:frontend/core/utils/time.dart';
-import 'package:frontend/features/dashboard/data/datasources/local/dashboard_local_datasource.dart';
-import 'package:frontend/features/dashboard/data/repositories/dashboard_repository_impl.dart';
+import 'package:venteapp/core/database/app_database.dart';
+import 'package:venteapp/shared/enums/permission.dart';
+import 'package:venteapp/core/utils/benin_day_range.dart';
+import 'package:venteapp/core/utils/time.dart';
+import 'package:venteapp/features/dashboard/data/datasources/local/dashboard_local_datasource.dart';
+import 'package:venteapp/features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../../support/auth_test_helpers.dart';

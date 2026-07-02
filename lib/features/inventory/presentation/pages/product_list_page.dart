@@ -47,6 +47,7 @@ class _ProductListPageState extends State<ProductListPage> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
+      key: ValueKey('product-list-${widget.session.shop.id}'),
       create: (_) => ProductListBloc(
         listProducts: sl(),
         listCategories: sl(),
@@ -60,6 +61,16 @@ class _ProductListPageState extends State<ProductListPage> {
           return Scaffold(
             body: Column(
               children: [
+                BlocBuilder<ProductListBloc, ProductListState>(
+                  buildWhen: (prev, curr) =>
+                      prev.isRefreshing != curr.isRefreshing,
+                  builder: (context, state) {
+                    if (!state.isRefreshing) {
+                      return const SizedBox.shrink();
+                    }
+                    return const LinearProgressIndicator();
+                  },
+                ),
                 ResponsiveBuilder(
                   builder: (context, screenType) {
                     final horizontal =
@@ -254,7 +265,16 @@ class _ProductListView extends StatelessWidget {
     return BlocBuilder<ProductListBloc, ProductListState>(
       builder: (context, state) {
         if (state.status == ProductListStatus.loading && !state.isRefreshing) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppSpacing.md),
+                Text('Chargement des produits…'),
+              ],
+            ),
+          );
         }
 
         if (state.status == ProductListStatus.failure) {

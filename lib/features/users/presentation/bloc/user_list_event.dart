@@ -63,3 +63,7 @@ class UserAssignShopRequested extends UserListEvent {
   @override
   List<Object?> get props => [userId, shopId, reason];
 }
+
+class UserFeedbackDismissed extends UserListEvent {
+  const UserFeedbackDismissed();
+}

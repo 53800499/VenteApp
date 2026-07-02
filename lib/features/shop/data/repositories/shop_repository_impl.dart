@@ -1,9 +1,8 @@
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart';
-import '../../../../core/network/remote_api_guard.dart';
+import '../../../../core/network/remote_api_runner.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../core/network/network_info.dart';
 import '../../../../core/utils/time.dart';
 import '../../domain/entities/shop_entities.dart';
 import '../../domain/repositories/shop_repository.dart';
@@ -14,99 +13,111 @@ class ShopRepositoryImpl implements ShopRepository {
   ShopRepositoryImpl({
     required ShopRemoteDatasource remote,
     required AppDatabase database,
-    RemoteApiGuard? apiGuard,
-    NetworkInfo? networkInfo,
+    required RemoteApiRunner apiRunner,
   })  : _remote = remote,
         _db = database,
-        _apiGuard = apiGuard,
-        _networkInfo = networkInfo ?? const NetworkInfo.alwaysOffline();
+        _apiRunner = apiRunner;
 
   final ShopRemoteDatasource _remote;
   final AppDatabase _db;
-  final RemoteApiGuard? _apiGuard;
-  final NetworkInfo _networkInfo;
+  final RemoteApiRunner _apiRunner;
+
+  static const _writeOfflineMessage =
+      'Connexion serveur requise pour gérer les boutiques. '
+      'Vérifiez le réseau (Plus → Connexion serveur).';
 
   @override
   Future<ShopListResult> listShops() async {
-    await _ensureOnline();
-    final dto = await _remote.listShops();
-    await _syncShopsLocally(dto.shops);
-    return _mapList(dto);
+    return _apiRunner.runOnlinePreferredRead(
+      remote: () async {
+        final dto = await _remote.listShops();
+        await _syncShopsLocally(dto.shops);
+        return _mapList(dto);
+      },
+      localFallback: _listShopsLocally,
+    );
   }
 
   @override
   Future<ManagedShop> getShop(int id) async {
-    await _ensureOnline();
-    final dto = await _remote.getShop(id);
-    await _upsertShopLocally(dto);
-    return _mapDetail(dto, isCurrent: false);
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _writeOfflineMessage,
+      remote: () async {
+        final dto = await _remote.getShop(id);
+        await _upsertShopLocally(dto);
+        return _mapDetail(dto, isCurrent: false);
+      },
+    );
   }
 
   @override
   Future<ManagedShop> createShop(CreateShopInput input) async {
-    await _ensureOnline();
-    final dto = await _remote.createShop(
-      name: input.name,
-      address: input.address,
-      phone: input.phone,
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _writeOfflineMessage,
+      remote: () async {
+        final dto = await _remote.createShop(
+          name: input.name,
+          address: input.address,
+          phone: input.phone,
+        );
+        await _upsertShopLocally(dto);
+        return _mapDetail(dto, isCurrent: false);
+      },
     );
-    await _upsertShopLocally(dto);
-    return _mapDetail(dto, isCurrent: false);
   }
 
   @override
   Future<ManagedShop> updateShop(int id, UpdateShopInput input) async {
-    await _ensureOnline();
-    final dto = await _remote.updateShop(
-      id,
-      name: input.name,
-      address: input.address,
-      phone: input.phone,
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _writeOfflineMessage,
+      remote: () async {
+        final dto = await _remote.updateShop(
+          id,
+          name: input.name,
+          address: input.address,
+          phone: input.phone,
+        );
+        await _upsertShopLocally(dto);
+        return _mapDetail(dto, isCurrent: false);
+      },
     );
-    await _upsertShopLocally(dto);
-    return _mapDetail(dto, isCurrent: false);
   }
 
   @override
   Future<void> deactivateShop(int id, {String? reason}) async {
-    await _ensureOnline();
-    await _remote.deactivateShop(id, reason: reason);
-    final localId = await _resolveLocalShopId(id);
-    await (_db.update(_db.shops)..where((s) => s.id.equals(localId))).write(
-      ShopsCompanion(
-        isActive: const Value(false),
-        syncedAt: Value(nowMs()),
-      ),
+    await _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _writeOfflineMessage,
+      remote: () async {
+        await _remote.deactivateShop(id, reason: reason);
+        final localId = await _resolveLocalShopId(id);
+        await (_db.update(_db.shops)..where((s) => s.id.equals(localId))).write(
+          ShopsCompanion(
+            isActive: const Value(false),
+            syncedAt: Value(nowMs()),
+          ),
+        );
+      },
     );
   }
 
   @override
   Future<void> setDefaultShop(int id) async {
-    await _ensureOnline();
-    await _remote.setDefaultShop(id);
-    await _db.update(_db.shops).write(
-      const ShopsCompanion(isDefault: Value(false)),
+    await _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _writeOfflineMessage,
+      remote: () async {
+        await _remote.setDefaultShop(id);
+        await _db.update(_db.shops).write(
+          const ShopsCompanion(isDefault: Value(false)),
+        );
+        final localId = await _resolveLocalShopId(id);
+        await (_db.update(_db.shops)..where((s) => s.id.equals(localId))).write(
+          ShopsCompanion(
+            isDefault: const Value(true),
+            syncedAt: Value(nowMs()),
+          ),
+        );
+      },
     );
-    final localId = await _resolveLocalShopId(id);
-    await (_db.update(_db.shops)..where((s) => s.id.equals(localId))).write(
-      ShopsCompanion(
-        isDefault: const Value(true),
-        syncedAt: Value(nowMs()),
-      ),
-    );
-  }
-
-  Future<void> _ensureOnline() async {
-    final guard = _apiGuard;
-    if (guard != null) {
-      await guard.ensureReady();
-      return;
-    }
-    if (!await _networkInfo.isConnected) {
-      throw const NetworkFailure(
-        'Connexion internet requise pour gérer les boutiques.',
-      );
-    }
   }
 
   ShopListResult _mapList(ShopListDataDto dto) {
@@ -204,5 +215,32 @@ class ShopRepositoryImpl implements ShopRepository {
     if (byId != null) return byId.id;
 
     throw NotFoundFailure('Boutique locale introuvable (id $serverShopId).');
+  }
+
+  Future<ShopListResult> _listShopsLocally() async {
+    final rows = await (_db.select(_db.shops)
+          ..orderBy([(s) => OrderingTerm.desc(s.isDefault)]))
+        .get();
+
+    if (rows.isEmpty) {
+      return const ShopListResult(activeShopId: 0, shops: []);
+    }
+
+    final shops = rows.map((row) {
+      final serverId = int.tryParse(row.serverId ?? '') ?? row.id;
+      return ManagedShop(
+        id: serverId,
+        name: row.name,
+        address: row.address,
+        phone: row.phone,
+        isActive: row.isActive,
+        isDefault: row.isDefault,
+        isCurrent: row.isDefault,
+        createdAt: row.createdAt,
+      );
+    }).toList();
+
+    final activeId = shops.firstWhere((s) => s.isDefault, orElse: () => shops.first).id;
+    return ShopListResult(activeShopId: activeId, shops: shops);
   }
 }

@@ -15,6 +15,10 @@ class AuthProceedToLoginRequested extends AuthEvent {
   const AuthProceedToLoginRequested();
 }
 
+class AuthProceedToPinLoginRequested extends AuthEvent {
+  const AuthProceedToPinLoginRequested();
+}
+
 class AuthWhatsappOtpRequested extends AuthEvent {
   const AuthWhatsappOtpRequested({required this.phone});
 
@@ -68,12 +72,13 @@ class AuthMembershipSelected extends AuthEvent {
 }
 
 class AuthLockScreenRequested extends AuthEvent {
-  const AuthLockScreenRequested({this.shopId});
+  const AuthLockScreenRequested({this.shopId, this.canGoBack = true});
 
   final int? shopId;
+  final bool canGoBack;
 
   @override
-  List<Object?> get props => [shopId];
+  List<Object?> get props => [shopId, canGoBack];
 }
 
 class AuthBiometricLoginRequested extends AuthEvent {

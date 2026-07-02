@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "VenteApp",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": [
+        "--dart-define=GOOGLE_SERVER_CLIENT_ID=102635823631-ng5d3or7895o66l3bc1qh8k8jvheic8d.apps.googleusercontent.com"
+      ]
+    }
+  ]
+}

@@ -52,3 +52,7 @@ class ShopSetDefaultRequested extends ShopListEvent {
   @override
   List<Object?> get props => [shopId];
 }
+
+class ShopFeedbackDismissed extends ShopListEvent {
+  const ShopFeedbackDismissed();
+}

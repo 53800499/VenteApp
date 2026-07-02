@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
+import '../widgets/sale_feedback.dart';
 import 'sale_receipt_page.dart';
 
 class QuickSalePage extends StatefulWidget {
@@ -37,33 +39,53 @@ class _QuickSalePageState extends State<QuickSalePage> {
       return;
     }
 
+    final confirmed = await SaleFeedback.confirm(
+      context: context,
+      title: 'Confirmer la vente rapide',
+      message:
+          'Enregistrer une vente de ${formatFcfa(amount)} '
+          'en ${_method.label} ?\n\n'
+          'Aucun détail produit ni impact stock.',
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() {
       _submitting = true;
       _error = null;
     });
 
     try {
-      final payment = switch (_method) {
-        PaymentMethod.cash => PaymentDraft(
-            method: PaymentMethod.cash,
-            amountCash: amount,
-          ),
-        PaymentMethod.mtnMomo || PaymentMethod.moovMoney => PaymentDraft(
-            method: _method,
-            amountMomo: amount,
-          ),
-        _ => PaymentDraft(method: PaymentMethod.cash, amountCash: amount),
-      };
+      final sale = await SaleFeedback.runWithBlockingLoader<Sale>(
+        context: context,
+        message: 'Enregistrement de la vente…',
+        action: () async {
+          final payment = switch (_method) {
+            PaymentMethod.cash => PaymentDraft(
+                method: PaymentMethod.cash,
+                amountCash: amount,
+              ),
+            PaymentMethod.mtnMomo || PaymentMethod.moovMoney => PaymentDraft(
+                method: _method,
+                amountMomo: amount,
+              ),
+            _ => PaymentDraft(method: PaymentMethod.cash, amountCash: amount),
+          };
 
-      final sale = await sl<CreateQuickSale>()(
-        session: widget.session,
-        input: CreateQuickSaleInput(
-          totalAmount: amount,
-          payment: payment,
-        ),
+          return sl<CreateQuickSale>()(
+            session: widget.session,
+            input: CreateQuickSaleInput(
+              totalAmount: amount,
+              payment: payment,
+            ),
+          );
+        },
       );
 
+      if (!mounted || sale == null) return;
+
+      await SaleFeedback.showSaleRegistered(context, sale: sale);
       if (!mounted) return;
+
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => SaleReceiptPage(
@@ -74,9 +96,22 @@ class _QuickSalePageState extends State<QuickSalePage> {
       );
       if (mounted) Navigator.of(context).pop(true);
     } on Failure catch (e) {
+      if (!mounted) return;
+      await SaleFeedback.showErrorDialog(
+        context,
+        title: 'Vente impossible',
+        message: e.message,
+      );
       setState(() => _error = e.message);
     } catch (_) {
-      setState(() => _error = 'Échec de la vente rapide.');
+      if (!mounted) return;
+      const message = 'Échec de la vente rapide.';
+      await SaleFeedback.showErrorDialog(
+        context,
+        title: 'Vente impossible',
+        message: message,
+      );
+      setState(() => _error = message);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -115,9 +150,11 @@ class _QuickSalePageState extends State<QuickSalePage> {
                   (m) => DropdownMenuItem(value: m, child: Text(m.label)),
                 )
                 .toList(),
-            onChanged: (v) {
-              if (v != null) setState(() => _method = v);
-            },
+            onChanged: _submitting
+                ? null
+                : (v) {
+                    if (v != null) setState(() => _method = v);
+                  },
           ),
           if (_error != null) ...[
             const SizedBox(height: AppSpacing.md),
@@ -134,11 +171,7 @@ class _QuickSalePageState extends State<QuickSalePage> {
           child: FilledButton(
             onPressed: _submitting ? null : _submit,
             child: _submitting
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                ? SaleFeedback.inlineLoader()
                 : const Text('Enregistrer'),
           ),
         ),

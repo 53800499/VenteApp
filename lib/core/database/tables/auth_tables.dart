@@ -59,11 +59,15 @@ class Settings extends Table {
       integer().withDefault(const Constant(7))();
   BoolColumn get enableDailySummary =>
       boolean().withDefault(const Constant(true))();
+  BoolColumn get enableBackupReminder =>
+      boolean().withDefault(const Constant(true))();
+  BoolColumn get enableGoodDayAlert =>
+      boolean().withDefault(const Constant(true))();
   TextColumn get receiptFooter => text().nullable()();
   IntColumn get backupLastAt => integer().nullable()();
   TextColumn get backupPath => text().nullable()();
   BoolColumn get cloudSyncEnabled =>
-      boolean().withDefault(const Constant(false))();
+      boolean().withDefault(const Constant(true))();
   IntColumn get cloudLastSyncAt => integer().nullable()();
   IntColumn get autoLockMinutes => integer().withDefault(const Constant(5))();
   IntColumn get updatedAt => integer()();

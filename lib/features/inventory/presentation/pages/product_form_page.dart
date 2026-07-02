@@ -5,9 +5,11 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../../../../shared/components/ui_primitives.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/usecases/inventory_usecases.dart';
+import '../widgets/inventory_feedback.dart';
 
 class ProductFormPage extends StatefulWidget {
   const ProductFormPage({
@@ -85,13 +87,23 @@ class _ProductFormPageState extends State<ProductFormPage> {
       return;
     }
 
+    final isEdit = widget.isEditing;
+    final confirmed = await InventoryFeedback.confirm(
+      context: context,
+      title: isEdit ? 'Enregistrer les modifications' : 'Créer le produit',
+      message: isEdit
+          ? 'Mettre à jour « ${_nameController.text.trim()} » ?'
+          : 'Créer le produit « ${_nameController.text.trim()} » ?',
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      if (widget.isEditing) {
+      if (isEdit) {
         await sl<UpdateProduct>()(
           shopId: widget.session.shop.id,
           productId: widget.product!.id,
@@ -131,17 +143,38 @@ class _ProductFormPageState extends State<ProductFormPage> {
         );
       }
 
+      if (!mounted) return;
+      await InventoryFeedback.showSuccess(
+        context: context,
+        title: isEdit ? 'Produit mis à jour' : 'Produit créé',
+        message: '« ${_nameController.text.trim()} » a été enregistré.',
+      );
       if (mounted) Navigator.of(context).pop(true);
     } on Failure catch (e) {
-      setState(() {
-        _errorMessage = e.message;
-        _isLoading = false;
-      });
+      if (mounted) {
+        await InventoryFeedback.showErrorDialog(
+          context,
+          title: 'Enregistrement impossible',
+          message: e.message,
+        );
+        setState(() {
+          _errorMessage = e.message;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
-      setState(() {
-        _errorMessage = 'Enregistrement impossible.';
-        _isLoading = false;
-      });
+      if (mounted) {
+        const message = 'Enregistrement impossible.';
+        await InventoryFeedback.showErrorDialog(
+          context,
+          title: 'Enregistrement impossible',
+          message: message,
+        );
+        setState(() {
+          _errorMessage = message;
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -250,22 +283,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
+                  ErrorBanner(message: _errorMessage!),
                 ],
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton(
                   onPressed: _isLoading ? null : _submit,
                   child: _isLoading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? InventoryFeedback.inlineLoader()
                       : Text(widget.isEditing ? 'Enregistrer' : 'Créer le produit'),
                 ),
               ],

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/usecases/inventory_usecases.dart';
@@ -21,6 +22,7 @@ class ProductDetailBloc extends Bloc<ProductDetailEvent, ProductDetailState> {
         super(const ProductDetailState()) {
     on<ProductDetailLoadRequested>(_onLoad);
     on<ProductDetailArchiveRequested>(_onArchive);
+    on<ProductDetailErrorDismissed>(_onErrorDismissed);
   }
 
   final GetProductDetail _getProductDetail;
@@ -49,7 +51,7 @@ class ProductDetailBloc extends Bloc<ProductDetailEvent, ProductDetailState> {
       emit(
         state.copyWith(
           status: ProductDetailStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -67,9 +69,16 @@ class ProductDetailBloc extends Bloc<ProductDetailEvent, ProductDetailState> {
       emit(
         state.copyWith(
           isArchiving: false,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
+  }
+
+  void _onErrorDismissed(
+    ProductDetailErrorDismissed event,
+    Emitter<ProductDetailState> emit,
+  ) {
+    emit(state.copyWith(clearError: true));
   }
 }

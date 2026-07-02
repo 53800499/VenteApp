@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/shop_entities.dart';
 import '../../domain/usecases/shop_usecases.dart';
@@ -28,6 +29,7 @@ class ShopListBloc extends Bloc<ShopListEvent, ShopListState> {
     on<ShopUpdateRequested>(_onUpdate);
     on<ShopDeactivateRequested>(_onDeactivate);
     on<ShopSetDefaultRequested>(_onSetDefault);
+    on<ShopFeedbackDismissed>(_onFeedbackDismissed);
   }
 
   final ListShops _listShops;
@@ -68,7 +70,15 @@ class ShopListBloc extends Bloc<ShopListEvent, ShopListState> {
       emit(
         state.copyWith(
           status: ShopListStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
+          isRefreshing: false,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: ShopListStatus.failure,
+          errorMessage: friendlyErrorMessage(error),
           isRefreshing: false,
         ),
       );
@@ -85,7 +95,14 @@ class ShopListBloc extends Bloc<ShopListEvent, ShopListState> {
       await _fetch(emit);
       emit(state.copyWith(isSubmitting: false, successMessage: 'Boutique créée.'));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(isSubmitting: false, errorMessage: friendlyErrorMessage(e)));
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -99,7 +116,14 @@ class ShopListBloc extends Bloc<ShopListEvent, ShopListState> {
       await _fetch(emit);
       emit(state.copyWith(isSubmitting: false, successMessage: 'Boutique mise à jour.'));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(isSubmitting: false, errorMessage: friendlyErrorMessage(e)));
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -113,7 +137,14 @@ class ShopListBloc extends Bloc<ShopListEvent, ShopListState> {
       await _fetch(emit);
       emit(state.copyWith(isSubmitting: false, successMessage: 'Boutique désactivée.'));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(isSubmitting: false, errorMessage: friendlyErrorMessage(e)));
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -132,7 +163,21 @@ class ShopListBloc extends Bloc<ShopListEvent, ShopListState> {
         ),
       );
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(state.copyWith(isSubmitting: false, errorMessage: friendlyErrorMessage(e)));
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
+  }
+
+  void _onFeedbackDismissed(
+    ShopFeedbackDismissed event,
+    Emitter<ShopListState> emit,
+  ) {
+    emit(state.copyWith(clearError: true, clearSuccess: true));
   }
 }

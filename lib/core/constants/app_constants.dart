@@ -7,4 +7,9 @@ class AppConstants {
   static const currencyLabel = 'FCFA';
   static const defaultLanguage = 'fr';
   static const deviceLabel = 'VenteApp Mobile';
+
+  /// Limite max des listes API (pagination serveur).
+  static const apiListLimitMax = 50;
+  static const apiListLimitDefault = 50;
+  static const apiAuditExportLimit = 500;
 }

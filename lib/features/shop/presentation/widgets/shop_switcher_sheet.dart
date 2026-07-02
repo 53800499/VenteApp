@@ -8,7 +8,9 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/storage/last_shop_storage.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
+import '../../../rbac/domain/usecases/refresh_session_permissions.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../widgets/shop_feedback.dart';
 
 /// Bascule la boutique active côté serveur et met à jour la session locale.
 Future<void> performShopSwitch(
@@ -22,8 +24,16 @@ Future<void> performShopSwitch(
 
   final session = await sl<SwitchShop>()(shopId: serverShopId);
   if (!context.mounted) return;
-  authBloc.add(AuthSessionRefreshed(session));
-  await sl<LastShopStorage>().save(session.shop.id);
+  AuthSession refreshed = session;
+  try {
+    final updated = await sl<RefreshSessionPermissions>()();
+    if (updated != null) refreshed = updated;
+  } catch (_) {
+    // Droits du switchShop conservés si /rbac/me échoue.
+  }
+  if (!context.mounted) return;
+  authBloc.add(AuthSessionRefreshed(refreshed));
+  await sl<LastShopStorage>().save(refreshed.shop.id);
 }
 
 /// Feuille modale : liste des boutiques du patron pour changer de contexte.
@@ -69,10 +79,10 @@ class _ShopSwitcherSheetState extends State<ShopSwitcherSheet> {
         _shops = shops;
         _loading = false;
       });
-    } on Failure catch (failure) {
+    } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = failure.message;
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     } catch (error) {
@@ -91,23 +101,37 @@ class _ShopSwitcherSheetState extends State<ShopSwitcherSheet> {
       return;
     }
 
+    final confirmed = await ShopFeedback.confirm(
+      context: context,
+      title: 'Changer de boutique',
+      message: 'Utiliser « ${shop.name} » comme boutique active ?',
+      confirmLabel: 'Utiliser',
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() => _switchingShopId = shop.id);
     try {
       await performShopSwitch(context, serverShopId: shop.id);
       if (!mounted) return;
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Boutique active : ${shop.name}')),
+      await ShopFeedback.showSuccess(
+        context: context,
+        title: 'Boutique changée',
+        message: '« ${shop.name} » est maintenant la boutique active.',
       );
-    } on Failure catch (failure) {
+    } on Failure catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message)),
+      await ShopFeedback.showErrorDialog(
+        context,
+        title: 'Changement impossible',
+        message: friendlyErrorMessage(e),
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+      await ShopFeedback.showErrorDialog(
+        context,
+        title: 'Changement impossible',
+        message: friendlyErrorMessage(error),
       );
     } finally {
       if (mounted) setState(() => _switchingShopId = null);
@@ -148,7 +172,16 @@ class _ShopSwitcherSheetState extends State<ShopSwitcherSheet> {
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(AppSpacing.xl),
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: AppSpacing.md),
+                      Text('Chargement des boutiques…'),
+                    ],
+                  ),
+                ),
               )
             else if (_error != null)
               Padding(
@@ -195,11 +228,7 @@ class _ShopSwitcherSheetState extends State<ShopSwitcherSheet> {
                           ? Text(shop.address!)
                           : null,
                       trailing: isBusy
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? ShopFeedback.inlineLoader(size: 24)
                           : isActive
                               ? Icon(Icons.check_circle, color: colorScheme.primary)
                               : const Icon(Icons.chevron_right),

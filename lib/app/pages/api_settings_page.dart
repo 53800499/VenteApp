@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
 import '../../../core/constants/api_config.dart';
+import '../../../shared/components/action_feedback.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/storage/api_settings_storage.dart';
 
@@ -31,7 +32,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
   String _suggestedHost() {
     const fromEnv = String.fromEnvironment('API_BASE_URL');
     if (fromEnv.isNotEmpty) return fromEnv;
-    return '192.168.1.100:3010';
+    return 'venteappbackend-1.onrender.com';
   }
 
   @override
@@ -56,12 +57,12 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Serveur : ${client.baseUrl}'),
-      ),
+    await ActionFeedback.showSuccess(
+      context: context,
+      title: 'Serveur configuré',
+      message: client.baseUrl,
     );
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -79,9 +80,9 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Émulateur Android : 10.0.2.2:3010 (par défaut).\n'
-              'Téléphone physique : IP du PC sur le Wi-Fi, ex. 192.168.1.100:3010.\n'
-              'Le backend doit écouter sur 0.0.0.0:3010.',
+              'Par défaut : backend cloud Render.\n'
+              'Pour un serveur local (dev), saisissez l\'IP du PC, '
+              'ex. 192.168.1.100:3010.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -97,7 +98,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
                 controller: _controller,
                 decoration: const InputDecoration(
                   labelText: 'Adresse IP ou URL',
-                  hintText: '192.168.1.100:3010',
+                  hintText: 'venteappbackend-1.onrender.com',
                   prefixIcon: Icon(Icons.dns_outlined),
                 ),
                 keyboardType: TextInputType.url,

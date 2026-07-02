@@ -13,11 +13,15 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../shop/presentation/widgets/shop_switcher_sheet.dart';
+import '../../../../core/network/widgets/offline_mode_banner.dart';
+import '../../../../core/sync/widgets/sync_status_indicator.dart';
+import '../../../../core/notifications/notification_orchestrator.dart';
+import '../../../../core/notifications/notification_permission_prompter.dart';
 import '../../../sales/presentation/pages/new_sale_page.dart';
 import '../../../sales/presentation/pages/sale_list_page.dart';
 import '../../../inventory/presentation/pages/product_list_page.dart';
+import '../../../customers/presentation/pages/customer_list_page.dart';
 import '../../../shop/presentation/pages/more_page.dart';
-import '../../../../shared/components/coming_soon_placeholder.dart';
 import '../bloc/dashboard_bloc.dart';
 import 'dashboard_page.dart';
 
@@ -33,15 +37,47 @@ class HomeShellPage extends StatefulWidget {
 class _HomeShellPageState extends State<HomeShellPage> {
   int _currentIndex = 0;
   bool _lowStockFilter = false;
+  bool _debtorsFilter = false;
   int _stockTabKey = 0;
+  int _customersTabKey = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrapNotifications();
+    });
+  }
+
+  Future<void> _bootstrapNotifications() async {
+    ensureNotificationsDependencies();
+    if (mounted) {
+      await NotificationPermissionPrompter().maybePrompt(context);
+    }
+    final orchestrator = sl<NotificationOrchestrator>();
+    orchestrator.bindShop(widget.session.shop.id);
+    await orchestrator.processPending(shopId: widget.session.shop.id);
+    if (!mounted) return;
+    final link = orchestrator.deepLinks.consumePending();
+    if (link != null) {
+      orchestrator.deepLinks.handle(context, link, widget.session);
+    }
+  }
 
   void _openNewSale() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NewSalePage(session: widget.session),
       ),
-    ).then((created) {
+    ).then((created) async {
+      if (mounted) {
+        setState(() => _customersTabKey++);
+      }
       if (created == true && mounted) {
+        await sl<NotificationOrchestrator>().processPending(
+          shopId: widget.session.shop.id,
+        );
+        if (!mounted) return;
         context.read<DashboardBloc>().add(const DashboardRefreshRequested());
         setState(() => _currentIndex = 1);
       }
@@ -56,7 +92,17 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _currentIndex = 2;
       _lowStockFilter = true;
+      _debtorsFilter = false;
       _stockTabKey++;
+    });
+  }
+
+  void _openDebtors() {
+    setState(() {
+      _currentIndex = 3;
+      _debtorsFilter = true;
+      _lowStockFilter = false;
+      _customersTabKey++;
     });
   }
 
@@ -64,6 +110,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _currentIndex = index;
       if (index != 2) _lowStockFilter = false;
+      if (index != 3) _debtorsFilter = false;
+      if (index == 3) _customersTabKey++;
     });
     if (index == 0) {
       context.read<DashboardBloc>().add(const DashboardRefreshRequested());
@@ -91,8 +139,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
             session: widget.session,
             currentIndex: _currentIndex,
             stockTabKey: _stockTabKey,
+            customersTabKey: _customersTabKey,
             lowStockFilter: _lowStockFilter,
+            debtorsFilter: _debtorsFilter,
             onLowStockTap: _openLowStockProducts,
+            onDebtorsTap: _openDebtors,
             onNewSaleTap: _openNewSale,
             onSalesHistoryTap: _openSalesTab,
           );
@@ -165,7 +216,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
                               .read<AuthBloc>()
                               .add(const AuthAppLockedRequested()),
                           compact: false,
+                          session: widget.session,
                         ),
+                        const OfflineModeBanner(),
                         Expanded(child: content),
                       ],
                     ),
@@ -190,7 +243,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
                       .read<AuthBloc>()
                       .add(const AuthAppLockedRequested()),
                   compact: true,
+                  session: widget.session,
                 ),
+                const OfflineModeBanner(),
                 Expanded(child: content),
               ],
             ),
@@ -277,8 +332,11 @@ class _ShellContent extends StatelessWidget {
     required this.session,
     required this.currentIndex,
     required this.stockTabKey,
+    required this.customersTabKey,
     required this.lowStockFilter,
+    required this.debtorsFilter,
     required this.onLowStockTap,
+    required this.onDebtorsTap,
     required this.onNewSaleTap,
     required this.onSalesHistoryTap,
   });
@@ -286,8 +344,11 @@ class _ShellContent extends StatelessWidget {
   final AuthSession session;
   final int currentIndex;
   final int stockTabKey;
+  final int customersTabKey;
   final bool lowStockFilter;
+  final bool debtorsFilter;
   final VoidCallback onLowStockTap;
+  final VoidCallback onDebtorsTap;
   final VoidCallback onNewSaleTap;
   final VoidCallback onSalesHistoryTap;
 
@@ -303,6 +364,7 @@ class _ShellContent extends StatelessWidget {
             onLowStockTap: onLowStockTap,
             onNewSaleTap: onNewSaleTap,
             onSalesHistoryTap: onSalesHistoryTap,
+            onDebtorsTap: onDebtorsTap,
           ),
           SaleListPage(session: session),
           ProductListPage(
@@ -310,10 +372,10 @@ class _ShellContent extends StatelessWidget {
             session: session,
             initialLowStockOnly: lowStockFilter,
           ),
-          const ComingSoonPlaceholder(
-            icon: Icons.people_outline,
-            title: 'Clients',
-            description: 'Fiches clients et dettes',
+          CustomerListPage(
+            key: ValueKey('customers-$customersTabKey'),
+            session: session,
+            initialDebtorsOnly: debtorsFilter,
           ),
           MorePage(session: session),
         ],
@@ -364,6 +426,7 @@ class _ShellHeader extends StatelessWidget {
     required this.onLock,
     required this.compact,
     this.onSwitchShop,
+    this.session,
   });
 
   final String shopName;
@@ -373,6 +436,7 @@ class _ShellHeader extends StatelessWidget {
   final VoidCallback? onSwitchShop;
   final VoidCallback onLock;
   final bool compact;
+  final AuthSession? session;
 
   @override
   Widget build(BuildContext context) {
@@ -449,6 +513,7 @@ class _ShellHeader extends StatelessWidget {
             icon: const Icon(Icons.lock_outline_rounded),
             tooltip: 'Verrouiller',
           ),
+          SyncStatusIndicator(session: session),
         ],
       ),
     );

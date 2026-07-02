@@ -1,4 +1,4 @@
-import 'package:frontend/features/auth/domain/value_objects/pin.dart';
+import 'package:venteapp/features/auth/domain/value_objects/pin.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

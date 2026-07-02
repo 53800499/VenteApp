@@ -50,6 +50,16 @@ class _SaleListPageState extends State<SaleListPage> {
           return Scaffold(
             body: Column(
               children: [
+                BlocBuilder<SaleListBloc, SaleListState>(
+                  buildWhen: (prev, curr) =>
+                      prev.isRefreshing != curr.isRefreshing,
+                  builder: (context, state) {
+                    if (!state.isRefreshing) {
+                      return const SizedBox.shrink();
+                    }
+                    return const LinearProgressIndicator();
+                  },
+                ),
                 ResponsiveBuilder(
                   builder: (context, screenType) {
                     final horizontal =

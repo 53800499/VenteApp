@@ -1,23 +1,20 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart';
-
 abstract final class ApiConfig {
   static const _prefsKey = 'api_base_url';
 
+  /// Backend cloud (Render) — défaut hors override utilisateur.
+  static const productionBaseUrl =
+      'https://venteappbackend-1.onrender.com/api';
+
   static String get prefsKey => _prefsKey;
 
-  /// URL par défaut selon la plateforme (sans override utilisateur).
+  /// URL par défaut : dart-define `API_BASE_URL` ou backend Render.
   static String defaultBaseUrl() {
     const fromEnv = String.fromEnvironment('API_BASE_URL');
     if (fromEnv.isNotEmpty) return fromEnv;
-    if (!kIsWeb && Platform.isAndroid) {
-      return 'http://10.0.2.2:3010/api';
-    }
-    return 'http://localhost:3010/api';
+    return productionBaseUrl;
   }
 
-  /// Résout l'URL effective : dart-define → [customUrl] → défaut plateforme.
+  /// Résout l'URL effective : dart-define → [customUrl] → défaut cloud.
   static String resolveBaseUrl({String? customUrl}) {
     const fromEnv = String.fromEnvironment('API_BASE_URL');
     if (fromEnv.isNotEmpty) return fromEnv;
@@ -31,8 +28,9 @@ abstract final class ApiConfig {
 
   static String normalizeUrl(String url) {
     var normalized = url;
-    if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
-      normalized = 'http://$normalized';
+    if (!normalized.startsWith('http://') &&
+        !normalized.startsWith('https://')) {
+      normalized = 'https://$normalized';
     }
     if (normalized.endsWith('/')) {
       normalized = normalized.substring(0, normalized.length - 1);

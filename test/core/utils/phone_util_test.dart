@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/utils/phone_util.dart';
+import 'package:venteapp/core/utils/phone_util.dart';
 
 void main() {
   group('normalizePhone', () {

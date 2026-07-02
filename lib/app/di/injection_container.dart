@@ -2,8 +2,12 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/constants/api_config.dart';
+import '../../core/audit/local_audit_writer.dart';
+import '../../core/backup/google_drive_backup_service.dart';
+import '../../core/backup/shop_backup_service.dart';
 import '../../core/database/app_database.dart';
+import '../../core/network/online_session_policy.dart';
+import '../../core/network/remote_api_runner.dart';
 import '../../core/network/remote_api_guard.dart';
 import '../../core/network/active_shop_context.dart';
 import '../../core/network/api_client.dart';
@@ -24,12 +28,22 @@ import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/auth/domain/usecases/auth_usecases.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
+import '../../core/sync/cloud_sync_enabler.dart';
+import '../../core/sync/cloud_sync_preferences.dart';
+import '../../core/sync/local_write_sync_recorder.dart';
+import '../../core/sync/sync_adapters.dart';
+import '../../core/sync/sync_policy.dart';
+import '../../core/sync/sync_conflict_service.dart';
+import '../../core/sync/sync_queue_datasource.dart';
+import '../../core/sync/sync_queue_processor.dart';
+import '../../core/sync/sync_service.dart';
 import '../../features/dashboard/data/datasources/local/dashboard_local_datasource.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../../features/dashboard/domain/services/dashboard_aggregation_service.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard.dart';
 import '../../features/inventory/data/datasources/local/inventory_local_datasource.dart';
+import '../../features/inventory/data/datasources/remote/inventory_remote_datasource.dart';
 import '../../features/inventory/data/repositories/inventory_repository_impl.dart';
 import '../../features/inventory/domain/repositories/inventory_repository.dart';
 import '../../features/inventory/domain/services/category_validation_service.dart';
@@ -43,15 +57,224 @@ import '../../features/users/data/datasources/remote/user_remote_datasource.dart
 import '../../features/users/data/repositories/user_repository_impl.dart';
 import '../../features/users/domain/repositories/user_repository.dart';
 import '../../features/users/domain/usecases/user_usecases.dart';
+import '../../features/rbac/data/datasources/remote/rbac_remote_datasource.dart';
+import '../../features/rbac/data/repositories/rbac_repository_impl.dart';
+import '../../features/rbac/domain/repositories/rbac_repository.dart';
+import '../../features/rbac/domain/usecases/rbac_usecases.dart';
+import '../../features/rbac/domain/usecases/refresh_session_permissions.dart';
+import '../../features/customers/data/datasources/local/customers_local_datasource.dart';
+import '../../features/customers/data/datasources/remote/customers_remote_datasource.dart';
+import '../../features/customers/data/repositories/customer_repository_impl.dart';
+import '../../features/customers/domain/repositories/customer_repository.dart';
+import '../../features/customers/domain/services/customer_validation_service.dart';
+import '../../features/customers/domain/usecases/customer_usecases.dart';
+import '../../features/debts/data/datasources/local/debts_local_datasource.dart';
+import '../../features/debts/data/datasources/remote/debts_remote_datasource.dart';
+import '../../features/debts/data/repositories/debt_repository_impl.dart';
+import '../../features/debts/domain/repositories/debt_repository.dart';
+import '../../features/debts/domain/services/debt_validation_service.dart';
+import '../../features/debts/domain/usecases/debt_usecases.dart';
+import '../../features/reports/data/datasources/local/reports_local_datasource.dart';
+import '../../features/reports/data/datasources/remote/reports_remote_datasource.dart';
+import '../../features/reports/data/repositories/report_repository_impl.dart';
+import '../../features/reports/domain/repositories/report_repository.dart';
+import '../../features/reports/domain/services/report_aggregation_service.dart';
+import '../../features/reports/domain/usecases/get_report.dart';
+import '../../features/reports/presentation/services/report_pdf_exporter.dart';
+import '../../features/notifications/data/datasources/local/notifications_local_datasource.dart';
+import '../../features/notifications/data/datasources/remote/notifications_remote_datasource.dart';
+import '../../features/notifications/data/repositories/notification_repository_impl.dart';
+import '../../features/notifications/domain/repositories/notification_repository.dart';
+import '../../features/notifications/domain/services/notification_feed_builder.dart';
+import '../../features/notifications/domain/usecases/notification_usecases.dart';
+import '../../core/notifications/local_notification_service.dart';
+import '../../core/notifications/notification_deep_link_handler.dart';
+import '../../core/notifications/notification_orchestrator.dart';
+import '../../features/settings/data/datasources/local/settings_local_datasource.dart';
+import '../../features/settings/data/datasources/remote/settings_remote_datasource.dart';
+import '../../features/settings/data/repositories/settings_repository_impl.dart';
+import '../../features/settings/domain/repositories/settings_repository.dart';
+import '../../features/settings/domain/services/settings_validation_service.dart';
+import '../../features/settings/domain/usecases/settings_usecases.dart';
+import '../../features/audit/data/datasources/local/audit_local_datasource.dart';
+import '../../features/audit/data/datasources/remote/audit_remote_datasource.dart';
+import '../../features/audit/data/mappers/audit_mapper.dart';
+import '../../features/audit/data/repositories/audit_repository_impl.dart';
+import '../../features/audit/domain/repositories/audit_repository.dart';
+import '../../features/audit/domain/services/audit_label_service.dart';
+import '../../features/audit/domain/usecases/audit_usecases.dart';
+import '../../features/audit/presentation/services/audit_pdf_exporter.dart';
 import '../../features/sales/data/datasources/local/sales_local_datasource.dart';
+import '../../features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import '../../features/sales/data/repositories/sale_repository_impl.dart';
 import '../../features/sales/domain/repositories/sale_repository.dart';
+import '../../features/sales/domain/services/receipt_formatter_service.dart';
 import '../../features/sales/domain/services/sale_validation_service.dart';
 import '../../features/sales/domain/usecases/sale_usecases.dart';
 import 'package:get_it/get_it.dart';
 import 'package:local_auth/local_auth.dart';
 
 final sl = GetIt.instance;
+
+/// Enregistre le module Statistiques si absent (hot reload après ajout DI).
+void ensureReportsDependencies() {
+  if (sl.isRegistered<GetReport>()) return;
+
+  if (!sl.isRegistered<ReportAggregationService>()) {
+    sl.registerLazySingleton(() => const ReportAggregationService());
+  }
+  if (!sl.isRegistered<ReportsLocalDatasource>()) {
+    sl.registerLazySingleton(() => ReportsLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<ReportsRemoteDatasource>()) {
+    sl.registerLazySingleton(() => ReportsRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<ReportRepository>()) {
+    sl.registerLazySingleton<ReportRepository>(
+      () => ReportRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        aggregation: sl(),
+      ),
+    );
+  }
+  sl.registerLazySingleton<GetReport>(
+    () => GetReport(sl<ReportRepository>()),
+  );
+  sl.registerLazySingleton(() => const ReportPdfExporter());
+}
+
+/// Enregistre le module Notifications si absent (hot reload après ajout DI).
+void ensureNotificationsDependencies() {
+  if (sl.isRegistered<GetNotificationPreferences>()) return;
+
+  if (!sl.isRegistered<NotificationsLocalDatasource>()) {
+    sl.registerLazySingleton(() => NotificationsLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<NotificationsRemoteDatasource>()) {
+    sl.registerLazySingleton(() => NotificationsRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<NotificationFeedBuilder>()) {
+    sl.registerLazySingleton(
+      () => NotificationFeedBuilder(sl<NotificationsLocalDatasource>()),
+    );
+  }
+  if (!sl.isRegistered<NotificationRepository>()) {
+    sl.registerLazySingleton<NotificationRepository>(
+      () => NotificationRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiRunner: sl(),
+        feedBuilder: sl(),
+      ),
+    );
+  }
+  sl.registerLazySingleton(
+    () => GetNotificationPreferences(sl<NotificationRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => UpdateNotificationPreferences(sl<NotificationRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetPendingNotifications(sl<NotificationRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => AckDebtReminderNotifications(sl<NotificationRepository>()),
+  );
+}
+
+/// Enregistre le module Paramètres si absent (hot reload après ajout DI).
+void ensureSettingsDependencies() {
+  if (sl.isRegistered<GetShopConfiguration>()) return;
+
+  if (!sl.isRegistered<SettingsValidationService>()) {
+    sl.registerLazySingleton(() => const SettingsValidationService());
+  }
+  if (!sl.isRegistered<SettingsLocalDatasource>()) {
+    sl.registerLazySingleton(() => SettingsLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<SettingsRemoteDatasource>()) {
+    sl.registerLazySingleton(() => SettingsRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<SettingsRepository>()) {
+    sl.registerLazySingleton<SettingsRepository>(
+      () => SettingsRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiRunner: sl(),
+        cloudSyncEnabler: sl(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<GoogleDriveBackupService>()) {
+    sl.registerLazySingleton(() => GoogleDriveBackupService());
+  }
+  if (!sl.isRegistered<ShopBackupService>()) {
+    sl.registerLazySingleton(() => ShopBackupService(sl()));
+  }
+  sl.registerLazySingleton(
+    () => GetShopConfiguration(sl<SettingsRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => UpdateShopConfiguration(
+      sl<SettingsRepository>(),
+      sl<SettingsValidationService>(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => RecordShopBackup(sl<SettingsRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => CreateShopBackup(sl<ShopBackupService>(), sl<RecordShopBackup>()),
+  );
+  sl.registerLazySingleton(
+    () => RestoreShopBackup(sl<ShopBackupService>()),
+  );
+  sl.registerLazySingleton(
+    () => ExportShopJson(sl<ShopBackupService>()),
+  );
+  sl.registerLazySingleton(
+    () => UpdateShopSyncSettings(sl<SettingsRepository>()),
+  );
+}
+
+/// Enregistre le module Audit si absent (hot reload après ajout DI).
+void ensureAuditDependencies() {
+  if (sl.isRegistered<ListAuditLogs>()) return;
+
+  if (!sl.isRegistered<AuditLabelService>()) {
+    sl.registerLazySingleton(() => const AuditLabelService());
+  }
+  if (!sl.isRegistered<AuditMapper>()) {
+    sl.registerLazySingleton(() => AuditMapper(sl()));
+  }
+  if (!sl.isRegistered<AuditLocalDatasource>()) {
+    sl.registerLazySingleton(() => AuditLocalDatasource(sl(), sl()));
+  }
+  if (!sl.isRegistered<AuditRemoteDatasource>()) {
+    sl.registerLazySingleton(() => AuditRemoteDatasource(sl(), sl()));
+  }
+  if (!sl.isRegistered<AuditRepository>()) {
+    sl.registerLazySingleton<AuditRepository>(
+      () => AuditRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiRunner: sl(),
+        mapper: sl(),
+        labels: sl(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<AuditPdfExporter>()) {
+    sl.registerLazySingleton(() => const AuditPdfExporter());
+  }
+  sl.registerLazySingleton(() => ListAuditLogs(sl()));
+  sl.registerLazySingleton(() => GetAuditLogDetail(sl()));
+  sl.registerLazySingleton(() => GetAuditFilterOptions(sl()));
+  sl.registerLazySingleton(() => ExportAuditLogs(sl()));
+  sl.registerLazySingleton(() => GetEntityAuditHistory(sl()));
+}
 
 Future<void> initDependencies() async {
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -86,11 +309,29 @@ Future<void> initDependencies() async {
       apiClient: sl(),
     ),
   );
+  sl.registerLazySingleton(OnlineSessionPolicy.new);
+  sl.registerLazySingleton(
+    () => RemoteApiRunner(
+      apiGuard: sl(),
+      sessionPolicy: sl(),
+      networkInfo: sl(),
+    ),
+  );
   sl.registerLazySingleton(() => AuthRemoteDatasource(sl()));
   sl.registerLazySingleton(() => ShopRemoteDatasource(sl()));
   sl.registerLazySingleton(() => UserRemoteDatasource(sl()));
+  sl.registerLazySingleton(() => RbacRemoteDatasource(sl()));
   sl.registerLazySingleton(LocalAuthentication.new);
   sl.registerLazySingleton(() => BiometricLocalDatasource(sl()));
+
+  sl.registerLazySingleton(() => SettingsLocalDatasource(sl()));
+  sl.registerLazySingleton(() => CloudSyncPreferences(sl()));
+  sl.registerLazySingleton(
+    () => CloudSyncEnabler(
+      settingsLocal: sl(),
+      preferences: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(
@@ -105,6 +346,13 @@ Future<void> initDependencies() async {
       activeShopContext: sl(),
       remote: sl(),
       networkInfo: sl(),
+      apiClient: sl(),
+      cloudSyncEnabler: sl(),
+      onOnlineSessionReady: (shopId) {
+        if (sl.isRegistered<SyncService>()) {
+          sl<SyncService>().scheduleSync(shopId: shopId);
+        }
+      },
     ),
   );
 
@@ -120,6 +368,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => CompleteWhatsappLogin(sl()));
   sl.registerLazySingleton(() => EmergencyUnlock(sl()));
   sl.registerLazySingleton(() => EnableBiometric(sl()));
+  sl.registerLazySingleton(() => DisableBiometric(sl()));
+  sl.registerLazySingleton(() => ChangeUserPin(sl()));
   sl.registerLazySingleton(() => TouchSession(sl()));
   sl.registerLazySingleton(() => LockActiveSession(sl()));
   sl.registerLazySingleton(() => Logout(sl()));
@@ -130,7 +380,7 @@ Future<void> initDependencies() async {
     () => ShopRepositoryImpl(
       remote: sl(),
       database: sl(),
-      apiGuard: sl(),
+      apiRunner: sl(),
     ),
   );
   sl.registerLazySingleton(() => ListShops(sl()));
@@ -141,7 +391,11 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => SetDefaultShop(sl()));
 
   sl.registerLazySingleton<UserRepository>(
-    () => UserRepositoryImpl(remote: sl(), apiGuard: sl()),
+    () => UserRepositoryImpl(
+      remote: sl(),
+      database: sl(),
+      apiRunner: sl(),
+    ),
   );
   sl.registerLazySingleton(() => ListShopUsers(sl()));
   sl.registerLazySingleton(() => GetUserAssignment(sl()));
@@ -150,6 +404,24 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => DeactivateShopUser(sl()));
   sl.registerLazySingleton(() => AssignUserShop(sl()));
 
+  sl.registerLazySingleton<RbacRepository>(
+    () => RbacRepositoryImpl(remote: sl(), apiRunner: sl()),
+  );
+  sl.registerLazySingleton(() => ListRoles(sl()));
+  sl.registerLazySingleton(() => GetRoleDetail(sl()));
+  sl.registerLazySingleton(() => GetPermissionsCatalog(sl()));
+  sl.registerLazySingleton(() => GetMyPermissions(sl()));
+  sl.registerLazySingleton(() => GetUserEffectivePermissions(sl()));
+  sl.registerLazySingleton(() => ListUserPermissionOverrides(sl()));
+  sl.registerLazySingleton(() => ReplaceUserPermissionOverrides(sl()));
+  sl.registerLazySingleton(
+    () => RefreshSessionPermissions(
+      getMyPermissions: sl(),
+      credentials: sl(),
+      authRepository: sl(),
+    ),
+  );
+
   sl.registerLazySingleton(() => DashboardAggregationService());
   sl.registerLazySingleton(() => DashboardLocalDatasource(sl()));
   sl.registerLazySingleton<DashboardRepository>(
@@ -157,14 +429,23 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton(() => GetDashboard(sl()));
 
+  ensureReportsDependencies();
+  ensureNotificationsDependencies();
+  ensureSettingsDependencies();
+  ensureAuditDependencies();
+
   sl.registerLazySingleton(() => const ProductValidationService());
   sl.registerLazySingleton(() => const CategoryValidationService());
   sl.registerLazySingleton(() => InventoryLocalDatasource(sl()));
+  sl.registerLazySingleton(() => InventoryRemoteDatasource(sl()));
   sl.registerLazySingleton<InventoryRepository>(
     () => InventoryRepositoryImpl(
       local: sl(),
+      remote: sl(),
+      apiGuard: sl(),
       validation: sl(),
       categoryValidation: sl(),
+      recorder: sl(),
     ),
   );
   sl.registerLazySingleton(() => ListProducts(sl()));
@@ -180,16 +461,136 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => AdjustProductStock(sl()));
 
   sl.registerLazySingleton(() => const SaleValidationService());
+  sl.registerLazySingleton(() => const ReceiptFormatterService());
   sl.registerLazySingleton(() => SalesLocalDatasource(sl()));
+  sl.registerLazySingleton(() => SalesRemoteDatasource(sl()));
+  sl.registerLazySingleton(() => const CustomerValidationService());
+  sl.registerLazySingleton(() => CustomersLocalDatasource(sl()));
+  sl.registerLazySingleton(() => CustomersRemoteDatasource(sl()));
+  sl.registerLazySingleton<CustomerRepository>(
+    () => CustomerRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      apiGuard: sl(),
+      recorder: sl(),
+      validation: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => ListCustomers(sl()));
+  sl.registerLazySingleton(() => GetCustomer(sl()));
+  sl.registerLazySingleton(() => ListCustomerSales(sl()));
+  sl.registerLazySingleton(() => ListCustomerSalesLifetime(sl()));
+  sl.registerLazySingleton(() => ListDebtors(sl()));
+  sl.registerLazySingleton(() => GetDebtReminder(sl()));
+  sl.registerLazySingleton(() => CreateCustomer(sl()));
+  sl.registerLazySingleton(() => UpdateCustomer(sl()));
+  sl.registerLazySingleton(() => ArchiveCustomer(sl()));
+
+  sl.registerLazySingleton(() => const DebtValidationService());
+  sl.registerLazySingleton(() => DebtsLocalDatasource(sl()));
+  sl.registerLazySingleton(() => DebtsRemoteDatasource(sl()));
+  sl.registerLazySingleton<DebtRepository>(
+    () => DebtRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      customersLocal: sl(),
+      apiGuard: sl(),
+      validation: sl(),
+      recorder: sl(),
+      notificationOrchestrator: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => ListCustomerDebts(sl()));
+  sl.registerLazySingleton(() => ListForgivenDebts(sl()));
+  sl.registerLazySingleton(() => GetDebt(sl()));
+  sl.registerLazySingleton(() => GetDebtDetail(sl()));
+  sl.registerLazySingleton(() => GetDebtDetailReminder(sl()));
+  sl.registerLazySingleton(() => RecordDebtPayment(sl()));
+  sl.registerLazySingleton(() => ForgiveDebt(sl()));
+
   sl.registerLazySingleton<SaleRepository>(
-    () => SaleRepositoryImpl(local: sl(), validation: sl()),
+    () => SaleRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      apiGuard: sl(),
+      validation: sl(),
+      recorder: sl(),
+    ),
   );
   sl.registerLazySingleton(() => ListSales(sl()));
   sl.registerLazySingleton(() => GetSale(sl()));
   sl.registerLazySingleton(() => ListSaleCustomers(sl()));
   sl.registerLazySingleton(() => CreateStandardSale(sl()));
   sl.registerLazySingleton(() => CreateQuickSale(sl()));
+  sl.registerLazySingleton(() => ConvertQuickSaleToStandard(sl()));
   sl.registerLazySingleton(() => CancelSale(sl()));
+
+  sl.registerLazySingleton(() => CustomerRemoteSyncAdapter(sl<CustomerRepository>()));
+  sl.registerLazySingleton(() => InventoryRemoteSyncAdapter(sl<InventoryRepository>()));
+  sl.registerLazySingleton(() => SalesRemoteSyncAdapter(sl<SaleRepository>()));
+  sl.registerLazySingleton(() => DebtsRemoteSyncAdapter(sl<DebtRepository>()));
+  sl.registerLazySingleton(() => SyncPolicy(sl(), sl()));
+  sl.registerLazySingleton(() => SyncQueueDatasource(sl()));
+  sl.registerLazySingleton(() => LocalAuditWriter(sl()));
+  sl.registerLazySingleton(
+    () => SyncConflictService(
+      db: sl(),
+      queue: sl(),
+      auditWriter: sl(),
+      customersLocal: sl(),
+      customersRemote: sl(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => LocalWriteSyncRecorder(
+      policy: sl(),
+      queue: sl(),
+      onEnqueued: (shopId) => sl<SyncService>().scheduleSync(shopId: shopId),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => SyncQueueProcessor(
+      queue: sl(),
+      apiGuard: sl(),
+      customersLocal: sl(),
+      customersRemote: sl(),
+      inventoryLocal: sl(),
+      inventoryRemote: sl(),
+      salesLocal: sl(),
+      salesRemote: sl(),
+      debtsLocal: sl(),
+      debtsRemote: sl(),
+    ),
+  );
+  sl.registerLazySingleton(
+    () => SyncService(
+      connectivity: sl(),
+      networkInfo: sl(),
+      apiGuard: sl(),
+      policy: sl(),
+      queue: sl(),
+      processor: sl(),
+      ports: [
+        sl<CustomerRemoteSyncAdapter>(),
+        sl<InventoryRemoteSyncAdapter>(),
+        sl<SalesRemoteSyncAdapter>(),
+        sl<DebtsRemoteSyncAdapter>(),
+      ],
+      settingsLocal: sl(),
+    ),
+  );
+
+  sl.registerLazySingleton(LocalNotificationService.new);
+  sl.registerLazySingleton(NotificationDeepLinkHandler.new);
+  sl.registerLazySingleton(
+    () => NotificationOrchestrator(
+      getPending: sl(),
+      ackDebtReminders: sl(),
+      localNotifications: sl(),
+      deepLinks: sl(),
+      preferences: sl(),
+    ),
+  );
 
   sl.registerFactory(
     () => AuthBloc(
@@ -209,6 +610,10 @@ Future<void> initDependencies() async {
       verifyWhatsappOtp: sl(),
       completeWhatsappLogin: sl(),
       lastShopStorage: sl(),
+      syncService: sl(),
     ),
   );
+
+  await sl<NotificationOrchestrator>().initialize();
+  sl<SyncService>().start();
 }

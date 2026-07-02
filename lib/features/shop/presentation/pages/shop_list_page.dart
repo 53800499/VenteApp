@@ -6,6 +6,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/active_shop_context.dart';
+import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -13,6 +14,7 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/shop_entities.dart';
 import '../bloc/shop_list_bloc.dart';
+import '../widgets/shop_feedback.dart';
 import '../widgets/shop_switcher_sheet.dart';
 import 'shop_form_page.dart';
 
@@ -86,104 +88,176 @@ class _ShopListView extends StatelessWidget {
               label: const Text('Nouvelle boutique'),
             )
           : null,
-      body: BlocConsumer<ShopListBloc, ShopListState>(
-        listener: (context, state) {
-          if (state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
-            );
-          }
-          if (state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.successMessage!)),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state.status == ShopListStatus.loading && !state.isRefreshing) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state.status == ShopListStatus.failure && state.shops.isEmpty) {
-            return ResponsivePage(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.errorMessage ?? 'Erreur de chargement'),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton(
-                      onPressed: () => context
-                          .read<ShopListBloc>()
-                          .add(const ShopListLoadRequested()),
-                      child: const Text('Réessayer'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final shops = state.activeShops;
-          if (shops.isEmpty) {
-            return const ResponsivePage(
-              child: Center(child: Text('Aucune boutique active')),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context
-                  .read<ShopListBloc>()
-                  .add(const ShopListRefreshRequested());
-              await context.read<ShopListBloc>().stream.firstWhere(
-                    (s) => !s.isRefreshing,
-                  );
+      body: Column(
+        children: [
+          const OfflineModeBanner(
+            onlinePreferredMessage: OfflineModeBanner.adminCacheMessage,
+          ),
+          BlocBuilder<ShopListBloc, ShopListState>(
+            buildWhen: (prev, curr) =>
+                prev.isRefreshing != curr.isRefreshing ||
+                prev.isSubmitting != curr.isSubmitting,
+            builder: (context, state) {
+              if (!state.isRefreshing && !state.isSubmitting) {
+                return const SizedBox.shrink();
+              }
+              return const LinearProgressIndicator();
             },
-            child: ResponsivePage(
-              padding: EdgeInsets.zero,
-              child: ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                itemCount: shops.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final shop = shops[index];
-                  final isActive = shop.id == state.activeServerShopId;
-                  return _ManagedShopTile(
-                    shop: shop,
-                    isActive: isActive,
-                    canUpdate: canUpdate,
-                    canDeactivate: canDeactivate,
-                    canSwitch: canSwitch && !isActive,
-                    isBusy: state.isSubmitting,
-                    onSwitch: () => _switchShop(context, shop.id),
-                    onEdit: () => _openForm(context, shop: shop),
-                    onSetDefault: () => context.read<ShopListBloc>().add(
-                          ShopSetDefaultRequested(shop.id),
-                        ),
-                    onDeactivate: () => _confirmDeactivate(context, shop),
+          ),
+          Expanded(
+            child: BlocConsumer<ShopListBloc, ShopListState>(
+              listenWhen: (prev, curr) {
+                if (prev.errorMessage != curr.errorMessage &&
+                    curr.errorMessage != null &&
+                    curr.status == ShopListStatus.loaded) {
+                  return true;
+                }
+                if (prev.successMessage != curr.successMessage &&
+                    curr.successMessage != null) {
+                  return true;
+                }
+                return false;
+              },
+              listener: (context, state) async {
+                if (state.errorMessage != null &&
+                    state.status == ShopListStatus.loaded) {
+                  await ShopFeedback.showErrorDialog(
+                    context,
+                    title: 'Action impossible',
+                    message: state.errorMessage!,
                   );
-                },
-              ),
+                  if (context.mounted) {
+                    context
+                        .read<ShopListBloc>()
+                        .add(const ShopFeedbackDismissed());
+                  }
+                  return;
+                }
+                if (state.successMessage != null) {
+                  await ShopFeedback.showSuccess(
+                    context: context,
+                    title: state.successMessage!,
+                  );
+                  if (context.mounted) {
+                    context
+                        .read<ShopListBloc>()
+                        .add(const ShopFeedbackDismissed());
+                  }
+                }
+              },
+              builder: (context, state) {
+                if (state.status == ShopListStatus.loading &&
+                    !state.isRefreshing) {
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: AppSpacing.md),
+                        Text('Chargement des boutiques…'),
+                      ],
+                    ),
+                  );
+                }
+
+                if (state.status == ShopListStatus.failure &&
+                    state.shops.isEmpty) {
+                  return ResponsivePage(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(state.errorMessage ?? 'Erreur de chargement'),
+                          const SizedBox(height: AppSpacing.md),
+                          FilledButton(
+                            onPressed: () => context
+                                .read<ShopListBloc>()
+                                .add(const ShopListLoadRequested()),
+                            child: const Text('Réessayer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final shops = state.activeShops;
+                if (shops.isEmpty) {
+                  return const ResponsivePage(
+                    child: Center(child: Text('Aucune boutique active')),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context
+                        .read<ShopListBloc>()
+                        .add(const ShopListRefreshRequested());
+                    await context.read<ShopListBloc>().stream.firstWhere(
+                          (s) => !s.isRefreshing,
+                        );
+                  },
+                  child: ResponsivePage(
+                    padding: EdgeInsets.zero,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      itemCount: shops.length,
+                      separatorBuilder: (_, __) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        final shop = shops[index];
+                        final isActive = shop.id == state.activeServerShopId;
+                        return _ManagedShopTile(
+                          shop: shop,
+                          isActive: isActive,
+                          canUpdate: canUpdate,
+                          canDeactivate: canDeactivate,
+                          canSwitch: canSwitch && !isActive,
+                          isBusy: state.isSubmitting,
+                          onSwitch: () => _switchShop(context, shop),
+                          onEdit: () => _openForm(context, shop: shop),
+                          onSetDefault: () =>
+                              _confirmSetDefault(context, shop),
+                          onDeactivate: () => _confirmDeactivate(context, shop),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Future<void> _switchShop(BuildContext context, int shopId) async {
-    final messenger = ScaffoldMessenger.of(context);
+  Future<void> _switchShop(BuildContext context, ManagedShop shop) async {
+    final confirmed = await ShopFeedback.confirm(
+      context: context,
+      title: 'Changer de boutique',
+      message: 'Utiliser « ${shop.name} » comme boutique active ?',
+      confirmLabel: 'Utiliser',
+    );
+    if (confirmed != true || !context.mounted) return;
+
     try {
-      await performShopSwitch(context, serverShopId: shopId);
+      await performShopSwitch(context, serverShopId: shop.id);
       if (!context.mounted) return;
       Navigator.of(context).popUntil((r) => r.isFirst);
-    } on Failure catch (failure) {
-      messenger.showSnackBar(SnackBar(content: Text(failure.message)));
+    } on Failure catch (e) {
+      if (!context.mounted) return;
+      await ShopFeedback.showErrorDialog(
+        context,
+        title: 'Changement impossible',
+        message: friendlyErrorMessage(e),
+      );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(friendlyErrorMessage(error))),
+      if (!context.mounted) return;
+      await ShopFeedback.showErrorDialog(
+        context,
+        title: 'Changement impossible',
+        message: friendlyErrorMessage(error),
       );
     }
   }
@@ -207,14 +281,36 @@ class _ShopListView extends StatelessWidget {
     }
   }
 
-  Future<void> _confirmDeactivate(BuildContext context, ManagedShop shop) async {
-    final reason = await showDialog<String>(
+  Future<void> _confirmSetDefault(
+    BuildContext context,
+    ManagedShop shop,
+  ) async {
+    final confirmed = await ShopFeedback.confirm(
       context: context,
-      builder: (ctx) => const _DeactivateShopDialog(),
+      title: 'Boutique par défaut',
+      message: 'Définir « ${shop.name} » comme boutique par défaut ?',
+    );
+    if (confirmed != true || !context.mounted) return;
+    context.read<ShopListBloc>().add(ShopSetDefaultRequested(shop.id));
+  }
+
+  Future<void> _confirmDeactivate(
+    BuildContext context,
+    ManagedShop shop,
+  ) async {
+    final reason = await ShopFeedback.confirmWithReason(
+      context: context,
+      title: 'Désactiver la boutique ?',
+      hint: 'Motif (optionnel)',
+      confirmLabel: 'Désactiver',
+      minLength: 0,
     );
     if (reason == null || !context.mounted) return;
     context.read<ShopListBloc>().add(
-          ShopDeactivateRequested(shopId: shop.id, reason: reason),
+          ShopDeactivateRequested(
+            shopId: shop.id,
+            reason: reason.isEmpty ? null : reason,
+          ),
         );
   }
 }
@@ -328,48 +424,6 @@ class _ManagedShopTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _DeactivateShopDialog extends StatefulWidget {
-  const _DeactivateShopDialog();
-
-  @override
-  State<_DeactivateShopDialog> createState() => _DeactivateShopDialogState();
-}
-
-class _DeactivateShopDialogState extends State<_DeactivateShopDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Désactiver la boutique ?'),
-      content: TextField(
-        controller: _controller,
-        decoration: const InputDecoration(
-          labelText: 'Motif (optionnel)',
-          hintText: 'Fermeture temporaire…',
-        ),
-        maxLines: 2,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
-          child: const Text('Désactiver'),
-        ),
-      ],
     );
   }
 }

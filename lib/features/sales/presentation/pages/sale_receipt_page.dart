@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/enums/permission.dart';
+import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
+import '../../domain/services/receipt_formatter_service.dart';
+import '../widgets/sale_feedback.dart';
+import 'new_sale_page.dart';
 
-class SaleReceiptPage extends StatelessWidget {
+class SaleReceiptPage extends StatefulWidget {
   const SaleReceiptPage({
     super.key,
     required this.session,
@@ -16,7 +26,117 @@ class SaleReceiptPage extends StatelessWidget {
   final Sale sale;
 
   @override
+  State<SaleReceiptPage> createState() => _SaleReceiptPageState();
+}
+
+class _SaleReceiptPageState extends State<SaleReceiptPage> {
+  bool _sharing = false;
+  bool _printing = false;
+
+  String get _receiptText {
+    final formatter = sl<ReceiptFormatterService>();
+    return formatter.formatText(
+      shopName: widget.session.shop.name,
+      sale: widget.sale,
+    );
+  }
+
+  Future<void> _shareReceipt() async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
+    try {
+      await Share.share(
+        _receiptText,
+        subject: widget.sale.receiptNumber ?? 'Reçu VenteApp',
+      );
+      if (mounted) {
+        await SaleFeedback.showSuccess(
+          context: context,
+          title: 'Reçu partagé',
+          message: 'Le reçu est prêt dans l\'application choisie.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        await SaleFeedback.showErrorDialog(
+          context,
+          title: 'Partage impossible',
+          message: 'Impossible de partager le reçu.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  Future<void> _printReceipt() async {
+    if (_printing) return;
+    setState(() => _printing = true);
+    try {
+      await SaleFeedback.runWithBlockingLoader(
+        context: context,
+        message: 'Préparation de l\'impression…',
+        action: () async {
+          final doc = pw.Document();
+          doc.addPage(
+            pw.Page(
+              pageFormat: PdfPageFormat.roll80,
+              build: (context) => pw.Text(
+                _receiptText,
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+            ),
+          );
+          await Printing.layoutPdf(onLayout: (_) async => doc.save());
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        await SaleFeedback.showErrorDialog(
+          context,
+          title: 'Impression impossible',
+          message: 'Impossible d\'imprimer le reçu.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _printing = false);
+    }
+  }
+
+  Future<void> _openConversion() async {
+    final confirmed = await SaleFeedback.confirm(
+      context: context,
+      title: 'Convertir en vente standard',
+      message:
+          'Répartir ${formatFcfa(widget.sale.totalAmount)} en produits ?',
+    );
+    if (confirmed != true || !mounted) return;
+
+    final converted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NewSalePage(
+          session: widget.session,
+          conversion: QuickSaleConversion(
+            saleId: widget.sale.id,
+            targetTotal: widget.sale.totalAmount,
+            receiptLabel: widget.sale.receiptNumber,
+          ),
+        ),
+      ),
+    );
+    if (converted == true && mounted) {
+      await SaleFeedback.showSuccess(
+        context: context,
+        title: 'Conversion réussie',
+        message: 'La vente rapide a été convertie en vente standard.',
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final sale = widget.sale;
     final dt = DateTime.fromMillisecondsSinceEpoch(sale.createdAt);
     final date =
         '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
@@ -26,6 +146,20 @@ class SaleReceiptPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Reçu de vente'),
         actions: [
+          IconButton(
+            icon: _sharing
+                ? SaleFeedback.inlineLoader(size: 18)
+                : const Icon(Icons.share_outlined),
+            tooltip: 'Partager',
+            onPressed: _sharing ? null : _shareReceipt,
+          ),
+          IconButton(
+            icon: _printing
+                ? SaleFeedback.inlineLoader(size: 18)
+                : const Icon(Icons.print_outlined),
+            tooltip: 'Imprimer',
+            onPressed: _printing ? null : _printReceipt,
+          ),
           IconButton(
             icon: const Icon(Icons.check),
             onPressed: () => Navigator.of(context).pop(),
@@ -39,7 +173,7 @@ class SaleReceiptPage extends StatelessWidget {
             child: Column(
               children: [
                 Text(
-                  session.shop.name,
+                  widget.session.shop.name,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: AppSpacing.xs),
@@ -105,6 +239,35 @@ class SaleReceiptPage extends StatelessWidget {
               'Merci pour votre achat !',
               style: Theme.of(context).textTheme.bodyLarge,
             ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          if (sale.saleType == SaleType.quick &&
+              sale.items.isEmpty &&
+              PermissionGuard.can(
+                widget.session.user.permissions,
+                Permission.salesCreate,
+              )) ...[
+            FilledButton.icon(
+              onPressed: _openConversion,
+              icon: const Icon(Icons.transform_outlined),
+              label: const Text('Convertir en vente standard'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+          OutlinedButton.icon(
+            onPressed: _sharing ? null : _shareReceipt,
+            icon: _sharing
+                ? SaleFeedback.inlineLoader(size: 18)
+                : const Icon(Icons.share_outlined),
+            label: Text(_sharing ? 'Partage…' : 'Partager le reçu'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton.icon(
+            onPressed: _printing ? null : _printReceipt,
+            icon: _printing
+                ? SaleFeedback.inlineLoader(size: 18)
+                : const Icon(Icons.print_outlined),
+            label: Text(_printing ? 'Impression…' : 'Imprimer'),
           ),
         ],
       ),

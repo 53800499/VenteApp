@@ -81,14 +81,14 @@ class _LockScreenPageState extends State<LockScreenPage> {
                           if (state.canGoBack)
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: IconButton(
+                              child: TextButton.icon(
                                 onPressed: state.isSubmitting
                                     ? null
                                     : () => context.read<AuthBloc>().add(
                                           const AuthLockScreenBackRequested(),
                                         ),
                                 icon: const Icon(Icons.arrow_back),
-                                tooltip: 'Retour',
+                                label: const Text('Retour à l\'accueil'),
                               ),
                             ),
                           ShopAvatar(

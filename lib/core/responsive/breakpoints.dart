@@ -55,6 +55,19 @@ abstract final class Breakpoints {
     };
   }
 
+  /// Hauteur minimale d'une tuile KPI pour éviter les débordements verticaux.
+  static double kpiTileHeight(
+    ScreenType type, {
+    bool withSubtitle = false,
+  }) {
+    final base = switch (type) {
+      ScreenType.compact => 132.0,
+      ScreenType.medium => 124.0,
+      ScreenType.expanded => 116.0,
+    };
+    return withSubtitle ? base + 32 : base;
+  }
+
   static bool useNavigationRail(ScreenType type) => type != ScreenType.compact;
 
   static double navigationRailWidth(ScreenType type) {

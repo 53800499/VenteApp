@@ -1,8 +1,12 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/commerce_shop_scope.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../customers/domain/entities/customer_entities.dart';
+import '../../../customers/domain/usecases/customer_usecases.dart';
 import '../../../inventory/domain/entities/inventory_entities.dart';
 import '../../../inventory/domain/usecases/inventory_usecases.dart';
 import '../../domain/entities/sale_entities.dart';
@@ -16,10 +20,16 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     required ListProducts listProducts,
     required ListSaleCustomers listCustomers,
     required CreateStandardSale createStandardSale,
+    required CreateCustomer createCustomer,
     required AuthSession session,
+    ConvertQuickSaleToStandard? convertQuickSale,
+    QuickSaleConversion? conversion,
   })  : _listProducts = listProducts,
         _listCustomers = listCustomers,
         _createStandardSale = createStandardSale,
+        _createCustomer = createCustomer,
+        _convertQuickSale = convertQuickSale,
+        _conversion = conversion,
         _session = session,
         super(const NewSaleState()) {
     on<NewSaleLoadRequested>(_onLoad);
@@ -28,13 +38,22 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     on<NewSaleLineRemoved>(_onLineRemoved);
     on<NewSalePaymentMethodChanged>(_onPaymentChanged);
     on<NewSaleCustomerSelected>(_onCustomerSelected);
+    on<NewSaleSearchChanged>(_onSearchChanged);
+    on<NewSaleMixedAmountsChanged>(_onMixedAmountsChanged);
+    on<NewSaleCreateCustomerRequested>(_onCreateCustomer);
+    on<NewSaleErrorDismissed>(_onErrorDismissed);
     on<NewSaleSubmitRequested>(_onSubmit);
   }
 
   final ListProducts _listProducts;
   final ListSaleCustomers _listCustomers;
   final CreateStandardSale _createStandardSale;
+  final CreateCustomer _createCustomer;
+  final ConvertQuickSaleToStandard? _convertQuickSale;
+  final QuickSaleConversion? _conversion;
   final AuthSession _session;
+
+  bool get isConversion => _conversion != null;
 
   Future<void> _onLoad(
     NewSaleLoadRequested event,
@@ -42,16 +61,18 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   ) async {
     emit(state.copyWith(status: NewSaleStatus.loading, clearError: true));
     try {
-      final products = await _listProducts(
-        shopId: _session.shop.id,
-        filters: const ProductListFilters(),
-      );
-      final customers = await _listCustomers(session: _session);
+      final products = await _loadProducts();
+      var customers = const <SaleCustomerOption>[];
+      try {
+        customers = await _listCustomers(session: _session);
+      } on Object {
+        // Clients optionnels pour une vente espèces.
+      }
+
       emit(
-        state.copyWith(
+        NewSaleState(
           status: NewSaleStatus.ready,
           products: products
-              .where((p) => !p.isArchived && p.quantityInStock > 0)
               .map(
                 (p) => SaleProductOption(
                   id: p.id,
@@ -62,7 +83,20 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
               )
               .toList(),
           customers: customers,
-          clearError: true,
+          cart: state.cart,
+          paymentMethod: state.paymentMethod,
+          selectedCustomerId: state.selectedCustomerId,
+          mixedAmountCash: state.mixedAmountCash,
+          mixedAmountMomo: state.mixedAmountMomo,
+          mixedAmountCredit: state.mixedAmountCredit,
+          searchQuery: state.searchQuery,
+        ),
+      );
+    } on Failure catch (error) {
+      emit(
+        state.copyWith(
+          status: NewSaleStatus.failure,
+          errorMessage: friendlyErrorMessage(error),
         ),
       );
     } catch (_) {
@@ -75,19 +109,45 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     }
   }
 
+  Future<List<Product>> _loadProducts() async {
+    const filters = ProductListFilters();
+    final shopIds = CommerceShopScope.candidateLocalShopIds(_session);
+
+    for (final shopId in shopIds) {
+      final products = await _listProducts(shopId: shopId, filters: filters);
+      if (products.isNotEmpty) {
+        return products;
+      }
+    }
+
+    return _listProducts(shopId: _session.shop.id, filters: filters);
+  }
+
+  void _onSearchChanged(
+    NewSaleSearchChanged event,
+    Emitter<NewSaleState> emit,
+  ) {
+    emit(state.copyWith(searchQuery: event.query));
+  }
+
   void _onProductAdded(
     NewSaleProductAdded event,
     Emitter<NewSaleState> emit,
   ) {
+    final stock = event.product.quantityInStock;
+    if (stock <= 0) return;
+
+    final addQty = event.quantity.clamp(1, stock);
     final existing = state.cart.indexWhere(
       (l) => l.productId == event.product.id,
     );
     if (existing >= 0) {
       final line = state.cart[existing];
-      if (line.quantity >= line.stockAvailable) return;
+      final newQty = (line.quantity + addQty).clamp(1, line.stockAvailable);
+      if (newQty == line.quantity) return;
       final updated = List<CartLine>.from(state.cart);
-      updated[existing] = line.copyWith(quantity: line.quantity + 1);
-      emit(state.copyWith(cart: updated));
+      updated[existing] = line.copyWith(quantity: newQty);
+      emit(state.copyWith(cart: updated, clearError: true));
       return;
     }
 
@@ -99,10 +159,11 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
             productId: event.product.id,
             productName: event.product.name,
             unitPrice: event.product.priceSell,
-            quantity: 1,
-            stockAvailable: event.product.quantityInStock,
+            quantity: addQty,
+            stockAvailable: stock,
           ),
         ],
+        clearError: true,
       ),
     );
   }
@@ -140,11 +201,30 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     NewSalePaymentMethodChanged event,
     Emitter<NewSaleState> emit,
   ) {
+    final total = state.subtotal;
     emit(
       state.copyWith(
         paymentMethod: event.method,
         clearCustomer: event.method != PaymentMethod.credit &&
             event.method != PaymentMethod.mixed,
+        mixedAmountCash: event.method == PaymentMethod.mixed ? total : 0,
+        mixedAmountMomo: 0,
+        mixedAmountCredit: 0,
+        clearError: true,
+      ),
+    );
+  }
+
+  void _onMixedAmountsChanged(
+    NewSaleMixedAmountsChanged event,
+    Emitter<NewSaleState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        mixedAmountCash: event.amountCash ?? state.mixedAmountCash,
+        mixedAmountMomo: event.amountMomo ?? state.mixedAmountMomo,
+        mixedAmountCredit: event.amountCredit ?? state.mixedAmountCredit,
+        clearError: true,
       ),
     );
   }
@@ -153,7 +233,52 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     NewSaleCustomerSelected event,
     Emitter<NewSaleState> emit,
   ) {
-    emit(state.copyWith(selectedCustomerId: event.customerId));
+    emit(state.copyWith(selectedCustomerId: event.customerId, clearError: true));
+  }
+
+  void _onErrorDismissed(
+    NewSaleErrorDismissed event,
+    Emitter<NewSaleState> emit,
+  ) {
+    emit(state.copyWith(clearError: true));
+  }
+
+  Future<void> _onCreateCustomer(
+    NewSaleCreateCustomerRequested event,
+    Emitter<NewSaleState> emit,
+  ) async {
+    emit(state.copyWith(creatingCustomer: true, clearError: true));
+    try {
+      final customer = await _createCustomer(
+        session: _session,
+        input: CreateCustomerInput(
+          name: event.name,
+          phone: event.phone,
+        ),
+      );
+      final customers = await _listCustomers(session: _session);
+      emit(
+        state.copyWith(
+          creatingCustomer: false,
+          customers: customers,
+          selectedCustomerId: customer.id,
+        ),
+      );
+    } on Failure catch (e) {
+      emit(
+        state.copyWith(
+          creatingCustomer: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (_) {
+      emit(
+        state.copyWith(
+          creatingCustomer: false,
+          errorMessage: 'Impossible de créer le client.',
+        ),
+      );
+    }
   }
 
   Future<void> _onSubmit(
@@ -169,9 +294,56 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       return;
     }
 
+    if (state.needsCustomer && state.selectedCustomerId == null) {
+      emit(
+        state.copyWith(
+          errorMessage: 'Sélectionnez ou créez un client pour le crédit.',
+        ),
+      );
+      return;
+    }
+
     emit(state.copyWith(status: NewSaleStatus.submitting, clearError: true));
 
     try {
+      final conversion = _conversion;
+      if (conversion != null) {
+        if (_convertQuickSale == null) {
+          throw const ValidationFailure('Conversion indisponible.');
+        }
+        if (state.subtotal != conversion.targetTotal) {
+          throw ValidationFailure(
+            'Le panier doit totaliser exactement '
+            '${conversion.targetTotal} FCFA.',
+          );
+        }
+
+        final sale = await _convertQuickSale(
+          session: _session,
+          saleId: conversion.saleId,
+          input: ConvertQuickSaleInput(
+            items: state.cart
+                .map(
+                  (line) => SaleLineDraft(
+                    productId: line.productId,
+                    quantity: line.quantity,
+                    unitPrice: line.unitPrice,
+                  ),
+                )
+                .toList(),
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: NewSaleStatus.success,
+            createdSale: sale,
+            cart: const [],
+          ),
+        );
+        return;
+      }
+
       final total = state.subtotal;
       final payment = _buildPayment(total);
 
@@ -203,7 +375,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       emit(
         state.copyWith(
           status: NewSaleStatus.ready,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     } catch (_) {
@@ -236,7 +408,9 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         ),
       PaymentMethod.mixed => PaymentDraft(
           method: PaymentMethod.mixed,
-          amountCash: total,
+          amountCash: state.mixedAmountCash,
+          amountMomo: state.mixedAmountMomo,
+          amountCredit: state.mixedAmountCredit,
         ),
     };
   }

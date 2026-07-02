@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
+import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -10,8 +12,10 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../shop/domain/entities/shop_entities.dart';
 import '../../../shop/domain/usecases/shop_usecases.dart';
+import '../../../rbac/presentation/pages/user_permissions_page.dart';
 import '../../domain/entities/user_entities.dart';
 import '../bloc/user_list_bloc.dart';
+import '../widgets/user_feedback.dart';
 import 'user_form_page.dart';
 
 class UserListPage extends StatelessWidget {
@@ -19,24 +23,36 @@ class UserListPage extends StatelessWidget {
 
   final AuthSession session;
 
+  bool get _canRead =>
+      PermissionGuard.can(session.user.permissions, Permission.usersRead);
+
   bool get _canCreate =>
-      session.user.role == UserRole.owner ||
       PermissionGuard.can(session.user.permissions, Permission.usersCreate);
 
   bool get _canChangeRole =>
-      session.user.role == UserRole.owner ||
       PermissionGuard.can(session.user.permissions, Permission.usersUpdateRole);
 
   bool get _canDeactivate =>
-      session.user.role == UserRole.owner ||
       PermissionGuard.can(session.user.permissions, Permission.usersDeactivate);
 
   bool get _canAssignShop =>
-      session.user.role == UserRole.owner ||
       PermissionGuard.can(session.user.permissions, Permission.usersAssignShop);
+
+  bool get _canViewPermissions =>
+      PermissionGuard.can(session.user.permissions, Permission.usersRead) ||
+      PermissionGuard.can(session.user.permissions, Permission.rbacRead);
 
   @override
   Widget build(BuildContext context) {
+    if (!_canRead) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Équipe')),
+        body: const Center(
+          child: Text('Vous n\'avez pas accès à la gestion de l\'équipe.'),
+        ),
+      );
+    }
+
     return BlocProvider(
       create: (_) => UserListBloc(
         listShopUsers: sl(),
@@ -44,7 +60,8 @@ class UserListPage extends StatelessWidget {
         changeUserRole: sl(),
         deactivateShopUser: sl(),
         assignUserShop: sl(),
-        currentUserId: session.user.apiUserId,
+        currentUserId: session.user.id,
+        localShopId: session.shop.id,
       )..add(const UserListLoadRequested()),
       child: _UserListView(
         session: session,
@@ -52,6 +69,7 @@ class UserListPage extends StatelessWidget {
         canChangeRole: _canChangeRole,
         canDeactivate: _canDeactivate,
         canAssignShop: _canAssignShop,
+        canViewPermissions: _canViewPermissions,
       ),
     );
   }
@@ -64,6 +82,7 @@ class _UserListView extends StatelessWidget {
     required this.canChangeRole,
     required this.canDeactivate,
     required this.canAssignShop,
+    required this.canViewPermissions,
   });
 
   final AuthSession session;
@@ -71,6 +90,7 @@ class _UserListView extends StatelessWidget {
   final bool canChangeRole;
   final bool canDeactivate;
   final bool canAssignShop;
+  final bool canViewPermissions;
 
   @override
   Widget build(BuildContext context) {
@@ -83,86 +103,152 @@ class _UserListView extends StatelessWidget {
               label: const Text('Ajouter'),
             )
           : null,
-      body: BlocConsumer<UserListBloc, UserListState>(
-        listener: (context, state) {
-          if (state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
-            );
-          }
-          if (state.successMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.successMessage!)),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state.status == UserListStatus.loading && !state.isRefreshing) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state.status == UserListStatus.failure && state.users.isEmpty) {
-            return ResponsivePage(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.errorMessage ?? 'Erreur de chargement'),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton(
-                      onPressed: () => context
-                          .read<UserListBloc>()
-                          .add(const UserListLoadRequested()),
-                      child: const Text('Réessayer'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final users = state.users.where((u) => u.isActive).toList();
-          if (users.isEmpty) {
-            return const ResponsivePage(
-              child: Center(child: Text('Aucun utilisateur actif')),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context
-                  .read<UserListBloc>()
-                  .add(const UserListRefreshRequested());
-              await context.read<UserListBloc>().stream.firstWhere(
-                    (s) => !s.isRefreshing,
-                  );
+      body: Column(
+        children: [
+          const OfflineModeBanner(
+            onlinePreferredMessage: OfflineModeBanner.adminCacheMessage,
+          ),
+          BlocBuilder<UserListBloc, UserListState>(
+            buildWhen: (prev, curr) =>
+                prev.isRefreshing != curr.isRefreshing ||
+                prev.isSubmitting != curr.isSubmitting,
+            builder: (context, state) {
+              if (!state.isRefreshing && !state.isSubmitting) {
+                return const SizedBox.shrink();
+              }
+              return const LinearProgressIndicator();
             },
-            child: ResponsivePage(
-              padding: EdgeInsets.zero,
-              child: ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                itemCount: users.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final user = users[index];
-                  final isSelf = user.id == session.user.apiUserId;
-                  return _UserTile(
-                    user: user,
-                    isSelf: isSelf,
-                    isBusy: state.isSubmitting,
-                    canChangeRole: canChangeRole && !isSelf && user.role != UserRole.owner,
-                    canDeactivate: canDeactivate && !isSelf && user.role != UserRole.owner,
-                    canAssignShop: canAssignShop && !isSelf && user.role != UserRole.owner,
-                    onChangeRole: () => _changeRole(context, user),
-                    onDeactivate: () => _deactivate(context, user),
-                    onAssignShop: () => _assignShop(context, user),
+          ),
+          Expanded(
+            child: BlocConsumer<UserListBloc, UserListState>(
+              listenWhen: (prev, curr) {
+                if (prev.errorMessage != curr.errorMessage &&
+                    curr.errorMessage != null &&
+                    curr.status == UserListStatus.loaded) {
+                  return true;
+                }
+                if (prev.successMessage != curr.successMessage &&
+                    curr.successMessage != null) {
+                  return true;
+                }
+                return false;
+              },
+              listener: (context, state) async {
+                if (state.errorMessage != null &&
+                    state.status == UserListStatus.loaded) {
+                  await UserFeedback.showErrorDialog(
+                    context,
+                    title: 'Action impossible',
+                    message: state.errorMessage!,
                   );
-                },
-              ),
+                  if (context.mounted) {
+                    context
+                        .read<UserListBloc>()
+                        .add(const UserFeedbackDismissed());
+                  }
+                  return;
+                }
+                if (state.successMessage != null) {
+                  await UserFeedback.showSuccess(
+                    context: context,
+                    title: state.successMessage!,
+                  );
+                  if (context.mounted) {
+                    context
+                        .read<UserListBloc>()
+                        .add(const UserFeedbackDismissed());
+                  }
+                }
+              },
+              builder: (context, state) {
+                if (state.status == UserListStatus.loading &&
+                    !state.isRefreshing) {
+                  return const Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: AppSpacing.md),
+                        Text('Chargement de l\'équipe…'),
+                      ],
+                    ),
+                  );
+                }
+
+                if (state.status == UserListStatus.failure &&
+                    state.users.isEmpty) {
+                  return ResponsivePage(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(state.errorMessage ?? 'Erreur de chargement'),
+                          const SizedBox(height: AppSpacing.md),
+                          FilledButton(
+                            onPressed: () => context
+                                .read<UserListBloc>()
+                                .add(const UserListLoadRequested()),
+                            child: const Text('Réessayer'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final users = state.users.where((u) => u.isActive).toList();
+                if (users.isEmpty) {
+                  return const ResponsivePage(
+                    child: Center(child: Text('Aucun utilisateur actif')),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context
+                        .read<UserListBloc>()
+                        .add(const UserListRefreshRequested());
+                    await context.read<UserListBloc>().stream.firstWhere(
+                          (s) => !s.isRefreshing,
+                        );
+                  },
+                  child: ResponsivePage(
+                    padding: EdgeInsets.zero,
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      itemCount: users.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        final user = users[index];
+                        final isSelf = user.id == session.user.apiUserId;
+                        return _UserTile(
+                          user: user,
+                          isSelf: isSelf,
+                          isBusy: state.isSubmitting,
+                          canChangeRole: canChangeRole &&
+                              !isSelf &&
+                              user.role != UserRole.owner,
+                          canDeactivate: canDeactivate &&
+                              !isSelf &&
+                              user.role != UserRole.owner,
+                          canAssignShop: canAssignShop &&
+                              !isSelf &&
+                              user.role != UserRole.owner,
+                          canViewPermissions: canViewPermissions,
+                          onChangeRole: () => _changeRole(context, user),
+                          onDeactivate: () => _deactivate(context, user),
+                          onAssignShop: () => _assignShop(context, user),
+                          onViewPermissions: () => _viewPermissions(context, user),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -191,71 +277,103 @@ class _UserListView extends StatelessWidget {
       ),
     );
     if (role == null || !context.mounted) return;
+
+    final confirmed = await UserFeedback.confirm(
+      context: context,
+      title: 'Changer le rôle',
+      message: 'Passer ${user.name} au rôle « ${role.label} » ?',
+    );
+    if (confirmed != true || !context.mounted) return;
+
     context.read<UserListBloc>().add(
           UserChangeRoleRequested(userId: user.id, role: role),
         );
   }
 
   Future<void> _deactivate(BuildContext context, ShopUser user) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await UserFeedback.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Désactiver ${user.name} ?'),
-        content: const Text('Cet utilisateur ne pourra plus se connecter.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Désactiver'),
-          ),
-        ],
-      ),
+      title: 'Désactiver ${user.name} ?',
+      message: 'Cet utilisateur ne pourra plus se connecter.',
+      confirmLabel: 'Désactiver',
+      isDestructive: true,
     );
     if (confirmed != true || !context.mounted) return;
+
     context.read<UserListBloc>().add(UserDeactivateRequested(userId: user.id));
   }
 
+  Future<void> _viewPermissions(BuildContext context, ShopUser user) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => UserPermissionsPage(
+          session: session,
+          userId: user.id,
+          userName: user.name,
+        ),
+      ),
+    );
+  }
+
   Future<void> _assignShop(BuildContext context, ShopUser user) async {
-    List<ManagedShop> shops;
+    List<ManagedShop>? shops;
     try {
-      final result = await sl<ListShops>()();
-      shops = result.activeShops;
-    } catch (e) {
+      shops = await UserFeedback.runWithBlockingLoader(
+        context: context,
+        message: 'Chargement des boutiques…',
+        action: () async {
+          final result = await sl<ListShops>()();
+          return result.activeShops;
+        },
+      );
+    } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Impossible de charger les boutiques : $e')),
+      await UserFeedback.showErrorDialog(
+        context,
+        title: 'Chargement impossible',
+        message: friendlyErrorMessage(error),
       );
       return;
     }
+
+    if (!context.mounted || shops == null) return;
 
     if (shops.length < 2) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aucune autre boutique disponible.')),
+      UserFeedback.showInfo(
+        context,
+        'Aucune autre boutique disponible.',
       );
       return;
     }
 
-    if (!context.mounted) return;
-    final shopId = await showDialog<int>(
+    final selectedShop = await showDialog<ManagedShop>(
       context: context,
       builder: (ctx) => SimpleDialog(
         title: Text('Réaffecter ${user.name}'),
         children: [
-          for (final shop in shops)
+          for (final shop in shops!)
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(ctx, shop.id),
+              onPressed: () => Navigator.pop(ctx, shop),
               child: Text(shop.name),
             ),
         ],
       ),
     );
-    if (shopId == null || !context.mounted) return;
+    if (selectedShop == null || !context.mounted) return;
+
+    final confirmed = await UserFeedback.confirm(
+      context: context,
+      title: 'Réaffecter',
+      message:
+          'Réaffecter ${user.name} à la boutique « ${selectedShop.name} » ?',
+    );
+    if (confirmed != true || !context.mounted) return;
+
     context.read<UserListBloc>().add(
-          UserAssignShopRequested(userId: user.id, shopId: shopId),
+          UserAssignShopRequested(
+            userId: user.id,
+            shopId: selectedShop.id,
+          ),
         );
   }
 }
@@ -268,9 +386,11 @@ class _UserTile extends StatelessWidget {
     required this.canChangeRole,
     required this.canDeactivate,
     required this.canAssignShop,
+    required this.canViewPermissions,
     required this.onChangeRole,
     required this.onDeactivate,
     required this.onAssignShop,
+    required this.onViewPermissions,
   });
 
   final ShopUser user;
@@ -279,9 +399,11 @@ class _UserTile extends StatelessWidget {
   final bool canChangeRole;
   final bool canDeactivate;
   final bool canAssignShop;
+  final bool canViewPermissions;
   final VoidCallback onChangeRole;
   final VoidCallback onDeactivate;
   final VoidCallback onAssignShop;
+  final VoidCallback onViewPermissions;
 
   @override
   Widget build(BuildContext context) {
@@ -332,12 +454,17 @@ class _UserTile extends StatelessWidget {
                   Icon(Icons.fingerprint, color: colorScheme.outline, size: 20),
               ],
             ),
-            if (canChangeRole || canDeactivate || canAssignShop) ...[
+            if (canChangeRole || canDeactivate || canAssignShop || canViewPermissions) ...[
               const SizedBox(height: AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
                 children: [
+                  if (canViewPermissions)
+                    OutlinedButton(
+                      onPressed: isBusy ? null : onViewPermissions,
+                      child: const Text('Droits'),
+                    ),
                   if (canChangeRole)
                     OutlinedButton(
                       onPressed: isBusy ? null : onChangeRole,

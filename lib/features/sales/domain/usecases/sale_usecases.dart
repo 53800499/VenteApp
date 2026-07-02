@@ -60,6 +60,8 @@ class CreateStandardSale {
     return _repository.createStandardSale(
       shopId: session.shop.id,
       userId: session.user.id,
+      serverShopId: session.shop.apiShopId,
+      serverUserId: session.user.apiUserId,
       input: input,
     );
   }
@@ -98,6 +100,25 @@ class CancelSale {
       saleId: saleId,
       reason: reason,
       isOwner: session.user.role == UserRole.owner,
+    );
+  }
+}
+
+class ConvertQuickSaleToStandard {
+  ConvertQuickSaleToStandard(this._repository);
+
+  final SaleRepository _repository;
+
+  Future<Sale> call({
+    required AuthSession session,
+    required int saleId,
+    required ConvertQuickSaleInput input,
+  }) {
+    return _repository.convertQuickSaleToStandard(
+      shopId: session.shop.id,
+      userId: session.user.id,
+      saleId: saleId,
+      input: input,
     );
   }
 }

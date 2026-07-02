@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_tokens.dart';
 import '../../domain/entities/shop_entities.dart';
+import '../widgets/shop_feedback.dart';
 
 class ShopFormResult {
   const ShopFormResult({
@@ -60,12 +61,23 @@ class _ShopFormPageState extends State<ShopFormPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final name = _nameController.text.trim();
+    final confirmed = await ShopFeedback.confirm(
+      context: context,
+      title: _isEdit ? 'Enregistrer les modifications' : 'Créer la boutique',
+      message: _isEdit
+          ? 'Mettre à jour « $name » ?'
+          : 'Créer la boutique « $name » ?',
+    );
+    if (confirmed != true || !mounted) return;
+
     Navigator.pop(
       context,
       ShopFormResult(
-        name: _nameController.text.trim(),
+        name: name,
         address: _addressController.text.trim().isEmpty
             ? null
             : _addressController.text.trim(),

@@ -2,7 +2,7 @@ import '../../../../shared/enums/user_role.dart';
 import '../entities/user_entities.dart';
 
 abstract class UserRepository {
-  Future<List<ShopUser>> listShopUsers();
+  Future<List<ShopUser>> listShopUsers({required int localShopId});
 
   Future<UserAssignment> getUserAssignment(int userId);
 

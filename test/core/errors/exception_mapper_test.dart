@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:frontend/core/errors/exception_mapper.dart';
-import 'package:frontend/core/errors/failures.dart';
+import 'package:venteapp/core/errors/exception_mapper.dart';
+import 'package:venteapp/core/errors/failures.dart';
 
 void main() {
   group('mapDioException', () {
@@ -48,7 +48,7 @@ void main() {
       expect(failure, isA<ValidationFailure>());
       expect(
         failure.message,
-        'Le nom de la boutique doit contenir au moins 2 caractères.',
+        'Le nom doit contenir au moins 2 caractères.',
       );
     });
 
@@ -73,9 +73,13 @@ void main() {
   });
 
   group('friendlyErrorMessage', () {
-    test('convertit une Failure sans la modifier', () {
-      const failure = UnauthorizedFailure('Code incorrect.');
-      expect(friendlyErrorMessage(failure), 'Code incorrect.');
+    test('humanise une Failure auth', () {
+      const failure = ConflictFailure(
+        'duplicate key value violates unique constraint "users_name_shop_id_key"',
+      );
+      final message = friendlyErrorMessage(failure);
+      expect(message, contains('nom'));
+      expect(message, isNot(contains('duplicate key')));
     });
   });
 }

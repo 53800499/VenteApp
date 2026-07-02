@@ -14,3 +14,7 @@ class ProductDetailLoadRequested extends ProductDetailEvent {
 class ProductDetailArchiveRequested extends ProductDetailEvent {
   const ProductDetailArchiveRequested();
 }
+
+class ProductDetailErrorDismissed extends ProductDetailEvent {
+  const ProductDetailErrorDismissed();
+}

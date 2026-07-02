@@ -11,10 +11,14 @@ class AuthEntryPage extends StatelessWidget {
     super.key,
     required this.onCreateShop,
     required this.onLogin,
+    this.onPinLogin,
+    this.localSetupAvailable = false,
   });
 
   final VoidCallback onCreateShop;
   final VoidCallback onLogin;
+  final VoidCallback? onPinLogin;
+  final bool localSetupAvailable;
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +26,9 @@ class AuthEntryPage extends StatelessWidget {
       body: GradientBackground(
         child: SafeArea(
           child: ResponsivePage(
-            child: Column(
+            expandHeight: true,
+            child: ResponsiveScrollColumn(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               children: [
                 const SizedBox(height: AppSpacing.xl),
                 const PageHeader(
@@ -48,6 +54,17 @@ class AuthEntryPage extends StatelessWidget {
                   onTap: onLogin,
                   accent: AppColors.secondary,
                 ),
+                if (localSetupAvailable && onPinLogin != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _EntryCard(
+                    icon: Icons.pin_outlined,
+                    title: 'Connexion par PIN',
+                    description:
+                        'Boutique déjà installée sur cet appareil — entrez votre code PIN.',
+                    onTap: onPinLogin!,
+                    accent: AppColors.seed,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.xl),
               ],
             ),

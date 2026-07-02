@@ -10,6 +10,8 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
+import '../widgets/sale_feedback.dart';
+import 'new_sale_page.dart';
 import 'sale_receipt_page.dart';
 
 class SaleDetailPage extends StatefulWidget {
@@ -39,17 +41,19 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
         Permission.salesCancel,
       );
 
+  bool get _canConvert =>
+      PermissionGuard.can(
+        widget.session.user.permissions,
+        Permission.salesCreate,
+      );
+
   @override
   void initState() {
     super.initState();
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _refreshSale() async {
     try {
       final sale = await sl<GetSale>()(
         session: widget.session,
@@ -58,6 +62,7 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
       if (mounted) {
         setState(() {
           _sale = sale;
+          _error = null;
           _loading = false;
         });
       }
@@ -78,61 +83,55 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
     }
   }
 
-  Future<void> _cancel() async {
-    final reasonController = TextEditingController();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Annuler la vente'),
-        content: TextField(
-          controller: reasonController,
-          decoration: const InputDecoration(
-            labelText: 'Motif (min. 5 caractères)',
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Annuler la vente'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    await _refreshSale();
+  }
 
-    if (confirmed != true || !mounted) return;
+  Future<void> _cancel() async {
+    final reason = await SaleFeedback.confirmWithReason(
+      context: context,
+      title: 'Annuler la vente',
+      hint: 'Motif (min. 5 caractères)',
+      confirmLabel: 'Annuler la vente',
+    );
+    if (reason == null || !mounted) return;
 
     setState(() => _cancelling = true);
     try {
       await sl<CancelSale>()(
         session: widget.session,
         saleId: widget.saleId,
-        reason: reasonController.text,
+        reason: reason,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vente annulée.')),
-        );
-        await _load();
-      }
+
+      if (!mounted) return;
+      await SaleFeedback.showSuccess(
+        context: context,
+        title: 'Vente annulée',
+        message: 'La vente a été annulée avec succès.',
+      );
+      if (mounted) await _refreshSale();
     } on Failure catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message)),
+        await SaleFeedback.showErrorDialog(
+          context,
+          title: 'Annulation impossible',
+          message: e.message,
         );
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Échec de l\'annulation.')),
+        await SaleFeedback.showErrorDialog(
+          context,
+          title: 'Annulation impossible',
+          message: 'Échec de l\'annulation.',
         );
       }
     } finally {
-      reasonController.dispose();
       if (mounted) setState(() => _cancelling = false);
     }
   }
@@ -158,33 +157,111 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : _buildContent(context, _sale!),
-      bottomNavigationBar: _sale != null &&
-              !_sale!.isCancelled &&
-              _canCancel
-          ? SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: OutlinedButton(
-                  onPressed: _cancelling ? null : _cancel,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.error,
-                  ),
-                  child: _cancelling
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Annuler la vente'),
-                ),
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: AppSpacing.md),
+                  Text('Chargement de la vente…'),
+                ],
               ),
             )
-          : null,
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton(
+                          onPressed: _load,
+                          child: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : _buildContent(context, _sale!),
+      bottomNavigationBar: _sale == null || _sale!.isCancelled
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (!_sale!.isCancelled &&
+                        _sale!.saleType == SaleType.quick &&
+                        _sale!.items.isEmpty &&
+                        _canConvert)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _cancelling
+                                ? null
+                                : () => _openConversion(_sale!),
+                            icon: const Icon(Icons.transform_outlined),
+                            label: const Text('Convertir en vente standard'),
+                          ),
+                        ),
+                      ),
+                    if (!_sale!.isCancelled && _canCancel)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _cancelling ? null : _cancel,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor:
+                                Theme.of(context).colorScheme.error,
+                          ),
+                          child: _cancelling
+                              ? SaleFeedback.inlineLoader()
+                              : const Text('Annuler la vente'),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
     );
+  }
+
+  Future<void> _openConversion(Sale sale) async {
+    final confirmed = await SaleFeedback.confirm(
+      context: context,
+      title: 'Convertir en vente standard',
+      message:
+          'Répartir ${formatFcfa(sale.totalAmount)} en produits '
+          'pour la vente ${sale.receiptNumber ?? '#${sale.id}'} ?',
+    );
+    if (confirmed != true || !mounted) return;
+
+    final converted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => NewSalePage(
+          session: widget.session,
+          conversion: QuickSaleConversion(
+            saleId: sale.id,
+            targetTotal: sale.totalAmount,
+            receiptLabel: sale.receiptNumber,
+          ),
+        ),
+      ),
+    );
+    if (converted == true && mounted) {
+      await _refreshSale();
+      if (!mounted) return;
+      await SaleFeedback.showSuccess(
+        context: context,
+        title: 'Conversion réussie',
+        message: 'La vente rapide a été convertie en vente standard.',
+      );
+    }
   }
 
   Widget _buildContent(BuildContext context, Sale sale) {
@@ -210,6 +287,16 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
             child: ListTile(
               title: const Text('Vente annulée'),
               subtitle: Text(sale.cancelReason ?? ''),
+            ),
+          ),
+        if (sale.saleType == SaleType.quick && sale.items.isEmpty)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.flash_on_outlined),
+              title: const Text('Vente rapide'),
+              subtitle: const Text(
+                'Montant enregistré sans détail produit ni impact stock.',
+              ),
             ),
           ),
         const Divider(),

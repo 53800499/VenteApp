@@ -13,6 +13,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/services/category_validation_service.dart';
 import '../bloc/category_list_bloc.dart';
+import '../widgets/inventory_feedback.dart';
 
 class CategoryListPage extends StatelessWidget {
   const CategoryListPage({super.key, required this.session});
@@ -58,26 +59,68 @@ class _CategoryListView extends StatelessWidget {
       body: ResponsivePage(
         padding: EdgeInsets.zero,
         child: BlocConsumer<CategoryListBloc, CategoryListState>(
-        listener: (context, state) {
-          if (state.errorMessage != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.errorMessage!)),
-            );
+        listenWhen: (prev, curr) {
+          if (prev.errorMessage != curr.errorMessage &&
+              curr.errorMessage != null) {
+            return true;
           }
+          if (prev.isSaving && !curr.isSaving && curr.errorMessage == null) {
+            return true;
+          }
+          return false;
+        },
+        listener: (context, state) async {
+          if (state.errorMessage != null) {
+            await InventoryFeedback.showErrorDialog(
+              context,
+              title: 'Action impossible',
+              message: state.errorMessage!,
+            );
+            if (context.mounted) {
+              context
+                  .read<CategoryListBloc>()
+                  .add(const CategoryFeedbackDismissed());
+            }
+            return;
+          }
+          await InventoryFeedback.showSuccess(
+            context: context,
+            title: 'Catégorie enregistrée',
+            message: 'Les modifications ont été appliquées.',
+          );
         },
         builder: (context, state) {
           if (state.status == CategoryListStatus.loading && !state.isRefreshing) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: AppSpacing.md),
+                  Text('Chargement des catégories…'),
+                ],
+              ),
+            );
           }
 
           if (state.status == CategoryListStatus.failure &&
               state.categories.isEmpty) {
             return Center(
-              child: FilledButton(
-                onPressed: () => context
-                    .read<CategoryListBloc>()
-                    .add(const CategoryListLoadRequested()),
-                child: const Text('Réessayer'),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(state.errorMessage ?? 'Erreur de chargement'),
+                    const SizedBox(height: AppSpacing.md),
+                    FilledButton(
+                      onPressed: () => context
+                          .read<CategoryListBloc>()
+                          .add(const CategoryListLoadRequested()),
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -86,7 +129,12 @@ class _CategoryListView extends StatelessWidget {
             return const Center(child: Text('Aucune catégorie'));
           }
 
-          return RefreshIndicator(
+          return Column(
+            children: [
+              if (state.isRefreshing || state.isSaving)
+                const LinearProgressIndicator(),
+              Expanded(
+                child: RefreshIndicator(
             onRefresh: () async {
               context
                   .read<CategoryListBloc>()
@@ -121,19 +169,16 @@ class _CategoryListView extends StatelessWidget {
                         category: item.category,
                       ),
                       onDelete: () => _confirmDelete(context, item),
-                      onToggleActive: (active) {
-                        context.read<CategoryListBloc>().add(
-                              CategoryToggleActiveRequested(
-                                categoryId: item.category.id,
-                                isActive: active,
-                              ),
-                            );
-                      },
+                      onToggleActive: (active) =>
+                          _confirmToggleActive(context, item, active),
                     );
                   },
                 );
               },
             ),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -168,40 +213,57 @@ class _CategoryListView extends StatelessWidget {
     CategoryWithStats item,
   ) async {
     if (item.category.name == CategoryValidationService.defaultCategoryName) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La catégorie « Général » ne peut pas être supprimée.'),
-        ),
+      InventoryFeedback.showInfo(
+        context,
+        'La catégorie « Général » ne peut pas être supprimée.',
       );
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    if (item.productCount > 0) {
+      await InventoryFeedback.showErrorDialog(
+        context,
+        title: 'Suppression impossible',
+        message:
+            'Cette catégorie contient ${item.productCount} produit(s).',
+      );
+      return;
+    }
+
+    final confirmed = await InventoryFeedback.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer la catégorie ?'),
-        content: Text(
-          item.productCount > 0
-              ? 'Cette catégorie contient ${item.productCount} produit(s) et ne peut pas être supprimée.'
-              : 'Supprimer « ${item.category.name} » définitivement ?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          if (item.productCount == 0)
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Supprimer'),
-            ),
-        ],
-      ),
+      title: 'Supprimer la catégorie ?',
+      message: 'Supprimer « ${item.category.name} » définitivement ?',
+      confirmLabel: 'Supprimer',
+      isDestructive: true,
     );
 
     if (confirmed == true && context.mounted) {
       context.read<CategoryListBloc>().add(
             CategoryDeleteRequested(item.category.id),
+          );
+    }
+  }
+
+  Future<void> _confirmToggleActive(
+    BuildContext context,
+    CategoryWithStats item,
+    bool active,
+  ) async {
+    final confirmed = await InventoryFeedback.confirm(
+      context: context,
+      title: active ? 'Réactiver la catégorie' : 'Désactiver la catégorie',
+      message: active
+          ? 'Réactiver « ${item.category.name} » ?'
+          : 'Désactiver « ${item.category.name} » ? Les produits restent associés.',
+      confirmLabel: active ? 'Réactiver' : 'Désactiver',
+    );
+    if (confirmed == true && context.mounted) {
+      context.read<CategoryListBloc>().add(
+            CategoryToggleActiveRequested(
+              categoryId: item.category.id,
+              isActive: active,
+            ),
           );
     }
   }

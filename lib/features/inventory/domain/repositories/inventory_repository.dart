@@ -67,4 +67,6 @@ abstract class InventoryRepository {
     required AdjustStockInput input,
     required int defaultAlertThreshold,
   });
+
+  Future<void> syncFromRemote({required int shopId});
 }

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/errors/failures.dart';
-import 'package:frontend/features/inventory/domain/entities/inventory_entities.dart';
-import 'package:frontend/features/inventory/domain/services/product_validation_service.dart';
+import 'package:venteapp/core/errors/failures.dart';
+import 'package:venteapp/features/inventory/domain/entities/inventory_entities.dart';
+import 'package:venteapp/features/inventory/domain/services/product_validation_service.dart';
 
 void main() {
   const service = ProductValidationService();

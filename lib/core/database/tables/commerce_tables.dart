@@ -26,6 +26,8 @@ class Products extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
+  TextColumn get serverId => text().nullable()();
+  IntColumn get syncedAt => integer().nullable()();
 }
 
 class Customers extends Table {
@@ -33,10 +35,16 @@ class Customers extends Table {
   IntColumn get shopId => integer().references(Shops, #id)();
   TextColumn get name => text()();
   TextColumn get phone => text().nullable()();
+  TextColumn get address => text().nullable()();
+  TextColumn get note => text().nullable()();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+  BoolColumn get isShared =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();
+  TextColumn get serverId => text().nullable()();
+  IntColumn get syncedAt => integer().nullable()();
 }
 
 class Sales extends Table {
@@ -94,6 +102,9 @@ class Debts extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get dueAt => integer().nullable()();
   IntColumn get version => integer().withDefault(const Constant(1))();
+  TextColumn get serverId => text().nullable()();
+  IntColumn get syncedAt => integer().nullable()();
+  IntColumn get updatedAt => integer().nullable()();
 }
 
 class StockMovements extends Table {

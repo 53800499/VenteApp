@@ -1,5 +1,7 @@
-import '../../../../shared/enums/permission.dart';
+import '../../../rbac/data/models/rbac_api_models.dart';
 import '../../../../shared/enums/user_role.dart';
+
+export '../../../rbac/data/models/rbac_api_models.dart' show permissionsFromCodes;
 
 class ShopUserItemDto {
   const ShopUserItemDto({
@@ -101,6 +103,7 @@ class UserAssignmentDto {
     required this.roleLabel,
     required this.isActive,
     required this.permissions,
+    required this.overrides,
   });
 
   final int id;
@@ -111,6 +114,7 @@ class UserAssignmentDto {
   final String roleLabel;
   final bool isActive;
   final List<String> permissions;
+  final List<UserPermissionOverrideDto> overrides;
 
   factory UserAssignmentDto.fromJson(Map<String, dynamic> json) {
     return UserAssignmentDto(
@@ -125,13 +129,16 @@ class UserAssignmentDto {
               ?.map((e) => e.toString())
               .toList() ??
           const [],
+      overrides: (json['overrides'] as List<dynamic>?)
+              ?.map(
+                (e) => UserPermissionOverrideDto.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          const [],
     );
   }
-}
-
-Set<Permission> permissionsFromCodes(Iterable<String> codes) {
-  final codeSet = codes.toSet();
-  return Permission.values.where((p) => codeSet.contains(p.code)).toSet();
 }
 
 UserRole roleFromCode(String code) => UserRole.fromCode(code);

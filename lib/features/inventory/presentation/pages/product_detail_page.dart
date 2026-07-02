@@ -11,6 +11,7 @@ import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../bloc/product_detail_bloc.dart';
+import '../widgets/inventory_feedback.dart';
 import '../widgets/stock_gauge.dart';
 import '../widgets/stock_movement_tile.dart';
 import 'product_form_page.dart';
@@ -51,9 +52,37 @@ class ProductDetailPage extends StatelessWidget {
         productId: productId,
       )..add(const ProductDetailLoadRequested()),
       child: BlocConsumer<ProductDetailBloc, ProductDetailState>(
-        listener: (context, state) {
+        listenWhen: (prev, curr) {
+          if (curr.archived && !prev.archived) return true;
+          if (prev.errorMessage != curr.errorMessage &&
+              curr.errorMessage != null &&
+              curr.status == ProductDetailStatus.loaded) {
+            return true;
+          }
+          return false;
+        },
+        listener: (context, state) async {
           if (state.archived) {
-            Navigator.of(context).pop(true);
+            await InventoryFeedback.showSuccess(
+              context: context,
+              title: 'Produit archivé',
+              message:
+                  'Le produit a été retiré du catalogue actif.',
+            );
+            if (context.mounted) Navigator.of(context).pop(true);
+            return;
+          }
+          if (state.errorMessage != null) {
+            await InventoryFeedback.showErrorDialog(
+              context,
+              title: 'Action impossible',
+              message: state.errorMessage!,
+            );
+            if (context.mounted) {
+              context
+                  .read<ProductDetailBloc>()
+                  .add(const ProductDetailErrorDismissed());
+            }
           }
         },
         builder: (context, state) {
@@ -91,12 +120,36 @@ class ProductDetailPage extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, ProductDetailState state) {
     if (state.status == ProductDetailStatus.loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: AppSpacing.md),
+            Text('Chargement du produit…'),
+          ],
+        ),
+      );
     }
 
     if (state.status == ProductDetailStatus.failure || state.detail == null) {
       return Center(
-        child: Text(state.errorMessage ?? 'Produit introuvable'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(state.errorMessage ?? 'Produit introuvable'),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(
+                onPressed: () => context
+                    .read<ProductDetailBloc>()
+                    .add(const ProductDetailLoadRequested()),
+                child: const Text('Réessayer'),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -245,10 +298,9 @@ class ProductDetailPage extends StatelessWidget {
                     ),
                   );
                   if (changed == true && context.mounted) {
-                    context
-                        .read<ProductDetailBloc>()
-                        .add(const ProductDetailLoadRequested());
-                    Navigator.of(context).pop(true);
+                    context.read<ProductDetailBloc>().add(
+                          const ProductDetailLoadRequested(),
+                        );
                   }
                 },
                 icon: const Icon(Icons.tune),
@@ -260,8 +312,12 @@ class ProductDetailPage extends StatelessWidget {
               OutlinedButton.icon(
                 onPressed:
                     state.isArchiving ? null : () => _confirmArchive(context),
-                icon: const Icon(Icons.archive_outlined),
-                label: const Text('Archiver'),
+                icon: state.isArchiving
+                    ? InventoryFeedback.inlineLoader(size: 18)
+                    : const Icon(Icons.archive_outlined),
+                label: Text(
+                  state.isArchiving ? 'Archivage…' : 'Archiver',
+                ),
               ),
             ] else if (detail.saleItemCount > 0) ...[
               const SizedBox(height: AppSpacing.sm),
@@ -298,24 +354,13 @@ class ProductDetailPage extends StatelessWidget {
   }
 
   Future<void> _confirmArchive(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await InventoryFeedback.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Archiver ce produit ?'),
-        content: const Text(
+      title: 'Archiver ce produit ?',
+      message:
           'Le produit sera retiré du catalogue actif mais restera visible dans l\'historique.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Archiver'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Archiver',
+      isDestructive: true,
     );
 
     if (confirmed == true && context.mounted) {

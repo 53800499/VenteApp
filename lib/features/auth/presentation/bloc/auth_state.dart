@@ -16,7 +16,13 @@ class AuthLoading extends AuthState {
 }
 
 class AuthNeedsSetup extends AuthState {
-  const AuthNeedsSetup();
+  const AuthNeedsSetup({this.localSetupAvailable = false});
+
+  /// Une boutique est déjà installée localement (connexion PIN possible).
+  final bool localSetupAvailable;
+
+  @override
+  List<Object?> get props => [localSetupAvailable];
 }
 
 class AuthSetupInProgress extends AuthState {
@@ -33,12 +39,16 @@ class AuthSetupCompleted extends AuthState {
 }
 
 class AuthSetupFailure extends AuthState {
-  const AuthSetupFailure(this.message);
+  const AuthSetupFailure(
+    this.message, {
+    this.fieldErrors = const {},
+  });
 
   final String message;
+  final Map<String, String> fieldErrors;
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, fieldErrors];
 }
 
 class AuthLocked extends AuthState {

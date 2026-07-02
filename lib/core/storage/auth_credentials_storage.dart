@@ -48,10 +48,12 @@ class AuthCredentialsStorage {
     required int accessExpiresAt,
     required int refreshExpiresAt,
   }) async {
+    final offlineUntil = nowMs() + ApiConfig.offlineGraceMs;
     await _write(accessTokenKey, accessToken);
     await _write(refreshTokenKey, refreshToken);
     await _write(accessExpiresAtKey, accessExpiresAt.toString());
     await _write(refreshExpiresAtKey, refreshExpiresAt.toString());
+    await _write(offlineValidUntilKey, offlineUntil.toString());
   }
 
   Future<void> updateProfileShopId(int shopId) async {
@@ -74,6 +76,10 @@ class AuthCredentialsStorage {
     final raw = await _read(profileKey);
     if (raw == null) return null;
     return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  Future<void> updatePermissions(List<String> permissions) async {
+    await _write(permissionsKey, jsonEncode(permissions));
   }
 
   Future<List<String>> getPermissions() async {

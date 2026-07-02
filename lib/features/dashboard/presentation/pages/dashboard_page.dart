@@ -20,12 +20,14 @@ class DashboardPage extends StatefulWidget {
     this.onLowStockTap,
     this.onNewSaleTap,
     this.onSalesHistoryTap,
+    this.onDebtorsTap,
   });
 
   final AuthSession session;
   final VoidCallback? onLowStockTap;
   final VoidCallback? onNewSaleTap;
   final VoidCallback? onSalesHistoryTap;
+  final VoidCallback? onDebtorsTap;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -131,15 +133,8 @@ class _DashboardPageState extends State<DashboardPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      GridView.count(
-                        crossAxisCount:
-                            Breakpoints.kpiGridColumns(screenType),
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: AppSpacing.sm + 4,
-                        crossAxisSpacing: AppSpacing.sm + 4,
-                        childAspectRatio:
-                            screenType.isCompact ? 1.35 : 1.5,
+                      ResponsiveKpiGrid(
+                        withSubtitle: true,
                         children: [
                           KpiCard(
                             label: 'Stock faible',
@@ -162,8 +157,8 @@ class _DashboardPageState extends State<DashboardPage> {
                             accentColor: data.kpis.debtorCount > 0
                                 ? AppColors.danger
                                 : null,
-                            onTap: () =>
-                                _showComingSoon('Liste des débiteurs'),
+                            onTap: widget.onDebtorsTap ??
+                                () => _showComingSoon('Liste des débiteurs'),
                           ),
                         ],
                       ),
@@ -242,40 +237,31 @@ class _FinancialSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (screenType.isTablet)
-          ResponsiveGrid(
-            compactColumns: 1,
-            mediumColumns: 2,
-            expandedColumns: 3,
-            childAspectRatio: 1.6,
-            itemCount: financial.profitAvailable &&
-                    financial.estimatedProfit != null
-                ? 3
-                : 2,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return KpiCard(
-                  label: 'Encaissé',
-                  value: formatFcfa(encaisse),
-                  subtitle:
-                      'Espèces ${formatFcfa(financial.totalCash)} · MoMo ${formatFcfa(financial.totalMomo)}',
-                  icon: Icons.savings_outlined,
-                );
-              }
-              if (index == 1) {
-                return KpiCard(
-                  label: 'Crédit',
-                  value: formatFcfa(financial.totalCredit),
-                  subtitle: 'ventes à crédit',
-                  icon: Icons.credit_card_outlined,
-                );
-              }
-              return KpiCard(
-                label: 'Bénéfice estimé',
-                value: formatFcfa(financial.estimatedProfit!),
-                icon: Icons.trending_up,
-                accentColor: AppColors.success,
-              );
-            },
+          ResponsiveKpiGrid(
+            withSubtitle: true,
+            crossAxisCount: screenType == ScreenType.expanded ? 3 : 2,
+            children: [
+              KpiCard(
+                label: 'Encaissé',
+                value: formatFcfa(encaisse),
+                subtitle:
+                    'Espèces ${formatFcfa(financial.totalCash)} · MoMo ${formatFcfa(financial.totalMomo)}',
+                icon: Icons.savings_outlined,
+              ),
+              KpiCard(
+                label: 'Crédit',
+                value: formatFcfa(financial.totalCredit),
+                subtitle: 'ventes à crédit',
+                icon: Icons.credit_card_outlined,
+              ),
+              if (financial.profitAvailable && financial.estimatedProfit != null)
+                KpiCard(
+                  label: 'Bénéfice estimé',
+                  value: formatFcfa(financial.estimatedProfit!),
+                  icon: Icons.trending_up,
+                  accentColor: AppColors.success,
+                ),
+            ],
           )
         else ...[
           Row(

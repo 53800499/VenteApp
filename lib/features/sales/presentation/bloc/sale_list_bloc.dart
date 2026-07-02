@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
@@ -50,6 +51,7 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
           search: event.query,
           clearSearch: event.query.isEmpty,
         ),
+        isRefreshing: state.status == SaleListStatus.loaded,
       ),
     );
     await _fetch(emit);
@@ -73,7 +75,7 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
       emit(
         state.copyWith(
           status: SaleListStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
           isRefreshing: false,
         ),
       );

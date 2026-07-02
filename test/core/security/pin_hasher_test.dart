@@ -1,4 +1,4 @@
-import 'package:frontend/core/security/pin_hasher.dart';
+import 'package:venteapp/core/security/pin_hasher.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

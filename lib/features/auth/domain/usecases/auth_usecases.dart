@@ -162,6 +162,42 @@ class EnableBiometric {
       );
 }
 
+class DisableBiometric {
+  const DisableBiometric(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<bool> call({
+    required int userId,
+    required String sessionToken,
+    required String pin,
+  }) =>
+      _repository.disableBiometric(
+        userId: userId,
+        sessionToken: sessionToken,
+        pin: pin,
+      );
+}
+
+class ChangeUserPin {
+  const ChangeUserPin(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<void> call({
+    required AuthSession session,
+    required String currentPin,
+    required String newPin,
+  }) {
+    return _repository.changePin(
+      userId: session.user.id,
+      shopId: session.shop.id,
+      currentPin: currentPin,
+      newPin: newPin,
+    );
+  }
+}
+
 class TouchSession {
   const TouchSession(this._repository);
 

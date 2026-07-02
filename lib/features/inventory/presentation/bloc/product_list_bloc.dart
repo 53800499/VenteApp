@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../../core/errors/failures.dart';
 import '../../domain/entities/inventory_entities.dart';
@@ -57,6 +58,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
           search: event.query,
           clearSearch: event.query.isEmpty,
         ),
+        isRefreshing: state.status == ProductListStatus.loaded,
       ),
     );
     await _fetch(emit);
@@ -72,6 +74,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
           categoryId: event.categoryId,
           clearCategory: event.categoryId == null,
         ),
+        isRefreshing: state.status == ProductListStatus.loaded,
       ),
     );
     await _fetch(emit);
@@ -84,6 +87,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     emit(
       state.copyWith(
         filters: state.filters.copyWith(lowStockOnly: event.enabled),
+        isRefreshing: state.status == ProductListStatus.loaded,
       ),
     );
     await _fetch(emit);
@@ -93,7 +97,10 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     ProductListSortChanged event,
     Emitter<ProductListState> emit,
   ) async {
-    emit(state.copyWith(filters: state.filters.copyWith(sort: event.sort)));
+    emit(state.copyWith(
+      filters: state.filters.copyWith(sort: event.sort),
+      isRefreshing: state.status == ProductListStatus.loaded,
+    ));
     await _fetch(emit);
   }
 
@@ -117,7 +124,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
       emit(
         state.copyWith(
           status: ProductListStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
           isRefreshing: false,
         ),
       );

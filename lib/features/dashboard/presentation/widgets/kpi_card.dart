@@ -33,66 +33,84 @@ class KpiCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.06),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (icon != null)
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(icon, size: 18, color: accent),
-                    ),
-                  if (icon != null) const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: AppColors.onSurfaceMuted,
-                          ),
-                    ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final tight = constraints.maxHeight < 128;
+            final padding = tight ? AppSpacing.sm : AppSpacing.md;
+            final valueStyle = tight
+                ? Theme.of(context).textTheme.titleLarge
+                : Theme.of(context).textTheme.headlineSmall;
+
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm + 4),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      if (icon != null)
+                        Container(
+                          padding: EdgeInsets.all(tight ? 6 : 8),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(icon, size: tight ? 16 : 18, color: accent),
+                        ),
+                      if (icon != null) SizedBox(width: tight ? 6 : AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: AppColors.onSurfaceMuted,
+                                fontSize: tight ? 12 : null,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: tight ? AppSpacing.xs : AppSpacing.sm + 4),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: valueStyle?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: accent,
                       letterSpacing: -0.3,
                     ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: tight ? 11 : null,
+                          ),
+                      maxLines: tight ? 1 : 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
               ),
-              if (subtitle != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  subtitle!,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
@@ -149,23 +167,29 @@ class RevenueHeroCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      'CA du jour',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontWeight: FontWeight.w600,
-                          ),
+                    Expanded(
+                      child: Text(
+                        'CA du jour',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Text(
-                  formatFcfa(revenue),
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatFcfa(revenue),
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Row(
@@ -176,11 +200,15 @@ class RevenueHeroCard extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.8),
                     ),
                     const SizedBox(width: 6),
-                    Text(
-                      saleCount == 1 ? '1 vente' : '$saleCount ventes',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
-                          ),
+                    Flexible(
+                      child: Text(
+                        saleCount == 1 ? '1 vente' : '$saleCount ventes',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.85),
+                            ),
+                      ),
                     ),
                   ],
                 ),

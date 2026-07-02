@@ -1,5 +1,6 @@
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
+import '../../../rbac/domain/entities/rbac_entities.dart';
 
 class ShopUser {
   const ShopUser({
@@ -47,6 +48,7 @@ class UserAssignment {
     required this.roleLabel,
     required this.isActive,
     required this.permissions,
+    this.overrides = const [],
   });
 
   final int id;
@@ -57,4 +59,5 @@ class UserAssignment {
   final String roleLabel;
   final bool isActive;
   final Set<Permission> permissions;
+  final List<UserPermissionOverride> overrides;
 }

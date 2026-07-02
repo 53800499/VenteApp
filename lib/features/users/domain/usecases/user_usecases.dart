@@ -7,7 +7,8 @@ class ListShopUsers {
 
   final UserRepository _repository;
 
-  Future<List<ShopUser>> call() => _repository.listShopUsers();
+  Future<List<ShopUser>> call({required int localShopId}) =>
+      _repository.listShopUsers(localShopId: localShopId);
 }
 
 class GetUserAssignment {

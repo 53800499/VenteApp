@@ -1,3 +1,6 @@
+import 'package:dio/dio.dart';
+
+import '../errors/exception_mapper.dart';
 import '../errors/failures.dart';
 import '../storage/auth_credentials_storage.dart';
 import 'api_client.dart';
@@ -24,8 +27,9 @@ class RemoteApiGuard {
       );
     }
     if (!await _credentials.hasCredentials()) {
-      throw const UnauthorizedFailure(
-        'Session en ligne requise. Reconnectez-vous avec le PIN alors que le serveur est accessible.',
+      throw const NetworkFailure(
+        'Session en ligne indisponible. Données locales affichées — '
+        'reconnectez le serveur et saisissez votre PIN.',
       );
     }
 
@@ -35,7 +39,23 @@ class RemoteApiGuard {
           'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).',
         );
       }
-      await _apiClient.refreshTokensIfNeeded();
+      try {
+        await _apiClient.refreshTokensIfNeeded();
+      } on DioException catch (error) {
+        throw await _mapRefreshFailure(error);
+      }
     }
+  }
+
+  Future<Failure> _mapRefreshFailure(DioException error) async {
+    final failure = mapDioException(error);
+    if (failure is UnauthorizedFailure &&
+        await _credentials.hasValidRefreshToken()) {
+      return const NetworkFailure(
+        'Serveur temporairement injoignable. Les données locales restent '
+        'disponibles — synchronisation à la reconnexion.',
+      );
+    }
+    return failure;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/user_entities.dart';
@@ -16,12 +17,14 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
     required ChangeUserRole changeUserRole,
     required DeactivateShopUser deactivateShopUser,
     required AssignUserShop assignUserShop,
+    required int localShopId,
     required int currentUserId,
   })  : _listShopUsers = listShopUsers,
         _createShopUser = createShopUser,
         _changeUserRole = changeUserRole,
         _deactivateShopUser = deactivateShopUser,
         _assignUserShop = assignUserShop,
+        _localShopId = localShopId,
         _currentUserId = currentUserId,
         super(const UserListState()) {
     on<UserListLoadRequested>(_onLoad);
@@ -30,6 +33,7 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
     on<UserChangeRoleRequested>(_onChangeRole);
     on<UserDeactivateRequested>(_onDeactivate);
     on<UserAssignShopRequested>(_onAssignShop);
+    on<UserFeedbackDismissed>(_onFeedbackDismissed);
   }
 
   final ListShopUsers _listShopUsers;
@@ -37,6 +41,7 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
   final ChangeUserRole _changeUserRole;
   final DeactivateShopUser _deactivateShopUser;
   final AssignUserShop _assignUserShop;
+  final int _localShopId;
   final int _currentUserId;
 
   Future<void> _onLoad(
@@ -57,7 +62,7 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
 
   Future<void> _fetch(Emitter<UserListState> emit) async {
     try {
-      final users = await _listShopUsers();
+      final users = await _listShopUsers(localShopId: _localShopId);
       emit(
         state.copyWith(
           status: UserListStatus.loaded,
@@ -70,7 +75,15 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
       emit(
         state.copyWith(
           status: UserListStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
+          isRefreshing: false,
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          status: UserListStatus.failure,
+          errorMessage: friendlyErrorMessage(error),
           isRefreshing: false,
         ),
       );
@@ -90,7 +103,19 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
         successMessage: 'Utilisateur créé.',
       ));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -111,7 +136,19 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
         successMessage: 'Rôle mis à jour.',
       ));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -120,7 +157,11 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
     Emitter<UserListState> emit,
   ) async {
     if (event.userId == _currentUserId) {
-      emit(state.copyWith(errorMessage: 'Impossible de désactiver votre propre compte.'));
+      emit(
+        state.copyWith(
+          errorMessage: 'Impossible de désactiver votre propre compte.',
+        ),
+      );
       return;
     }
     emit(state.copyWith(isSubmitting: true, clearError: true));
@@ -132,7 +173,19 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
         successMessage: 'Utilisateur désactivé.',
       ));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -141,7 +194,11 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
     Emitter<UserListState> emit,
   ) async {
     if (event.userId == _currentUserId) {
-      emit(state.copyWith(errorMessage: 'Impossible de modifier votre propre affectation.'));
+      emit(
+        state.copyWith(
+          errorMessage: 'Impossible de modifier votre propre affectation.',
+        ),
+      );
       return;
     }
     emit(state.copyWith(isSubmitting: true, clearError: true));
@@ -157,7 +214,26 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
         successMessage: 'Utilisateur réaffecté.',
       ));
     } on Failure catch (e) {
-      emit(state.copyWith(isSubmitting: false, errorMessage: e.message));
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
+  }
+
+  void _onFeedbackDismissed(
+    UserFeedbackDismissed event,
+    Emitter<UserListState> emit,
+  ) {
+    emit(state.copyWith(clearError: true, clearSuccess: true));
   }
 }

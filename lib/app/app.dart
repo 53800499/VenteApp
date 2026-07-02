@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../core/network/online_session_policy.dart';
 import 'pages/app_bootstrap_page.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -37,7 +38,14 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
 
-    _authBloc = sl<AuthBloc>()..add(const AuthBootstrapRequested());
+    _authBloc = sl<AuthBloc>();
+    final sessionPolicy = sl<OnlineSessionPolicy>();
+    sessionPolicy.onSessionInvalidated = () {
+      sessionPolicy.reset();
+      // Verrouillage PIN — pas de déconnexion complète (offline-first).
+      _authBloc.add(const AuthAppLockedRequested());
+    };
+    _authBloc.add(const AuthBootstrapRequested());
 
   }
 
@@ -61,16 +69,13 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
   void didChangeAppLifecycleState(AppLifecycleState state) {
 
-    if (state == AppLifecycleState.paused ||
-
-        state == AppLifecycleState.inactive) {
-
+    // Verrouiller uniquement quand l'app passe en arrière-plan (pas sur
+    // `inactive`, déclenché par les dialogues système / barre de statut).
+    if (state == AppLifecycleState.paused) {
       final authState = _authBloc.state;
-
       if (authState is AuthAuthenticated) {
         _authBloc.add(const AuthAppLockedRequested());
       }
-
     }
 
   }

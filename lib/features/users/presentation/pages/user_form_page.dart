@@ -5,6 +5,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/user_entities.dart';
+import '../widgets/user_feedback.dart';
 
 class UserFormResult {
   const UserFormResult({
@@ -49,12 +50,21 @@ class _UserFormPageState extends State<UserFormPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final name = _nameController.text.trim();
+    final confirmed = await UserFeedback.confirm(
+      context: context,
+      title: 'Créer l\'utilisateur',
+      message: 'Ajouter « $name » comme ${_role.label} ?',
+    );
+    if (confirmed != true || !mounted) return;
+
     Navigator.pop(
       context,
       UserFormResult(
-        name: _nameController.text.trim(),
+        name: name,
         phone: _phoneController.text.trim(),
         pin: _pinController.text.trim(),
         role: _role,

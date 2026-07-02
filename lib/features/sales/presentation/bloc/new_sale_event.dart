@@ -12,12 +12,13 @@ final class NewSaleLoadRequested extends NewSaleEvent {
 }
 
 final class NewSaleProductAdded extends NewSaleEvent {
-  const NewSaleProductAdded(this.product);
+  const NewSaleProductAdded(this.product, {this.quantity = 1});
 
   final SaleProductOption product;
+  final int quantity;
 
   @override
-  List<Object?> get props => [product];
+  List<Object?> get props => [product, quantity];
 }
 
 final class NewSaleLineQuantityChanged extends NewSaleEvent {
@@ -58,6 +59,47 @@ final class NewSaleCustomerSelected extends NewSaleEvent {
 
   @override
   List<Object?> get props => [customerId];
+}
+
+final class NewSaleSearchChanged extends NewSaleEvent {
+  const NewSaleSearchChanged(this.query);
+
+  final String query;
+
+  @override
+  List<Object?> get props => [query];
+}
+
+final class NewSaleMixedAmountsChanged extends NewSaleEvent {
+  const NewSaleMixedAmountsChanged({
+    this.amountCash,
+    this.amountMomo,
+    this.amountCredit,
+  });
+
+  final int? amountCash;
+  final int? amountMomo;
+  final int? amountCredit;
+
+  @override
+  List<Object?> get props => [amountCash, amountMomo, amountCredit];
+}
+
+final class NewSaleCreateCustomerRequested extends NewSaleEvent {
+  const NewSaleCreateCustomerRequested({
+    required this.name,
+    this.phone,
+  });
+
+  final String name;
+  final String? phone;
+
+  @override
+  List<Object?> get props => [name, phone];
+}
+
+final class NewSaleErrorDismissed extends NewSaleEvent {
+  const NewSaleErrorDismissed();
 }
 
 final class NewSaleSubmitRequested extends NewSaleEvent {

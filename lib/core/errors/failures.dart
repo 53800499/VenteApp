@@ -21,6 +21,20 @@ class ConflictFailure extends Failure {
   const ConflictFailure(super.message);
 }
 
+/// Conflit d'installation avec erreurs par champ (doublons formulaire ou serveur).
+class SetupFieldConflictFailure extends ConflictFailure {
+  const SetupFieldConflictFailure({
+    required String message,
+    required this.fieldErrors,
+  }) : super(message);
+
+  /// Clés : ownerName, ownerPhone, shopName, shopPhone, …
+  final Map<String, String> fieldErrors;
+
+  @override
+  List<Object?> get props => [message, fieldErrors];
+}
+
 class InvalidPinFailure extends Failure {
   const InvalidPinFailure(this.remainingAttempts)
       : super('Code incorrect. $remainingAttempts tentatives restantes.');

@@ -1,11 +1,11 @@
 import 'package:drift/native.dart';
-import 'package:frontend/core/database/app_database.dart';
-import 'package:frontend/core/security/lockout_policy.dart';
-import 'package:frontend/core/security/pin_hasher.dart';
-import 'package:frontend/core/security/recovery_token_service.dart';
-import 'package:frontend/core/storage/auth_credentials_storage.dart';
-import 'package:frontend/core/storage/session_storage.dart';
-import 'package:frontend/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:venteapp/core/database/app_database.dart';
+import 'package:venteapp/core/security/lockout_policy.dart';
+import 'package:venteapp/core/security/pin_hasher.dart';
+import 'package:venteapp/core/security/recovery_token_service.dart';
+import 'package:venteapp/core/storage/auth_credentials_storage.dart';
+import 'package:venteapp/core/storage/session_storage.dart';
+import 'package:venteapp/features/auth/data/repositories/auth_repository_impl.dart';
 
 AppDatabase createTestDatabase() {
   return AppDatabase.forTesting(NativeDatabase.memory());

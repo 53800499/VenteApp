@@ -212,6 +212,18 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
                                             : 'Recevoir le code',
                                       ),
                               ),
+                              const SizedBox(height: AppSpacing.sm),
+                              TextButton.icon(
+                                onPressed: state.isSubmitting
+                                    ? null
+                                    : () => context.read<AuthBloc>().add(
+                                          const AuthProceedToPinLoginRequested(),
+                                        ),
+                                icon: const Icon(Icons.pin_outlined),
+                                label: const Text(
+                                  'Utiliser le PIN local à la place',
+                                ),
+                              ),
                             ],
                           ),
                         ),

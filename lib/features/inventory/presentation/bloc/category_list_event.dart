@@ -58,3 +58,7 @@ class CategoryDeleteRequested extends CategoryListEvent {
   @override
   List<Object?> get props => [categoryId];
 }
+
+class CategoryFeedbackDismissed extends CategoryListEvent {
+  const CategoryFeedbackDismissed();
+}

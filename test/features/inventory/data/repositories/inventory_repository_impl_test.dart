@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/core/database/app_database.dart';
-import 'package:frontend/core/utils/time.dart';
-import 'package:frontend/features/inventory/data/datasources/local/inventory_local_datasource.dart';
-import 'package:frontend/features/inventory/data/repositories/inventory_repository_impl.dart';
-import 'package:frontend/core/errors/failures.dart';
-import 'package:frontend/features/inventory/domain/entities/inventory_entities.dart';
+import 'package:venteapp/core/database/app_database.dart';
+import 'package:venteapp/core/utils/time.dart';
+import 'package:venteapp/features/inventory/data/datasources/local/inventory_local_datasource.dart';
+import 'package:venteapp/features/inventory/data/repositories/inventory_repository_impl.dart';
+import 'package:venteapp/core/errors/failures.dart';
+import 'package:venteapp/features/inventory/domain/entities/inventory_entities.dart';
 
 import '../../../../support/auth_test_helpers.dart';
 

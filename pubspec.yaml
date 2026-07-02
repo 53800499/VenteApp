@@ -1,4 +1,4 @@
-name: frontend
+name: venteapp
 description: "VenteApp Bénin — application de gestion commerciale offline-first."
 publish_to: 'none'
 
@@ -29,6 +29,17 @@ dependencies:
   dio: ^5.8.0+1
   connectivity_plus: ^6.1.4
   shared_preferences: ^2.5.3
+  share_plus: ^10.1.4
+  google_sign_in: ^6.2.2
+  googleapis: ^13.2.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12
+  file_picker: ^8.1.7
+  encrypt: ^5.0.3
+  pointycastle: ^3.9.1
+  printing: ^5.14.2
+  pdf: ^3.11.3
+  url_launcher: ^6.3.1
+  flutter_local_notifications: ^19.0.0
 
 dev_dependencies:
   flutter_test:

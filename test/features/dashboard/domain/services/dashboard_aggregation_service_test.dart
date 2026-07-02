@@ -1,6 +1,6 @@
-import 'package:frontend/core/utils/benin_day_range.dart';
-import 'package:frontend/features/dashboard/domain/entities/dashboard_entities.dart';
-import 'package:frontend/features/dashboard/domain/services/dashboard_aggregation_service.dart';
+import 'package:venteapp/core/utils/benin_day_range.dart';
+import 'package:venteapp/features/dashboard/domain/entities/dashboard_entities.dart';
+import 'package:venteapp/features/dashboard/domain/services/dashboard_aggregation_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

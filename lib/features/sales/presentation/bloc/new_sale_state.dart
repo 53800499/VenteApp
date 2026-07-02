@@ -59,6 +59,11 @@ class NewSaleState extends Equatable {
     this.customers = const [],
     this.paymentMethod = PaymentMethod.cash,
     this.selectedCustomerId,
+    this.mixedAmountCash = 0,
+    this.mixedAmountMomo = 0,
+    this.mixedAmountCredit = 0,
+    this.searchQuery = '',
+    this.creatingCustomer = false,
     this.createdSale,
     this.errorMessage,
   });
@@ -69,10 +74,30 @@ class NewSaleState extends Equatable {
   final List<SaleCustomerOption> customers;
   final PaymentMethod paymentMethod;
   final int? selectedCustomerId;
+  final int mixedAmountCash;
+  final int mixedAmountMomo;
+  final int mixedAmountCredit;
+  final String searchQuery;
+  final bool creatingCustomer;
   final Sale? createdSale;
   final String? errorMessage;
 
   int get subtotal => cart.fold<int>(0, (sum, line) => sum + line.lineTotal);
+
+  bool get needsCustomer =>
+      paymentMethod == PaymentMethod.credit ||
+      (paymentMethod == PaymentMethod.mixed && mixedAmountCredit > 0);
+
+  List<SaleProductOption> get filteredProducts {
+    final q = searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return products;
+    return products
+        .where((p) => p.name.toLowerCase().contains(q))
+        .toList();
+  }
+
+  int get mixedRemaining =>
+      subtotal - mixedAmountCash - mixedAmountMomo - mixedAmountCredit;
 
   NewSaleState copyWith({
     NewSaleStatus? status,
@@ -82,6 +107,11 @@ class NewSaleState extends Equatable {
     PaymentMethod? paymentMethod,
     int? selectedCustomerId,
     bool clearCustomer = false,
+    int? mixedAmountCash,
+    int? mixedAmountMomo,
+    int? mixedAmountCredit,
+    String? searchQuery,
+    bool? creatingCustomer,
     Sale? createdSale,
     bool clearSale = false,
     String? errorMessage,
@@ -95,6 +125,11 @@ class NewSaleState extends Equatable {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       selectedCustomerId:
           clearCustomer ? null : (selectedCustomerId ?? this.selectedCustomerId),
+      mixedAmountCash: mixedAmountCash ?? this.mixedAmountCash,
+      mixedAmountMomo: mixedAmountMomo ?? this.mixedAmountMomo,
+      mixedAmountCredit: mixedAmountCredit ?? this.mixedAmountCredit,
+      searchQuery: searchQuery ?? this.searchQuery,
+      creatingCustomer: creatingCustomer ?? this.creatingCustomer,
       createdSale: clearSale ? null : (createdSale ?? this.createdSale),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
@@ -108,6 +143,11 @@ class NewSaleState extends Equatable {
         customers,
         paymentMethod,
         selectedCustomerId,
+        mixedAmountCash,
+        mixedAmountMomo,
+        mixedAmountCredit,
+        searchQuery,
+        creatingCustomer,
         createdSale,
         errorMessage,
       ];

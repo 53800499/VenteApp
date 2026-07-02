@@ -20,6 +20,8 @@ abstract class SaleRepository {
     required int shopId,
     required int userId,
     required CreateStandardSaleInput input,
+    int? serverShopId,
+    int? serverUserId,
   });
 
   Future<Sale> createQuickSale({
@@ -35,4 +37,13 @@ abstract class SaleRepository {
     required String reason,
     required bool isOwner,
   });
+
+  Future<Sale> convertQuickSaleToStandard({
+    required int shopId,
+    required int userId,
+    required int saleId,
+    required ConvertQuickSaleInput input,
+  });
+
+  Future<void> syncFromRemote({required int shopId});
 }

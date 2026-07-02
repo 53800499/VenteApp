@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/time.dart';
 import 'tables/auth_tables.dart';
 import 'tables/commerce_tables.dart';
+import 'tables/notification_tables.dart';
+import 'tables/sync_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -24,6 +26,8 @@ part 'app_database.g.dart';
   SaleItems,
   Debts,
   StockMovements,
+  SyncQueue,
+  NotificationDailyStates,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -31,10 +35,13 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        beforeOpen: (details) async {
+          await _backfillNotificationSettingsColumns();
+        },
         onCreate: (Migrator m) async {
           await m.createAll();
         },
@@ -69,8 +76,60 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(sales, sales.syncStatus);
             await m.addColumn(saleItems, saleItems.discountAmount);
           }
+          if (from < 5) {
+            await m.addColumn(products, products.serverId);
+            await m.addColumn(products, products.syncedAt);
+            await m.addColumn(customers, customers.serverId);
+            await m.addColumn(customers, customers.syncedAt);
+          }
+          if (from < 6) {
+            await m.addColumn(customers, customers.note);
+          }
+          if (from < 7) {
+            await m.addColumn(debts, debts.serverId);
+            await m.addColumn(debts, debts.syncedAt);
+            await m.addColumn(debts, debts.updatedAt);
+          }
+          if (from < 8) {
+            await m.createTable(syncQueue);
+          }
+          if (from < 9) {
+            await m.addColumn(
+              settings,
+              settings.enableBackupReminder,
+            );
+            await m.addColumn(
+              settings,
+              settings.enableGoodDayAlert,
+            );
+            await m.createTable(notificationDailyStates);
+            await _backfillNotificationSettingsColumns();
+          }
+          if (from < 10) {
+            await m.addColumn(customers, customers.isShared);
+          }
+          if (from < 11) {
+            await m.addColumn(customers, customers.address);
+          }
+          if (from < 12) {
+            await customStatement(
+              'UPDATE settings SET cloud_sync_enabled = 1 '
+              'WHERE cloud_sync_enabled = 0',
+            );
+          }
         },
       );
+
+  Future<void> _backfillNotificationSettingsColumns() async {
+    await customStatement(
+      'UPDATE settings SET enable_backup_reminder = 1 '
+      'WHERE enable_backup_reminder IS NULL',
+    );
+    await customStatement(
+      'UPDATE settings SET enable_good_day_alert = 1 '
+      'WHERE enable_good_day_alert IS NULL',
+    );
+  }
 
   static QueryExecutor _openConnection() {
     return LazyDatabase(() async {

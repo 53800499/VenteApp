@@ -5,9 +5,11 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../../../../shared/components/ui_primitives.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/usecases/inventory_usecases.dart';
+import '../widgets/inventory_feedback.dart';
 
 class StockAdjustmentPage extends StatefulWidget {
   const StockAdjustmentPage({
@@ -47,12 +49,36 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
     };
   }
 
+  String get _typeLabel => switch (_type) {
+        StockAdjustmentType.restock => 'Entrée de stock',
+        StockAdjustmentType.loss => 'Perte',
+        StockAdjustmentType.adjustment => 'Correction',
+      };
+
   Future<void> _submit() async {
     final raw = int.tryParse(_quantityController.text.trim());
     if (raw == null || raw == 0) {
       setState(() => _errorMessage = 'Indiquez une quantité non nulle.');
       return;
     }
+
+    final needsReason =
+        _type == StockAdjustmentType.adjustment ||
+            _type == StockAdjustmentType.loss;
+    if (needsReason && _reasonController.text.trim().isEmpty) {
+      setState(() => _errorMessage = 'Le motif est obligatoire.');
+      return;
+    }
+
+    final signed = _signedQuantity(raw);
+    final confirmed = await InventoryFeedback.confirm(
+      context: context,
+      title: 'Confirmer l\'ajustement',
+      message:
+          '$_typeLabel : ${signed > 0 ? '+' : ''}$signed unité(s) pour '
+          '« ${widget.product.name} » ?',
+    );
+    if (confirmed != true || !mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -66,7 +92,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
         productId: widget.product.id,
         input: AdjustStockInput(
           type: _type,
-          quantityChange: _signedQuantity(raw),
+          quantityChange: signed,
           reason: _reasonController.text.trim().isEmpty
               ? null
               : _reasonController.text.trim(),
@@ -75,17 +101,43 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
               : int.tryParse(_unitCostController.text.trim()),
         ),
       );
+
+      if (!mounted) return;
+      final newStock = widget.product.quantityInStock + signed;
+      await InventoryFeedback.showSuccess(
+        context: context,
+        title: 'Stock mis à jour',
+        details: [
+          Text('Produit : ${widget.product.name}'),
+          Text('Nouveau stock : $newStock unité(s)'),
+        ],
+      );
       if (mounted) Navigator.of(context).pop(true);
     } on Failure catch (e) {
-      setState(() {
-        _errorMessage = e.message;
-        _isLoading = false;
-      });
+      if (mounted) {
+        await InventoryFeedback.showErrorDialog(
+          context,
+          title: 'Ajustement impossible',
+          message: e.message,
+        );
+        setState(() {
+          _errorMessage = e.message;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
-      setState(() {
-        _errorMessage = 'Ajustement impossible.';
-        _isLoading = false;
-      });
+      if (mounted) {
+        const message = 'Ajustement impossible.';
+        await InventoryFeedback.showErrorDialog(
+          context,
+          title: 'Ajustement impossible',
+          message: message,
+        );
+        setState(() {
+          _errorMessage = message;
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -176,20 +228,13 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
               ],
               if (_errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.md),
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
+                ErrorBanner(message: _errorMessage!),
               ],
               const Spacer(),
               FilledButton(
                 onPressed: _isLoading ? null : _submit,
                 child: _isLoading
-                    ? const SizedBox(
-                        height: 22,
-                        width: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? InventoryFeedback.inlineLoader()
                     : const Text('Valider l\'ajustement'),
               ),
             ],

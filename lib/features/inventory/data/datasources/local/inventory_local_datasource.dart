@@ -289,4 +289,119 @@ class InventoryLocalDatasource {
     await (_db.update(_db.products)..where((p) => p.id.equals(productId)))
         .write(patch);
   }
+
+  Future<Category?> findCategoryByName(int shopId, String name) async {
+    return (_db.select(_db.categories)
+          ..where(
+            (c) => c.shopId.equals(shopId) & c.name.equals(name.trim()),
+          ))
+        .getSingleOrNull();
+  }
+
+  Future<int> upsertCategoryFromRemote({
+    required int shopId,
+    required String name,
+    required bool isActive,
+    required int sortOrder,
+    int? createdAt,
+    int? updatedAt,
+  }) async {
+    final timestamp = nowMs();
+    final existing = await findCategoryByName(shopId, name);
+    if (existing != null) {
+      await updateCategoryRow(
+        existing.id,
+        CategoriesCompanion(
+          isActive: Value(isActive),
+          sortOrder: Value(sortOrder),
+          updatedAt: Value(updatedAt ?? timestamp),
+        ),
+      );
+      return existing.id;
+    }
+
+    return _db.into(_db.categories).insert(
+          CategoriesCompanion.insert(
+            shopId: shopId,
+            name: name.trim(),
+            isActive: Value(isActive),
+            sortOrder: Value(sortOrder),
+            createdAt: createdAt ?? timestamp,
+            updatedAt: updatedAt ?? timestamp,
+          ),
+        );
+  }
+
+  Future<void> upsertProductFromRemote({
+    required int shopId,
+    required int? categoryId,
+    required String serverId,
+    required String name,
+    String? sku,
+    required int quantityInStock,
+    int? alertThreshold,
+    int? priceBuy,
+    required int priceSell,
+    required bool isArchived,
+    int? createdAt,
+    int? updatedAt,
+  }) async {
+    final timestamp = nowMs();
+    final existing = await (_db.select(_db.products)
+          ..where(
+            (p) => p.shopId.equals(shopId) & p.serverId.equals(serverId),
+          ))
+        .getSingleOrNull();
+
+    if (existing != null) {
+      await updateProductRow(
+        existing.id,
+        ProductsCompanion(
+          categoryId: Value(categoryId),
+          name: Value(name),
+          sku: Value(sku),
+          quantityInStock: Value(quantityInStock),
+          alertThreshold: Value(alertThreshold),
+          priceBuy: Value(priceBuy),
+          priceSell: Value(priceSell),
+          isArchived: Value(isArchived),
+          updatedAt: Value(updatedAt ?? timestamp),
+          syncedAt: Value(timestamp),
+        ),
+      );
+      return;
+    }
+
+    await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            shopId: shopId,
+            categoryId: Value(categoryId),
+            name: name,
+            sku: Value(sku),
+            quantityInStock: Value(quantityInStock),
+            alertThreshold: Value(alertThreshold),
+            priceBuy: Value(priceBuy),
+            priceSell: priceSell,
+            isArchived: Value(isArchived),
+            createdAt: createdAt ?? timestamp,
+            updatedAt: updatedAt ?? timestamp,
+            serverId: Value(serverId),
+            syncedAt: Value(timestamp),
+          ),
+        );
+  }
+
+  Future<void> updateProductServerSync({
+    required int productId,
+    required String serverId,
+  }) async {
+    final timestamp = nowMs();
+    await (_db.update(_db.products)..where((p) => p.id.equals(productId))).write(
+      ProductsCompanion(
+        serverId: Value(serverId),
+        syncedAt: Value(timestamp),
+        updatedAt: Value(timestamp),
+      ),
+    );
+  }
 }

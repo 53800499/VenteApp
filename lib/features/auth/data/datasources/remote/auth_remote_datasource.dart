@@ -57,6 +57,51 @@ class AuthRemoteDatasource {
     return SetupOwnerData.fromJson(data);
   }
 
+  Future<Map<String, String>> validateSetupOwner({
+    required String ownerName,
+    required String shopName,
+    required String pin,
+    required String ownerPhone,
+    String? shopAddress,
+    String? shopPhone,
+  }) async {
+    final data = await _postData(
+      '/auth/setup/validate',
+      {
+        'ownerName': ownerName,
+        'shopName': shopName,
+        'pin': pin,
+        'ownerPhone': ownerPhone,
+        if (shopAddress != null) 'shopAddress': shopAddress,
+        if (shopPhone != null) 'shopPhone': shopPhone,
+      },
+    );
+
+    if (data['valid'] == true) return {};
+
+    final conflicts = data['conflicts'];
+    if (conflicts is List) {
+      final result = <String, String>{};
+      for (final item in conflicts) {
+        if (item is Map<String, dynamic>) {
+          final field = item['field']?.toString();
+          final message = item['message']?.toString();
+          if (field != null && message != null && message.isNotEmpty) {
+            result[field] = message;
+          }
+        }
+      }
+      if (result.isNotEmpty) return result;
+    }
+
+    final fields = data['fields'];
+    if (fields is Map<String, dynamic>) {
+      return fields.map((key, value) => MapEntry(key.toString(), '$value'));
+    }
+
+    return {};
+  }
+
   Future<WhatsappOtpRequestDataDto> requestWhatsappOtp({
     required String phone,
   }) async {

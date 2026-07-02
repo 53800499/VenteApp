@@ -224,6 +224,35 @@ class CreateQuickSaleInput extends Equatable {
   List<Object?> get props => [totalAmount, payment];
 }
 
+/// Contexte UI pour transformer une vente rapide en vente détaillée.
+class QuickSaleConversion extends Equatable {
+  const QuickSaleConversion({
+    required this.saleId,
+    required this.targetTotal,
+    this.receiptLabel,
+  });
+
+  final int saleId;
+  final int targetTotal;
+  final String? receiptLabel;
+
+  @override
+  List<Object?> get props => [saleId, targetTotal, receiptLabel];
+}
+
+class ConvertQuickSaleInput extends Equatable {
+  const ConvertQuickSaleInput({
+    required this.items,
+    this.discountAmount = 0,
+  });
+
+  final List<SaleLineDraft> items;
+  final int discountAmount;
+
+  @override
+  List<Object?> get props => [items, discountAmount];
+}
+
 class SaleListFilters extends Equatable {
   const SaleListFilters({
     this.search = '',

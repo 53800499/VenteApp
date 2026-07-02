@@ -38,6 +38,7 @@ class ApiClient {
           if (error.response?.statusCode == 401 &&
               !retried &&
               !isRefresh &&
+              !_isPublicAuthRequest(error.requestOptions) &&
               _credentials != null) {
             try {
               await _refreshTokens();
@@ -92,6 +93,14 @@ class ApiClient {
     return _dio.patch<T>(path, data: data, options: options);
   }
 
+  Future<Response<T>> put<T>(
+    String path, {
+    Object? data,
+    Options? options,
+  }) {
+    return _dio.put<T>(path, data: data, options: options);
+  }
+
   Future<Response<T>> delete<T>(
     String path, {
     Options? options,
@@ -99,9 +108,22 @@ class ApiClient {
     return _dio.delete<T>(path, options: options);
   }
 
+  static const _publicAuthPathMarkers = [
+    '/auth/pin/login',
+    '/auth/setup',
+    '/auth/validate-setup',
+    '/auth/lock-screen',
+    '/auth/whatsapp',
+  ];
+
+  bool _isPublicAuthRequest(RequestOptions options) {
+    final path = options.path;
+    return _publicAuthPathMarkers.any(path.contains);
+  }
+
   Future<void> _attachBearer(RequestOptions options) async {
     final credentials = _credentials;
-    if (credentials != null) {
+    if (credentials != null && !_isPublicAuthRequest(options)) {
       if (!await credentials.hasValidAccessToken() &&
           await credentials.hasValidRefreshToken()) {
         try {

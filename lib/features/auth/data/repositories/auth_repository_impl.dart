@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/database/app_database.dart' hide AuthSession;
+import '../../../../core/errors/auth_error_humanizer.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/active_shop_context.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/network/network_info.dart';
 import '../../../../core/security/lockout_policy.dart';
 import '../../../../core/security/pin_hasher.dart';
@@ -14,15 +18,20 @@ import '../../../../core/storage/auth_credentials_storage.dart';
 import '../../../../core/storage/auth_flow_storage.dart';
 import '../../../../core/storage/device_id_storage.dart';
 import '../../../../core/storage/session_storage.dart';
+import '../../../../core/sync/cloud_sync_enabler.dart';
 import '../../../../core/utils/phone_util.dart';
 import '../../../../core/utils/time.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/auth_entities.dart';
+import '../../domain/entities/setup_field.dart';
 import '../../domain/repositories/auth_repository.dart';
+import '../../domain/services/setup_validation_service.dart';
 import '../../domain/value_objects/pin.dart';
 import '../datasources/remote/auth_remote_datasource.dart';
 import '../models/auth_api_models.dart';
+
+typedef OnlineSessionReadyCallback = void Function(int shopId);
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -37,7 +46,11 @@ class AuthRepositoryImpl implements AuthRepository {
     ActiveShopContext? activeShopContext,
     AuthRemoteDatasource? remote,
     NetworkInfo? networkInfo,
+    ApiClient? apiClient,
+    CloudSyncEnabler? cloudSyncEnabler,
+    OnlineSessionReadyCallback? onOnlineSessionReady,
     Uuid? uuid,
+    SetupValidationService? setupValidation,
   })  : _db = database,
         _pinHasher = pinHasher,
         _lockoutPolicy = lockoutPolicy,
@@ -49,7 +62,11 @@ class AuthRepositoryImpl implements AuthRepository {
         _activeShop = activeShopContext ?? ActiveShopContext(),
         _remote = remote,
         _networkInfo = networkInfo ?? const NetworkInfo.alwaysOffline(),
-        _uuid = uuid ?? const Uuid();
+        _apiClient = apiClient,
+        _cloudSyncEnabler = cloudSyncEnabler,
+        _onOnlineSessionReady = onOnlineSessionReady,
+        _uuid = uuid ?? const Uuid(),
+        _setupValidation = setupValidation ?? const SetupValidationService();
 
   final AppDatabase _db;
   final PinHasher _pinHasher;
@@ -62,9 +79,15 @@ class AuthRepositoryImpl implements AuthRepository {
   final ActiveShopContext _activeShop;
   final AuthRemoteDatasource? _remote;
   final NetworkInfo _networkInfo;
+  final ApiClient? _apiClient;
+  final CloudSyncEnabler? _cloudSyncEnabler;
+  final OnlineSessionReadyCallback? _onOnlineSessionReady;
   final Uuid _uuid;
+  final SetupValidationService _setupValidation;
 
   bool get _isOnlineMode => _remote != null;
+
+  static const _onlinePinRefreshTimeout = Duration(seconds: 8);
 
   @override
   Future<bool> isSetupComplete() async {
@@ -91,21 +114,30 @@ class AuthRepositoryImpl implements AuthRepository {
           ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
         .get();
 
-    if (localUsers.isNotEmpty && await _credentials.hasValidOfflineGrant()) {
-      return _lockScreenFromLocal(localShopId);
+    if (localUsers.isNotEmpty) {
+      final local = await _lockScreenFromLocal(localShopId);
+      if (_remote != null && await _networkInfo.isConnected) {
+        unawaited(_syncLockScreenFromApiInBackground(serverShopId));
+      }
+      return local;
     }
 
     if (_remote != null && await _networkInfo.isConnected) {
       final remote = await _remote!.getLockScreen(serverShopId);
       await _syncLockScreenFromApi(remote);
-      return _mapLockScreenDto(remote);
+      return _mapLockScreenDto(remote, localShopId: localShopId);
     }
 
-    if (localUsers.isNotEmpty) {
-      return _lockScreenFromLocal(localShopId);
+      throw const NotFoundFailure('Boutique introuvable.');
     }
 
-    throw const NotFoundFailure('Boutique introuvable.');
+  Future<void> _syncLockScreenFromApiInBackground(int serverShopId) async {
+    try {
+      final remote = await _remote!.getLockScreen(serverShopId);
+      await _syncLockScreenFromApi(remote);
+    } on Object {
+      // L'écran PIN local reste utilisable sans le réseau.
+    }
   }
 
   @override
@@ -114,17 +146,47 @@ class AuthRepositoryImpl implements AuthRepository {
     required int shopId,
     int? userId,
   }) async {
+    final serverShopId = await _resolveServerShopId(shopId);
+    final localShopId = await _resolveLocalShopId(serverShopId);
+
+    final localUsers = await (_db.select(_db.users)
+          ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
+        .get();
+
+    if (localUsers.isNotEmpty) {
+      try {
+        final session = await _loginWithPinLocal(
+          pin: pin,
+          shopId: localShopId,
+          userId: userId,
+        );
+        if (_remote != null && await _networkInfo.isConnected) {
+          await _refreshOnlineCredentialsAfterLocalPin(
+            pin: pin,
+            shopId: serverShopId,
+            localShopId: localShopId,
+            userId: userId,
+          );
+        }
+        return session;
+      } on InvalidPinFailure {
+        if (_remote != null && await _networkInfo.isConnected) {
+          return _loginWithPinOnline(
+            pin: pin,
+            serverShopId: serverShopId,
+            userId: userId,
+          );
+        }
+        rethrow;
+      }
+    }
+
     if (_remote != null && await _networkInfo.isConnected) {
-      final serverShopId = await _resolveServerShopId(shopId);
-      final device = await _deviceIds.getAuthDevice();
-      final result = await _remote!.loginWithPin(
+      return _loginWithPinOnline(
         pin: pin,
-        shopId: serverShopId,
+        serverShopId: serverShopId,
         userId: userId,
-        deviceId: device.deviceId,
-        deviceLabel: device.deviceLabel,
       );
-      return _finalizeOnlineLogin(result, pin: pin);
     }
 
     if (_isOnlineMode && !await _credentials.hasValidOfflineGrant()) {
@@ -136,11 +198,125 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     }
 
-    return _loginWithPinLocal(
-      pin: pin,
-      shopId: await _resolveLocalShopId(await _resolveServerShopId(shopId)),
+    throw const NotFoundFailure(
+      'Aucun utilisateur local. Connectez-vous ou réinstallez l\'application.',
+    );
+  }
+
+  Future<AuthSession> _loginWithPinOnline({
+    required String pin,
+    required int serverShopId,
+    int? userId,
+  }) async {
+    final localShopId = await _resolveLocalShopId(serverShopId);
+    final serverUserId = await _resolveServerUserId(
+      localShopId: localShopId,
       userId: userId,
     );
+    final device = await _deviceIds.getAuthDevice();
+    final result = await _remote!.loginWithPin(
+      pin: pin,
+      shopId: serverShopId,
+      userId: serverUserId,
+      deviceId: device.deviceId,
+      deviceLabel: device.deviceLabel,
+    ).timeout(_onlinePinRefreshTimeout);
+    return _finalizeOnlineLogin(result, pin: pin);
+  }
+
+  Future<void> _refreshOnlineCredentialsAfterLocalPin({
+    required String pin,
+    required int shopId,
+    required int localShopId,
+    int? userId,
+  }) async {
+    try {
+      final serverUserId = userId != null
+          ? await _resolveServerUserId(
+              localShopId: localShopId,
+              userId: userId,
+            )
+          : null;
+      await _attemptOnlinePinLoginForCredentials(
+        pin: pin,
+        serverShopId: shopId,
+        localShopId: localShopId,
+        serverUserId: serverUserId,
+      );
+      if (await _credentials.hasCredentials()) {
+        _onOnlineSessionReady?.call(localShopId);
+      }
+    } on Object {
+      // La session locale est déjà ouverte ; la synchro API peut attendre.
+    }
+  }
+
+  /// Connexion API par PIN pour obtenir JWT sans recréer de session locale.
+  Future<bool> _attemptOnlinePinLoginForCredentials({
+    required String pin,
+    required int serverShopId,
+    required int localShopId,
+    int? serverUserId,
+    bool retryWithoutUserId = true,
+  }) async {
+    if (_remote == null || !await _networkInfo.isConnected) return false;
+
+    await _syncActiveShopFromLocal(localShopId);
+    _activeShop.setServerShopId(serverShopId);
+
+    Future<LoginSuccessData?> tryLogin(int? userId) async {
+      try {
+        final device = await _deviceIds.getAuthDevice();
+        return await _remote!.loginWithPin(
+          pin: pin,
+          shopId: serverShopId,
+          userId: userId,
+          deviceId: device.deviceId,
+          deviceLabel: device.deviceLabel,
+        ).timeout(_onlinePinRefreshTimeout);
+      } on Object {
+        return null;
+      }
+    }
+
+    var result = await tryLogin(serverUserId);
+    if (result == null && retryWithoutUserId && serverUserId != null) {
+      result = await tryLogin(null);
+    }
+    if (result == null) return false;
+
+    await _persistOnlineLoginResult(result, pin: pin);
+    return true;
+  }
+
+  Future<User> _persistOnlineLoginResult(
+    LoginSuccessData result, {
+    String? pin,
+  }) async {
+    await _credentials.saveOnlineAuth(
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      profile: {
+        'id': result.user.id,
+        'name': result.user.name,
+        'role': result.user.role,
+        'roleLabel': result.user.roleLabel,
+        'shopId': result.user.shopId,
+        'biometricEnabled': result.user.biometricEnabled,
+        'lastLoginAt': result.user.lastLoginAt,
+      },
+      permissions: result.user.permissions,
+      accessExpiresAt: result.accessExpiresAt,
+      refreshExpiresAt: result.refreshExpiresAt,
+    );
+    _activeShop.setServerShopId(result.shop.id);
+    final user = await _upsertLocalUserFromApi(
+      result.user,
+      pin: pin,
+      shopName: result.shop.name,
+    );
+    await _cloudSyncEnabler?.activateForShop(user.shopId);
+    return user;
   }
 
   @override
@@ -148,10 +324,23 @@ class AuthRepositoryImpl implements AuthRepository {
     required int shopId,
     int? userId,
   }) async {
-    if (_isOnlineMode && !await _credentials.hasValidOfflineGrant()) {
+    final localShopId =
+        await _resolveLocalShopId(await _resolveServerShopId(shopId));
+    final localUsers = await (_db.select(_db.users)
+          ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
+        .get();
+
+    if (localUsers.isEmpty &&
+        _isOnlineMode &&
+        !await _credentials.hasValidOfflineGrant()) {
       throw const OfflineGraceExpiredFailure();
     }
-    return _loginWithBiometricLocal(shopId: shopId, userId: userId);
+
+    return _loginWithBiometricLocal(shopId: localShopId, userId: userId)
+        .then((session) async {
+      await _ensureOnlineSessionAfterUnlock(localShopId);
+      return session;
+    });
   }
 
   @override
@@ -163,6 +352,12 @@ class AuthRepositoryImpl implements AuthRepository {
     String? shopAddress,
     String? shopPhone,
   }) async {
+    if (!isValidPhone(ownerPhone)) {
+      throw const ValidationFailure(
+        'Numéro WhatsApp patron invalide. Utilisez le format 01XXXXXXXX ou +229…',
+      );
+    }
+
     if (_remote != null) {
       if (!await _networkInfo.isConnected) {
         throw const NetworkFailure(
@@ -170,42 +365,108 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
+      final serverConflicts = await _remote!.validateSetupOwner(
+        ownerName: ownerName,
+        shopName: shopName,
+        pin: pin,
+        ownerPhone: ownerPhone,
+        shopAddress: shopAddress,
+        shopPhone: shopPhone,
+      );
+      _throwSetupFieldConflicts(
+        SetupField.fromStringMap(serverConflicts),
+      );
+
       await _prepareForOwnerSetup();
 
-      final apiResult = await _remote!.setupOwner(
-        ownerName: ownerName,
-        shopName: shopName,
-        pin: pin,
-        ownerPhone: ownerPhone,
-        shopAddress: shopAddress,
-        shopPhone: shopPhone,
-      );
+      SetupOwnerData? apiResult;
+      try {
+        apiResult = await _remote!.setupOwner(
+          ownerName: ownerName,
+          shopName: shopName,
+          pin: pin,
+          ownerPhone: ownerPhone,
+          shopAddress: shopAddress,
+          shopPhone: shopPhone,
+        );
 
-      await _persistSetupLocally(
-        apiResult: apiResult,
-        ownerName: ownerName,
-        shopName: shopName,
-        pin: pin,
-        ownerPhone: ownerPhone,
-        shopAddress: shopAddress,
-        shopPhone: shopPhone,
-      );
+        await _persistSetupLocally(
+          apiResult: apiResult,
+          ownerName: ownerName,
+          shopName: shopName,
+          pin: pin,
+          ownerPhone: ownerPhone,
+          shopAddress: shopAddress,
+          shopPhone: shopPhone,
+        );
 
-      return SetupOwnerResult(
-        shopId: apiResult.shopId,
-        userId: apiResult.userId,
-        recoveryToken: apiResult.recoveryToken,
-        message: apiResult.message,
-      );
+        final localShopId = await _resolveLocalShopId(apiResult.shopId);
+        await _attemptOnlinePinLoginForCredentials(
+          pin: pin,
+          serverShopId: apiResult.shopId,
+          localShopId: localShopId,
+          serverUserId: apiResult.userId,
+          retryWithoutUserId: false,
+        );
+
+        await _authFlow?.clearLoggedOut();
+
+        return SetupOwnerResult(
+          shopId: apiResult.shopId,
+          userId: apiResult.userId,
+          recoveryToken: apiResult.recoveryToken,
+          message: apiResult.message,
+        );
+      } on Failure {
+        rethrow;
+      } on SqliteException catch (error) {
+        throw _setupPersistFailure(error.message, serverCreated: apiResult != null);
+      } catch (error) {
+        if (error is Failure) rethrow;
+        throw _setupPersistFailure(
+          error.toString(),
+          serverCreated: apiResult != null,
+        );
+      }
     }
 
-    return _setupOwnerLocal(
-      ownerName: ownerName,
-      shopName: shopName,
-      pin: pin,
-      shopAddress: shopAddress,
-      shopPhone: shopPhone,
+    try {
+      return await _setupOwnerLocal(
+        ownerName: ownerName,
+        shopName: shopName,
+        pin: pin,
+        shopAddress: shopAddress,
+        shopPhone: shopPhone,
+      );
+    } on SqliteException catch (error) {
+      throw _setupPersistFailure(error.message);
+    }
+  }
+
+  void _throwSetupFieldConflicts(Map<SetupField, String> fieldErrors) {
+    if (fieldErrors.isEmpty) return;
+    throw SetupFieldConflictFailure(
+      message: _setupValidation.summaryFor(fieldErrors) ??
+          'Corrigez les champs signalés avant de continuer.',
+      fieldErrors: SetupField.toStringMap(fieldErrors),
     );
+  }
+
+  Failure _setupPersistFailure(String raw, {bool serverCreated = false}) {
+    final classified = classifySetupDuplicateMessage(raw);
+    var message = classified.summary;
+    if (serverCreated) {
+      message =
+          '$message\n\nLa boutique a peut-être déjà été créée sur le serveur : '
+          'fermez l\'installation et utilisez « Se connecter avec WhatsApp ».';
+    }
+    if (classified.fieldErrors.isNotEmpty) {
+      return SetupFieldConflictFailure(
+        message: message,
+        fieldErrors: classified.fieldErrors,
+      );
+    }
+    return ConflictFailure(message);
   }
 
   @override
@@ -274,7 +535,103 @@ class AuthRepositoryImpl implements AuthRepository {
       ),
     );
 
+    await _patchStoredUserBiometric(sessionToken, enabled: true);
     return true;
+  }
+
+  @override
+  Future<bool> disableBiometric({
+    required int userId,
+    required String sessionToken,
+    required String pin,
+  }) async {
+    final session = await (_db.select(_db.authSessions)
+          ..where((s) => s.id.equals(sessionToken)))
+        .getSingleOrNull();
+
+    if (session == null ||
+        session.userId != userId ||
+        session.expiresAt <= nowMs()) {
+      throw const UnauthorizedFailure('Session invalide ou expirée.');
+    }
+
+    final user = await (_db.select(_db.users)
+          ..where(
+            (u) => u.id.equals(userId) & u.shopId.equals(session.shopId),
+          ))
+        .getSingleOrNull();
+
+    if (user == null) {
+      throw const UnauthorizedFailure('Utilisateur introuvable.');
+    }
+
+    final pinVo = Pin.create(pin);
+    if (!_pinHasher.compare(pinVo.value, user.pinHash)) {
+      throw const UnauthorizedFailure('PIN incorrect.');
+    }
+
+    final timestamp = nowMs();
+    await (_db.update(_db.users)..where((u) => u.id.equals(user.id))).write(
+      UsersCompanion(
+        biometricEnabled: const Value(false),
+        updatedAt: Value(timestamp),
+        version: Value(user.version + 1),
+      ),
+    );
+
+    await _patchStoredUserBiometric(sessionToken, enabled: false);
+    return true;
+  }
+
+  @override
+  Future<void> changePin({
+    required int userId,
+    required int shopId,
+    required String currentPin,
+    required String newPin,
+  }) async {
+    if (currentPin == newPin) {
+      throw const ValidationFailure(
+        'Le nouveau PIN doit être différent de l\'actuel.',
+      );
+    }
+
+    final current = Pin.create(currentPin);
+    final next = Pin.create(newPin);
+
+    final user = await (_db.select(_db.users)
+          ..where(
+            (u) => u.id.equals(userId) & u.shopId.equals(shopId),
+          ))
+        .getSingleOrNull();
+    if (user == null) {
+      throw const NotFoundFailure('Utilisateur introuvable.');
+    }
+    if (!_pinHasher.compare(current.value, user.pinHash)) {
+      throw const UnauthorizedFailure('PIN actuel incorrect.');
+    }
+
+    final timestamp = nowMs();
+    final newHash = _pinHasher.hash(next.value);
+    await (_db.update(_db.users)..where((u) => u.id.equals(userId))).write(
+      UsersCompanion(
+        pinHash: Value(newHash),
+        updatedAt: Value(timestamp),
+        version: Value(user.version + 1),
+      ),
+    );
+
+    await _db.into(_db.auditLogs).insert(
+          AuditLogsCompanion.insert(
+            shopId: shopId,
+            userId: userId,
+            action: 'pin_changed',
+            module: 'auth',
+            entityId: userId,
+            entityTable: 'users',
+            createdAt: timestamp,
+          ),
+        );
   }
 
   @override
@@ -324,34 +681,52 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthSession?> restoreSession() async {
-    if (_isOnlineMode && !await _credentials.hasValidOfflineGrant()) {
+    final hasLocalInstall = await _hasLocalOwnerInstallation();
+    if (_isOnlineMode &&
+        !await _credentials.hasValidOfflineGrant() &&
+        !hasLocalInstall) {
       return null;
     }
 
     final token = await _sessionStorage.getSessionToken();
-    final expiresAt = await _sessionStorage.getSessionExpiresAt();
     final userJson = await _sessionStorage.getUser();
 
-    if (token == null || expiresAt == null || userJson == null) {
+    if (token == null || userJson == null) {
       return null;
     }
 
-    if (expiresAt <= nowMs()) {
-      await lockActiveSession();
-      return null;
-    }
-
-    final session = await (_db.select(_db.authSessions)
+    var dbSession = await (_db.select(_db.authSessions)
           ..where((s) => s.id.equals(token)))
         .getSingleOrNull();
 
-    if (session == null || session.expiresAt <= nowMs()) {
+    if (dbSession == null) {
       await lockActiveSession();
       return null;
     }
 
+    var expiresAt = await _sessionStorage.getSessionExpiresAt();
+    final sessionExpired =
+        expiresAt == null ||
+        expiresAt <= nowMs() ||
+        dbSession.expiresAt <= nowMs();
+
+    if (sessionExpired) {
+      if (await _credentials.hasValidOfflineGrant()) {
+        await _renewLocalSession(token: token, shopId: dbSession.shopId);
+        expiresAt = await _sessionStorage.getSessionExpiresAt();
+        dbSession = await (_db.select(_db.authSessions)
+              ..where((s) => s.id.equals(token)))
+            .getSingle();
+      } else {
+        await lockActiveSession();
+        return null;
+      }
+    }
+
+    final shopId = dbSession.shopId;
+
     final shop = await (_db.select(_db.shops)
-          ..where((s) => s.id.equals(session.shopId)))
+          ..where((s) => s.id.equals(shopId)))
         .getSingleOrNull();
 
     if (shop == null) {
@@ -359,7 +734,39 @@ class AuthRepositoryImpl implements AuthRepository {
       return null;
     }
 
-    final settings = await _getSettings(session.shopId);
+    if (_isOnlineMode && await _credentials.hasCredentials()) {
+      if (!await _credentials.hasValidAccessToken() &&
+          await _credentials.hasValidRefreshToken() &&
+          await _networkInfo.isConnected) {
+        try {
+          await _apiClient?.refreshTokensIfNeeded();
+        } on Object {
+          // Échec transitoire (réseau / serveur) — session locale conservée.
+        }
+      }
+
+      if (!await _credentials.hasValidAccessToken() &&
+          !await _credentials.hasValidRefreshToken()) {
+        if (await _credentials.hasValidOfflineGrant()) {
+          // Grâce offline : pas de verrouillage PIN tant que la fenêtre est ouverte.
+        } else {
+          await _credentials.clear();
+          await lockActiveSession();
+          return null;
+        }
+      }
+    } else if (_isOnlineMode &&
+        await _networkInfo.isConnected &&
+        !await _credentials.hasCredentials()) {
+      if (!await _credentials.hasValidOfflineGrant()) {
+        await lockActiveSession();
+        return null;
+      }
+    }
+
+    await _ensureOnlineSessionAfterUnlock(shopId);
+
+    final settings = await _getSettings(shopId);
     final role = UserRole.fromCode(userJson['role'] as String? ?? 'owner');
     final permissions = await _resolvePermissions(role);
 
@@ -368,18 +775,18 @@ class AuthRepositoryImpl implements AuthRepository {
     if (profileShopId is int) {
       _activeShop.setServerShopId(profileShopId);
     } else {
-      await _syncActiveShopFromLocal(session.shopId);
+      await _syncActiveShopFromLocal(shopId);
     }
 
     final serverUserId = profile?['id'] as int?;
     final localShop = await (_db.select(_db.shops)
-          ..where((s) => s.id.equals(session.shopId)))
+          ..where((s) => s.id.equals(shopId)))
         .getSingle();
     final serverShopId = _parseServerId(localShop.serverId) ?? profileShopId as int?;
 
     return AuthSession(
       token: token,
-      expiresAt: session.expiresAt,
+      expiresAt: dbSession.expiresAt,
       autoLockMinutes: settings.autoLockMinutes,
       shop: AuthShop(
         id: localShop.id,
@@ -391,7 +798,7 @@ class AuthRepositoryImpl implements AuthRepository {
         name: userJson['name'] as String,
         role: role,
         roleLabel: role.label,
-        shopId: userJson['shopId'] as int,
+        shopId: shopId,
         biometricEnabled: userJson['biometricEnabled'] as bool? ?? false,
         lastLoginAt: userJson['lastLoginAt'] as int?,
         permissions: permissions,
@@ -414,6 +821,62 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  Future<void> _patchStoredUserBiometric(
+    String sessionToken, {
+    required bool enabled,
+  }) async {
+    final userJson = await _sessionStorage.getUser();
+    final expiresAt = await _sessionStorage.getSessionExpiresAt();
+    if (userJson == null || expiresAt == null) return;
+    userJson['biometricEnabled'] = enabled;
+    await _sessionStorage.saveSession(
+      sessionToken: sessionToken,
+      expiresAt: expiresAt,
+      user: userJson,
+    );
+  }
+
+  Future<void> _ensureOnlineSessionAfterUnlock(int localShopId) async {
+    if (_remote == null || !await _networkInfo.isConnected) return;
+
+    await _syncActiveShopFromLocal(localShopId);
+    await _cloudSyncEnabler?.activateForShop(localShopId);
+
+    if (!await _credentials.hasCredentials()) return;
+
+    if (!await _credentials.hasValidAccessToken() &&
+        await _credentials.hasValidRefreshToken()) {
+      try {
+        await _apiClient?.refreshTokensIfNeeded();
+      } on Object {
+        // Refresh transitoire — prochain cycle sync retentera.
+      }
+    }
+
+    if (await _credentials.hasValidAccessToken()) {
+      _onOnlineSessionReady?.call(localShopId);
+    }
+  }
+
+  Future<void> _renewLocalSession({
+    required String token,
+    required int shopId,
+  }) async {
+    final settings = await _getSettings(shopId);
+    final userJson = await _sessionStorage.getUser();
+    if (userJson == null) return;
+
+    final newExpiry = nowMs() + msFromMinutes(settings.autoLockMinutes);
+    await (_db.update(_db.authSessions)..where((s) => s.id.equals(token))).write(
+      AuthSessionsCompanion(expiresAt: Value(newExpiry)),
+    );
+    await _sessionStorage.saveSession(
+      sessionToken: token,
+      expiresAt: newExpiry,
+      user: userJson,
+    );
+  }
+
   @override
   Future<void> lockActiveSession() async {
     final token = await _sessionStorage.getSessionToken();
@@ -428,7 +891,7 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> logout() async {
     if (_remote != null && await _networkInfo.isConnected) {
       try {
-        await _remote!.logout();
+        await _remote!.logout().timeout(const Duration(seconds: 5));
       } on Object {
         // Déconnexion locale même si l'API est injoignable.
       }
@@ -441,32 +904,65 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<OwnedShopList> listOwnedShops() async {
-    if (_remote == null) {
-      throw const NetworkFailure('Liste des boutiques indisponible hors ligne.');
+    try {
+      if (_remote == null) {
+        return _listOwnedShopsLocally();
+      }
+      if (!await _networkInfo.isConnected) {
+        return _listOwnedShopsLocally();
+      }
+
+      final dto = await _remote!.listOwnedShops();
+      return OwnedShopList(
+        activeShopId: dto.activeShopId,
+        shops: dto.shops
+            .map(
+              (shop) => OwnedShop(
+                id: shop.id,
+                name: shop.name,
+                address: shop.address,
+                phone: shop.phone,
+                isActive: shop.isActive,
+                isDefault: shop.isDefault,
+                isCurrent: shop.isCurrent,
+              ),
+            )
+            .toList(),
+      );
+    } on Failure {
+      return _listOwnedShopsLocally();
+    } catch (_) {
+      return _listOwnedShopsLocally();
     }
-    if (!await _networkInfo.isConnected) {
+  }
+
+  Future<OwnedShopList> _listOwnedShopsLocally() async {
+    final rows = await (_db.select(_db.shops)
+          ..orderBy([(s) => OrderingTerm.desc(s.isDefault)]))
+        .get();
+
+    if (rows.isEmpty) {
       throw const NetworkFailure(
-        'Connexion internet requise pour lister vos boutiques.',
+        'Aucune boutique locale. Connectez le serveur ou créez une boutique.',
       );
     }
 
-    final dto = await _remote!.listOwnedShops();
-    return OwnedShopList(
-      activeShopId: dto.activeShopId,
-      shops: dto.shops
-          .map(
-            (shop) => OwnedShop(
-              id: shop.id,
-              name: shop.name,
-              address: shop.address,
-              phone: shop.phone,
-              isActive: shop.isActive,
-              isDefault: shop.isDefault,
-              isCurrent: shop.isCurrent,
-            ),
-          )
-          .toList(),
-    );
+    final shops = rows.map((row) {
+      final serverId = int.tryParse(row.serverId ?? '') ?? row.id;
+      return OwnedShop(
+        id: serverId,
+        name: row.name,
+        address: row.address,
+        phone: row.phone,
+        isActive: row.isActive,
+        isDefault: row.isDefault,
+        isCurrent: row.isDefault,
+      );
+    }).toList();
+
+    final activeId =
+        shops.firstWhere((s) => s.isDefault, orElse: () => shops.first).id;
+    return OwnedShopList(activeShopId: activeId, shops: shops);
   }
 
   @override
@@ -507,6 +1003,11 @@ class AuthRepositoryImpl implements AuthRepository {
         'Connexion internet requise pour recevoir le code WhatsApp.',
       );
     }
+    if (!isValidPhone(phone)) {
+      throw const ValidationFailure(
+        'Numéro WhatsApp invalide. Utilisez le format 01XXXXXXXX (10 chiffres) ou +229…',
+      );
+    }
     final normalized = normalizePhone(phone);
     final dto = await _remote!.requestWhatsappOtp(phone: normalized);
     return WhatsappOtpRequestResult(
@@ -524,8 +1025,17 @@ class AuthRepositoryImpl implements AuthRepository {
     if (_remote == null || !await _networkInfo.isConnected) {
       throw const NetworkFailure('Connexion internet requise.');
     }
+    if (!isValidPhone(phone)) {
+      throw const ValidationFailure(
+        'Numéro WhatsApp invalide. Vérifiez le numéro saisi.',
+      );
+    }
+    final trimmedCode = code.trim();
+    if (trimmedCode.length < 4) {
+      throw const ValidationFailure('Le code doit contenir au moins 4 chiffres.');
+    }
     final normalized = normalizePhone(phone);
-    final dto = await _remote!.verifyWhatsappOtp(phone: normalized, code: code);
+    final dto = await _remote!.verifyWhatsappOtp(phone: normalized, code: trimmedCode);
     return WhatsappOtpVerifyResult(
       verificationToken: dto.verificationToken,
       memberships: dto.memberships
@@ -645,32 +1155,20 @@ class AuthRepositoryImpl implements AuthRepository {
     LoginSuccessData result, {
     String? pin,
   }) async {
-    await _credentials.saveOnlineAuth(
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      profile: {
-        'id': result.user.id,
-        'name': result.user.name,
-        'role': result.user.role,
-        'roleLabel': result.user.roleLabel,
-        'shopId': result.user.shopId,
-        'biometricEnabled': result.user.biometricEnabled,
-        'lastLoginAt': result.user.lastLoginAt,
-      },
-      permissions: result.user.permissions,
-      accessExpiresAt: result.accessExpiresAt,
-      refreshExpiresAt: result.refreshExpiresAt,
-    );
-    _activeShop.setServerShopId(result.shop.id);
+    final localUser = await _persistOnlineLoginResult(result, pin: pin);
 
-    final localUser = await _upsertLocalUserFromApi(
-      result.user,
-      pin: pin,
+    final localShopId = await _resolveLocalShopId(
+      result.shop.id,
       shopName: result.shop.name,
     );
-
-    final localShopId = await _resolveLocalShopId(result.shop.id);
     final settings = await _getSettings(localShopId);
+    await (_db.update(_db.settings)..where((s) => s.shopId.equals(localShopId)))
+        .write(
+      SettingsCompanion(
+        shopName: Value(result.shop.name),
+        updatedAt: Value(nowMs()),
+      ),
+    );
     final permissions = resolveSessionPermissions(
       apiCodes: result.user.permissions,
       role: UserRole.fromCode(result.user.role),
@@ -697,17 +1195,21 @@ class AuthRepositoryImpl implements AuthRepository {
     String? shopAddress,
     String? shopPhone,
   }) async {
-    final existing = await (_db.select(_db.users)
+    final serverUserId = '${apiResult.userId}';
+    final serverShopId = '${apiResult.shopId}';
+
+    final existingUser = await (_db.select(_db.users)
+          ..where((u) => u.serverId.equals(serverUserId)))
+        .getSingleOrNull();
+    if (existingUser != null) {
+      return;
+    }
+
+    final existingOwners = await (_db.select(_db.users)
           ..where((u) => u.role.equals('owner')))
         .get();
-    if (existing.isNotEmpty) {
-      final owner = existing.first;
-      if (owner.serverId == '${apiResult.userId}') {
-        return;
-      }
-      throw const ConflictFailure(
-        'L\'installation a déjà été effectuée sur cet appareil.',
-      );
+    if (existingOwners.isNotEmpty) {
+      await _clearOrphanLocalAuthData();
     }
 
     final pinHash = _pinHasher.hash(Pin.create(pin).value);
@@ -715,16 +1217,21 @@ class AuthRepositoryImpl implements AuthRepository {
     final timestamp = nowMs();
 
     await _db.transaction(() async {
-      final shopId = await _db.into(_db.shops).insert(
-            ShopsCompanion.insert(
-              name: Value(shopName),
-              address: Value(shopAddress),
-              phone: Value(shopPhone),
-              createdAt: timestamp,
-              serverId: Value('${apiResult.shopId}'),
-              syncedAt: Value(timestamp),
-            ),
-          );
+      final existingShop = await (_db.select(_db.shops)
+            ..where((s) => s.serverId.equals(serverShopId)))
+          .getSingleOrNull();
+
+      final shopId = existingShop?.id ??
+          await _db.into(_db.shops).insert(
+                ShopsCompanion.insert(
+                  name: Value(shopName),
+                  address: Value(shopAddress),
+                  phone: Value(shopPhone),
+                  createdAt: timestamp,
+                  serverId: Value(serverShopId),
+                  syncedAt: Value(timestamp),
+                ),
+              );
 
       final userId = await _db.into(_db.users).insert(
             UsersCompanion.insert(
@@ -735,7 +1242,7 @@ class AuthRepositoryImpl implements AuthRepository {
               emergencyRecoveryHash: Value(recoveryHash),
               createdAt: timestamp,
               updatedAt: timestamp,
-              serverId: Value('${apiResult.userId}'),
+              serverId: Value(serverUserId),
               syncedAt: Value(timestamp),
             ),
           );
@@ -744,16 +1251,32 @@ class AuthRepositoryImpl implements AuthRepository {
         ShopsCompanion(ownerUserId: Value(userId)),
       );
 
-      await _db.into(_db.settings).insert(
-            SettingsCompanion.insert(
-              shopId: shopId,
-              shopName: Value(shopName),
-              shopPhone: Value(shopPhone),
-              shopAddress: Value(shopAddress),
-              autoLockMinutes: const Value(5),
-              updatedAt: timestamp,
-            ),
-          );
+      final settings = await (_db.select(_db.settings)
+            ..where((s) => s.shopId.equals(shopId)))
+          .getSingleOrNull();
+
+      if (settings == null) {
+        await _db.into(_db.settings).insert(
+              SettingsCompanion.insert(
+                shopId: shopId,
+                shopName: Value(shopName),
+                shopPhone: Value(shopPhone),
+                shopAddress: Value(shopAddress),
+                autoLockMinutes: const Value(5),
+                updatedAt: timestamp,
+              ),
+            );
+      } else {
+        await (_db.update(_db.settings)..where((s) => s.shopId.equals(shopId)))
+            .write(
+          SettingsCompanion(
+            shopName: Value(shopName),
+            shopPhone: Value(shopPhone),
+            shopAddress: Value(shopAddress),
+            updatedAt: Value(timestamp),
+          ),
+        );
+      }
     });
   }
 
@@ -815,6 +1338,9 @@ class AuthRepositoryImpl implements AuthRepository {
         message:
             'Installation réussie. Sauvegardez le fichier de récupération d\'urgence en lieu sûr.',
       );
+    }).then((result) async {
+      await _authFlow?.clearLoggedOut();
+      return result;
     });
   }
 
@@ -1037,10 +1563,11 @@ class AuthRepositoryImpl implements AuthRepository {
           .getSingle());
     }
 
-    if (pin == null) {
-      throw const ValidationFailure('PIN requis pour la synchronisation locale.');
-    }
-    final pinHash = _pinHasher.hash(Pin.create(pin).value);
+    // Connexion WhatsApp sur nouvel appareil : hash provisoire jusqu'au premier
+    // login PIN réussi (local échoue → validation serveur → hash mis à jour).
+    final pinHash = pin != null
+        ? _pinHasher.hash(Pin.create(pin).value)
+        : _pinHasher.hash(_uuid.v4());
 
     final userId = await _db.into(_db.users).insert(
           UsersCompanion.insert(
@@ -1070,6 +1597,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> _clearOrphanLocalAuthData() async {
     await _sessionStorage.clear();
     await _db.transaction(() async {
+      await _db.delete(_db.saleItems).go();
+      await _db.delete(_db.sales).go();
+      await _db.delete(_db.debts).go();
+      await _db.delete(_db.stockMovements).go();
+      await _db.delete(_db.products).go();
+      await _db.delete(_db.categories).go();
+      await _db.delete(_db.customers).go();
       await _db.delete(_db.authSessions).go();
       await _db.delete(_db.users).go();
       await _db.delete(_db.settings).go();
@@ -1177,9 +1711,12 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
-  LockScreenData _mapLockScreenDto(LockScreenDataDto remote) {
+  LockScreenData _mapLockScreenDto(
+    LockScreenDataDto remote, {
+    required int localShopId,
+  }) {
     return LockScreenData(
-      shopId: remote.shopId,
+      shopId: localShopId,
       shopName: remote.shopName,
       shopLogoPath: remote.shopLogoPath,
       users: remote.users
@@ -1235,6 +1772,21 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return users.first;
+  }
+
+  /// Convertit un id utilisateur local (écran PIN) en id serveur pour l'API.
+  Future<int?> _resolveServerUserId({
+    required int localShopId,
+    int? userId,
+  }) async {
+    if (userId == null) return null;
+
+    final user = await (_db.select(_db.users)
+          ..where((u) => u.id.equals(userId) & u.shopId.equals(localShopId)))
+        .getSingleOrNull();
+    if (user == null) return null;
+
+    return _parseServerId(user.serverId);
   }
 
   Future<Setting> _getSettings(int shopId) async {

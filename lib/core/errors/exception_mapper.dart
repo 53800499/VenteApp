@@ -1,12 +1,20 @@
 import 'package:dio/dio.dart';
+import 'package:sqlite3/sqlite3.dart';
 
+import 'auth_error_humanizer.dart';
+import 'api_error_humanizer.dart';
 import 'failures.dart';
 
 /// Convertit toute exception en message lisible pour l'utilisateur.
 String friendlyErrorMessage(Object error) {
-  if (error is Failure) return error.message;
+  if (error is Failure) {
+    return humanizeAuthErrorMessage(error.message);
+  }
   if (error is DioException) return mapDioException(error).message;
-  return 'Une erreur inattendue est survenue. Réessayez.';
+  if (error is SqliteException) {
+    return humanizeAuthErrorMessage(error.message);
+  }
+  return humanizeAuthErrorMessage(error.toString());
 }
 
 /// Convertit une [DioException] en [Failure] métier.
@@ -41,7 +49,7 @@ Failure mapDioException(DioException error) {
     if (message is List) {
       final texts = message.whereType<String>().where((m) => m.isNotEmpty).toList();
       if (texts.isNotEmpty) {
-        return ValidationFailure(texts.first);
+        return ValidationFailure(humanizeApiErrorMessage(texts.first));
       }
     }
     if (message is Map<String, dynamic>) {
@@ -64,24 +72,30 @@ Failure mapDioException(DioException error) {
       }
     }
     if (message is String && message.isNotEmpty) {
-      if (statusCode == 409) return ConflictFailure(message);
-      if (statusCode == 404) return NotFoundFailure(message);
-      if (statusCode == 403) return UnauthorizedFailure(message);
+      final human = humanizeAuthErrorMessage(message);
+      if (statusCode == 409) {
+        return _conflictFailure(human, body);
+      }
+      if (statusCode == 404) return NotFoundFailure(human);
+      if (statusCode == 403) return UnauthorizedFailure(human);
       if (statusCode == 401) {
-        return const UnauthorizedFailure(
-          'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).',
+        return UnauthorizedFailure(
+          human == message
+              ? 'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).'
+              : human,
         );
       }
-      return UnauthorizedFailure(message);
+      if (statusCode == 400) return ValidationFailure(human);
+      return UnauthorizedFailure(human);
     }
     final errorField = body['error'];
     if (errorField is String && errorField.isNotEmpty) {
-      return UnauthorizedFailure(errorField);
+      return UnauthorizedFailure(humanizeApiErrorMessage(errorField));
     }
   }
 
   if (body is String && body.isNotEmpty) {
-    return UnauthorizedFailure(body);
+    return UnauthorizedFailure(humanizeApiErrorMessage(body));
   }
 
   return NetworkFailure(_httpStatusMessage(statusCode));
@@ -104,6 +118,16 @@ String _httpStatusMessage(int? statusCode) {
 
 Failure? _mapApiErrorPayload(Map<String, dynamic> apiError, int? statusCode) {
   final details = apiError['details'];
+  final fieldErrors = _extractSetupFieldErrors(details is Map<String, dynamic> ? details : null) ??
+      _extractSetupFieldErrors(apiError);
+
+  if (fieldErrors != null && fieldErrors.isNotEmpty) {
+    final message = apiError['message'] is String
+        ? humanizeAuthErrorMessage(apiError['message'] as String)
+        : 'Corrigez les champs signalés avant de continuer.';
+    return SetupFieldConflictFailure(message: message, fieldErrors: fieldErrors);
+  }
+
   if (details is Map<String, dynamic>) {
     final errors = details['errors'];
     if (errors is List) {
@@ -116,38 +140,78 @@ Failure? _mapApiErrorPayload(Map<String, dynamic> apiError, int? statusCode) {
 
   final message = apiError['message'];
   if (message is String && message.isNotEmpty) {
+    final human = humanizeAuthErrorMessage(message);
     if (statusCode == 400) {
       return ValidationFailure(
-        message == 'Données invalides.'
+        human == message && message == 'Données invalides.'
             ? 'Données invalides. Vérifiez votre saisie.'
-            : message,
+            : human,
       );
     }
-    if (statusCode == 409) return ConflictFailure(message);
-    if (statusCode == 404) return NotFoundFailure(message);
-    if (statusCode == 403) return UnauthorizedFailure(message);
+    if (statusCode == 409) {
+      return _conflictFailure(human, details is Map<String, dynamic> ? details : null);
+    }
+    if (statusCode == 404) return NotFoundFailure(human);
+    if (statusCode == 403) return UnauthorizedFailure(human);
     if (statusCode == 401) {
-      return const UnauthorizedFailure(
-        'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).',
+      return UnauthorizedFailure(
+        human == message
+            ? 'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).'
+            : human,
       );
     }
-    return UnauthorizedFailure(message);
+    return UnauthorizedFailure(human);
   }
 
   return null;
 }
 
 String _humanizeValidationMessage(String raw) {
-  final normalized = raw.toLowerCase();
-  if (normalized.contains('name') &&
-      (normalized.contains('short') ||
-          normalized.contains('longer than') ||
-          normalized.contains('minlength'))) {
-    return 'Le nom de la boutique doit contenir au moins 2 caractères.';
+  return humanizeApiErrorMessage(humanizeAuthErrorMessage(raw));
+}
+
+Map<String, String>? _extractSetupFieldErrors(Map<String, dynamic>? source) {
+  if (source == null) return null;
+
+  final fields = source['fields'];
+  if (fields is Map<String, dynamic>) {
+    return fields.map((key, value) => MapEntry(key, '$value'));
   }
-  if (normalized.contains('row-level security') ||
-      normalized.contains('violates row-level security')) {
-    return 'Création refusée par le serveur. Redémarrez le backend puis réessayez.';
+
+  final conflicts = source['conflicts'];
+  if (conflicts is List) {
+    final result = <String, String>{};
+    for (final item in conflicts) {
+      if (item is Map<String, dynamic>) {
+        final field = item['field']?.toString();
+        final message = item['message']?.toString();
+        if (field != null && message != null && message.isNotEmpty) {
+          result[field] = message;
+        }
+      }
+    }
+    if (result.isNotEmpty) return result;
   }
-  return raw;
+
+  return null;
+}
+
+Failure _conflictFailure(String message, Map<String, dynamic>? details) {
+  final fieldErrors = _extractSetupFieldErrors(details);
+  if (fieldErrors != null && fieldErrors.isNotEmpty) {
+    return SetupFieldConflictFailure(
+      message: message,
+      fieldErrors: fieldErrors,
+    );
+  }
+
+  final classified = classifySetupDuplicateMessage(message);
+  if (classified.fieldErrors.isNotEmpty) {
+    return SetupFieldConflictFailure(
+      message: classified.summary,
+      fieldErrors: classified.fieldErrors,
+    );
+  }
+
+  return ConflictFailure(message);
 }

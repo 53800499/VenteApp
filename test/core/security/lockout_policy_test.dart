@@ -1,5 +1,5 @@
-import 'package:frontend/core/security/lockout_policy.dart';
-import 'package:frontend/core/utils/time.dart';
+import 'package:venteapp/core/security/lockout_policy.dart';
+import 'package:venteapp/core/utils/time.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -37,6 +37,19 @@ abstract class AuthRepository {
     required String pin,
   });
 
+  Future<bool> disableBiometric({
+    required int userId,
+    required String sessionToken,
+    required String pin,
+  });
+
+  Future<void> changePin({
+    required int userId,
+    required int shopId,
+    required String currentPin,
+    required String newPin,
+  });
+
   Future<void> touchSession({
     required String sessionToken,
     required int shopId,

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
@@ -28,6 +29,7 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
     on<CategoryUpdateRequested>(_onUpdate);
     on<CategoryDeleteRequested>(_onDelete);
     on<CategoryToggleActiveRequested>(_onToggleActive);
+    on<CategoryFeedbackDismissed>(_onFeedbackDismissed);
   }
 
   final ListCategoriesWithStats _listCategoriesWithStats;
@@ -69,7 +71,7 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
       emit(
         state.copyWith(
           status: CategoryListStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
           isRefreshing: false,
         ),
       );
@@ -89,7 +91,7 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
       emit(state.copyWith(isSaving: false));
       await _fetch(emit);
     } on Failure catch (e) {
-      emit(state.copyWith(isSaving: false, errorMessage: e.message));
+      emit(state.copyWith(isSaving: false, errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -107,7 +109,7 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
       emit(state.copyWith(isSaving: false));
       await _fetch(emit);
     } on Failure catch (e) {
-      emit(state.copyWith(isSaving: false, errorMessage: e.message));
+      emit(state.copyWith(isSaving: false, errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -115,15 +117,22 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
     CategoryToggleActiveRequested event,
     Emitter<CategoryListState> emit,
   ) async {
+    emit(state.copyWith(isSaving: true, clearError: true));
     try {
       await _updateCategory(
         shopId: _shopId,
         categoryId: event.categoryId,
         input: UpdateCategoryInput(isActive: event.isActive),
       );
+      emit(state.copyWith(isSaving: false));
       await _fetch(emit);
     } on Failure catch (e) {
-      emit(state.copyWith(errorMessage: e.message));
+      emit(
+        state.copyWith(
+          isSaving: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
     }
   }
 
@@ -131,11 +140,25 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
     CategoryDeleteRequested event,
     Emitter<CategoryListState> emit,
   ) async {
+    emit(state.copyWith(isSaving: true, clearError: true));
     try {
       await _deleteCategory(shopId: _shopId, categoryId: event.categoryId);
+      emit(state.copyWith(isSaving: false));
       await _fetch(emit);
     } on Failure catch (e) {
-      emit(state.copyWith(errorMessage: e.message));
+      emit(
+        state.copyWith(
+          isSaving: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
     }
+  }
+
+  void _onFeedbackDismissed(
+    CategoryFeedbackDismissed event,
+    Emitter<CategoryListState> emit,
+  ) {
+    emit(state.copyWith(clearError: true));
   }
 }

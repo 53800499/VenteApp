@@ -39,12 +39,14 @@ class ResponsivePage extends StatelessWidget {
     this.maxWidth,
     this.padding,
     this.alignment = Alignment.topCenter,
+    this.expandHeight = false,
   });
 
   final Widget child;
   final double? maxWidth;
   final EdgeInsetsGeometry? padding;
   final Alignment alignment;
+  final bool expandHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -56,17 +58,41 @@ class ResponsivePage extends StatelessWidget {
               horizontal: Breakpoints.horizontalPadding(type),
             );
 
-        return Align(
-          alignment: alignment,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: resolvedMax,
-            ),
-            child: Padding(
-              padding: resolvedPadding,
-              child: child,
-            ),
+        final content = ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: resolvedMax,
           ),
+          child: Padding(
+            padding: resolvedPadding,
+            child: child,
+          ),
+        );
+
+        if (!expandHeight) {
+          return SizedBox(
+            width: double.infinity,
+            child: Align(
+              alignment: alignment,
+              child: content,
+            ),
+          );
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final height = constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : MediaQuery.sizeOf(context).height;
+
+            return Align(
+              alignment: alignment,
+              child: SizedBox(
+                width: double.infinity,
+                height: height,
+                child: content,
+              ),
+            );
+          },
         );
       },
     );
@@ -88,9 +114,115 @@ class ResponsiveFormPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ResponsivePage(
       maxWidth: Breakpoints.formMaxWidth,
-      padding: padding ??
-          const EdgeInsets.all(AppSpacing.lg),
-      child: child,
+      padding: EdgeInsets.zero,
+      expandHeight: true,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final resolvedPadding =
+              padding ?? const EdgeInsets.all(AppSpacing.lg);
+          final hasBoundedHeight =
+              constraints.maxHeight.isFinite && constraints.maxHeight > 0;
+
+          if (hasBoundedHeight) {
+            return Padding(
+              padding: resolvedPadding,
+              child: SizedBox(
+                height: constraints.maxHeight,
+                child: child,
+              ),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: resolvedPadding,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Colonne scrollable : le contenu défile sur petits écrans, [Spacer] fonctionne
+/// quand la hauteur le permet.
+class ResponsiveScrollColumn extends StatelessWidget {
+  const ResponsiveScrollColumn({
+    super.key,
+    required this.children,
+    this.padding,
+    this.crossAxisAlignment = CrossAxisAlignment.stretch,
+  });
+
+  final List<Widget> children;
+  final EdgeInsetsGeometry? padding;
+  final CrossAxisAlignment crossAxisAlignment;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final hasBoundedHeight =
+            constraints.maxHeight.isFinite && constraints.maxHeight > 0;
+
+        // Avec hauteur bornée : colonne fixe (Spacer / Expanded autorisés).
+        if (hasBoundedHeight) {
+          return Padding(
+            padding: padding ?? EdgeInsets.zero,
+            child: SizedBox(
+              height: constraints.maxHeight,
+              child: Column(
+                crossAxisAlignment: crossAxisAlignment,
+                children: children,
+              ),
+            ),
+          );
+        }
+
+        // Hauteur illimitée : scroll simple, pas de flex vertical.
+        return SingleChildScrollView(
+          padding: padding,
+          child: Column(
+            crossAxisAlignment: crossAxisAlignment,
+            children: children,
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Grille KPI adaptative (hauteur fixe par tuile, pas de débordement).
+class ResponsiveKpiGrid extends StatelessWidget {
+  const ResponsiveKpiGrid({
+    super.key,
+    required this.children,
+    this.withSubtitle = false,
+    this.crossAxisCount,
+  });
+
+  final List<Widget> children;
+  final bool withSubtitle;
+  final int? crossAxisCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return ResponsiveBuilder(
+      builder: (context, type) {
+        final columns = crossAxisCount ?? Breakpoints.kpiGridColumns(type);
+
+        return GridView.count(
+          crossAxisCount: columns,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: AppSpacing.sm + 4,
+          crossAxisSpacing: AppSpacing.sm + 4,
+          mainAxisExtent: Breakpoints.kpiTileHeight(
+            type,
+            withSubtitle: withSubtitle,
+          ),
+          children: children,
+        );
+      },
     );
   }
 }

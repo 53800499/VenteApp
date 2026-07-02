@@ -146,6 +146,36 @@ class SaleValidationService {
     }
   }
 
+  void assertConvertibleQuickSale(Sale sale) {
+    if (sale.saleType != SaleType.quick) {
+      throw const ValidationFailure(
+        'Seules les ventes rapides peuvent être converties.',
+      );
+    }
+    if (sale.isCancelled) {
+      throw const ValidationFailure(
+        'Impossible de convertir une vente annulée.',
+      );
+    }
+    if (sale.items.isNotEmpty) {
+      throw const ValidationFailure(
+        'Cette vente contient déjà des articles détaillés.',
+      );
+    }
+  }
+
+  void assertConversionTotalsMatch({
+    required ComputedSaleTotals totals,
+    required int quickSaleTotal,
+  }) {
+    if (totals.totalAmount != quickSaleTotal) {
+      throw ValidationFailure(
+        'Le total des articles (${totals.totalAmount} FCFA) doit être égal '
+        'au montant de la vente rapide ($quickSaleTotal FCFA).',
+      );
+    }
+  }
+
   ComputedSaleTotals _resolvePayment(int totalAmount, PaymentDraft payment) {
     final amountCash = payment.amountCash < 0 ? 0 : payment.amountCash;
     final amountMomo = payment.amountMomo < 0 ? 0 : payment.amountMomo;

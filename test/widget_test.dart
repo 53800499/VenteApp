@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:frontend/app/app.dart';
-import 'package:frontend/app/di/injection_container.dart';
-import 'package:frontend/features/onboarding/presentation/pages/splash_page.dart';
+import 'package:venteapp/app/app.dart';
+import 'package:venteapp/app/di/injection_container.dart';
+import 'package:venteapp/features/onboarding/presentation/pages/splash_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
