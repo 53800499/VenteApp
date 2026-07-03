@@ -164,15 +164,18 @@ class ResponsiveScrollColumn extends StatelessWidget {
         final hasBoundedHeight =
             constraints.maxHeight.isFinite && constraints.maxHeight > 0;
 
-        // Avec hauteur bornée : colonne fixe (Spacer / Expanded autorisés).
+        // Avec hauteur bornée : scroll si le contenu dépasse ; Spacer possible via minHeight.
         if (hasBoundedHeight) {
           return Padding(
             padding: padding ?? EdgeInsets.zero,
-            child: SizedBox(
-              height: constraints.maxHeight,
-              child: Column(
-                crossAxisAlignment: crossAxisAlignment,
-                children: children,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.zero,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: crossAxisAlignment,
+                  children: children,
+                ),
               ),
             ),
           );

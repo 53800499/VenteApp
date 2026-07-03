@@ -37,6 +37,7 @@ const _labels = <Permission, String>{
   Permission.salesCreate: 'Créer une vente',
   Permission.salesRead: 'Lire les ventes',
   Permission.salesCancel: 'Annuler une vente',
+  Permission.salesPriceOverride: 'Modifier le prix à la vente',
   Permission.paymentsCreate: 'Enregistrer un paiement',
   Permission.paymentsRead: 'Lire les paiements',
   Permission.customersRead: 'Lire les clients',

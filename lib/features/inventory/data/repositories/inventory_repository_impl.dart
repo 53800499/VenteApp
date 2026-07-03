@@ -82,6 +82,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
     final id = await _local.insertCategory(
       shopId: shopId,
       name: input.name,
+      description: input.description,
       sortOrder: input.sortOrder,
     );
 
@@ -93,6 +94,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
       shopId: shopId,
       categoryId: id,
       name: row.name,
+      description: row.description,
       sortOrder: row.sortOrder,
     );
     return ProductMapper.categoryFromRow(row);
@@ -127,6 +129,11 @@ class InventoryRepositoryImpl implements InventoryRepository {
       categoryId,
       CategoriesCompanion(
         name: input.name != null ? Value(input.name!.trim()) : const Value.absent(),
+        description: input.description != null
+            ? Value(
+                input.description!.trim().isEmpty ? null : input.description!.trim(),
+              )
+            : const Value.absent(),
         isActive:
             input.isActive != null ? Value(input.isActive!) : const Value.absent(),
         sortOrder:
@@ -141,6 +148,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
       categoryId: categoryId,
       fields: {
         if (input.name != null) 'name': input.name!.trim(),
+        if (input.description != null)
+          'description': input.description!.trim().isEmpty
+              ? null
+              : input.description!.trim(),
         if (input.isActive != null) 'isActive': input.isActive,
         if (input.sortOrder != null) 'sortOrder': input.sortOrder,
       },
@@ -273,6 +284,8 @@ class InventoryRepositoryImpl implements InventoryRepository {
       alertThreshold: alertThreshold,
       priceBuy: input.priceBuy,
       priceSell: input.priceSell,
+      priceSemiWholesale: input.priceSemiWholesale,
+      priceWholesale: input.priceWholesale,
     );
 
     if (input.initialQuantity > 0) {
@@ -303,6 +316,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
           'sku': input.sku!.trim(),
         'priceSell': input.priceSell,
         if (input.priceBuy != null) 'priceBuy': input.priceBuy,
+        if (input.priceSemiWholesale != null)
+          'priceSemiWholesale': input.priceSemiWholesale,
+        if (input.priceWholesale != null) 'priceWholesale': input.priceWholesale,
         'initialQuantity': input.initialQuantity,
         'alertThreshold': alertThreshold,
       },
@@ -365,6 +381,12 @@ class InventoryRepositoryImpl implements InventoryRepository {
             : input.priceBuy != null
                 ? Value(input.priceBuy)
                 : const Value.absent(),
+        priceSemiWholesale: input.priceSemiWholesale != null
+            ? Value(input.priceSemiWholesale)
+            : const Value.absent(),
+        priceWholesale: input.priceWholesale != null
+            ? Value(input.priceWholesale)
+            : const Value.absent(),
         alertThreshold: input.alertThreshold != null
             ? Value(
                 _validation.resolveAlertThreshold(
@@ -393,6 +415,9 @@ class InventoryRepositoryImpl implements InventoryRepository {
         if (input.priceSell != null) 'priceSell': input.priceSell,
         if (input.priceBuy != null) 'priceBuy': input.priceBuy,
         if (input.clearPriceBuy) 'priceBuy': null,
+        if (input.priceSemiWholesale != null)
+          'priceSemiWholesale': input.priceSemiWholesale,
+        if (input.priceWholesale != null) 'priceWholesale': input.priceWholesale,
         if (input.alertThreshold != null) 'alertThreshold': input.alertThreshold,
       },
       version: existing.version + 1,
@@ -518,6 +543,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
       final localId = await _local.upsertCategoryFromRemote(
         shopId: shopId,
         name: category.name,
+        description: category.description,
         isActive: category.isActive,
         sortOrder: category.sortOrder,
       );

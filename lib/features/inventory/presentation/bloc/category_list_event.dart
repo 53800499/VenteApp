@@ -16,25 +16,31 @@ class CategoryListRefreshRequested extends CategoryListEvent {
 }
 
 class CategoryCreateRequested extends CategoryListEvent {
-  const CategoryCreateRequested(this.name);
+  const CategoryCreateRequested({
+    required this.name,
+    this.description,
+  });
 
   final String name;
+  final String? description;
 
   @override
-  List<Object?> get props => [name];
+  List<Object?> get props => [name, description];
 }
 
 class CategoryUpdateRequested extends CategoryListEvent {
   const CategoryUpdateRequested({
     required this.categoryId,
     required this.name,
+    this.description,
   });
 
   final int categoryId;
   final String name;
+  final String? description;
 
   @override
-  List<Object?> get props => [categoryId, name];
+  List<Object?> get props => [categoryId, name, description];
 }
 
 class CategoryToggleActiveRequested extends CategoryListEvent {

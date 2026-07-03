@@ -100,6 +100,7 @@ class LocalWriteSyncRecorder {
     required int shopId,
     required int categoryId,
     required String name,
+    String? description,
     int sortOrder = 0,
   }) {
     return record(
@@ -107,7 +108,12 @@ class LocalWriteSyncRecorder {
       entityTable: SyncEntityTable.categories,
       recordId: categoryId,
       operation: SyncOperation.create,
-      payload: {'name': name, 'sortOrder': sortOrder},
+      payload: {
+        'name': name,
+        if (description != null && description.trim().isNotEmpty)
+          'description': description.trim(),
+        'sortOrder': sortOrder,
+      },
     );
   }
 

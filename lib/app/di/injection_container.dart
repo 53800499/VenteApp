@@ -6,6 +6,8 @@ import '../../core/audit/local_audit_writer.dart';
 import '../../core/backup/google_drive_backup_service.dart';
 import '../../core/backup/shop_backup_service.dart';
 import '../../core/database/app_database.dart';
+import '../../core/auth/app_lock_controller.dart';
+import '../../core/auth/cloud_session_coordinator.dart';
 import '../../core/network/online_session_policy.dart';
 import '../../core/network/remote_api_runner.dart';
 import '../../core/network/remote_api_guard.dart';
@@ -105,6 +107,7 @@ import '../../features/audit/domain/services/audit_label_service.dart';
 import '../../features/audit/domain/usecases/audit_usecases.dart';
 import '../../features/audit/presentation/services/audit_pdf_exporter.dart';
 import '../../features/sales/data/datasources/local/sales_local_datasource.dart';
+import '../../features/sales/data/datasources/local/customer_product_price_local_datasource.dart';
 import '../../features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import '../../features/sales/data/repositories/sale_repository_impl.dart';
 import '../../features/sales/domain/repositories/sale_repository.dart';
@@ -311,6 +314,15 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton(OnlineSessionPolicy.new);
   sl.registerLazySingleton(
+    () => AppLockController(sl<SharedPreferences>()),
+  );
+  sl.registerLazySingleton(
+    () => CloudSessionCoordinator(
+      credentials: sl(),
+      networkInfo: sl(),
+    ),
+  );
+  sl.registerLazySingleton(
     () => RemoteApiRunner(
       apiGuard: sl(),
       sessionPolicy: sl(),
@@ -375,6 +387,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => Logout(sl()));
   sl.registerLazySingleton(() => ListOwnedShops(sl()));
   sl.registerLazySingleton(() => SwitchShop(sl()));
+  sl.registerLazySingleton(() => ListDeviceSessions(sl()));
+  sl.registerLazySingleton(() => RevokeDeviceSession(sl()));
 
   sl.registerLazySingleton<ShopRepository>(
     () => ShopRepositoryImpl(
@@ -463,6 +477,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => const SaleValidationService());
   sl.registerLazySingleton(() => const ReceiptFormatterService());
   sl.registerLazySingleton(() => SalesLocalDatasource(sl()));
+  sl.registerLazySingleton(() => CustomerProductPriceLocalDatasource(sl()));
   sl.registerLazySingleton(() => SalesRemoteDatasource(sl()));
   sl.registerLazySingleton(() => const CustomerValidationService());
   sl.registerLazySingleton(() => CustomersLocalDatasource(sl()));
@@ -596,13 +611,11 @@ Future<void> initDependencies() async {
     () => AuthBloc(
       isSetupComplete: sl(),
       wasLoggedOut: sl(),
-      restoreSession: sl(),
       getLockScreen: sl(),
       loginWithPin: sl(),
       loginWithBiometric: sl(),
       setupOwner: sl(),
       emergencyUnlock: sl(),
-      lockActiveSession: sl(),
       logout: sl(),
       listOwnedShops: sl(),
       switchShop: sl(),
@@ -611,6 +624,7 @@ Future<void> initDependencies() async {
       completeWhatsappLogin: sl(),
       lastShopStorage: sl(),
       syncService: sl(),
+      appLockController: sl(),
     ),
   );
 

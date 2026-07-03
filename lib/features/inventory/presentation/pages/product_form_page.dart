@@ -9,6 +9,7 @@ import '../../../../shared/components/ui_primitives.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/usecases/inventory_usecases.dart';
+import '../../../settings/data/datasources/local/settings_local_datasource.dart';
 import '../widgets/inventory_feedback.dart';
 
 class ProductFormPage extends StatefulWidget {
@@ -33,12 +34,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final _skuController = TextEditingController();
   final _priceSellController = TextEditingController();
   final _priceBuyController = TextEditingController();
+  final _priceSemiWholesaleController = TextEditingController();
+  final _priceWholesaleController = TextEditingController();
   final _quantityController = TextEditingController(text: '0');
   final _alertThresholdController = TextEditingController();
 
   List<ProductCategory> _categories = [];
   int? _categoryId;
   bool _isLoading = false;
+  bool _pricingTiersEnabled = false;
   String? _errorMessage;
 
   @override
@@ -49,6 +53,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _nameController.text = product.name;
       _skuController.text = product.sku ?? '';
       _priceSellController.text = '${product.priceSell}';
+      if (product.priceSemiWholesale != null) {
+        _priceSemiWholesaleController.text = '${product.priceSemiWholesale}';
+      }
+      if (product.priceWholesale != null) {
+        _priceWholesaleController.text = '${product.priceWholesale}';
+      }
       if (product.priceBuy != null) {
         _priceBuyController.text = '${product.priceBuy}';
       }
@@ -56,6 +66,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _categoryId = product.categoryId;
     }
     _loadCategories();
+    _loadPricingSettings();
+  }
+
+  Future<void> _loadPricingSettings() async {
+    final config =
+        await sl<SettingsLocalDatasource>().loadConfiguration(widget.session.shop.id);
+    if (mounted) {
+      setState(() => _pricingTiersEnabled = config.commerce.pricingTiersEnabled);
+    }
   }
 
   Future<void> _loadCategories() async {
@@ -72,6 +91,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _nameController.dispose();
     _skuController.dispose();
     _priceSellController.dispose();
+    _priceSemiWholesaleController.dispose();
+    _priceWholesaleController.dispose();
     _priceBuyController.dispose();
     _quantityController.dispose();
     _alertThresholdController.dispose();
@@ -115,6 +136,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
             priceBuy: _priceBuyController.text.trim().isEmpty
                 ? null
                 : _parseInt(_priceBuyController.text),
+            priceSemiWholesale: _pricingTiersEnabled &&
+                    _priceSemiWholesaleController.text.trim().isNotEmpty
+                ? _parseInt(_priceSemiWholesaleController.text)
+                : null,
+            priceWholesale: _pricingTiersEnabled &&
+                    _priceWholesaleController.text.trim().isNotEmpty
+                ? _parseInt(_priceWholesaleController.text)
+                : null,
             clearPriceBuy: _priceBuyController.text.trim().isEmpty,
             alertThreshold: _alertThresholdController.text.trim().isEmpty
                 ? null
@@ -135,6 +164,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
             priceBuy: _priceBuyController.text.trim().isEmpty
                 ? null
                 : _parseInt(_priceBuyController.text),
+            priceSemiWholesale: _pricingTiersEnabled &&
+                    _priceSemiWholesaleController.text.trim().isNotEmpty
+                ? _parseInt(_priceSemiWholesaleController.text)
+                : null,
+            priceWholesale: _pricingTiersEnabled &&
+                    _priceWholesaleController.text.trim().isNotEmpty
+                ? _parseInt(_priceWholesaleController.text)
+                : null,
             initialQuantity: _parseInt(_quantityController.text) ?? 0,
             alertThreshold: _alertThresholdController.text.trim().isEmpty
                 ? null
@@ -233,7 +270,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 TextFormField(
                   controller: _priceSellController,
                   decoration: const InputDecoration(
-                    labelText: 'Prix de vente (FCFA)',
+                    labelText: 'Prix catalogue — détail (FCFA)',
                     prefixIcon: Icon(Icons.sell_outlined),
                   ),
                   keyboardType: TextInputType.number,
@@ -244,6 +281,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     return null;
                   },
                 ),
+                if (_pricingTiersEnabled) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: _priceSemiWholesaleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Prix demi-gros (optionnel)',
+                      prefixIcon: Icon(Icons.store_outlined),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: _priceWholesaleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Prix gros (optionnel)',
+                      prefixIcon: Icon(Icons.warehouse_outlined),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   controller: _priceBuyController,

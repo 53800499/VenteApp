@@ -3,6 +3,7 @@ import '../../domain/entities/customer_entities.dart';
 class CustomerApiDto {
   CustomerApiDto({
     required this.id,
+    required this.shopId,
     required this.name,
     this.phone,
     this.note,
@@ -21,6 +22,7 @@ class CustomerApiDto {
   });
 
   final int id;
+  final int shopId;
   final String name;
   final String? phone;
   final String? address;
@@ -42,6 +44,7 @@ class CustomerApiDto {
     final sales = json['recentSales'];
     return CustomerApiDto(
       id: json['id'] as int,
+      shopId: json['shopId'] as int? ?? 0,
       name: json['name'] as String,
       phone: json['phone'] as String?,
       address: json['address'] as String?,

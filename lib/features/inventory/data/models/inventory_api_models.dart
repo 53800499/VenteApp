@@ -2,12 +2,14 @@ class CategoryApiDto {
   const CategoryApiDto({
     required this.id,
     required this.name,
+    this.description,
     required this.isActive,
     required this.sortOrder,
   });
 
   final int id;
   final String name;
+  final String? description;
   final bool isActive;
   final int sortOrder;
 
@@ -15,6 +17,7 @@ class CategoryApiDto {
     return CategoryApiDto(
       id: json['id'] as int,
       name: json['name'] as String,
+      description: json['description'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       sortOrder: json['sortOrder'] as int? ?? 0,
     );

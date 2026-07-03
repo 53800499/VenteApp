@@ -38,6 +38,8 @@ class InventoryRemoteDatasource {
 
     required String name,
 
+    String? description,
+
     int sortOrder = 0,
 
   }) async {
@@ -45,6 +47,9 @@ class InventoryRemoteDatasource {
     final data = await _postData('/categories', {
 
       'name': name,
+
+      if (description != null && description.trim().isNotEmpty)
+        'description': description.trim(),
 
       if (sortOrder > 0) 'sortOrder': sortOrder,
 
@@ -62,6 +67,8 @@ class InventoryRemoteDatasource {
 
     String? name,
 
+    String? description,
+
     bool? isActive,
 
     int? sortOrder,
@@ -71,6 +78,8 @@ class InventoryRemoteDatasource {
     final body = <String, dynamic>{};
 
     if (name != null) body['name'] = name;
+
+    if (description != null) body['description'] = description.trim().isEmpty ? null : description.trim();
 
     if (isActive != null) body['isActive'] = isActive;
 

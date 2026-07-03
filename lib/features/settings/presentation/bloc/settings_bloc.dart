@@ -24,6 +24,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SettingsLoadRequested>(_onLoad);
     on<SettingsShopSaveRequested>(_onShopSave);
     on<SettingsThresholdChanged>(_onThresholdChanged);
+    on<SettingsPricingTiersChanged>(_onPricingTiersChanged);
     on<SettingsAutoLockChanged>(_onAutoLockChanged);
     on<SettingsReceiptSaveRequested>(_onReceiptSave);
     on<SettingsBackupRecordRequested>(_onBackupRecord);
@@ -86,6 +87,19 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       emit,
       UpdateShopSettingsInput(defaultAlertThreshold: event.threshold),
       successMessage: 'Seuil d\'alerte mis à jour.',
+    );
+  }
+
+  Future<void> _onPricingTiersChanged(
+    SettingsPricingTiersChanged event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _save(
+      emit,
+      UpdateShopSettingsInput(pricingTiersEnabled: event.enabled),
+      successMessage: event.enabled
+          ? 'Grilles tarifaires activées.'
+          : 'Grilles tarifaires désactivées.',
     );
   }
 

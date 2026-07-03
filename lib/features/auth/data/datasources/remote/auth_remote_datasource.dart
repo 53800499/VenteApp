@@ -189,6 +189,42 @@ class AuthRemoteDatasource {
     return SwitchShopDataDto.fromJson(data);
   }
 
+  Future<bool> enableBiometric({required String pin}) async {
+    final data = await _postData('/auth/biometric/enable', {'pin': pin});
+    return data['biometricEnabled'] as bool? ?? true;
+  }
+
+  Future<List<DeviceSessionDto>> listDevices({bool shopScope = false}) async {
+    try {
+      final response = await _client.get<Map<String, dynamic>>(
+        '/auth/devices',
+        queryParameters: shopScope ? {'all': 'true'} : null,
+      );
+      final payload = response.data;
+      if (payload == null) {
+        throw const NetworkFailure('Réponse serveur vide.');
+      }
+      final data = payload['data'] ?? payload;
+      if (data is List) {
+        return data
+            .whereType<Map<String, dynamic>>()
+            .map(DeviceSessionDto.fromJson)
+            .toList();
+      }
+      return [];
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<void> revokeDevice(String sessionId) async {
+    try {
+      await _client.delete('/auth/devices/$sessionId');
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   Future<Map<String, dynamic>> _getData(String path) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(path);

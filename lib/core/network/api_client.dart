@@ -47,6 +47,9 @@ class ApiClient {
               final response = await _dio.fetch(error.requestOptions);
               return handler.resolve(response);
             } on Object {
+              if (error.response?.statusCode == 401) {
+                await onRefreshTokenInvalid?.call();
+              }
               return handler.next(error);
             }
           }
@@ -60,6 +63,9 @@ class ApiClient {
   final AuthCredentialsStorage? _credentials;
   final ActiveShopContext? _activeShop;
   Future<void>? _refreshInFlight;
+
+  /// Appelé quand le refresh token est rejeté (401) — ne verrouille pas l'app.
+  Future<void> Function()? onRefreshTokenInvalid;
 
   String get baseUrl => _dio.options.baseUrl;
 
@@ -111,7 +117,7 @@ class ApiClient {
   static const _publicAuthPathMarkers = [
     '/auth/pin/login',
     '/auth/setup',
-    '/auth/validate-setup',
+    '/auth/setup/validate',
     '/auth/lock-screen',
     '/auth/whatsapp',
   ];
@@ -183,6 +189,16 @@ class ApiClient {
       '/auth/refresh',
       data: {'refreshToken': refreshToken},
     );
+
+    final statusCode = response.statusCode;
+    if (statusCode == 401 || statusCode == 403) {
+      await onRefreshTokenInvalid?.call();
+      throw DioException(
+        requestOptions: RequestOptions(path: '/auth/refresh'),
+        response: response,
+        type: DioExceptionType.badResponse,
+      );
+    }
 
     final payload = response.data;
     if (payload == null) {

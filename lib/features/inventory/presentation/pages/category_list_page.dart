@@ -40,6 +40,13 @@ class CategoryListPage extends StatelessWidget {
   }
 }
 
+class CategoryFormResult {
+  const CategoryFormResult({required this.name, this.description});
+
+  final String name;
+  final String? description;
+}
+
 class _CategoryListView extends StatelessWidget {
   const _CategoryListView({required this.canWrite});
 
@@ -190,21 +197,29 @@ class _CategoryListView extends StatelessWidget {
     BuildContext context, {
     ProductCategory? category,
   }) async {
-    final name = await showDialog<String>(
+    final result = await showDialog<CategoryFormResult>(
       context: context,
       builder: (ctx) => _CategoryFormDialog(
         initialName: category?.name,
+        initialDescription: category?.description,
         title: category == null ? 'Nouvelle catégorie' : 'Modifier la catégorie',
       ),
     );
 
-    if (name == null || !context.mounted) return;
+    if (result == null || !context.mounted) return;
 
     final bloc = context.read<CategoryListBloc>();
     if (category == null) {
-      bloc.add(CategoryCreateRequested(name));
+      bloc.add(CategoryCreateRequested(
+        name: result.name,
+        description: result.description,
+      ));
     } else {
-      bloc.add(CategoryUpdateRequested(categoryId: category.id, name: name));
+      bloc.add(CategoryUpdateRequested(
+        categoryId: category.id,
+        name: result.name,
+        description: result.description,
+      ));
     }
   }
 
@@ -317,9 +332,15 @@ class _CategoryTile extends StatelessWidget {
           ),
         ),
         subtitle: Text(
-          item.productCount == 1
-              ? '1 produit'
-              : '${item.productCount} produits',
+          [
+            if (category.description != null && category.description!.isNotEmpty)
+              category.description!,
+            item.productCount == 1
+                ? '1 produit'
+                : '${item.productCount} produits',
+          ].join(' · '),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: canWrite
             ? PopupMenuButton<String>(
@@ -361,10 +382,12 @@ class _CategoryFormDialog extends StatefulWidget {
   const _CategoryFormDialog({
     required this.title,
     this.initialName,
+    this.initialDescription,
   });
 
   final String title;
   final String? initialName;
+  final String? initialDescription;
 
   @override
   State<_CategoryFormDialog> createState() => _CategoryFormDialogState();
@@ -373,16 +396,20 @@ class _CategoryFormDialog extends StatefulWidget {
 class _CategoryFormDialogState extends State<_CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName);
+    _descriptionController =
+        TextEditingController(text: widget.initialDescription);
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -392,19 +419,34 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
       title: Text(widget.title),
       content: Form(
         key: _formKey,
-        child: TextFormField(
-          controller: _nameController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Nom de la catégorie',
-            prefixIcon: Icon(Icons.label_outline),
-          ),
-          validator: (value) {
-            if (value == null || value.trim().length < 2) {
-              return 'Min. 2 caractères';
-            }
-            return null;
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Nom de la catégorie',
+                prefixIcon: Icon(Icons.label_outline),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().length < 2) {
+                  return 'Min. 2 caractères';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Description (optionnelle)',
+                prefixIcon: Icon(Icons.notes_outlined),
+                alignLabelWithHint: true,
+              ),
+            ),
+          ],
         ),
       ),
       actions: [
@@ -415,7 +457,14 @@ class _CategoryFormDialogState extends State<_CategoryFormDialog> {
         FilledButton(
           onPressed: () {
             if (_formKey.currentState!.validate()) {
-              Navigator.pop(context, _nameController.text.trim());
+              final description = _descriptionController.text.trim();
+              Navigator.pop(
+                context,
+                CategoryFormResult(
+                  name: _nameController.text.trim(),
+                  description: description.isEmpty ? null : description,
+                ),
+              );
             }
           },
           child: const Text('Enregistrer'),

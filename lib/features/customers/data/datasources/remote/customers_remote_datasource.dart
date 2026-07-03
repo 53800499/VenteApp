@@ -84,7 +84,7 @@ class CustomersRemoteDatasource {
         if (phone != null && phone.isNotEmpty) 'phone': phone,
         if (address != null && address.isNotEmpty) 'address': address,
         if (note != null && note.isNotEmpty) 'note': note,
-        'isShared': isShared,
+        if (isShared) 'isShared': isShared,
       },
     );
     return CustomerApiDto.fromJson(data);

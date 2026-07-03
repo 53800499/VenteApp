@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/database/app_database.dart' hide AuthSession;
 import '../../../../core/errors/auth_error_humanizer.dart';
+import '../../../../core/constants/api_config.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/active_shop_context.dart';
 import '../../../../core/network/api_client.dart';
@@ -189,10 +190,7 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     }
 
-    if (_isOnlineMode && !await _credentials.hasValidOfflineGrant()) {
-      if (!await _networkInfo.isConnected) {
-        throw const OfflineGraceExpiredFailure();
-      }
+    if (_isOnlineMode && !await _networkInfo.isConnected && localUsers.isEmpty) {
       throw const NetworkFailure(
         'Connexion internet requise pour la première connexion.',
       );
@@ -330,10 +328,10 @@ class AuthRepositoryImpl implements AuthRepository {
           ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
         .get();
 
-    if (localUsers.isEmpty &&
-        _isOnlineMode &&
-        !await _credentials.hasValidOfflineGrant()) {
-      throw const OfflineGraceExpiredFailure();
+    if (localUsers.isEmpty && _isOnlineMode && !await _networkInfo.isConnected) {
+      throw const NetworkFailure(
+        'Connexion internet requise pour la première connexion biométrique.',
+      );
     }
 
     return _loginWithBiometricLocal(shopId: localShopId, userId: userId)
@@ -526,6 +524,18 @@ class AuthRepositoryImpl implements AuthRepository {
       throw const UnauthorizedFailure('PIN incorrect.');
     }
 
+    if (_remote != null &&
+        await _networkInfo.isConnected &&
+        await _credentials.hasValidAccessToken()) {
+      try {
+        await _remote!.enableBiometric(pin: pin);
+      } on Failure {
+        rethrow;
+      } catch (_) {
+        // Session cloud absente : activation locale uniquement.
+      }
+    }
+
     final timestamp = nowMs();
     await (_db.update(_db.users)..where((u) => u.id.equals(user.id))).write(
       UsersCompanion(
@@ -652,9 +662,8 @@ class AuthRepositoryImpl implements AuthRepository {
       throw const UnauthorizedFailure('Session expirée.');
     }
 
-    final settings = await _getSettings(session.shopId);
     final timestamp = nowMs();
-    final newExpiry = timestamp + msFromMinutes(settings.autoLockMinutes);
+    final newExpiry = timestamp + ApiConfig.localSessionMaxMs;
 
     await (_db.update(_db.authSessions)..where((s) => s.id.equals(sessionToken)))
         .write(
@@ -681,13 +690,6 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<AuthSession?> restoreSession() async {
-    final hasLocalInstall = await _hasLocalOwnerInstallation();
-    if (_isOnlineMode &&
-        !await _credentials.hasValidOfflineGrant() &&
-        !hasLocalInstall) {
-      return null;
-    }
-
     final token = await _sessionStorage.getSessionToken();
     final userJson = await _sessionStorage.getUser();
 
@@ -700,7 +702,6 @@ class AuthRepositoryImpl implements AuthRepository {
         .getSingleOrNull();
 
     if (dbSession == null) {
-      await lockActiveSession();
       return null;
     }
 
@@ -711,16 +712,11 @@ class AuthRepositoryImpl implements AuthRepository {
         dbSession.expiresAt <= nowMs();
 
     if (sessionExpired) {
-      if (await _credentials.hasValidOfflineGrant()) {
-        await _renewLocalSession(token: token, shopId: dbSession.shopId);
-        expiresAt = await _sessionStorage.getSessionExpiresAt();
-        dbSession = await (_db.select(_db.authSessions)
-              ..where((s) => s.id.equals(token)))
-            .getSingle();
-      } else {
-        await lockActiveSession();
-        return null;
-      }
+      await _renewLocalSession(token: token, shopId: dbSession.shopId);
+      expiresAt = await _sessionStorage.getSessionExpiresAt();
+      dbSession = await (_db.select(_db.authSessions)
+            ..where((s) => s.id.equals(token)))
+          .getSingle();
     }
 
     final shopId = dbSession.shopId;
@@ -734,37 +730,25 @@ class AuthRepositoryImpl implements AuthRepository {
       return null;
     }
 
-    if (_isOnlineMode && await _credentials.hasCredentials()) {
-      if (!await _credentials.hasValidAccessToken() &&
-          await _credentials.hasValidRefreshToken() &&
-          await _networkInfo.isConnected) {
-        try {
-          await _apiClient?.refreshTokensIfNeeded();
-        } on Object {
-          // Échec transitoire (réseau / serveur) — session locale conservée.
+    if (_isOnlineMode && await _networkInfo.isConnected) {
+      if (await _credentials.hasCredentials()) {
+        if (!await _credentials.hasValidAccessToken() &&
+            await _credentials.hasValidRefreshToken()) {
+          try {
+            await _apiClient?.refreshTokensIfNeeded();
+          } on Object {
+            // Refresh transitoire — travail offline conservé.
+          }
         }
-      }
 
-      if (!await _credentials.hasValidAccessToken() &&
-          !await _credentials.hasValidRefreshToken()) {
-        if (await _credentials.hasValidOfflineGrant()) {
-          // Grâce offline : pas de verrouillage PIN tant que la fenêtre est ouverte.
-        } else {
+        if (!await _credentials.hasValidAccessToken() &&
+            !await _credentials.hasValidRefreshToken()) {
           await _credentials.clear();
-          await lockActiveSession();
-          return null;
         }
       }
-    } else if (_isOnlineMode &&
-        await _networkInfo.isConnected &&
-        !await _credentials.hasCredentials()) {
-      if (!await _credentials.hasValidOfflineGrant()) {
-        await lockActiveSession();
-        return null;
-      }
-    }
 
-    await _ensureOnlineSessionAfterUnlock(shopId);
+      await _ensureOnlineSessionAfterUnlock(shopId);
+    }
 
     final settings = await _getSettings(shopId);
     final role = UserRole.fromCode(userJson['role'] as String? ?? 'owner');
@@ -866,7 +850,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final userJson = await _sessionStorage.getUser();
     if (userJson == null) return;
 
-    final newExpiry = nowMs() + msFromMinutes(settings.autoLockMinutes);
+    final newExpiry = nowMs() + ApiConfig.localSessionMaxMs;
     await (_db.update(_db.authSessions)..where((s) => s.id.equals(token))).write(
       AuthSessionsCompanion(expiresAt: Value(newExpiry)),
     );
@@ -1071,6 +1055,63 @@ class AuthRepositoryImpl implements AuthRepository {
       deviceLabel: device.deviceLabel,
     );
     return _finalizeOnlineLogin(result);
+  }
+
+  @override
+  Future<List<DeviceSession>> listDeviceSessions({bool shopScope = false}) async {
+    if (_remote == null) {
+      throw const NetworkFailure('Connexion serveur requise.');
+    }
+    if (!await _networkInfo.isConnected) {
+      throw const NetworkFailure(
+        'Hors ligne — impossible de lister les appareils connectés.',
+      );
+    }
+    if (!await _credentials.hasValidAccessToken() &&
+        await _credentials.hasValidRefreshToken()) {
+      try {
+        await _apiClient?.refreshTokensIfNeeded();
+      } on Object {
+        // Refresh transitoire.
+      }
+    }
+    final sessions = await _remote!.listDevices(shopScope: shopScope);
+    return sessions
+        .map(
+          (s) => DeviceSession(
+            id: s.id,
+            userId: s.userId,
+            userName: s.userName,
+            deviceId: s.deviceId,
+            deviceLabel: s.deviceLabel,
+            lastSeenAt: s.lastSeenAt,
+            sessionExpiresAt: s.sessionExpiresAt,
+            refreshExpiresAt: s.refreshExpiresAt,
+            isCurrent: s.isCurrent,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> revokeDeviceSession(String sessionId) async {
+    if (_remote == null) {
+      throw const NetworkFailure('Connexion serveur requise.');
+    }
+    if (!await _networkInfo.isConnected) {
+      throw const NetworkFailure(
+        'Hors ligne — impossible de révoquer cet appareil.',
+      );
+    }
+    if (!await _credentials.hasValidAccessToken() &&
+        await _credentials.hasValidRefreshToken()) {
+      try {
+        await _apiClient?.refreshTokensIfNeeded();
+      } on Object {
+        // Refresh transitoire.
+      }
+    }
+    await _remote!.revokeDevice(sessionId);
   }
 
   Future<AuthSession> _applyShopSwitch({
@@ -1850,7 +1891,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     await _authFlow?.clearLoggedOut();
     final timestamp = nowMs();
-    final expiresAt = timestamp + msFromMinutes(settings.autoLockMinutes);
+    final expiresAt = timestamp + ApiConfig.localSessionMaxMs;
     final token = _uuid.v4();
 
     await _db.into(_db.authSessions).insert(

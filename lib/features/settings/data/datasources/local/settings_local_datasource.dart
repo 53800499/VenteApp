@@ -78,6 +78,12 @@ class SettingsLocalDatasource {
           defaultValue: 5,
         ),
       ),
+      commerce: CommerceSettings(
+        pricingTiersEnabled: _readSqlBool(
+          data['pricing_tiers_enabled'],
+          defaultValue: false,
+        ),
+      ),
       security: SecuritySettings(
         autoLockMinutes: const SettingsValidationService()
             .normalizeAutoLockMinutes(
@@ -121,6 +127,7 @@ class SettingsLocalDatasource {
         backup_path,
         cloud_sync_enabled,
         cloud_last_sync_at,
+        pricing_tiers_enabled,
         updated_at
       FROM settings
       WHERE shop_id = ?
@@ -173,6 +180,9 @@ class SettingsLocalDatasource {
             : Value(
                 input.receiptFooter!.trim().isEmpty ? null : input.receiptFooter,
               ),
+        pricingTiersEnabled: input.pricingTiersEnabled == null
+            ? const Value.absent()
+            : Value(input.pricingTiersEnabled!),
         updatedAt: Value(timestamp),
       ),
     );

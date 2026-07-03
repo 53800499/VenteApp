@@ -86,7 +86,10 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
     try {
       await _createCategory(
         shopId: _shopId,
-        input: CreateCategoryInput(name: event.name),
+        input: CreateCategoryInput(
+          name: event.name,
+          description: event.description,
+        ),
       );
       emit(state.copyWith(isSaving: false));
       await _fetch(emit);
@@ -104,7 +107,10 @@ class CategoryListBloc extends Bloc<CategoryListEvent, CategoryListState> {
       await _updateCategory(
         shopId: _shopId,
         categoryId: event.categoryId,
-        input: UpdateCategoryInput(name: event.name),
+        input: UpdateCategoryInput(
+          name: event.name,
+          description: event.description ?? '',
+        ),
       );
       emit(state.copyWith(isSaving: false));
       await _fetch(emit);

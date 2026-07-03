@@ -35,7 +35,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
       final remoteCustomers = await _fetchAllRemoteCustomers();
       for (final remote in remoteCustomers) {
         await _local.upsertFromRemote(
-          shopId: shopId,
+          shopId: remote.shopId > 0 ? remote.shopId : shopId,
           remoteId: remote.id,
           name: remote.name,
           phone: remote.phone,
@@ -89,7 +89,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
         await _apiGuard.ensureReady();
         final remote = await _remote.getCustomer(int.parse(local.serverId!));
         await _local.upsertFromRemote(
-          shopId: shopId,
+          shopId: remote.shopId > 0 ? remote.shopId : shopId,
           remoteId: remote.id,
           name: remote.name,
           phone: remote.phone,

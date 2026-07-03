@@ -19,6 +19,7 @@ class ProductCategory extends Equatable {
     required this.id,
     required this.shopId,
     required this.name,
+    this.description,
     required this.isActive,
     required this.sortOrder,
   });
@@ -26,11 +27,12 @@ class ProductCategory extends Equatable {
   final int id;
   final int shopId;
   final String name;
+  final String? description;
   final bool isActive;
   final int sortOrder;
 
   @override
-  List<Object?> get props => [id, shopId, name, isActive, sortOrder];
+  List<Object?> get props => [id, shopId, name, description, isActive, sortOrder];
 }
 
 class CategoryWithStats extends Equatable {
@@ -49,29 +51,33 @@ class CategoryWithStats extends Equatable {
 class CreateCategoryInput extends Equatable {
   const CreateCategoryInput({
     required this.name,
+    this.description,
     this.sortOrder = 0,
   });
 
   final String name;
+  final String? description;
   final int sortOrder;
 
   @override
-  List<Object?> get props => [name, sortOrder];
+  List<Object?> get props => [name, description, sortOrder];
 }
 
 class UpdateCategoryInput extends Equatable {
   const UpdateCategoryInput({
     this.name,
+    this.description,
     this.isActive,
     this.sortOrder,
   });
 
   final String? name;
+  final String? description;
   final bool? isActive;
   final int? sortOrder;
 
   @override
-  List<Object?> get props => [name, isActive, sortOrder];
+  List<Object?> get props => [name, description, isActive, sortOrder];
 }
 
 class Product extends Equatable {
@@ -85,6 +91,8 @@ class Product extends Equatable {
     required this.alertThreshold,
     this.priceBuy,
     required this.priceSell,
+    this.priceSemiWholesale,
+    this.priceWholesale,
     required this.isArchived,
     required this.isLowStock,
     this.categoryName,
@@ -99,6 +107,8 @@ class Product extends Equatable {
   final int alertThreshold;
   final int? priceBuy;
   final int priceSell;
+  final int? priceSemiWholesale;
+  final int? priceWholesale;
   final bool isArchived;
   final bool isLowStock;
   final String? categoryName;
@@ -114,6 +124,8 @@ class Product extends Equatable {
         alertThreshold,
         priceBuy,
         priceSell,
+        priceSemiWholesale,
+        priceWholesale,
         isArchived,
         isLowStock,
         categoryName,
@@ -182,6 +194,8 @@ class CreateProductInput extends Equatable {
     this.sku,
     required this.priceSell,
     this.priceBuy,
+    this.priceSemiWholesale,
+    this.priceWholesale,
     required this.initialQuantity,
     this.alertThreshold,
   });
@@ -191,6 +205,8 @@ class CreateProductInput extends Equatable {
   final String? sku;
   final int priceSell;
   final int? priceBuy;
+  final int? priceSemiWholesale;
+  final int? priceWholesale;
   final int initialQuantity;
   final int? alertThreshold;
 
@@ -201,6 +217,8 @@ class CreateProductInput extends Equatable {
         sku,
         priceSell,
         priceBuy,
+        priceSemiWholesale,
+        priceWholesale,
         initialQuantity,
         alertThreshold,
       ];
@@ -213,6 +231,8 @@ class UpdateProductInput extends Equatable {
     this.sku,
     this.priceSell,
     this.priceBuy,
+    this.priceSemiWholesale,
+    this.priceWholesale,
     this.clearPriceBuy = false,
     this.alertThreshold,
   });
@@ -222,6 +242,8 @@ class UpdateProductInput extends Equatable {
   final String? sku;
   final int? priceSell;
   final int? priceBuy;
+  final int? priceSemiWholesale;
+  final int? priceWholesale;
   final bool clearPriceBuy;
   final int? alertThreshold;
 
@@ -232,6 +254,8 @@ class UpdateProductInput extends Equatable {
         sku,
         priceSell,
         priceBuy,
+        priceSemiWholesale,
+        priceWholesale,
         clearPriceBuy,
         alertThreshold,
       ];

@@ -317,6 +317,44 @@ class WhatsappOtpVerifyDataDto {
   }
 }
 
+class DeviceSessionDto {
+  const DeviceSessionDto({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.deviceId,
+    this.deviceLabel,
+    required this.lastSeenAt,
+    required this.sessionExpiresAt,
+    required this.refreshExpiresAt,
+    required this.isCurrent,
+  });
+
+  final String id;
+  final int userId;
+  final String userName;
+  final String deviceId;
+  final String? deviceLabel;
+  final int lastSeenAt;
+  final int sessionExpiresAt;
+  final int refreshExpiresAt;
+  final bool isCurrent;
+
+  factory DeviceSessionDto.fromJson(Map<String, dynamic> json) {
+    return DeviceSessionDto(
+      id: json['id'] as String,
+      userId: json['userId'] as int,
+      userName: json['userName'] as String,
+      deviceId: json['deviceId'] as String,
+      deviceLabel: json['deviceLabel'] as String?,
+      lastSeenAt: json['lastSeenAt'] as int,
+      sessionExpiresAt: json['sessionExpiresAt'] as int,
+      refreshExpiresAt: json['refreshExpiresAt'] as int,
+      isCurrent: json['isCurrent'] as bool? ?? false,
+    );
+  }
+}
+
 class LockScreenUserDto {
   const LockScreenUserDto({
     required this.id,

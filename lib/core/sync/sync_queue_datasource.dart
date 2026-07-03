@@ -95,9 +95,30 @@ class SyncQueueDatasource {
         .map((e) => '${e.value} ${labels[e.key] ?? e.key}')
         .join(', ');
 
-    return '$parts en attente. '
-        'Les ventes et produits nécessitent que les clients et catégories '
-        'soient synchronisés au préalable.';
+    final hints = rows
+        .map((r) => r.lastError)
+        .whereType<String>()
+        .where((m) => m.trim().isNotEmpty)
+        .toSet()
+        .take(2)
+        .join(' · ');
+
+    final buffer = StringBuffer('$parts en attente.');
+    if (hints.isNotEmpty) {
+      buffer.write(' $hints');
+    } else {
+      buffer.write(
+        ' Les ventes nécessitent des produits synchronisés ; '
+        'les produits nécessitent leurs catégories.',
+      );
+    }
+    return buffer.toString();
+  }
+
+  Future<void> markDeferred(int queueId, String reason) async {
+    await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
+      SyncQueueCompanion(lastError: Value(reason)),
+    );
   }
 
   Future<void> enqueue({

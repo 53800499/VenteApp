@@ -81,4 +81,8 @@ abstract class AuthRepository {
     required int shopId,
     required int userId,
   });
+
+  Future<List<DeviceSession>> listDeviceSessions({bool shopScope = false});
+
+  Future<void> revokeDeviceSession(String sessionId);
 }

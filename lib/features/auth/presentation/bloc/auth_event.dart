@@ -169,6 +169,11 @@ class AuthAppLockedRequested extends AuthEvent {
   const AuthAppLockedRequested();
 }
 
+/// Refresh token cloud invalide — reconnexion OTP (sans effacer la session locale).
+class AuthCloudReconnectRequested extends AuthEvent {
+  const AuthCloudReconnectRequested();
+}
+
 class AuthEntryResetRequested extends AuthEvent {
   const AuthEntryResetRequested();
 }

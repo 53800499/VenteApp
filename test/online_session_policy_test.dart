@@ -11,21 +11,17 @@ void main() {
       policy = OnlineSessionPolicy();
     });
 
-    test('requiresLogout uniquement pour auth expirée ou grâce offline', () {
+    test('requiresLogout ne déclenche plus de déconnexion automatique', () {
       expect(
         OnlineSessionPolicy.requiresLogout(const UnauthorizedFailure('expiré')),
-        isTrue,
-      );
-      expect(
-        OnlineSessionPolicy.requiresLogout(const OfflineGraceExpiredFailure()),
-        isTrue,
-      );
-      expect(
-        OnlineSessionPolicy.requiresLogout(const NetworkFailure('hors ligne')),
         isFalse,
       );
       expect(
-        OnlineSessionPolicy.requiresLogout(const ValidationFailure('x')),
+        OnlineSessionPolicy.requiresLogout(const OfflineGraceExpiredFailure()),
+        isFalse,
+      );
+      expect(
+        OnlineSessionPolicy.requiresLogout(const NetworkFailure('hors ligne')),
         isFalse,
       );
     });
@@ -45,32 +41,32 @@ void main() {
       );
     });
 
-    test('handleFailure déclenche onSessionInvalidated une seule fois', () async {
+    test('handleFailure déclenche onCloudSessionExpired une seule fois', () async {
       var count = 0;
-      policy.onSessionInvalidated = () => count++;
+      policy.onCloudSessionExpired = () => count++;
 
       policy.handleFailure(const NetworkFailure('offline'));
       expect(count, 0);
 
       policy.handleFailure(const UnauthorizedFailure('session'));
-      await Future<void>.delayed(const Duration(milliseconds: 1600));
+      await Future<void>.delayed(const Duration(milliseconds: 900));
       expect(count, 1);
 
       policy.handleFailure(const UnauthorizedFailure('encore'));
       expect(count, 1);
     });
 
-    test('reset permet une nouvelle invalidation', () async {
+    test('reset permet une nouvelle notification cloud', () async {
       var count = 0;
-      policy.onSessionInvalidated = () => count++;
+      policy.onCloudSessionExpired = () => count++;
 
       policy.handleFailure(const OfflineGraceExpiredFailure());
-      await Future<void>.delayed(const Duration(milliseconds: 1600));
+      await Future<void>.delayed(const Duration(milliseconds: 900));
       expect(count, 1);
 
       policy.reset();
       policy.handleFailure(const UnauthorizedFailure('x'));
-      await Future<void>.delayed(const Duration(milliseconds: 1600));
+      await Future<void>.delayed(const Duration(milliseconds: 900));
       expect(count, 2);
     });
   });

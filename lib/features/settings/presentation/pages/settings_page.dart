@@ -25,6 +25,8 @@ import '../widgets/settings_feedback.dart';
 import '../../../../core/backup/backup_file_sharer.dart';
 import '../../../../core/backup/google_drive_backup_service.dart';
 import 'change_pin_page.dart';
+import 'connected_devices_page.dart';
+import '../../../auth/data/datasources/local/biometric_local_datasource.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import '../../../auth/presentation/widgets/pin_pad.dart';
 
@@ -379,6 +381,21 @@ class _SettingsViewState extends State<_SettingsView> {
                                   }
                                 },
                         ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Grilles tarifaires'),
+                          subtitle: const Text(
+                            'Détail, demi-gros et gros sur les produits et ventes.',
+                          ),
+                          value: config.commerce.pricingTiersEnabled,
+                          onChanged: !widget.canWrite || state.isSaving
+                              ? null
+                              : (enabled) {
+                                  context.read<SettingsBloc>().add(
+                                        SettingsPricingTiersChanged(enabled),
+                                      );
+                                },
+                        ),
                         const SizedBox(height: AppSpacing.lg),
                         const _SectionTitle(title: 'Sécurité'),
                         Text(
@@ -441,6 +458,20 @@ class _SettingsViewState extends State<_SettingsView> {
                             onDisable: state.isSaving
                                 ? null
                                 : _openDisableBiometric,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          OutlinedButton.icon(
+                            onPressed: state.isSaving
+                                ? null
+                                : () => Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => ConnectedDevicesPage(
+                                          session: widget.session,
+                                        ),
+                                      ),
+                                    ),
+                            icon: const Icon(Icons.devices_outlined),
+                            label: const Text('Appareils connectés'),
                           ),
                         ],
                         const SizedBox(height: AppSpacing.lg),
@@ -666,6 +697,42 @@ class _SettingsViewState extends State<_SettingsView> {
       confirmLabel: 'Activer',
     );
     if (pin == null || !mounted) return;
+
+    final canUseBio = await sl<BiometricLocalDatasource>().canCheckBiometrics();
+    if (!canUseBio) {
+      if (!mounted) return;
+      await SettingsFeedback.showErrorDialog(
+        context,
+        title: 'Empreinte indisponible',
+        message:
+            'Aucune empreinte n\'est configurée sur cet appareil. '
+            'Enregistrez-en une dans les réglages du téléphone.',
+      );
+      return;
+    }
+
+    try {
+      final bioOk = await sl<BiometricLocalDatasource>().authenticate();
+      if (!bioOk) {
+        if (!mounted) return;
+        await SettingsFeedback.showErrorDialog(
+          context,
+          title: 'Empreinte non validée',
+          message:
+              'L\'activation a été annulée ou l\'empreinte n\'a pas été reconnue.',
+        );
+        return;
+      }
+    } on Failure catch (e) {
+      if (!mounted) return;
+      await SettingsFeedback.showErrorDialog(
+        context,
+        title: 'Empreinte indisponible',
+        message: friendlyErrorMessage(e),
+      );
+      return;
+    }
+    if (!mounted) return;
 
     try {
       final ok = await ActionFeedback.runWithBlockingLoader(

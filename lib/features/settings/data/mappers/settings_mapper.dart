@@ -17,6 +17,7 @@ class SettingsMapper {
       inventory: InventorySettings(
         defaultAlertThreshold: dto.inventory.defaultAlertThreshold,
       ),
+      commerce: const CommerceSettings(),
       security: SecuritySettings(
         autoLockMinutes: dto.security.autoLockMinutes,
       ),
@@ -47,6 +48,23 @@ class SettingsMapper {
 
   static SyncSettings syncFromApi(SyncSettingsApiDto dto) {
     return SyncSettings(enabled: dto.enabled, lastAt: dto.lastAt);
+  }
+
+  static ShopConfiguration withLocalCommerce(
+    ShopConfiguration config,
+    CommerceSettings commerce,
+  ) {
+    return ShopConfiguration(
+      shop: config.shop,
+      localization: config.localization,
+      inventory: config.inventory,
+      commerce: commerce,
+      security: config.security,
+      receipts: config.receipts,
+      backup: config.backup,
+      sync: config.sync,
+      updatedAt: config.updatedAt,
+    );
   }
 
   static Map<String, dynamic> updateToApi(UpdateShopSettingsInput input) {

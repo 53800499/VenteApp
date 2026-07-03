@@ -30,6 +30,12 @@ class InventorySettings {
   final int defaultAlertThreshold;
 }
 
+class CommerceSettings {
+  const CommerceSettings({this.pricingTiersEnabled = false});
+
+  final bool pricingTiersEnabled;
+}
+
 class SecuritySettings {
   const SecuritySettings({required this.autoLockMinutes});
 
@@ -69,6 +75,7 @@ class ShopConfiguration {
     required this.shop,
     required this.localization,
     required this.inventory,
+    required this.commerce,
     required this.security,
     required this.receipts,
     required this.backup,
@@ -79,6 +86,7 @@ class ShopConfiguration {
   final ShopSettings shop;
   final LocalizationSettings localization;
   final InventorySettings inventory;
+  final CommerceSettings commerce;
   final SecuritySettings security;
   final ReceiptSettings receipts;
   final BackupSettings backup;
@@ -95,6 +103,7 @@ class UpdateShopSettingsInput {
     this.defaultAlertThreshold,
     this.autoLockMinutes,
     this.receiptFooter,
+    this.pricingTiersEnabled,
   });
 
   final String? shopName;
@@ -104,6 +113,7 @@ class UpdateShopSettingsInput {
   final int? defaultAlertThreshold;
   final int? autoLockMinutes;
   final String? receiptFooter;
+  final bool? pricingTiersEnabled;
 
   bool get isEmpty =>
       shopName == null &&
@@ -112,7 +122,18 @@ class UpdateShopSettingsInput {
       shopLogoPath == null &&
       defaultAlertThreshold == null &&
       autoLockMinutes == null &&
-      receiptFooter == null;
+      receiptFooter == null &&
+      pricingTiersEnabled == null;
+
+  /// Champs synchronisés avec l'API cloud (hors préférences locales).
+  bool get hasRemoteFields =>
+      shopName != null ||
+      shopPhone != null ||
+      shopAddress != null ||
+      shopLogoPath != null ||
+      defaultAlertThreshold != null ||
+      autoLockMinutes != null ||
+      receiptFooter != null;
 }
 
 class RecordBackupInput {

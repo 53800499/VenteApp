@@ -28,9 +28,9 @@ class AuthEntryPage extends StatelessWidget {
           child: ResponsivePage(
             expandHeight: true,
             child: ResponsiveScrollColumn(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: EdgeInsets.zero,
               children: [
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
                 const PageHeader(
                   icon: Icons.storefront_outlined,
                   title: 'Comment utilisez-vous VenteApp ?',
@@ -65,7 +65,7 @@ class AuthEntryPage extends StatelessWidget {
                     accent: AppColors.seed,
                   ),
                 ],
-                const SizedBox(height: AppSpacing.xl),
+                const SizedBox(height: AppSpacing.lg),
               ],
             ),
           ),

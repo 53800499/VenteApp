@@ -7,6 +7,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
+import '../../domain/entities/sale_pricing_entities.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../bloc/new_sale_bloc.dart';
 import '../widgets/sale_feedback.dart';
@@ -65,6 +66,8 @@ class _NewSalePageState extends State<NewSalePage>
         listCustomers: sl(),
         createStandardSale: sl(),
         createCustomer: sl(),
+        settingsLocal: sl(),
+        customerPrices: sl(),
         convertQuickSale: sl(),
         conversion: widget.conversion,
         session: widget.session,
@@ -265,10 +268,7 @@ class _NewSalePageState extends State<NewSalePage>
                       ),
                     ),
                     SizedBox.expand(
-                      child: _CartPanel(
-                        cart: state.cart,
-                        total: state.subtotal,
-                      ),
+                      child: _CartPanel(state: state),
                     ),
                   ],
                 )
@@ -398,6 +398,28 @@ class _ProductList extends StatelessWidget {
                 context.read<NewSaleBloc>().add(NewSaleSearchChanged(q)),
           ),
         ),
+        if (state.pricingTiersEnabled) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: SegmentedButton<SalePricingTier>(
+              segments: SalePricingTier.values
+                  .map(
+                    (tier) => ButtonSegment(
+                      value: tier,
+                      label: Text(tier.label),
+                    ),
+                  )
+                  .toList(),
+              selected: {state.selectedPricingTier},
+              onSelectionChanged: (selection) {
+                context.read<NewSaleBloc>().add(
+                      NewSalePricingTierChanged(selection.first),
+                    );
+              },
+            ),
+          ),
+        ],
         Expanded(
           child: products.isEmpty
               ? LayoutBuilder(
@@ -490,8 +512,8 @@ class _ProductList extends StatelessWidget {
                                     const SizedBox(height: 2),
                                     Text(
                                       outOfStock
-                                          ? '${formatFcfa(product.priceSell)} · Rupture de stock'
-                                          : '${formatFcfa(product.priceSell)} · Stock ${product.quantityInStock}',
+                                          ? '${formatFcfa(product.catalogPrice(state.selectedPricingTier))} · Rupture de stock'
+                                          : '${formatFcfa(product.catalogPrice(state.selectedPricingTier))} · Stock ${product.quantityInStock}',
                                       style:
                                           Theme.of(context).textTheme.bodySmall,
                                     ),
@@ -518,10 +540,27 @@ class _ProductList extends StatelessWidget {
 }
 
 class _CartPanel extends StatelessWidget {
-  const _CartPanel({required this.cart, required this.total});
+  const _CartPanel({required this.state});
 
-  final List<CartLine> cart;
-  final int total;
+  final NewSaleState state;
+
+  List<CartLine> get cart => state.cart;
+  int get total => state.subtotal;
+
+  Future<void> _editUnitPrice(BuildContext context, CartLine line) async {
+    final updated = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => _UnitPriceEditDialog(line: line),
+    );
+    if (updated != null && context.mounted) {
+      context.read<NewSaleBloc>().add(
+            NewSaleLineUnitPriceChanged(
+              productId: line.productId,
+              unitPrice: updated,
+            ),
+          );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -578,9 +617,30 @@ class _CartPanel extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 2),
-                            Text(
-                              '${formatFcfa(line.unitPrice)} / unité',
-                              style: Theme.of(context).textTheme.bodySmall,
+                            InkWell(
+                              onTap: state.canOverridePrice
+                                  ? () => _editUnitPrice(context, line)
+                                  : null,
+                              child: Text(
+                                line.usedRememberedPrice
+                                    ? '${formatFcfa(line.unitPrice)} / unité · dernier prix client'
+                                    : line.isManualPrice
+                                        ? '${formatFcfa(line.unitPrice)} / unité · prix modifié'
+                                        : '${formatFcfa(line.unitPrice)} / unité',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: state.canOverridePrice
+                                          ? Theme.of(context)
+                                              .colorScheme
+                                              .primary
+                                          : null,
+                                      decoration: state.canOverridePrice
+                                          ? TextDecoration.underline
+                                          : null,
+                                    ),
+                              ),
                             ),
                           ],
                         ),
@@ -614,6 +674,65 @@ class _CartPanel extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UnitPriceEditDialog extends StatefulWidget {
+  const _UnitPriceEditDialog({required this.line});
+
+  final CartLine line;
+
+  @override
+  State<_UnitPriceEditDialog> createState() => _UnitPriceEditDialogState();
+}
+
+class _UnitPriceEditDialogState extends State<_UnitPriceEditDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: '${widget.line.unitPrice}');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = int.tryParse(_controller.text.trim());
+    if (value == null || value <= 0) return;
+    Navigator.pop(context, value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Prix — ${widget.line.productName}'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        decoration: InputDecoration(
+          labelText: 'Prix unitaire (FCFA)',
+          helperText: 'Catalogue : ${formatFcfa(widget.line.catalogUnitPrice)}',
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: const Text('Appliquer'),
         ),
       ],
     );

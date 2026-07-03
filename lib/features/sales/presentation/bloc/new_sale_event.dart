@@ -105,3 +105,25 @@ final class NewSaleErrorDismissed extends NewSaleEvent {
 final class NewSaleSubmitRequested extends NewSaleEvent {
   const NewSaleSubmitRequested();
 }
+
+final class NewSalePricingTierChanged extends NewSaleEvent {
+  const NewSalePricingTierChanged(this.tier);
+
+  final SalePricingTier tier;
+
+  @override
+  List<Object?> get props => [tier];
+}
+
+final class NewSaleLineUnitPriceChanged extends NewSaleEvent {
+  const NewSaleLineUnitPriceChanged({
+    required this.productId,
+    required this.unitPrice,
+  });
+
+  final int productId;
+  final int unitPrice;
+
+  @override
+  List<Object?> get props => [productId, unitPrice];
+}

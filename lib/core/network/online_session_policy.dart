@@ -2,62 +2,59 @@ import 'dart:async';
 
 import '../errors/failures.dart';
 
-/// Déconnexion automatique uniquement quand la session en ligne n'est plus valide.
-///
-/// Une [NetworkFailure] (coupure réseau, serveur injoignable) ne doit jamais
-/// déconnecter l'utilisateur — les modules offline-first continuent en local.
+/// Politique session cloud — le JWT ne déclenche jamais le verrouillage PIN.
 class OnlineSessionPolicy {
   OnlineSessionPolicy();
 
-  void Function()? onSessionInvalidated;
+  /// Ne plus déconnecter ni verrouiller automatiquement l'application.
+  void Function()? onCloudSessionExpired;
 
-  Timer? _invalidateTimer;
-  bool _invalidationScheduled = false;
+  Timer? _notifyTimer;
+  bool _notifyScheduled = false;
 
-  /// Session à fermer : auth expirée ou grâce offline épuisée.
-  static bool requiresLogout(Object error) {
-    return error is UnauthorizedFailure ||
-        error is OfflineGraceExpiredFailure;
-  }
+  /// Le JWT / refresh expiré n'est plus une déconnexion locale.
+  static bool requiresLogout(Object error) => false;
 
   /// Erreur réseau / serveur injoignable — pas une invalidation de session.
   static bool isNetworkUnavailable(Object error) {
     return error is NetworkFailure;
   }
 
-  /// Erreurs à afficher à l'utilisateur (hors déconnexion silencieuse).
+  /// Erreurs à afficher à l'utilisateur.
   static bool shouldPresentToUser(Object error) {
     if (error is Failure) {
-      return !requiresLogout(error);
+      return error is! UnauthorizedFailure;
     }
     return true;
   }
 
   /// Lecture : retomber sur le cache local (Drift) si le serveur est absent.
   static bool shouldFallbackToLocal(Object error) {
-    return isNetworkUnavailable(error);
+    return isNetworkUnavailable(error) ||
+        error is UnauthorizedFailure ||
+        error is OfflineGraceExpiredFailure;
   }
 
-  void invalidate() {
-    if (_invalidationScheduled || _invalidateTimer != null) return;
-    _invalidateTimer = Timer(const Duration(milliseconds: 1500), () {
-      _invalidateTimer = null;
-      if (_invalidationScheduled) return;
-      _invalidationScheduled = true;
-      onSessionInvalidated?.call();
+  void notifyCloudSessionExpired() {
+    if (_notifyScheduled || _notifyTimer != null) return;
+    _notifyTimer = Timer(const Duration(milliseconds: 800), () {
+      _notifyTimer = null;
+      if (_notifyScheduled) return;
+      _notifyScheduled = true;
+      onCloudSessionExpired?.call();
     });
   }
 
   void handleFailure(Object error) {
     if (isNetworkUnavailable(error)) return;
-    if (requiresLogout(error)) {
-      invalidate();
+    if (error is UnauthorizedFailure || error is OfflineGraceExpiredFailure) {
+      notifyCloudSessionExpired();
     }
   }
 
   void reset() {
-    _invalidateTimer?.cancel();
-    _invalidateTimer = null;
-    _invalidationScheduled = false;
+    _notifyTimer?.cancel();
+    _notifyTimer = null;
+    _notifyScheduled = false;
   }
 }

@@ -43,4 +43,9 @@ abstract final class ApiConfig {
 
   static const offlineGraceDays = 7;
   static const offlineGraceMs = offlineGraceDays * 24 * 60 * 60 * 1000;
+
+  /// Durée de la session locale (indépendante du verrouillage PIN).
+  static const localSessionMaxDays = 3650;
+  static const localSessionMaxMs =
+      localSessionMaxDays * 24 * 60 * 60 * 1000;
 }

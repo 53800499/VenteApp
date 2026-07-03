@@ -168,12 +168,9 @@ class SyncQueueProcessor {
           int.parse(customer.serverId!),
           name: payload['name'] as String?,
           phone: payload.containsKey('phone') ? payload['phone'] as String? : null,
-          address:
-              payload.containsKey('address') ? payload['address'] as String? : null,
+          address: payload.containsKey('address') ? payload['address'] as String? : null,
           note: payload.containsKey('note') ? payload['note'] as String? : null,
-          isShared: payload.containsKey('isShared')
-              ? payload['isShared'] as bool?
-              : null,
+          isShared: payload.containsKey('isShared') ? payload['isShared'] as bool? : null,
         );
         return true;
 
@@ -197,8 +194,19 @@ class SyncQueueProcessor {
 
     switch (item.operation) {
       case SyncOperation.create:
+        final remoteCategories = await _inventoryRemote.listCategories();
+        final existing = remoteCategories
+            .where(
+              (c) =>
+                  c.name.toLowerCase() ==
+                  (payload['name'] as String? ?? category.name).toLowerCase(),
+            )
+            .firstOrNull;
+        if (existing != null) return true;
+
         await _inventoryRemote.createCategory(
           name: payload['name'] as String? ?? category.name,
+          description: payload['description'] as String? ?? category.description,
           sortOrder: payload['sortOrder'] as int? ?? category.sortOrder,
         );
         return true;
@@ -212,6 +220,9 @@ class SyncQueueProcessor {
         await _inventoryRemote.updateCategory(
           match.id,
           name: payload['name'] as String?,
+          description: payload.containsKey('description')
+              ? payload['description'] as String?
+              : null,
           isActive: payload['isActive'] as bool?,
           sortOrder: payload['sortOrder'] as int?,
         );
@@ -235,20 +246,49 @@ class SyncQueueProcessor {
     switch (item.operation) {
       case SyncOperation.create:
         if (product.serverId != null) return true;
+        final localCategoryId =
+            payload['localCategoryId'] as int? ?? product.categoryId;
+        if (localCategoryId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Le produit « ${product.name} » doit avoir une catégorie pour être synchronisé.',
+          );
+          return false;
+        }
         final categoryId = await _resolveCategoryServerId(
           shopId,
-          payload['localCategoryId'] as int? ?? product.categoryId,
+          localCategoryId,
         );
-        if (categoryId == null) return false;
+        if (categoryId == null) {
+          final localCat = await _inventoryLocal.findCategory(
+            shopId,
+            payload['localCategoryId'] as int? ?? product.categoryId ?? -1,
+          );
+          await _queue.markDeferred(
+            item.id,
+            localCat == null
+                ? 'Catégorie du produit « ${product.name} » introuvable.'
+                : 'Catégorie « ${localCat.name} » non synchronisée sur le serveur.',
+          );
+          return false;
+        }
 
+        final priceSell = _coercePositivePrice(
+          payload['priceSell'] ?? product.priceSell,
+        );
         final remote = await _inventoryRemote.createProduct({
           'name': payload['name'] ?? product.name,
           'categoryId': categoryId,
           if (payload['sku'] != null || product.sku != null)
             'sku': payload['sku'] ?? product.sku,
-          'priceSell': payload['priceSell'] ?? product.priceSell,
+          'priceSell': priceSell,
           if (payload['priceBuy'] != null || product.priceBuy != null)
             'priceBuy': payload['priceBuy'] ?? product.priceBuy,
+          if (payload['priceSemiWholesale'] != null || product.priceSemiWholesale != null)
+            'priceSemiWholesale':
+                payload['priceSemiWholesale'] ?? product.priceSemiWholesale,
+          if (payload['priceWholesale'] != null || product.priceWholesale != null)
+            'priceWholesale': payload['priceWholesale'] ?? product.priceWholesale,
           'initialQuantity': payload['initialQuantity'] ?? product.quantityInStock,
           if (payload['alertThreshold'] != null || product.alertThreshold != null)
             'alertThreshold': payload['alertThreshold'] ?? product.alertThreshold,
@@ -312,7 +352,13 @@ class SyncQueueProcessor {
         final serverId = await _salesLocal.findSaleServerId(shopId, sale.id);
         if (serverId != null) return true;
         final request = await _buildStandardSaleRequest(shopId, sale);
-        if (request == null) return false;
+        if (request == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Vente en attente : synchronisez d\'abord les produits (et le client si crédit).',
+          );
+          return false;
+        }
         final remote = await _salesRemote.createStandardSale(request);
         await _salesLocal.markSaleSynced(
           saleId: sale.id,
@@ -392,7 +438,23 @@ class SyncQueueProcessor {
     final match = remoteCategories
         .where((c) => c.name.toLowerCase() == category.name.toLowerCase())
         .firstOrNull;
-    return match?.id;
+    if (match != null) return match.id;
+
+    try {
+      final created = await _inventoryRemote.createCategory(
+        name: category.name,
+        description: category.description,
+        sortOrder: category.sortOrder,
+      );
+      return created.id;
+    } on Object {
+      return null;
+    }
+  }
+
+  int _coercePositivePrice(dynamic value) {
+    final parsed = value is int ? value : int.tryParse('$value') ?? 0;
+    return parsed < 1 ? 1 : parsed;
   }
 
   Future<CreateStandardSaleApiRequest?> _buildStandardSaleRequest(

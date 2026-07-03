@@ -4,12 +4,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/commerce_shop_scope.dart';
+import '../../../../shared/enums/permission.dart';
+import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../customers/domain/entities/customer_entities.dart';
 import '../../../customers/domain/usecases/customer_usecases.dart';
 import '../../../inventory/domain/entities/inventory_entities.dart';
 import '../../../inventory/domain/usecases/inventory_usecases.dart';
+import '../../../settings/data/datasources/local/settings_local_datasource.dart';
+import '../../data/datasources/local/customer_product_price_local_datasource.dart';
 import '../../domain/entities/sale_entities.dart';
+import '../../domain/entities/sale_pricing_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
 
 part 'new_sale_event.dart';
@@ -22,12 +27,16 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     required CreateStandardSale createStandardSale,
     required CreateCustomer createCustomer,
     required AuthSession session,
+    required SettingsLocalDatasource settingsLocal,
+    required CustomerProductPriceLocalDatasource customerPrices,
     ConvertQuickSaleToStandard? convertQuickSale,
     QuickSaleConversion? conversion,
   })  : _listProducts = listProducts,
         _listCustomers = listCustomers,
         _createStandardSale = createStandardSale,
         _createCustomer = createCustomer,
+        _settingsLocal = settingsLocal,
+        _customerPrices = customerPrices,
         _convertQuickSale = convertQuickSale,
         _conversion = conversion,
         _session = session,
@@ -36,6 +45,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     on<NewSaleProductAdded>(_onProductAdded);
     on<NewSaleLineQuantityChanged>(_onQuantityChanged);
     on<NewSaleLineRemoved>(_onLineRemoved);
+    on<NewSaleLineUnitPriceChanged>(_onLineUnitPriceChanged);
+    on<NewSalePricingTierChanged>(_onPricingTierChanged);
     on<NewSalePaymentMethodChanged>(_onPaymentChanged);
     on<NewSaleCustomerSelected>(_onCustomerSelected);
     on<NewSaleSearchChanged>(_onSearchChanged);
@@ -49,6 +60,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   final ListSaleCustomers _listCustomers;
   final CreateStandardSale _createStandardSale;
   final CreateCustomer _createCustomer;
+  final SettingsLocalDatasource _settingsLocal;
+  final CustomerProductPriceLocalDatasource _customerPrices;
   final ConvertQuickSaleToStandard? _convertQuickSale;
   final QuickSaleConversion? _conversion;
   final AuthSession _session;
@@ -61,6 +74,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   ) async {
     emit(state.copyWith(status: NewSaleStatus.loading, clearError: true));
     try {
+      final config =
+          await _settingsLocal.loadConfiguration(_session.shop.id);
       final products = await _loadProducts();
       var customers = const <SaleCustomerOption>[];
       try {
@@ -78,6 +93,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
                   id: p.id,
                   name: p.name,
                   priceSell: p.priceSell,
+                  priceSemiWholesale: p.priceSemiWholesale,
+                  priceWholesale: p.priceWholesale,
                   quantityInStock: p.quantityInStock,
                 ),
               )
@@ -90,6 +107,12 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
           mixedAmountMomo: state.mixedAmountMomo,
           mixedAmountCredit: state.mixedAmountCredit,
           searchQuery: state.searchQuery,
+          pricingTiersEnabled: config.commerce.pricingTiersEnabled,
+          selectedPricingTier: state.selectedPricingTier,
+          canOverridePrice: PermissionGuard.can(
+            _session.user.permissions,
+            Permission.salesPriceOverride,
+          ),
         ),
       );
     } on Failure catch (error) {
@@ -121,6 +144,85 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     }
 
     return _listProducts(shopId: _session.shop.id, filters: filters);
+  }
+
+  int _resolveUnitPrice(SaleProductOption product) {
+    final remembered = state.customerRememberedPrices[product.id];
+    if (state.selectedCustomerId != null &&
+        remembered != null &&
+        remembered > 0) {
+      return remembered;
+    }
+    return product.catalogPrice(state.selectedPricingTier);
+  }
+
+  bool _usesRememberedPrice(SaleProductOption product, int unitPrice) {
+    final remembered = state.customerRememberedPrices[product.id];
+    return state.selectedCustomerId != null &&
+        remembered != null &&
+        remembered > 0 &&
+        unitPrice == remembered;
+  }
+
+  CartLine _buildCartLine({
+    required SaleProductOption product,
+    required int quantity,
+    int? unitPrice,
+    bool isManualPrice = false,
+  }) {
+    final resolved = unitPrice ?? _resolveUnitPrice(product);
+    final catalog = product.catalogPrice(state.selectedPricingTier);
+    return CartLine(
+      productId: product.id,
+      productName: product.name,
+      catalogUnitPrice: catalog,
+      unitPrice: resolved,
+      quantity: quantity,
+      stockAvailable: product.quantityInStock,
+      isManualPrice: isManualPrice,
+      usedRememberedPrice:
+          _usesRememberedPrice(product, resolved) && !isManualPrice,
+    );
+  }
+
+  Future<Map<int, int>> _loadRememberedPrices(int? customerId) async {
+    if (customerId == null) return {};
+    final productIds = state.products.map((p) => p.id);
+    if (productIds.isEmpty) return {};
+    return _customerPrices.loadForCustomer(
+      shopId: _session.shop.id,
+      customerId: customerId,
+      productIds: productIds,
+    );
+  }
+
+  List<CartLine> _refreshCartPrices({
+    required List<CartLine> cart,
+    required SalePricingTier tier,
+    required Map<int, int> remembered,
+  }) {
+    final productsById = {for (final p in state.products) p.id: p};
+    return cart.map((line) {
+      if (line.isManualPrice) return line;
+      final product = productsById[line.productId];
+      if (product == null) return line;
+
+      final rememberedPrice = remembered[product.id];
+      final unitPrice = state.selectedCustomerId != null &&
+              rememberedPrice != null &&
+              rememberedPrice > 0
+          ? rememberedPrice
+          : product.catalogPrice(tier);
+
+      return line.copyWith(
+        catalogUnitPrice: product.catalogPrice(tier),
+        unitPrice: unitPrice,
+        usedRememberedPrice: state.selectedCustomerId != null &&
+            rememberedPrice != null &&
+            rememberedPrice > 0 &&
+            unitPrice == rememberedPrice,
+      );
+    }).toList();
   }
 
   void _onSearchChanged(
@@ -155,13 +257,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       state.copyWith(
         cart: [
           ...state.cart,
-          CartLine(
-            productId: event.product.id,
-            productName: event.product.name,
-            unitPrice: event.product.priceSell,
-            quantity: addQty,
-            stockAvailable: stock,
-          ),
+          _buildCartLine(product: event.product, quantity: addQty),
         ],
         clearError: true,
       ),
@@ -182,6 +278,39 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       return line.copyWith(quantity: qty);
     }).toList();
     emit(state.copyWith(cart: updated));
+  }
+
+  void _onLineUnitPriceChanged(
+    NewSaleLineUnitPriceChanged event,
+    Emitter<NewSaleState> emit,
+  ) {
+    if (!state.canOverridePrice || event.unitPrice <= 0) return;
+    final updated = state.cart.map((line) {
+      if (line.productId != event.productId) return line;
+      return line.copyWith(
+        unitPrice: event.unitPrice,
+        isManualPrice: true,
+        usedRememberedPrice: false,
+      );
+    }).toList();
+    emit(state.copyWith(cart: updated, clearError: true));
+  }
+
+  Future<void> _onPricingTierChanged(
+    NewSalePricingTierChanged event,
+    Emitter<NewSaleState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        selectedPricingTier: event.tier,
+        cart: _refreshCartPrices(
+          cart: state.cart,
+          tier: event.tier,
+          remembered: state.customerRememberedPrices,
+        ),
+        clearError: true,
+      ),
+    );
   }
 
   void _onLineRemoved(
@@ -210,6 +339,9 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         mixedAmountCash: event.method == PaymentMethod.mixed ? total : 0,
         mixedAmountMomo: 0,
         mixedAmountCredit: 0,
+        clearRememberedPrices:
+            event.method != PaymentMethod.credit &&
+            event.method != PaymentMethod.mixed,
         clearError: true,
       ),
     );
@@ -229,11 +361,40 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     );
   }
 
-  void _onCustomerSelected(
+  Future<void> _onCustomerSelected(
     NewSaleCustomerSelected event,
     Emitter<NewSaleState> emit,
-  ) {
-    emit(state.copyWith(selectedCustomerId: event.customerId, clearError: true));
+  ) async {
+    if (event.customerId == null) {
+      emit(
+        state.copyWith(
+          clearCustomer: true,
+          clearRememberedPrices: true,
+          cart: _refreshCartPrices(
+            cart: state.cart,
+            tier: state.selectedPricingTier,
+            remembered: const {},
+          ),
+          clearError: true,
+        ),
+      );
+      return;
+    }
+
+    final remembered = await _loadRememberedPrices(event.customerId);
+    emit(
+      state.copyWith(
+        selectedCustomerId: event.customerId,
+        customerRememberedPrices: remembered,
+        cart: _refreshCartPrices(
+          cart: state.cart,
+          tier: state.selectedPricingTier,
+          remembered: remembered,
+        ),
+        clearError: true,
+        clearRememberedPrices: event.customerId == null,
+      ),
+    );
   }
 
   void _onErrorDismissed(
@@ -257,11 +418,18 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         ),
       );
       final customers = await _listCustomers(session: _session);
+      final remembered = await _loadRememberedPrices(customer.id);
       emit(
         state.copyWith(
           creatingCustomer: false,
           customers: customers,
           selectedCustomerId: customer.id,
+          customerRememberedPrices: remembered,
+          cart: _refreshCartPrices(
+            cart: state.cart,
+            tier: state.selectedPricingTier,
+            remembered: remembered,
+          ),
         ),
       );
     } on Failure catch (e) {
@@ -346,6 +514,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
 
       final total = state.subtotal;
       final payment = _buildPayment(total);
+      final customerId = state.selectedCustomerId;
 
       final sale = await _createStandardSale(
         session: _session,
@@ -360,9 +529,24 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
               )
               .toList(),
           payment: payment,
-          customerId: state.selectedCustomerId,
+          customerId: customerId,
         ),
       );
+
+      if (customerId != null) {
+        await _customerPrices.saveAfterSale(
+          shopId: _session.shop.id,
+          customerId: customerId,
+          lines: state.cart
+              .map(
+                (line) => (
+                  productId: line.productId,
+                  unitPrice: line.unitPrice,
+                ),
+              )
+              .toList(),
+        );
+      }
 
       emit(
         state.copyWith(

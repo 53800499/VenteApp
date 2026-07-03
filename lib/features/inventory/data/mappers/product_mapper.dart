@@ -19,6 +19,8 @@ class ProductMapper {
       alertThreshold: effectiveThreshold,
       priceBuy: row.priceBuy,
       priceSell: row.priceSell,
+      priceSemiWholesale: row.priceSemiWholesale,
+      priceWholesale: row.priceWholesale,
       isArchived: row.isArchived,
       isLowStock: !row.isArchived && row.quantityInStock <= effectiveThreshold,
       categoryName: categoryName,
@@ -30,6 +32,7 @@ class ProductMapper {
       id: row.id,
       shopId: row.shopId,
       name: row.name,
+      description: row.description,
       isActive: row.isActive,
       sortOrder: row.sortOrder,
     );

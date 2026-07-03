@@ -6,6 +6,7 @@ class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get shopId => integer().references(Shops, #id)();
   TextColumn get name => text()();
+  TextColumn get description => text().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   IntColumn get createdAt => integer()();
@@ -22,6 +23,8 @@ class Products extends Table {
   IntColumn get alertThreshold => integer().nullable()();
   IntColumn get priceBuy => integer().nullable()();
   IntColumn get priceSell => integer()();
+  IntColumn get priceSemiWholesale => integer().nullable()();
+  IntColumn get priceWholesale => integer().nullable()();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
@@ -120,4 +123,19 @@ class StockMovements extends Table {
   IntColumn get saleId => integer().nullable().references(Sales, #id)();
   IntColumn get unitCost => integer().nullable()();
   IntColumn get createdAt => integer()();
+}
+
+/// Dernier prix unitaire pratiqué pour un couple client × produit.
+class CustomerProductPrices extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get shopId => integer().references(Shops, #id)();
+  IntColumn get customerId => integer().references(Customers, #id)();
+  IntColumn get productId => integer().references(Products, #id)();
+  IntColumn get lastUnitPrice => integer()();
+  IntColumn get updatedAt => integer()();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {customerId, productId},
+      ];
 }

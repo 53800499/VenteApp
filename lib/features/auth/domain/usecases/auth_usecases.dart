@@ -40,13 +40,16 @@ class LoginWithBiometric {
   }) async {
     final canUse = await _biometricDatasource.canCheckBiometrics();
     if (!canUse) {
-      throw const UnauthorizedFailure('Biométrie indisponible sur cet appareil.');
+      throw const UnauthorizedFailure(
+        'Aucune empreinte enregistrée sur cet appareil. '
+        'Ajoutez-en une dans les réglages du téléphone.',
+      );
     }
 
     final authenticated = await _biometricDatasource.authenticate();
     if (!authenticated) {
       throw const UnauthorizedFailure(
-        'Échec biométrique. Utilisez votre code PIN.',
+        'Empreinte non reconnue. Utilisez votre code PIN.',
       );
     }
 
@@ -249,4 +252,22 @@ class SwitchShop {
 
   Future<AuthSession> call({required int shopId}) =>
       _repository.switchShop(shopId: shopId);
+}
+
+class ListDeviceSessions {
+  const ListDeviceSessions(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<List<DeviceSession>> call({bool shopScope = false}) =>
+      _repository.listDeviceSessions(shopScope: shopScope);
+}
+
+class RevokeDeviceSession {
+  const RevokeDeviceSession(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<void> call(String sessionId) =>
+      _repository.revokeDeviceSession(sessionId);
 }

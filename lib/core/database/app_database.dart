@@ -28,6 +28,7 @@ part 'app_database.g.dart';
   StockMovements,
   SyncQueue,
   NotificationDailyStates,
+  CustomerProductPrices,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -35,7 +36,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -117,8 +118,31 @@ class AppDatabase extends _$AppDatabase {
               'WHERE cloud_sync_enabled = 0',
             );
           }
+          if (from < 13) {
+            await m.addColumn(products, products.priceSemiWholesale);
+            await m.addColumn(products, products.priceWholesale);
+            await m.addColumn(settings, settings.pricingTiersEnabled);
+            await m.createTable(customerProductPrices);
+          }
+          if (from < 14) {
+            await _addColumnIfMissing(m, categories, categories.description);
+          }
         },
       );
+
+  Future<void> _addColumnIfMissing(
+    Migrator m,
+    TableInfo<Table, dynamic> table,
+    GeneratedColumn<Object> column,
+  ) async {
+    final rows = await customSelect(
+      'PRAGMA table_info(${table.actualTableName})',
+    ).get();
+    final exists = rows.any((row) => row.read<String>('name') == column.name);
+    if (!exists) {
+      await m.addColumn(table, column);
+    }
+  }
 
   Future<void> _backfillNotificationSettingsColumns() async {
     await customStatement(

@@ -70,6 +70,8 @@ class Settings extends Table {
       boolean().withDefault(const Constant(true))();
   IntColumn get cloudLastSyncAt => integer().nullable()();
   IntColumn get autoLockMinutes => integer().withDefault(const Constant(5))();
+  BoolColumn get pricingTiersEnabled =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get updatedAt => integer()();
 }
 

@@ -99,13 +99,18 @@ class InventoryLocalDatasource {
   Future<int> insertCategory({
     required int shopId,
     required String name,
+    String? description,
     int sortOrder = 0,
   }) async {
     final timestamp = nowMs();
+    final trimmedDescription = description?.trim();
     return _db.into(_db.categories).insert(
           CategoriesCompanion.insert(
             shopId: shopId,
             name: name.trim(),
+            description: trimmedDescription == null || trimmedDescription.isEmpty
+                ? const Value.absent()
+                : Value(trimmedDescription),
             sortOrder: Value(sortOrder),
             createdAt: timestamp,
             updatedAt: timestamp,
@@ -239,6 +244,8 @@ class InventoryLocalDatasource {
     required int alertThreshold,
     int? priceBuy,
     required int priceSell,
+    int? priceSemiWholesale,
+    int? priceWholesale,
   }) async {
     final timestamp = nowMs();
     return _db.into(_db.products).insert(
@@ -251,6 +258,8 @@ class InventoryLocalDatasource {
             alertThreshold: Value(alertThreshold),
             priceBuy: Value(priceBuy),
             priceSell: priceSell,
+            priceSemiWholesale: Value(priceSemiWholesale),
+            priceWholesale: Value(priceWholesale),
             createdAt: timestamp,
             updatedAt: timestamp,
           ),
@@ -301,17 +310,22 @@ class InventoryLocalDatasource {
   Future<int> upsertCategoryFromRemote({
     required int shopId,
     required String name,
+    String? description,
     required bool isActive,
     required int sortOrder,
     int? createdAt,
     int? updatedAt,
   }) async {
     final timestamp = nowMs();
+    final trimmedDescription = description?.trim();
     final existing = await findCategoryByName(shopId, name);
     if (existing != null) {
       await updateCategoryRow(
         existing.id,
         CategoriesCompanion(
+          description: trimmedDescription == null || trimmedDescription.isEmpty
+              ? const Value(null)
+              : Value(trimmedDescription),
           isActive: Value(isActive),
           sortOrder: Value(sortOrder),
           updatedAt: Value(updatedAt ?? timestamp),
@@ -324,6 +338,9 @@ class InventoryLocalDatasource {
           CategoriesCompanion.insert(
             shopId: shopId,
             name: name.trim(),
+            description: trimmedDescription == null || trimmedDescription.isEmpty
+                ? const Value.absent()
+                : Value(trimmedDescription),
             isActive: Value(isActive),
             sortOrder: Value(sortOrder),
             createdAt: createdAt ?? timestamp,
@@ -342,6 +359,8 @@ class InventoryLocalDatasource {
     int? alertThreshold,
     int? priceBuy,
     required int priceSell,
+    int? priceSemiWholesale,
+    int? priceWholesale,
     required bool isArchived,
     int? createdAt,
     int? updatedAt,
@@ -364,6 +383,8 @@ class InventoryLocalDatasource {
           alertThreshold: Value(alertThreshold),
           priceBuy: Value(priceBuy),
           priceSell: Value(priceSell),
+          priceSemiWholesale: Value(priceSemiWholesale),
+          priceWholesale: Value(priceWholesale),
           isArchived: Value(isArchived),
           updatedAt: Value(updatedAt ?? timestamp),
           syncedAt: Value(timestamp),
@@ -382,6 +403,8 @@ class InventoryLocalDatasource {
             alertThreshold: Value(alertThreshold),
             priceBuy: Value(priceBuy),
             priceSell: priceSell,
+            priceSemiWholesale: Value(priceSemiWholesale),
+            priceWholesale: Value(priceWholesale),
             isArchived: Value(isArchived),
             createdAt: createdAt ?? timestamp,
             updatedAt: updatedAt ?? timestamp,

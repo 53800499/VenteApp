@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../core/auth/app_lock_controller.dart';
+import '../core/auth/cloud_session_coordinator.dart';
+import '../core/network/api_client.dart';
 import '../core/network/online_session_policy.dart';
 import 'pages/app_bootstrap_page.dart';
 import 'router/app_router.dart';
@@ -27,6 +30,7 @@ class VenteApp extends StatefulWidget {
 class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
   late final AuthBloc _authBloc;
+  final _navigatorKey = GlobalKey<NavigatorState>();
 
 
 
@@ -39,12 +43,26 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     _authBloc = sl<AuthBloc>();
+
     final sessionPolicy = sl<OnlineSessionPolicy>();
-    sessionPolicy.onSessionInvalidated = () {
-      sessionPolicy.reset();
-      // Verrouillage PIN — pas de déconnexion complète (offline-first).
-      _authBloc.add(const AuthAppLockedRequested());
+    final cloudCoordinator = sl<CloudSessionCoordinator>();
+    final apiClient = sl<ApiClient>();
+
+    cloudCoordinator.bind(
+      navigatorKey: _navigatorKey,
+      onReconnectRequested: () {
+        _authBloc.add(const AuthCloudReconnectRequested());
+      },
+    );
+
+    sessionPolicy.onCloudSessionExpired = () {
+      cloudCoordinator.handleInvalidRefreshToken();
     };
+
+    apiClient.onRefreshTokenInvalid = () {
+      return cloudCoordinator.handleInvalidRefreshToken();
+    };
+
     _authBloc.add(const AuthBootstrapRequested());
 
   }
@@ -69,12 +87,18 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
   void didChangeAppLifecycleState(AppLifecycleState state) {
 
-    // Verrouiller uniquement quand l'app passe en arrière-plan (pas sur
-    // `inactive`, déclenché par les dialogues système / barre de statut).
     if (state == AppLifecycleState.paused) {
+      sl<AppLockController>().markBackgrounded();
+      return;
+    }
+
+    if (state == AppLifecycleState.resumed) {
       final authState = _authBloc.state;
       if (authState is AuthAuthenticated) {
-        _authBloc.add(const AuthAppLockedRequested());
+        final autoLockMinutes = authState.session.autoLockMinutes;
+        if (sl<AppLockController>().requiresPinOnResume(autoLockMinutes)) {
+          _authBloc.add(const AuthAppLockedRequested());
+        }
       }
     }
 
@@ -91,6 +115,8 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
       value: _authBloc,
 
       child: MaterialApp(
+
+        navigatorKey: _navigatorKey,
 
         title: 'VenteApp Bénin',
 
@@ -111,4 +137,3 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
   }
 
 }
-

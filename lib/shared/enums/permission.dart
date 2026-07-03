@@ -12,6 +12,7 @@ enum Permission {
   salesCreate('sales:create'),
   salesRead('sales:read'),
   salesCancel('sales:cancel'),
+  salesPriceOverride('sales:price_override'),
   paymentsCreate('payments:create'),
   paymentsRead('payments:read'),
   customersRead('customers:read'),

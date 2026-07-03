@@ -35,6 +35,15 @@ class SettingsThresholdChanged extends SettingsEvent {
   List<Object?> get props => [threshold];
 }
 
+class SettingsPricingTiersChanged extends SettingsEvent {
+  const SettingsPricingTiersChanged(this.enabled);
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class SettingsAutoLockChanged extends SettingsEvent {
   const SettingsAutoLockChanged(this.minutes);
 

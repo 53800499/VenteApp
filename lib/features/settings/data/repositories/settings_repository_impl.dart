@@ -30,7 +30,11 @@ class SettingsRepositoryImpl implements SettingsRepository {
     return _apiRunner.runOnlinePreferredRead(
       remote: () async {
         final remote = await _remote.fetchConfiguration();
-        return SettingsMapper.fromApi(remote);
+        final local = await _local.loadConfiguration(shopId);
+        return SettingsMapper.withLocalCommerce(
+          SettingsMapper.fromApi(remote),
+          local.commerce,
+        );
       },
       localFallback: () => _local.loadConfiguration(shopId),
     );
@@ -41,14 +45,17 @@ class SettingsRepositoryImpl implements SettingsRepository {
     required int shopId,
     required UpdateShopSettingsInput input,
   }) async {
+    if (!input.hasRemoteFields) {
+      return _local.updateConfiguration(shopId: shopId, input: input);
+    }
+
     return _apiRunner.runOnlineRequiredWrite(
       offlineMessage: _writeOfflineMessage,
       remote: () async {
-        final remote = await _remote.updateConfiguration(
+        await _remote.updateConfiguration(
           SettingsMapper.updateToApi(input),
         );
-        await _local.updateConfiguration(shopId: shopId, input: input);
-        return SettingsMapper.fromApi(remote);
+        return _local.updateConfiguration(shopId: shopId, input: input);
       },
     );
   }

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/auth/app_lock_controller.dart';
 import '../../../../core/errors/auth_error_humanizer.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
@@ -17,13 +18,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc({
     required IsSetupComplete isSetupComplete,
     required WasLoggedOut wasLoggedOut,
-    required RestoreSession restoreSession,
     required GetLockScreen getLockScreen,
     required LoginWithPin loginWithPin,
     required LoginWithBiometric loginWithBiometric,
     required SetupOwner setupOwner,
     required EmergencyUnlock emergencyUnlock,
-    required LockActiveSession lockActiveSession,
     required Logout logout,
     required ListOwnedShops listOwnedShops,
     required SwitchShop switchShop,
@@ -32,15 +31,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required CompleteWhatsappLogin completeWhatsappLogin,
     required LastShopStorage lastShopStorage,
     required SyncService syncService,
+    required AppLockController appLockController,
   })  : _isSetupComplete = isSetupComplete,
         _wasLoggedOut = wasLoggedOut,
-        _restoreSession = restoreSession,
         _getLockScreen = getLockScreen,
         _loginWithPin = loginWithPin,
         _loginWithBiometric = loginWithBiometric,
         _setupOwner = setupOwner,
         _emergencyUnlock = emergencyUnlock,
-        _lockActiveSession = lockActiveSession,
         _logout = logout,
         _listOwnedShops = listOwnedShops,
         _switchShop = switchShop,
@@ -49,6 +47,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _completeWhatsappLogin = completeWhatsappLogin,
         _lastShopStorage = lastShopStorage,
         _syncService = syncService,
+        _appLockController = appLockController,
         super(const AuthInitial()) {
     on<AuthBootstrapRequested>(_onBootstrap);
     on<AuthProceedToLoginRequested>(_onProceedToLogin);
@@ -67,6 +66,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthSetupRequested>(_onSetupRequested);
     on<AuthEmergencyUnlockRequested>(_onEmergencyUnlock);
     on<AuthAppLockedRequested>(_onAppLocked);
+    on<AuthCloudReconnectRequested>(_onCloudReconnect);
     on<AuthLogoutRequested>(_onLogout);
     on<AuthEntryResetRequested>(_onEntryResetRequested);
     on<AuthLockScreenBackRequested>(_onLockScreenBackRequested);
@@ -74,13 +74,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   final IsSetupComplete _isSetupComplete;
   final WasLoggedOut _wasLoggedOut;
-  final RestoreSession _restoreSession;
   final GetLockScreen _getLockScreen;
   final LoginWithPin _loginWithPin;
   final LoginWithBiometric _loginWithBiometric;
   final SetupOwner _setupOwner;
   final EmergencyUnlock _emergencyUnlock;
-  final LockActiveSession _lockActiveSession;
   final Logout _logout;
   final ListOwnedShops _listOwnedShops;
   final SwitchShop _switchShop;
@@ -89,6 +87,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final CompleteWhatsappLogin _completeWhatsappLogin;
   final LastShopStorage _lastShopStorage;
   final SyncService _syncService;
+  final AppLockController _appLockController;
 
   int get _defaultShopId => _lastShopStorage.lastShopId;
 
@@ -114,34 +113,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
 
       if (await _wasLoggedOut()) {
-        if (await _isSetupComplete()) {
-          try {
-            final lockScreen = await _getLockScreen(shopId: _defaultShopId);
-            emit(AuthLocked(lockScreen, canGoBack: true));
-            return;
-          } on NotFoundFailure {
-            // Données locales effacées : retour au choix connexion / installation.
-          }
-        }
-        await _emitEntryScreen(emit);
+        emit(AuthNeedsSetup(localSetupAvailable: true));
         return;
       }
 
-      final session = await _restoreSession();
-      if (session != null) {
-        await _lastShopStorage.save(session.shop.id);
-        _scheduleBackgroundSync(session);
-        emit(AuthAuthenticated(session));
-        return;
-      }
-
-      try {
-        final lockScreen = await _getLockScreen(shopId: _defaultShopId);
-        final allowBack = await _wasLoggedOut();
-        emit(AuthLocked(lockScreen, canGoBack: allowBack));
-      } on NotFoundFailure {
-        emit(const AuthNeedsSetup());
-      }
+      // Session locale présente → PIN obligatoire (cold start).
+      final lockScreen = await _getLockScreen(shopId: _defaultShopId);
+      emit(AuthLocked(lockScreen, canGoBack: false));
+    } on NotFoundFailure {
+      emit(const AuthNeedsSetup());
     } catch (error) {
       emit(AuthFailure(friendlyErrorMessage(error)));
     }
@@ -514,6 +494,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSession session,
     Emitter<AuthState> emit,
   ) async {
+    _appLockController.markUnlocked();
+
     if (session.user.role == UserRole.owner) {
       try {
         final shops = await _listOwnedShops().timeout(
@@ -647,7 +629,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AuthLocked(:final lockScreen) => lockScreen.shopId,
       _ => _defaultShopId,
     };
-    await _lockActiveSession();
+
     try {
       final lockScreen = await _getLockScreen(shopId: shopId);
       emit(AuthLocked(lockScreen, canGoBack: false));
@@ -656,6 +638,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (error) {
       emit(AuthFailure(friendlyErrorMessage(error)));
     }
+  }
+
+  Future<void> _onCloudReconnect(
+    AuthCloudReconnectRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(const AuthWhatsappLogin());
   }
 
   Future<void> _onLogout(

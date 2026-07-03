@@ -174,3 +174,30 @@ class WhatsappOtpVerifyResult {
   final String verificationToken;
   final List<AuthMembership> memberships;
 }
+
+class DeviceSession {
+  const DeviceSession({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.deviceId,
+    this.deviceLabel,
+    required this.lastSeenAt,
+    required this.sessionExpiresAt,
+    required this.refreshExpiresAt,
+    required this.isCurrent,
+  });
+
+  final String id;
+  final int userId;
+  final String userName;
+  final String deviceId;
+  final String? deviceLabel;
+  final int lastSeenAt;
+  final int sessionExpiresAt;
+  final int refreshExpiresAt;
+  final bool isCurrent;
+
+  String get displayName =>
+      deviceLabel?.trim().isNotEmpty == true ? deviceLabel!.trim() : deviceId;
+}
