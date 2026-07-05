@@ -5,11 +5,13 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../shared/enums/permission.dart';
+import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/rbac_entities.dart';
 import '../../domain/usecases/rbac_usecases.dart';
 import 'role_detail_page.dart';
+import 'role_form_page.dart';
 
 class RolesCatalogPage extends StatefulWidget {
   const RolesCatalogPage({super.key, required this.session});
@@ -29,6 +31,20 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
         widget.session.user.permissions,
         Permission.rbacRead,
       );
+
+  bool get _canManage => PermissionGuard.can(
+        widget.session.user.permissions,
+        Permission.rbacManage,
+      );
+
+  List<RoleCatalogItem> get _parentRoleOptions => _roles
+      .where(
+        (r) =>
+            r.code == UserRole.viewer.code ||
+            r.code == UserRole.seller.code ||
+            (!r.isSystem && r.scope == 'shop'),
+      )
+      .toList();
 
   @override
   void initState() {
@@ -57,6 +73,17 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
     }
   }
 
+  Future<void> _openCreateForm() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => RoleFormPage(
+          assignableParentRoles: _parentRoleOptions,
+        ),
+      ),
+    );
+    if (created == true && mounted) await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_canRead) {
@@ -70,6 +97,13 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Rôles & permissions')),
+      floatingActionButton: _canManage
+          ? FloatingActionButton.extended(
+              onPressed: _loading ? null : _openCreateForm,
+              icon: const Icon(Icons.add),
+              label: const Text('Nouveau rôle'),
+            )
+          : null,
       body: Column(
         children: [
           const OfflineModeBanner(
@@ -121,15 +155,19 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
                 ].join('\n'),
               ),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => RoleDetailPage(
-                    session: widget.session,
-                    roleCode: role.code,
-                    initialRole: role,
+              onTap: () async {
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => RoleDetailPage(
+                      session: widget.session,
+                      roleCode: role.code,
+                      initialRole: role,
+                      assignableParentRoles: _parentRoleOptions,
+                    ),
                   ),
-                ),
-              ),
+                );
+                if (changed == true && mounted) await _load();
+              },
             ),
           );
         },

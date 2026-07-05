@@ -85,6 +85,8 @@ class AuthWhatsappLogin extends AuthState {
     this.errorMessage,
     this.infoMessage,
     this.maskedPhone,
+    this.deliveryWarning,
+    this.devCode,
   });
 
   final String? phone;
@@ -93,10 +95,20 @@ class AuthWhatsappLogin extends AuthState {
   final String? errorMessage;
   final String? infoMessage;
   final String? maskedPhone;
+  final String? deliveryWarning;
+  final String? devCode;
 
   @override
-  List<Object?> get props =>
-      [phone, step, isSubmitting, errorMessage, infoMessage, maskedPhone];
+  List<Object?> get props => [
+        phone,
+        step,
+        isSubmitting,
+        errorMessage,
+        infoMessage,
+        maskedPhone,
+        deliveryWarning,
+        devCode,
+      ];
 }
 
 enum WhatsappLoginStep { phone, code }

@@ -83,6 +83,10 @@ import '../../features/reports/domain/repositories/report_repository.dart';
 import '../../features/reports/domain/services/report_aggregation_service.dart';
 import '../../features/reports/domain/usecases/get_report.dart';
 import '../../features/reports/presentation/services/report_pdf_exporter.dart';
+import '../../features/sales_analysis/data/datasources/local/sales_analysis_local_datasource.dart';
+import '../../features/sales_analysis/data/repositories/sales_analysis_repository_impl.dart';
+import '../../features/sales_analysis/domain/repositories/sales_analysis_repository.dart';
+import '../../features/sales_analysis/domain/usecases/sales_analysis_usecases.dart';
 import '../../features/notifications/data/datasources/local/notifications_local_datasource.dart';
 import '../../features/notifications/data/datasources/remote/notifications_remote_datasource.dart';
 import '../../features/notifications/data/repositories/notification_repository_impl.dart';
@@ -146,6 +150,38 @@ void ensureReportsDependencies() {
     () => GetReport(sl<ReportRepository>()),
   );
   sl.registerLazySingleton(() => const ReportPdfExporter());
+}
+
+/// Enregistre le module Analyse des ventes si absent.
+void ensureSalesAnalysisDependencies() {
+  if (sl.isRegistered<ListProductSalesAnalysis>()) return;
+
+  if (!sl.isRegistered<SalesAnalysisLocalDatasource>()) {
+    sl.registerLazySingleton(() => SalesAnalysisLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<SalesAnalysisRepository>()) {
+    sl.registerLazySingleton<SalesAnalysisRepository>(
+      () => SalesAnalysisRepositoryImpl(sl()),
+    );
+  }
+  sl.registerLazySingleton(
+    () => ListProductSalesAnalysis(sl<SalesAnalysisRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetProductSalesDetail(sl<SalesAnalysisRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => ListEmployeePriceAnalysis(sl<SalesAnalysisRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => ListCustomerSalesInsights(sl<SalesAnalysisRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetCustomerPriceHabits(sl<SalesAnalysisRepository>()),
+  );
+  sl.registerLazySingleton(
+    () => GetProductSoldPriceRange(sl<SalesAnalysisRepository>()),
+  );
 }
 
 /// Enregistre le module Notifications si absent (hot reload après ajout DI).
@@ -428,6 +464,10 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => GetUserEffectivePermissions(sl()));
   sl.registerLazySingleton(() => ListUserPermissionOverrides(sl()));
   sl.registerLazySingleton(() => ReplaceUserPermissionOverrides(sl()));
+  sl.registerLazySingleton(() => CreateShopRole(sl()));
+  sl.registerLazySingleton(() => UpdateShopRole(sl()));
+  sl.registerLazySingleton(() => DeleteShopRole(sl()));
+  sl.registerLazySingleton(() => SetRolePermissions(sl()));
   sl.registerLazySingleton(
     () => RefreshSessionPermissions(
       getMyPermissions: sl(),

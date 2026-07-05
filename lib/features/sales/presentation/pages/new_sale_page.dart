@@ -6,6 +6,8 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../sales_analysis/domain/usecases/sales_analysis_usecases.dart';
+import '../../../sales_analysis/presentation/utils/sales_analysis_formatters.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/entities/sale_pricing_entities.dart';
 import '../../../../shared/components/ui_primitives.dart';
@@ -552,14 +554,54 @@ class _CartPanel extends StatelessWidget {
       context: context,
       builder: (dialogContext) => _UnitPriceEditDialog(line: line),
     );
-    if (updated != null && context.mounted) {
-      context.read<NewSaleBloc>().add(
-            NewSaleLineUnitPriceChanged(
-              productId: line.productId,
-              unitPrice: updated,
+    if (updated == null || !context.mounted) return;
+
+    final bloc = context.read<NewSaleBloc>();
+    ensureSalesAnalysisDependencies();
+    final range = await sl<GetProductSoldPriceRange>()(
+      shopId: bloc.session.shop.id,
+      productId: line.productId,
+    );
+
+    if (!context.mounted) return;
+
+    if (isUnusuallyLowPrice(enteredPrice: updated, range: range)) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: Icon(
+            Icons.warning_amber_rounded,
+            color: Theme.of(ctx).colorScheme.error,
+          ),
+          title: const Text('Prix inhabituel'),
+          content: Text(
+            unusualPriceMessage(
+              productName: line.productName,
+              enteredPrice: updated,
+              range: range,
             ),
-          );
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Corriger'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continuer'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
     }
+
+    bloc.add(
+      NewSaleLineUnitPriceChanged(
+        productId: line.productId,
+        unitPrice: updated,
+      ),
+    );
   }
 
   @override

@@ -103,4 +103,97 @@ class RbacRepositoryImpl implements RbacRepository {
       },
     );
   }
+
+  @override
+  Future<RoleCatalogItem> createShopRole(CreateShopRoleInput input) {
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _offlineMessage,
+      remote: () async {
+        final dto = await _remote.createShopRole({
+          'slug': input.slug.trim(),
+          'label': input.label.trim(),
+          if (input.description != null && input.description!.trim().isNotEmpty)
+            'description': input.description!.trim(),
+          if (input.parentRoleCode != null &&
+              input.parentRoleCode!.trim().isNotEmpty)
+            'parentRoleCode': input.parentRoleCode!.trim(),
+          'permissions': [
+            for (final grant in input.permissions)
+              {
+                'permissionCode': grant.permissionCode,
+                'effect': grant.effect == RolePermissionEffect.deny
+                    ? 'deny'
+                    : 'allow',
+              },
+          ],
+        });
+        return dto.toEntity();
+      },
+    );
+  }
+
+  @override
+  Future<RoleCatalogItem> updateShopRole(
+    String code,
+    UpdateShopRoleInput input,
+  ) {
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _offlineMessage,
+      remote: () async {
+        final body = <String, dynamic>{};
+        if (input.label != null) body['label'] = input.label!.trim();
+        if (input.description != null) {
+          body['description'] = input.description!.trim().isEmpty
+              ? null
+              : input.description!.trim();
+        }
+        if (input.permissions != null) {
+          body['permissions'] = [
+            for (final grant in input.permissions!)
+              {
+                'permissionCode': grant.permissionCode,
+                'effect': grant.effect == RolePermissionEffect.deny
+                    ? 'deny'
+                    : 'allow',
+              },
+          ];
+        }
+        final dto = await _remote.updateShopRole(code, body);
+        return dto.toEntity();
+      },
+    );
+  }
+
+  @override
+  Future<void> deleteShopRole(String code) {
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _offlineMessage,
+      remote: () => _remote.deleteShopRole(code),
+    );
+  }
+
+  @override
+  Future<RoleCatalogItem> setRolePermissions(
+    String code,
+    List<RolePermissionGrant> permissions,
+  ) {
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _offlineMessage,
+      remote: () async {
+        final dto = await _remote.setRolePermissions(
+          code,
+          [
+            for (final grant in permissions)
+              {
+                'permissionCode': grant.permissionCode,
+                'effect': grant.effect == RolePermissionEffect.deny
+                    ? 'deny'
+                    : 'allow',
+              },
+          ],
+        );
+        return dto.toEntity();
+      },
+    );
+  }
 }

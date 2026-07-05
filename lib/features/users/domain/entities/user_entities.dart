@@ -1,12 +1,11 @@
 import '../../../../shared/enums/permission.dart';
-import '../../../../shared/enums/user_role.dart';
 import '../../../rbac/domain/entities/rbac_entities.dart';
 
 class ShopUser {
   const ShopUser({
     required this.id,
     required this.name,
-    required this.role,
+    required this.roleCode,
     required this.roleLabel,
     required this.isActive,
     required this.biometricEnabled,
@@ -16,12 +15,14 @@ class ShopUser {
 
   final int id;
   final String name;
-  final UserRole role;
+  final String roleCode;
   final String roleLabel;
   final bool isActive;
   final bool biometricEnabled;
   final int? lastLoginAt;
   final Set<Permission> permissions;
+
+  bool get isOwner => roleCode == 'owner';
 }
 
 class CreateShopUserInput {
@@ -29,13 +30,13 @@ class CreateShopUserInput {
     required this.name,
     required this.phone,
     required this.pin,
-    required this.role,
+    required this.roleCode,
   });
 
   final String name;
   final String phone;
   final String pin;
-  final UserRole role;
+  final String roleCode;
 }
 
 class UserAssignment {
@@ -44,7 +45,7 @@ class UserAssignment {
     required this.name,
     required this.shopId,
     required this.shopName,
-    required this.role,
+    required this.roleCode,
     required this.roleLabel,
     required this.isActive,
     required this.permissions,
@@ -55,9 +56,19 @@ class UserAssignment {
   final String name;
   final int shopId;
   final String shopName;
-  final UserRole role;
+  final String roleCode;
   final String roleLabel;
   final bool isActive;
   final Set<Permission> permissions;
   final List<UserPermissionOverride> overrides;
+}
+
+class AssignableRole {
+  const AssignableRole({
+    required this.code,
+    required this.label,
+  });
+
+  final String code;
+  final String label;
 }

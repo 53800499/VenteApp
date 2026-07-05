@@ -15,6 +15,7 @@ import '../../../debts/domain/entities/debt_entities.dart';
 import '../../../debts/domain/usecases/debt_usecases.dart';
 import '../../../debts/presentation/pages/record_debt_payment_page.dart';
 import '../../../sales/presentation/pages/sale_detail_page.dart';
+import '../../../sales_analysis/presentation/widgets/customer_price_habits_section.dart';
 import '../../domain/entities/customer_entities.dart';
 import '../../domain/usecases/customer_usecases.dart';
 import '../widgets/customer_debts_tab.dart';
@@ -486,6 +487,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
             ),
           ],
         ),
+        if (_canViewSales) ...[
+          const SizedBox(height: AppSpacing.lg),
+          CustomerPriceHabitsSection(
+            session: widget.session,
+            customerId: widget.customerId,
+          ),
+        ],
         if (_canViewAudit) ...[
           const SizedBox(height: AppSpacing.md),
           Card(

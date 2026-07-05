@@ -97,6 +97,7 @@ class _SetupPageState extends State<SetupPage> {
                 child: ResponsivePage(
                   maxWidth: Breakpoints.formMaxWidth,
                   padding: EdgeInsets.zero,
+                  expandHeight: true,
                   child: Column(
                     children: [
                       if (widget.onBack != null)

@@ -10,6 +10,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../../app/pages/api_settings_page.dart';
 import '../../../reports/presentation/pages/reports_page.dart';
+import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
 import '../../../audit/presentation/pages/audit_journal_page.dart';
 import '../../../debts/presentation/pages/forgiven_debts_page.dart';
 import '../../../notifications/presentation/pages/notification_settings_page.dart';
@@ -123,6 +124,18 @@ class MorePage extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ReportsPage(session: activeSession),
+                    ),
+                  ),
+                ),
+              if (_canViewReports)
+                _MoreTile(
+                  icon: Icons.analytics_outlined,
+                  title: 'Analyse des ventes',
+                  subtitle: 'Prix pratiqués, produits vendus et écarts',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          SalesAnalysisPage(session: activeSession),
                     ),
                   ),
                 ),

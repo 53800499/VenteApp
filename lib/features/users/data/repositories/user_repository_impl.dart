@@ -49,7 +49,7 @@ class UserRepositoryImpl implements UserRepository {
           name: dto.name,
           shopId: dto.shopId,
           shopName: dto.shopName,
-          role: roleFromCode(dto.role),
+          roleCode: dto.role,
           roleLabel: dto.roleLabel,
           isActive: dto.isActive,
           permissions: permissionsFromCodes(dto.permissions),
@@ -62,9 +62,9 @@ class UserRepositoryImpl implements UserRepository {
 
   @override
   Future<ShopUser> createShopUser(CreateShopUserInput input) async {
-    if (input.role == UserRole.owner) {
+    if (input.roleCode == UserRole.owner.code) {
       throw const ValidationFailure(
-        'Seuls les rôles vendeur et lecteur peuvent être créés.',
+        'Le rôle patron ne peut pas être attribué.',
       );
     }
     return _apiRunner.runOnlineRequiredWrite(
@@ -74,16 +74,16 @@ class UserRepositoryImpl implements UserRepository {
           name: input.name,
           phone: normalizePhone(input.phone),
           pin: input.pin,
-          role: input.role,
+          roleCode: input.roleCode,
         );
         return ShopUser(
           id: dto.id,
           name: dto.name,
-          role: roleFromCode(dto.role),
-          roleLabel: roleFromCode(dto.role).label,
+          roleCode: dto.role,
+          roleLabel: dto.role,
           isActive: true,
           biometricEnabled: false,
-          permissions: permissionsForRole(roleFromCode(dto.role)),
+          permissions: const {},
         );
       },
     );
@@ -92,7 +92,7 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<ShopUser> changeUserRole({
     required int userId,
-    required UserRole role,
+    required String roleCode,
     String? reason,
   }) async {
     return _apiRunner.runOnlineRequiredWrite(
@@ -100,13 +100,13 @@ class UserRepositoryImpl implements UserRepository {
       remote: () async {
         final dto = await _remote.changeUserRole(
           userId: userId,
-          role: role,
+          roleCode: roleCode,
           reason: reason,
         );
         return ShopUser(
           id: dto.id,
           name: dto.name,
-          role: roleFromCode(dto.role),
+          roleCode: dto.role,
           roleLabel: dto.roleLabel,
           isActive: true,
           biometricEnabled: false,
@@ -144,7 +144,7 @@ class UserRepositoryImpl implements UserRepository {
     return ShopUser(
       id: dto.id,
       name: dto.name,
-      role: roleFromCode(dto.role),
+      roleCode: dto.role,
       roleLabel: dto.roleLabel,
       isActive: dto.isActive,
       biometricEnabled: dto.biometricEnabled,
@@ -160,16 +160,22 @@ class UserRepositoryImpl implements UserRepository {
         .get();
 
     return rows.map((row) {
-      final role = roleFromCode(row.role);
+      final roleCode = row.role;
+      final systemRole = UserRole.values
+          .where((r) => r.code == roleCode)
+          .cast<UserRole?>()
+          .firstOrNull;
       return ShopUser(
         id: int.tryParse(row.serverId ?? '') ?? row.id,
         name: row.name,
-        role: role,
-        roleLabel: role.label,
+        roleCode: roleCode,
+        roleLabel: systemRole?.label ?? roleCode,
         isActive: row.isActive,
         biometricEnabled: row.biometricEnabled,
         lastLoginAt: row.lastLoginAt,
-        permissions: permissionsForRole(role),
+        permissions: systemRole != null
+            ? permissionsForRole(systemRole)
+            : const {},
       );
     }).toList();
   }

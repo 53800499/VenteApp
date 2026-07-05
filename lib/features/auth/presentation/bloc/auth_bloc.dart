@@ -167,6 +167,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           step: WhatsappLoginStep.code,
           infoMessage: result.message,
           maskedPhone: result.maskedPhone,
+          deliveryWarning:
+              result.sentViaWhatsapp ? null : result.deliveryWarning,
+          devCode: result.devCode,
         ),
       );
     } on Failure catch (failure) {
@@ -210,6 +213,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           step: WhatsappLoginStep.code,
           infoMessage: result.message,
           maskedPhone: result.maskedPhone,
+          deliveryWarning:
+              result.sentViaWhatsapp ? null : result.deliveryWarning,
+          devCode: result.devCode,
         ),
       );
     } on Failure catch (failure) {

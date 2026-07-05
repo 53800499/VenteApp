@@ -11,6 +11,7 @@ import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
 import '../../../dashboard/presentation/widgets/kpi_card.dart';
 import '../../domain/entities/report_entities.dart';
 import '../../domain/usecases/get_report.dart';
@@ -213,6 +214,7 @@ class _ReportBody extends StatelessWidget {
             _TopProductsSection(
               products: report.topProducts,
               topBy: state.query.topBy,
+              session: session,
             ),
             if (report.sellerPerformance != null &&
                 report.sellerPerformance!.isNotEmpty) ...[
@@ -424,10 +426,12 @@ class _TopProductsSection extends StatelessWidget {
   const _TopProductsSection({
     required this.products,
     required this.topBy,
+    required this.session,
   });
 
   final List<ReportTopProduct> products;
   final ReportTopSort topBy;
+  final AuthSession session;
 
   @override
   Widget build(BuildContext context) {
@@ -485,6 +489,19 @@ class _TopProductsSection extends StatelessWidget {
               ],
             ),
           ),
+        const SizedBox(height: AppSpacing.sm),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SalesAnalysisPage(session: session),
+              ),
+            ),
+            icon: const Icon(Icons.analytics_outlined),
+            label: const Text('Analyse complète des prix'),
+          ),
+        ),
       ],
     );
   }

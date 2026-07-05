@@ -144,7 +144,7 @@ class ResponsiveFormPage extends StatelessWidget {
 }
 
 /// Colonne scrollable : le contenu défile sur petits écrans, [Spacer] fonctionne
-/// quand la hauteur le permet.
+/// quand la hauteur est bornée (sans scroll intermédiaire).
 class ResponsiveScrollColumn extends StatelessWidget {
   const ResponsiveScrollColumn({
     super.key,
@@ -157,14 +157,40 @@ class ResponsiveScrollColumn extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final CrossAxisAlignment crossAxisAlignment;
 
+  static bool _hasVerticalFlex(Widget widget) =>
+      widget is Spacer || widget is Flexible || widget is Expanded;
+
+  static List<Widget> _withoutFlex(List<Widget> widgets) {
+    return [
+      for (final widget in widgets)
+        if (widget is Spacer)
+          const SizedBox(height: AppSpacing.lg)
+        else if (widget is Flexible || widget is Expanded)
+          widget
+        else
+          widget,
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final hasBoundedHeight =
             constraints.maxHeight.isFinite && constraints.maxHeight > 0;
+        final hasFlex = children.any(_hasVerticalFlex);
 
-        // Avec hauteur bornée : scroll si le contenu dépasse ; Spacer possible via minHeight.
+        // Flex vertical : colonne directe dans l'espace disponible (pas de scroll).
+        if (hasBoundedHeight && hasFlex) {
+          return Padding(
+            padding: padding ?? EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: crossAxisAlignment,
+              children: children,
+            ),
+          );
+        }
+
         if (hasBoundedHeight) {
           return Padding(
             padding: padding ?? EdgeInsets.zero,
@@ -181,12 +207,11 @@ class ResponsiveScrollColumn extends StatelessWidget {
           );
         }
 
-        // Hauteur illimitée : scroll simple, pas de flex vertical.
         return SingleChildScrollView(
           padding: padding,
           child: Column(
             crossAxisAlignment: crossAxisAlignment,
-            children: children,
+            children: _withoutFlex(children),
           ),
         );
       },

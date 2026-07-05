@@ -68,6 +68,68 @@ class RbacRemoteDatasource {
     return ReplaceOverridesResultDto.fromJson(data);
   }
 
+  Future<RoleCatalogItemDto> createShopRole(Map<String, dynamic> body) async {
+    final data = await _postMap('/rbac/roles', body);
+    return RoleCatalogItemDto.fromJson(data);
+  }
+
+  Future<RoleCatalogItemDto> updateShopRole(
+    String code,
+    Map<String, dynamic> body,
+  ) async {
+    final data = await _patchMap('/rbac/roles/$code', body);
+    return RoleCatalogItemDto.fromJson(data);
+  }
+
+  Future<void> deleteShopRole(String code) async {
+    await _delete('/rbac/roles/$code');
+  }
+
+  Future<RoleCatalogItemDto> setRolePermissions(
+    String code,
+    List<Map<String, dynamic>> permissions,
+  ) async {
+    final data = await _putMap(
+      '/rbac/roles/$code/permissions',
+      {'permissions': permissions},
+    );
+    return RoleCatalogItemDto.fromJson(data);
+  }
+
+  Future<Map<String, dynamic>> _postMap(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response =
+          await _client.post<Map<String, dynamic>>(path, data: body);
+      return _unwrapMap(response.data);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<Map<String, dynamic>> _patchMap(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response =
+          await _client.patch<Map<String, dynamic>>(path, data: body);
+      return _unwrapMap(response.data);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<void> _delete(String path) async {
+    try {
+      await _client.delete<void>(path);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
   Future<Map<String, dynamic>> _getMap(String path) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(path);

@@ -67,3 +67,41 @@ class ReplaceUserPermissionOverrides {
         reason: reason,
       );
 }
+
+class CreateShopRole {
+  const CreateShopRole(this._repository);
+
+  final RbacRepository _repository;
+
+  Future<RoleCatalogItem> call(CreateShopRoleInput input) =>
+      _repository.createShopRole(input);
+}
+
+class UpdateShopRole {
+  const UpdateShopRole(this._repository);
+
+  final RbacRepository _repository;
+
+  Future<RoleCatalogItem> call(String code, UpdateShopRoleInput input) =>
+      _repository.updateShopRole(code, input);
+}
+
+class DeleteShopRole {
+  const DeleteShopRole(this._repository);
+
+  final RbacRepository _repository;
+
+  Future<void> call(String code) => _repository.deleteShopRole(code);
+}
+
+class SetRolePermissions {
+  const SetRolePermissions(this._repository);
+
+  final RbacRepository _repository;
+
+  Future<RoleCatalogItem> call(
+    String code,
+    List<RolePermissionGrant> permissions,
+  ) =>
+      _repository.setRolePermissions(code, permissions);
+}

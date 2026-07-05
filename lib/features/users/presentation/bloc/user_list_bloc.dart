@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/user_entities.dart';
 import '../../domain/usecases/user_usecases.dart';
 
@@ -127,7 +126,7 @@ class UserListBloc extends Bloc<UserListEvent, UserListState> {
     try {
       await _changeUserRole(
         userId: event.userId,
-        role: event.role,
+        roleCode: event.roleCode,
         reason: event.reason,
       );
       await _fetch(emit);

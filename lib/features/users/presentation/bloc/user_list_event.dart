@@ -27,16 +27,16 @@ class UserCreateRequested extends UserListEvent {
 class UserChangeRoleRequested extends UserListEvent {
   const UserChangeRoleRequested({
     required this.userId,
-    required this.role,
+    required this.roleCode,
     this.reason,
   });
 
   final int userId;
-  final UserRole role;
+  final String roleCode;
   final String? reason;
 
   @override
-  List<Object?> get props => [userId, role, reason];
+  List<Object?> get props => [userId, roleCode, reason];
 }
 
 class UserDeactivateRequested extends UserListEvent {

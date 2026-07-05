@@ -1,4 +1,3 @@
-import '../../../../shared/enums/user_role.dart';
 import '../entities/user_entities.dart';
 import '../repositories/user_repository.dart';
 
@@ -36,10 +35,14 @@ class ChangeUserRole {
 
   Future<ShopUser> call({
     required int userId,
-    required UserRole role,
+    required String roleCode,
     String? reason,
   }) =>
-      _repository.changeUserRole(userId: userId, role: role, reason: reason);
+      _repository.changeUserRole(
+        userId: userId,
+        roleCode: roleCode,
+        reason: reason,
+      );
 }
 
 class DeactivateShopUser {
@@ -61,5 +64,9 @@ class AssignUserShop {
     required int shopId,
     String? reason,
   }) =>
-      _repository.assignUserShop(userId: userId, shopId: shopId, reason: reason);
+      _repository.assignUserShop(
+        userId: userId,
+        shopId: shopId,
+        reason: reason,
+      );
 }

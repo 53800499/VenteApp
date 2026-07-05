@@ -68,6 +68,7 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
               child: ResponsivePage(
                 maxWidth: Breakpoints.formMaxWidth,
                 padding: EdgeInsets.zero,
+                expandHeight: true,
                 child: Column(
                   children: [
                     if (widget.showBackButton)
@@ -177,6 +178,13 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
                                   child: const Text('Modifier le numéro'),
                                 ),
                               ],
+                              if (state.devCode != null) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                _DevOtpCard(code: state.devCode!),
+                              ] else if (state.deliveryWarning != null) ...[
+                                const SizedBox(height: AppSpacing.md),
+                                ErrorBanner(message: state.deliveryWarning!),
+                              ],
                               if (state.infoMessage != null) ...[
                                 const SizedBox(height: AppSpacing.md),
                                 _InfoMessage(text: state.infoMessage!),
@@ -236,6 +244,50 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _DevOtpCard extends StatelessWidget {
+  const _DevOtpCard({required this.code});
+
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Code de vérification (mode test)',
+            style: Theme.of(context).textTheme.labelLarge,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SelectableText(
+            code,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  letterSpacing: 6,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'WhatsApp n\'est pas configuré sur le serveur — saisissez ce code pour continuer.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
     );
   }
 }

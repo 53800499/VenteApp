@@ -1,4 +1,3 @@
-import '../../../../shared/enums/user_role.dart';
 import '../entities/user_entities.dart';
 
 abstract class UserRepository {
@@ -10,7 +9,7 @@ abstract class UserRepository {
 
   Future<ShopUser> changeUserRole({
     required int userId,
-    required UserRole role,
+    required String roleCode,
     String? reason,
   });
 

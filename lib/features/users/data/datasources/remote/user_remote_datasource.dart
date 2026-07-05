@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import '../../../../../core/errors/exception_mapper.dart';
 import '../../../../../core/errors/failures.dart';
 import '../../../../../core/network/api_client.dart';
-import '../../../../../shared/enums/user_role.dart';
 import '../../models/user_api_models.dart';
 
 class UserRemoteDatasource {
@@ -27,7 +26,7 @@ class UserRemoteDatasource {
     required String name,
     required String phone,
     required String pin,
-    required UserRole role,
+    required String roleCode,
   }) async {
     final data = await _postData(
       '/users',
@@ -35,7 +34,7 @@ class UserRemoteDatasource {
         'name': name,
         'phone': phone,
         'pin': pin,
-        'role': role.code,
+        'role': roleCode,
       },
     );
     return CreateShopUserResponseDto.fromJson(data);
@@ -43,13 +42,13 @@ class UserRemoteDatasource {
 
   Future<ChangeUserRoleResponseDto> changeUserRole({
     required int userId,
-    required UserRole role,
+    required String roleCode,
     String? reason,
   }) async {
     final data = await _patchData(
       '/users/$userId/role',
       {
-        'role': role.code,
+        'role': roleCode,
         if (reason != null && reason.isNotEmpty) 'reason': reason,
       },
     );

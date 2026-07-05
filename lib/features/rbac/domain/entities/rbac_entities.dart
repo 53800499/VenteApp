@@ -134,3 +134,31 @@ class ReplaceOverridesResult {
   final List<UserPermissionOverride> overrides;
   final Set<Permission> permissions;
 }
+
+class CreateShopRoleInput {
+  const CreateShopRoleInput({
+    required this.slug,
+    required this.label,
+    this.description,
+    this.parentRoleCode,
+    required this.permissions,
+  });
+
+  final String slug;
+  final String label;
+  final String? description;
+  final String? parentRoleCode;
+  final List<RolePermissionGrant> permissions;
+}
+
+class UpdateShopRoleInput {
+  const UpdateShopRoleInput({
+    this.label,
+    this.description,
+    this.permissions,
+  });
+
+  final String? label;
+  final String? description;
+  final List<RolePermissionGrant>? permissions;
+}

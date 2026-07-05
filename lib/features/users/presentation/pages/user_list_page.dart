@@ -7,7 +7,6 @@ import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/enums/permission.dart';
-import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../shop/domain/entities/shop_entities.dart';
@@ -15,6 +14,7 @@ import '../../../shop/domain/usecases/shop_usecases.dart';
 import '../../../rbac/presentation/pages/user_permissions_page.dart';
 import '../../domain/entities/user_entities.dart';
 import '../bloc/user_list_bloc.dart';
+import '../widgets/assignable_role_picker.dart';
 import '../widgets/user_feedback.dart';
 import 'user_form_page.dart';
 
@@ -228,13 +228,13 @@ class _UserListView extends StatelessWidget {
                           isBusy: state.isSubmitting,
                           canChangeRole: canChangeRole &&
                               !isSelf &&
-                              user.role != UserRole.owner,
+                              !user.isOwner,
                           canDeactivate: canDeactivate &&
                               !isSelf &&
-                              user.role != UserRole.owner,
+                              !user.isOwner,
                           canAssignShop: canAssignShop &&
                               !isSelf &&
-                              user.role != UserRole.owner,
+                              !user.isOwner,
                           canViewPermissions: canViewPermissions,
                           onChangeRole: () => _changeRole(context, user),
                           onDeactivate: () => _deactivate(context, user),
@@ -262,19 +262,10 @@ class _UserListView extends StatelessWidget {
   }
 
   Future<void> _changeRole(BuildContext context, ShopUser user) async {
-    final role = await showDialog<UserRole>(
+    final role = await showAssignableRolePicker(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text('Rôle de ${user.name}'),
-        children: [
-          for (final r in [UserRole.seller, UserRole.viewer])
-            if (r != user.role)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(ctx, r),
-                child: Text(r.label),
-              ),
-        ],
-      ),
+      title: 'Rôle de ${user.name}',
+      currentRoleCode: user.roleCode,
     );
     if (role == null || !context.mounted) return;
 
@@ -286,7 +277,7 @@ class _UserListView extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     context.read<UserListBloc>().add(
-          UserChangeRoleRequested(userId: user.id, role: role),
+          UserChangeRoleRequested(userId: user.id, roleCode: role.code),
         );
   }
 

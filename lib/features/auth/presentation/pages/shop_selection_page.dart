@@ -27,6 +27,7 @@ class ShopSelectionPage extends StatelessWidget {
           body: GradientBackground(
             child: SafeArea(
               child: ResponsivePage(
+                expandHeight: true,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [

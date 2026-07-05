@@ -158,11 +158,19 @@ class WhatsappOtpRequestResult {
     required this.maskedPhone,
     required this.expiresInSeconds,
     required this.message,
+    this.deliveryChannel = 'whatsapp',
+    this.deliveryWarning,
+    this.devCode,
   });
 
   final String maskedPhone;
   final int expiresInSeconds;
   final String message;
+  final String deliveryChannel;
+  final String? deliveryWarning;
+  final String? devCode;
+
+  bool get sentViaWhatsapp => deliveryChannel == 'whatsapp';
 }
 
 class WhatsappOtpVerifyResult {

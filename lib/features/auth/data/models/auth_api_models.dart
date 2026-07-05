@@ -254,17 +254,26 @@ class WhatsappOtpRequestDataDto {
     required this.maskedPhone,
     required this.expiresInSeconds,
     required this.message,
+    this.deliveryChannel = 'whatsapp',
+    this.deliveryWarning,
+    this.devCode,
   });
 
   final String maskedPhone;
   final int expiresInSeconds;
   final String message;
+  final String deliveryChannel;
+  final String? deliveryWarning;
+  final String? devCode;
 
   factory WhatsappOtpRequestDataDto.fromJson(Map<String, dynamic> json) {
     return WhatsappOtpRequestDataDto(
       maskedPhone: json['maskedPhone'] as String,
       expiresInSeconds: json['expiresInSeconds'] as int? ?? 300,
       message: json['message'] as String? ?? 'Code envoyé sur WhatsApp.',
+      deliveryChannel: json['deliveryChannel'] as String? ?? 'whatsapp',
+      deliveryWarning: json['deliveryWarning'] as String?,
+      devCode: json['devCode'] as String?,
     );
   }
 }

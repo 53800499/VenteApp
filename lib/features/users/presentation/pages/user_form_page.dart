@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/phone_util.dart';
-import '../../../../shared/enums/user_role.dart';
 import '../../domain/entities/user_entities.dart';
+import '../widgets/assignable_role_picker.dart';
 import '../widgets/user_feedback.dart';
 
 class UserFormResult {
@@ -12,19 +12,19 @@ class UserFormResult {
     required this.name,
     required this.phone,
     required this.pin,
-    required this.role,
+    required this.roleCode,
   });
 
   final String name;
   final String phone;
   final String pin;
-  final UserRole role;
+  final String roleCode;
 
   CreateShopUserInput toInput() => CreateShopUserInput(
         name: name,
         phone: phone,
         pin: pin,
-        role: role,
+        roleCode: roleCode,
       );
 }
 
@@ -40,7 +40,7 @@ class _UserFormPageState extends State<UserFormPage> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _pinController = TextEditingController();
-  UserRole _role = UserRole.seller;
+  String? _roleCode;
 
   @override
   void dispose() {
@@ -52,12 +52,20 @@ class _UserFormPageState extends State<UserFormPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final roleCode = _roleCode;
+    if (roleCode == null || roleCode.isEmpty) {
+      UserFeedback.showInfo(context, 'Choisissez un rôle.');
+      return;
+    }
 
     final name = _nameController.text.trim();
+    final roleLabel = await _roleLabelFor(roleCode);
+    if (!mounted) return;
+
     final confirmed = await UserFeedback.confirm(
       context: context,
       title: 'Créer l\'utilisateur',
-      message: 'Ajouter « $name » comme ${_role.label} ?',
+      message: 'Ajouter « $name » comme $roleLabel ?',
     );
     if (confirmed != true || !mounted) return;
 
@@ -67,9 +75,15 @@ class _UserFormPageState extends State<UserFormPage> {
         name: name,
         phone: _phoneController.text.trim(),
         pin: _pinController.text.trim(),
-        role: _role,
+        roleCode: roleCode,
       ),
     );
+  }
+
+  Future<String> _roleLabelFor(String code) async {
+    final roles = await AssignableRolesLoader.load();
+    return roles.where((r) => r.code == code).map((r) => r.label).firstOrNull ??
+        code;
   }
 
   @override
@@ -134,22 +148,9 @@ class _UserFormPageState extends State<UserFormPage> {
               },
             ),
             const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<UserRole>(
-              initialValue: _role,
-              decoration: const InputDecoration(labelText: 'Rôle'),
-              items: const [
-                DropdownMenuItem(
-                  value: UserRole.seller,
-                  child: Text('Vendeur'),
-                ),
-                DropdownMenuItem(
-                  value: UserRole.viewer,
-                  child: Text('Lecteur'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() => _role = value);
-              },
+            AssignableRoleDropdown(
+              value: _roleCode,
+              onChanged: (value) => setState(() => _roleCode = value),
             ),
             const SizedBox(height: AppSpacing.xl),
             FilledButton(

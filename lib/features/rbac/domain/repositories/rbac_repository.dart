@@ -18,4 +18,18 @@ abstract class RbacRepository {
     required List<UserPermissionOverride> overrides,
     String? reason,
   });
+
+  Future<RoleCatalogItem> createShopRole(CreateShopRoleInput input);
+
+  Future<RoleCatalogItem> updateShopRole(
+    String code,
+    UpdateShopRoleInput input,
+  );
+
+  Future<void> deleteShopRole(String code);
+
+  Future<RoleCatalogItem> setRolePermissions(
+    String code,
+    List<RolePermissionGrant> permissions,
+  );
 }

@@ -66,6 +66,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   final QuickSaleConversion? _conversion;
   final AuthSession _session;
 
+  AuthSession get session => _session;
+
   bool get isConversion => _conversion != null;
 
   Future<void> _onLoad(

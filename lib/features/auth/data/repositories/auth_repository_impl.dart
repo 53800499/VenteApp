@@ -998,6 +998,9 @@ class AuthRepositoryImpl implements AuthRepository {
       maskedPhone: dto.maskedPhone,
       expiresInSeconds: dto.expiresInSeconds,
       message: dto.message,
+      deliveryChannel: dto.deliveryChannel,
+      deliveryWarning: dto.deliveryWarning,
+      devCode: dto.devCode,
     );
   }
 
