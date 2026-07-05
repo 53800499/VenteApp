@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../../../core/database/app_database.dart';
+import '../../../../../core/utils/benin_day_range.dart';
 import '../../../domain/entities/sales_analysis_entities.dart';
 
 class SalesAnalysisLocalDatasource {
@@ -345,6 +346,201 @@ class SalesAnalysisLocalDatasource {
     return habits;
   }
 
+  Future<List<CategorySalesSummary>> listCategorySummaries({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+  }) async {
+    final rows = await _fetchSaleItemRows(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    final byCategory = <String, _CategoryAccumulator>{};
+
+    for (final row in rows) {
+      final key = row.categoryId?.toString() ?? 'none';
+      final acc = byCategory.putIfAbsent(
+        key,
+        () => _CategoryAccumulator(
+          categoryId: row.categoryId,
+          categoryName: row.categoryName ?? 'Sans catégorie',
+        ),
+      );
+      acc.add(row);
+    }
+
+    return byCategory.values
+        .map((e) => e.toSummary())
+        .toList()
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
+  }
+
+  Future<MarginSummary> loadMarginSummary({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+    int topLimit = 15,
+  }) async {
+    final rows = await _fetchSaleItemRows(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    if (rows.isEmpty) return const MarginSummary.empty();
+
+    var totalRevenue = 0;
+    var totalCost = 0;
+    var linesWithCost = 0;
+    final byProduct = <String, _MarginProductAccumulator>{};
+
+    for (final row in rows) {
+      totalRevenue += row.lineTotal;
+      final unitCost = row.unitCost ?? row.priceBuy;
+      final lineCost =
+          unitCost != null ? (unitCost * row.quantity).round() : null;
+
+      if (lineCost != null) {
+        totalCost += lineCost;
+        linesWithCost++;
+      }
+
+      final key = _productKey(row.productId, row.productName);
+      final acc = byProduct.putIfAbsent(
+        key,
+        () => _MarginProductAccumulator(
+          productId: row.productId,
+          productName: row.productName,
+        ),
+      );
+      acc.add(
+        revenue: row.lineTotal,
+        cost: lineCost,
+        quantity: row.quantity,
+      );
+    }
+
+    final topProducts = byProduct.values
+        .map((e) => e.toLine())
+        .where((line) => line.estimatedCost > 0)
+        .toList()
+      ..sort((a, b) => b.estimatedProfit.compareTo(a.estimatedProfit));
+
+    return MarginSummary(
+      totalRevenue: totalRevenue,
+      totalCost: totalCost,
+      estimatedProfit: totalRevenue - totalCost,
+      linesWithCost: linesWithCost,
+      totalLines: rows.length,
+      topProducts: topProducts.take(topLimit).toList(),
+    );
+  }
+
+  Future<List<PriceDeviationLine>> listPriceDeviations({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+  }) async {
+    final rows = await _fetchSaleItemRows(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+
+    final deviations = <PriceDeviationLine>[];
+    for (final row in rows) {
+      final belowCatalog = row.catalogPrice != null &&
+          row.unitPrice < row.catalogPrice!;
+      final aboveCatalog = row.catalogPrice != null &&
+          row.unitPrice > row.catalogPrice!;
+      if (row.discountAmount > 0 || belowCatalog || aboveCatalog) {
+        deviations.add(
+          PriceDeviationLine(
+            saleId: row.saleId,
+            soldAt: row.soldAt,
+            productId: row.productId,
+            productName: row.productName,
+            catalogPrice: row.catalogPrice,
+            unitPrice: row.unitPrice,
+            discountAmount: row.discountAmount,
+            sellerName: row.sellerName,
+          ),
+        );
+      }
+    }
+
+    deviations.sort((a, b) => b.soldAt.compareTo(a.soldAt));
+    return deviations;
+  }
+
+  Future<SalesTrendSummary> loadSalesTrends({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+  }) async {
+    const beninOffsetMs = 60 * 60 * 1000;
+    const dayMs = 86_400_000;
+
+    int beninDayStart(int soldAtMs) {
+      final localMs = soldAtMs + beninOffsetMs;
+      final localMidnight = (localMs ~/ dayMs) * dayMs;
+      return localMidnight - beninOffsetMs;
+    }
+
+    final sales = await (_db.select(_db.sales)
+          ..where(
+            (s) =>
+                s.shopId.equals(shopId) &
+                s.status.equals('completed') &
+                s.createdAt.isBiggerOrEqualValue(fromMs) &
+                s.createdAt.isSmallerOrEqualValue(toMs),
+          ))
+        .get();
+
+    final itemRows = await _fetchSaleItemRows(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+
+    final byDay = <int, _TrendAccumulator>{};
+
+    for (final sale in sales) {
+      final bucket = beninDayStart(sale.createdAt);
+      final acc = byDay.putIfAbsent(
+        bucket,
+        () => _TrendAccumulator(bucketStartMs: bucket),
+      );
+      acc.saleCount++;
+      acc.revenue += sale.totalAmount;
+    }
+
+    for (final row in itemRows) {
+      final bucket = beninDayStart(row.soldAt);
+      final acc = byDay.putIfAbsent(
+        bucket,
+        () => _TrendAccumulator(bucketStartMs: bucket),
+      );
+      acc.quantitySold += row.quantity;
+    }
+
+    final points = byDay.values.map((e) => e.toPoint()).toList()
+      ..sort((a, b) => a.bucketStartMs.compareTo(b.bucketStartMs));
+
+    var totalRevenue = 0;
+    var totalSaleCount = 0;
+    for (final point in points) {
+      totalRevenue += point.revenue;
+      totalSaleCount += point.saleCount;
+    }
+
+    return SalesTrendSummary(
+      points: points,
+      totalRevenue: totalRevenue,
+      totalSaleCount: totalSaleCount,
+    );
+  }
+
   int _usualPrice(List<int> prices) {
     if (prices.isEmpty) return 0;
     final counts = <int, int>{};
@@ -387,6 +583,10 @@ class SalesAnalysisLocalDatasource {
         _db.products,
         _db.products.id.equalsExp(_db.saleItems.productId),
       ),
+      leftOuterJoin(
+        _db.categories,
+        _db.categories.id.equalsExp(_db.products.categoryId),
+      ),
     ])
       ..where(
         _db.saleItems.shopId.equals(shopId) &
@@ -420,6 +620,10 @@ class SalesAnalysisLocalDatasource {
             sellerName: row.readTableOrNull(_db.users)?.name,
             catalogPrice: row.readTableOrNull(_db.products)?.priceSell,
             customerId: row.readTable(_db.sales).customerId,
+            unitCost: row.readTable(_db.saleItems).unitCost,
+            priceBuy: row.readTableOrNull(_db.products)?.priceBuy,
+            categoryId: row.readTableOrNull(_db.products)?.categoryId,
+            categoryName: row.readTableOrNull(_db.categories)?.name,
           ),
         )
         .toList();
@@ -444,6 +648,10 @@ class _SaleItemRow {
     this.sellerName,
     this.catalogPrice,
     this.customerId,
+    this.unitCost,
+    this.priceBuy,
+    this.categoryId,
+    this.categoryName,
   });
 
   final int saleId;
@@ -459,6 +667,10 @@ class _SaleItemRow {
   final String? sellerName;
   final int? catalogPrice;
   final int? customerId;
+  final int? unitCost;
+  final int? priceBuy;
+  final int? categoryId;
+  final String? categoryName;
 }
 
 class _ProductAccumulator {
@@ -555,6 +767,86 @@ class _CustomerInsightAccumulator {
       averageUnitPrice: totalQuantity > 0
           ? (totalRevenue / totalQuantity).round()
           : 0,
+    );
+  }
+}
+
+class _CategoryAccumulator {
+  _CategoryAccumulator({
+    this.categoryId,
+    required this.categoryName,
+  });
+
+  final int? categoryId;
+  final String categoryName;
+  final Set<String> productKeys = {};
+  double quantitySold = 0;
+  int revenue = 0;
+
+  void add(_SaleItemRow row) {
+    productKeys.add('${row.productId ?? 'null'}:${row.productName}');
+    quantitySold += row.quantity;
+    revenue += row.lineTotal;
+  }
+
+  CategorySalesSummary toSummary() {
+    return CategorySalesSummary(
+      categoryId: categoryId,
+      categoryName: categoryName,
+      productCount: productKeys.length,
+      quantitySold: quantitySold,
+      revenue: revenue,
+    );
+  }
+}
+
+class _MarginProductAccumulator {
+  _MarginProductAccumulator({
+    this.productId,
+    required this.productName,
+  });
+
+  final int? productId;
+  final String productName;
+  double quantitySold = 0;
+  int revenue = 0;
+  int estimatedCost = 0;
+
+  void add({required int revenue, int? cost, required double quantity}) {
+    this.revenue += revenue;
+    quantitySold += quantity;
+    if (cost != null) {
+      estimatedCost += cost;
+    }
+  }
+
+  MarginProductLine toLine() {
+    return MarginProductLine(
+      productId: productId,
+      productName: productName,
+      quantitySold: quantitySold,
+      revenue: revenue,
+      estimatedCost: estimatedCost,
+      estimatedProfit: revenue - estimatedCost,
+    );
+  }
+}
+
+class _TrendAccumulator {
+  _TrendAccumulator({required this.bucketStartMs});
+
+  final int bucketStartMs;
+  int revenue = 0;
+  int saleCount = 0;
+  double quantitySold = 0;
+
+  SalesTrendPoint toPoint() {
+    return SalesTrendPoint(
+      bucketStartMs: bucketStartMs,
+      label: formatBeninDate(bucketStartMs),
+      revenue: revenue,
+      saleCount: saleCount,
+      quantitySold: quantitySold,
     );
   }
 }

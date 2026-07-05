@@ -16,10 +16,18 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     required ListProductSalesAnalysis listProducts,
     required ListEmployeePriceAnalysis listEmployees,
     required ListCustomerSalesInsights listCustomers,
+    required ListCategorySalesAnalysis listCategories,
+    required GetMarginAnalysis getMargins,
+    required ListPriceDeviationAnalysis listPriceDeviations,
+    required GetSalesTrendAnalysis getTrends,
     required AuthSession session,
   })  : _listProducts = listProducts,
         _listEmployees = listEmployees,
         _listCustomers = listCustomers,
+        _listCategories = listCategories,
+        _getMargins = getMargins,
+        _listPriceDeviations = listPriceDeviations,
+        _getTrends = getTrends,
         _session = session,
         super(const SalesAnalysisState()) {
     on<SalesAnalysisLoadRequested>(_onLoad);
@@ -30,6 +38,10 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
   final ListProductSalesAnalysis _listProducts;
   final ListEmployeePriceAnalysis _listEmployees;
   final ListCustomerSalesInsights _listCustomers;
+  final ListCategorySalesAnalysis _listCategories;
+  final GetMarginAnalysis _getMargins;
+  final ListPriceDeviationAnalysis _listPriceDeviations;
+  final GetSalesTrendAnalysis _getTrends;
   final AuthSession _session;
 
   AuthSession get session => _session;
@@ -88,6 +100,22 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
         shopId: shopId,
         query: state.query,
       );
+      final categories = await _listCategories(
+        shopId: shopId,
+        query: state.query,
+      );
+      final margins = await _getMargins(
+        shopId: shopId,
+        query: state.query,
+      );
+      final priceDeviations = await _listPriceDeviations(
+        shopId: shopId,
+        query: state.query,
+      );
+      final trends = await _getTrends(
+        shopId: shopId,
+        query: state.query,
+      );
       emit(
         state.copyWith(
           status: SalesAnalysisStatus.loaded,
@@ -95,6 +123,10 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
           products: products,
           employees: employees,
           customers: customers,
+          categories: categories,
+          margins: margins,
+          priceDeviations: priceDeviations,
+          trends: trends,
           clearError: true,
         ),
       );

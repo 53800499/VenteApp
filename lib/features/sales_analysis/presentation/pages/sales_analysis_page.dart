@@ -28,6 +28,10 @@ class SalesAnalysisPage extends StatelessWidget {
         listProducts: sl<ListProductSalesAnalysis>(),
         listEmployees: sl<ListEmployeePriceAnalysis>(),
         listCustomers: sl<ListCustomerSalesInsights>(),
+        listCategories: sl<ListCategorySalesAnalysis>(),
+        getMargins: sl<GetMarginAnalysis>(),
+        listPriceDeviations: sl<ListPriceDeviationAnalysis>(),
+        getTrends: sl<GetSalesTrendAnalysis>(),
         session: session,
       )..add(const SalesAnalysisLoadRequested()),
       child: const _SalesAnalysisView(),
@@ -130,10 +134,22 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
                       session: context.read<SalesAnalysisBloc>().session,
                       isLoading: state.status == SalesAnalysisStatus.loading,
                     ),
-                    const _ComingSoonTab(label: 'Analyse par catégorie'),
-                    const _ComingSoonTab(label: 'Marges estimées'),
-                    const _ComingSoonTab(label: 'Prix pratiqués'),
-                    const _ComingSoonTab(label: 'Tendances'),
+                    _CategoriesTab(
+                      categories: state.categories,
+                      isLoading: state.status == SalesAnalysisStatus.loading,
+                    ),
+                    _MarginsTab(
+                      margins: state.margins,
+                      isLoading: state.status == SalesAnalysisStatus.loading,
+                    ),
+                    _PricesTab(
+                      deviations: state.priceDeviations,
+                      isLoading: state.status == SalesAnalysisStatus.loading,
+                    ),
+                    _TrendsTab(
+                      trends: state.trends,
+                      isLoading: state.status == SalesAnalysisStatus.loading,
+                    ),
                   ],
                 );
               },
@@ -560,22 +576,425 @@ class _ClientsTab extends StatelessWidget {
   }
 }
 
-class _ComingSoonTab extends StatelessWidget {
-  const _ComingSoonTab({required this.label});
+class _CategoriesTab extends StatelessWidget {
+  const _CategoriesTab({
+    required this.categories,
+    required this.isLoading,
+  });
 
-  final String label;
+  final List<CategorySalesSummary> categories;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Text(
-          '$label — bientôt disponible.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge,
+    if (categories.isEmpty) {
+      return ListView(
+        children: const [
+          SizedBox(height: 120),
+          Center(child: Text('Aucune vente par catégorie sur cette période.')),
+        ],
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: categories.length,
+          separatorBuilder: (_, index) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            return Card(
+              child: ListTile(
+                title: Text(category.categoryName),
+                subtitle: Text(
+                  '${category.productCount} produit(s) · '
+                  '${formatQuantitySold(category.quantitySold)} vendu(s)',
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'CA',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    Text(
+                      formatFcfa(category.revenue),
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
+        if (isLoading)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(),
+          ),
+      ],
+    );
+  }
+}
+
+class _MarginsTab extends StatelessWidget {
+  const _MarginsTab({
+    required this.margins,
+    required this.isLoading,
+  });
+
+  final MarginSummary margins;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (margins.totalRevenue == 0) {
+      return ListView(
+        children: const [
+          SizedBox(height: 120),
+          Center(child: Text('Aucune vente sur cette période.')),
+        ],
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Synthèse des marges',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _KpiRow(
+                      label: 'Chiffre d\'affaires',
+                      value: formatFcfa(margins.totalRevenue),
+                    ),
+                    _KpiRow(
+                      label: 'Coût estimé',
+                      value: margins.hasCostData
+                          ? formatFcfa(margins.totalCost)
+                          : '—',
+                    ),
+                    _KpiRow(
+                      label: 'Marge estimée',
+                      value: margins.hasCostData
+                          ? formatFcfa(margins.estimatedProfit)
+                          : '—',
+                      highlight: true,
+                    ),
+                    if (margins.hasCostData)
+                      _KpiRow(
+                        label: 'Taux de marge',
+                        value: '${margins.marginPercent.toStringAsFixed(1)} %',
+                      ),
+                    if (!margins.hasCostData)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                        child: Text(
+                          'Renseignez le prix d\'achat ou le coût unitaire '
+                          'sur les lignes pour estimer les marges.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    if (margins.linesWithCost < margins.totalLines &&
+                        margins.hasCostData)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
+                        child: Text(
+                          'Coût connu sur ${margins.linesWithCost} / '
+                          '${margins.totalLines} lignes.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (margins.topProducts.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Produits les plus rentables',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ...margins.topProducts.map(
+                (line) => Card(
+                  child: ListTile(
+                    title: Text(line.productName),
+                    subtitle: Text(
+                      '${formatQuantitySold(line.quantitySold)} vendu(s) · '
+                      'marge ${line.marginPercent.toStringAsFixed(1)} %',
+                    ),
+                    trailing: Text(
+                      formatFcfa(line.estimatedProfit),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (isLoading)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(),
+          ),
+      ],
+    );
+  }
+}
+
+class _KpiRow extends StatelessWidget {
+  const _KpiRow({
+    required this.label,
+    required this.value,
+    this.highlight = false,
+  });
+
+  final String label;
+  final String value;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Expanded(child: Text(label)),
+          Text(
+            value,
+            style: highlight
+                ? Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    )
+                : Theme.of(context).textTheme.titleSmall,
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _PricesTab extends StatelessWidget {
+  const _PricesTab({
+    required this.deviations,
+    required this.isLoading,
+  });
+
+  final List<PriceDeviationLine> deviations;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (deviations.isEmpty) {
+      return ListView(
+        children: const [
+          SizedBox(height: 120),
+          Center(
+            child: Text(
+              'Aucun écart de prix par rapport au catalogue sur cette période.',
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Stack(
+      children: [
+        ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: deviations.length,
+          separatorBuilder: (_, index) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final line = deviations[index];
+            final delta = line.priceDelta;
+            final deltaLabel = delta == null
+                ? 'Prix catalogue inconnu'
+                : delta == 0
+                    ? 'Remise appliquée'
+                    : delta < 0
+                        ? '${formatFcfa(delta.abs())} sous catalogue'
+                        : '${formatFcfa(delta)} au-dessus du catalogue';
+
+            return Card(
+              child: ListTile(
+                title: Text(line.productName),
+                subtitle: Text(
+                  '${formatRelativeSaleDate(line.soldAt)} · '
+                  '${line.sellerName ?? 'Vendeur'} · $deltaLabel',
+                ),
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (line.catalogPrice != null)
+                      Text(
+                        'Cat. ${formatFcfa(line.catalogPrice!)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    Text(
+                      formatFcfa(line.unitPrice),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: delta != null && delta < 0
+                                ? Theme.of(context).colorScheme.error
+                                : null,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+        if (isLoading)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(),
+          ),
+      ],
+    );
+  }
+}
+
+class _TrendsTab extends StatelessWidget {
+  const _TrendsTab({
+    required this.trends,
+    required this.isLoading,
+  });
+
+  final SalesTrendSummary trends;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    if (trends.points.isEmpty) {
+      return ListView(
+        children: const [
+          SizedBox(height: 120),
+          Center(child: Text('Aucune tendance sur cette période.')),
+        ],
+      );
+    }
+
+    final maxRevenue = trends.points
+        .map((p) => p.revenue)
+        .reduce((a, b) => a > b ? a : b);
+
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'CA total',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            formatFcfa(trends.totalRevenue),
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ventes',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          Text(
+                            '${trends.totalSaleCount}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ...trends.points.map((point) {
+              final barFraction =
+                  maxRevenue > 0 ? point.revenue / maxRevenue : 0.0;
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              point.label,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                          Text(formatFcfa(point.revenue)),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: barFraction,
+                          minHeight: 8,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '${point.saleCount} vente(s) · '
+                        '${formatQuantitySold(point.quantitySold)} article(s)',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+        if (isLoading)
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: LinearProgressIndicator(),
+          ),
+      ],
     );
   }
 }

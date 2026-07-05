@@ -10,6 +10,10 @@ class SalesAnalysisState extends Equatable {
     this.products = const [],
     this.employees = const [],
     this.customers = const [],
+    this.categories = const [],
+    this.margins = const MarginSummary.empty(),
+    this.priceDeviations = const [],
+    this.trends = const SalesTrendSummary.empty(),
     this.tabIndex = 0,
     this.errorMessage,
   });
@@ -20,6 +24,10 @@ class SalesAnalysisState extends Equatable {
   final List<ProductSalesSummary> products;
   final List<EmployeePricePerformance> employees;
   final List<CustomerSalesInsight> customers;
+  final List<CategorySalesSummary> categories;
+  final MarginSummary margins;
+  final List<PriceDeviationLine> priceDeviations;
+  final SalesTrendSummary trends;
   final int tabIndex;
   final String? errorMessage;
 
@@ -30,6 +38,10 @@ class SalesAnalysisState extends Equatable {
     List<ProductSalesSummary>? products,
     List<EmployeePricePerformance>? employees,
     List<CustomerSalesInsight>? customers,
+    List<CategorySalesSummary>? categories,
+    MarginSummary? margins,
+    List<PriceDeviationLine>? priceDeviations,
+    SalesTrendSummary? trends,
     int? tabIndex,
     String? errorMessage,
     bool clearError = false,
@@ -41,6 +53,10 @@ class SalesAnalysisState extends Equatable {
       products: products ?? this.products,
       employees: employees ?? this.employees,
       customers: customers ?? this.customers,
+      categories: categories ?? this.categories,
+      margins: margins ?? this.margins,
+      priceDeviations: priceDeviations ?? this.priceDeviations,
+      trends: trends ?? this.trends,
       tabIndex: tabIndex ?? this.tabIndex,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
@@ -54,6 +70,10 @@ class SalesAnalysisState extends Equatable {
         products,
         employees,
         customers,
+        categories,
+        margins,
+        priceDeviations,
+        trends,
         tabIndex,
         errorMessage,
       ];

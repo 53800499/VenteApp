@@ -236,3 +236,182 @@ class CustomerProductPriceHabit extends Equatable {
   @override
   List<Object?> get props => [productId, productName, recentPrices, usualPrice];
 }
+
+class CategorySalesSummary extends Equatable {
+  const CategorySalesSummary({
+    this.categoryId,
+    required this.categoryName,
+    required this.productCount,
+    required this.quantitySold,
+    required this.revenue,
+  });
+
+  final int? categoryId;
+  final String categoryName;
+  final int productCount;
+  final double quantitySold;
+  final int revenue;
+
+  @override
+  List<Object?> get props => [
+        categoryId,
+        categoryName,
+        productCount,
+        quantitySold,
+        revenue,
+      ];
+}
+
+class MarginProductLine extends Equatable {
+  const MarginProductLine({
+    this.productId,
+    required this.productName,
+    required this.quantitySold,
+    required this.revenue,
+    required this.estimatedCost,
+    required this.estimatedProfit,
+  });
+
+  final int? productId;
+  final String productName;
+  final double quantitySold;
+  final int revenue;
+  final int estimatedCost;
+  final int estimatedProfit;
+
+  double get marginPercent =>
+      revenue > 0 ? (estimatedProfit / revenue) * 100 : 0;
+
+  @override
+  List<Object?> get props => [
+        productId,
+        productName,
+        quantitySold,
+        revenue,
+        estimatedCost,
+        estimatedProfit,
+      ];
+}
+
+class MarginSummary extends Equatable {
+  const MarginSummary({
+    required this.totalRevenue,
+    required this.totalCost,
+    required this.estimatedProfit,
+    required this.linesWithCost,
+    required this.totalLines,
+    required this.topProducts,
+  });
+
+  const MarginSummary.empty()
+      : totalRevenue = 0,
+        totalCost = 0,
+        estimatedProfit = 0,
+        linesWithCost = 0,
+        totalLines = 0,
+        topProducts = const [];
+
+  final int totalRevenue;
+  final int totalCost;
+  final int estimatedProfit;
+  final int linesWithCost;
+  final int totalLines;
+  final List<MarginProductLine> topProducts;
+
+  double get marginPercent =>
+      totalRevenue > 0 ? (estimatedProfit / totalRevenue) * 100 : 0;
+
+  bool get hasCostData => linesWithCost > 0;
+
+  @override
+  List<Object?> get props => [
+        totalRevenue,
+        totalCost,
+        estimatedProfit,
+        linesWithCost,
+        totalLines,
+        topProducts,
+      ];
+}
+
+class PriceDeviationLine extends Equatable {
+  const PriceDeviationLine({
+    required this.saleId,
+    required this.soldAt,
+    this.productId,
+    required this.productName,
+    this.catalogPrice,
+    required this.unitPrice,
+    required this.discountAmount,
+    this.sellerName,
+  });
+
+  final int saleId;
+  final int soldAt;
+  final int? productId;
+  final String productName;
+  final int? catalogPrice;
+  final int unitPrice;
+  final int discountAmount;
+  final String? sellerName;
+
+  int? get priceDelta =>
+      catalogPrice != null ? unitPrice - catalogPrice! : null;
+
+  @override
+  List<Object?> get props => [
+        saleId,
+        soldAt,
+        productId,
+        productName,
+        catalogPrice,
+        unitPrice,
+        discountAmount,
+        sellerName,
+      ];
+}
+
+class SalesTrendPoint extends Equatable {
+  const SalesTrendPoint({
+    required this.bucketStartMs,
+    required this.label,
+    required this.revenue,
+    required this.saleCount,
+    required this.quantitySold,
+  });
+
+  final int bucketStartMs;
+  final String label;
+  final int revenue;
+  final int saleCount;
+  final double quantitySold;
+
+  @override
+  List<Object?> get props => [
+        bucketStartMs,
+        label,
+        revenue,
+        saleCount,
+        quantitySold,
+      ];
+}
+
+class SalesTrendSummary extends Equatable {
+  const SalesTrendSummary({
+    required this.points,
+    required this.totalRevenue,
+    required this.totalSaleCount,
+  });
+
+  const SalesTrendSummary.empty()
+      : points = const [],
+        totalRevenue = 0,
+        totalSaleCount = 0;
+
+  final List<SalesTrendPoint> points;
+  final int totalRevenue;
+  final int totalSaleCount;
+
+  @override
+  List<Object?> get props => [points, totalRevenue, totalSaleCount];
+}

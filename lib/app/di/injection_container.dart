@@ -84,6 +84,7 @@ import '../../features/reports/domain/services/report_aggregation_service.dart';
 import '../../features/reports/domain/usecases/get_report.dart';
 import '../../features/reports/presentation/services/report_pdf_exporter.dart';
 import '../../features/sales_analysis/data/datasources/local/sales_analysis_local_datasource.dart';
+import '../../features/sales_analysis/data/datasources/remote/sales_analysis_remote_datasource.dart';
 import '../../features/sales_analysis/data/repositories/sales_analysis_repository_impl.dart';
 import '../../features/sales_analysis/domain/repositories/sales_analysis_repository.dart';
 import '../../features/sales_analysis/domain/usecases/sales_analysis_usecases.dart';
@@ -154,34 +155,71 @@ void ensureReportsDependencies() {
 
 /// Enregistre le module Analyse des ventes si absent.
 void ensureSalesAnalysisDependencies() {
-  if (sl.isRegistered<ListProductSalesAnalysis>()) return;
-
   if (!sl.isRegistered<SalesAnalysisLocalDatasource>()) {
     sl.registerLazySingleton(() => SalesAnalysisLocalDatasource(sl()));
   }
+  if (!sl.isRegistered<SalesAnalysisRemoteDatasource>()) {
+    sl.registerLazySingleton(() => SalesAnalysisRemoteDatasource(sl()));
+  }
   if (!sl.isRegistered<SalesAnalysisRepository>()) {
     sl.registerLazySingleton<SalesAnalysisRepository>(
-      () => SalesAnalysisRepositoryImpl(sl()),
+      () => SalesAnalysisRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+      ),
     );
   }
-  sl.registerLazySingleton(
-    () => ListProductSalesAnalysis(sl<SalesAnalysisRepository>()),
-  );
-  sl.registerLazySingleton(
-    () => GetProductSalesDetail(sl<SalesAnalysisRepository>()),
-  );
-  sl.registerLazySingleton(
-    () => ListEmployeePriceAnalysis(sl<SalesAnalysisRepository>()),
-  );
-  sl.registerLazySingleton(
-    () => ListCustomerSalesInsights(sl<SalesAnalysisRepository>()),
-  );
-  sl.registerLazySingleton(
-    () => GetCustomerPriceHabits(sl<SalesAnalysisRepository>()),
-  );
-  sl.registerLazySingleton(
-    () => GetProductSoldPriceRange(sl<SalesAnalysisRepository>()),
-  );
+  if (!sl.isRegistered<ListProductSalesAnalysis>()) {
+    sl.registerLazySingleton(
+      () => ListProductSalesAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<GetProductSalesDetail>()) {
+    sl.registerLazySingleton(
+      () => GetProductSalesDetail(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<ListEmployeePriceAnalysis>()) {
+    sl.registerLazySingleton(
+      () => ListEmployeePriceAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<ListCustomerSalesInsights>()) {
+    sl.registerLazySingleton(
+      () => ListCustomerSalesInsights(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<GetCustomerPriceHabits>()) {
+    sl.registerLazySingleton(
+      () => GetCustomerPriceHabits(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<GetProductSoldPriceRange>()) {
+    sl.registerLazySingleton(
+      () => GetProductSoldPriceRange(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<ListCategorySalesAnalysis>()) {
+    sl.registerLazySingleton(
+      () => ListCategorySalesAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<GetMarginAnalysis>()) {
+    sl.registerLazySingleton(
+      () => GetMarginAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<ListPriceDeviationAnalysis>()) {
+    sl.registerLazySingleton(
+      () => ListPriceDeviationAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<GetSalesTrendAnalysis>()) {
+    sl.registerLazySingleton(
+      () => GetSalesTrendAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
 }
 
 /// Enregistre le module Notifications si absent (hot reload après ajout DI).

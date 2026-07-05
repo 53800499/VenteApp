@@ -32,4 +32,24 @@ abstract class SalesAnalysisRepository {
     required int shopId,
     required int productId,
   });
+
+  Future<List<CategorySalesSummary>> listCategorySummaries({
+    required int shopId,
+    required SalesAnalysisQuery query,
+  });
+
+  Future<MarginSummary> loadMarginSummary({
+    required int shopId,
+    required SalesAnalysisQuery query,
+  });
+
+  Future<List<PriceDeviationLine>> listPriceDeviations({
+    required int shopId,
+    required SalesAnalysisQuery query,
+  });
+
+  Future<SalesTrendSummary> loadSalesTrends({
+    required int shopId,
+    required SalesAnalysisQuery query,
+  });
 }

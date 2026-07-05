@@ -91,3 +91,55 @@ class GetProductSoldPriceRange {
     );
   }
 }
+
+class ListCategorySalesAnalysis {
+  const ListCategorySalesAnalysis(this._repository);
+
+  final SalesAnalysisRepository _repository;
+
+  Future<List<CategorySalesSummary>> call({
+    required int shopId,
+    SalesAnalysisQuery query = const SalesAnalysisQuery(),
+  }) {
+    return _repository.listCategorySummaries(shopId: shopId, query: query);
+  }
+}
+
+class GetMarginAnalysis {
+  const GetMarginAnalysis(this._repository);
+
+  final SalesAnalysisRepository _repository;
+
+  Future<MarginSummary> call({
+    required int shopId,
+    SalesAnalysisQuery query = const SalesAnalysisQuery(),
+  }) {
+    return _repository.loadMarginSummary(shopId: shopId, query: query);
+  }
+}
+
+class ListPriceDeviationAnalysis {
+  const ListPriceDeviationAnalysis(this._repository);
+
+  final SalesAnalysisRepository _repository;
+
+  Future<List<PriceDeviationLine>> call({
+    required int shopId,
+    SalesAnalysisQuery query = const SalesAnalysisQuery(),
+  }) {
+    return _repository.listPriceDeviations(shopId: shopId, query: query);
+  }
+}
+
+class GetSalesTrendAnalysis {
+  const GetSalesTrendAnalysis(this._repository);
+
+  final SalesAnalysisRepository _repository;
+
+  Future<SalesTrendSummary> call({
+    required int shopId,
+    SalesAnalysisQuery query = const SalesAnalysisQuery(),
+  }) {
+    return _repository.loadSalesTrends(shopId: shopId, query: query);
+  }
+}
