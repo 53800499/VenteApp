@@ -18,6 +18,7 @@ import '../../data/datasources/local/customer_product_price_local_datasource.dar
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/entities/sale_pricing_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
+import '../../../cash_sessions/domain/usecases/cash_session_usecases.dart';
 
 part 'new_sale_event.dart';
 part 'new_sale_state.dart';
@@ -33,6 +34,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     required CustomerProductPriceLocalDatasource customerPrices,
     ConvertQuickSaleToStandard? convertQuickSale,
     QuickSaleConversion? conversion,
+    FindOpenCashSession? findOpenCashSession,
   })  : _listProducts = listProducts,
         _listCustomers = listCustomers,
         _createStandardSale = createStandardSale,
@@ -41,6 +43,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         _customerPrices = customerPrices,
         _convertQuickSale = convertQuickSale,
         _conversion = conversion,
+        _findOpenCashSession = findOpenCashSession,
         _session = session,
         super(const NewSaleState()) {
     on<NewSaleLoadRequested>(_onLoad);
@@ -66,6 +69,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   final CustomerProductPriceLocalDatasource _customerPrices;
   final ConvertQuickSaleToStandard? _convertQuickSale;
   final QuickSaleConversion? _conversion;
+  final FindOpenCashSession? _findOpenCashSession;
   final AuthSession _session;
 
   AuthSession get session => _session;
@@ -86,6 +90,12 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         customers = await _listCustomers(session: _session);
       } on Object {
         // Clients optionnels pour une vente espèces.
+      }
+
+      var cashSessionOpen = true;
+      if (_findOpenCashSession != null) {
+        final open = await _findOpenCashSession(session: _session);
+        cashSessionOpen = open != null;
       }
 
       emit(
@@ -117,6 +127,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
             _session.user.permissions,
             Permission.salesPriceOverride,
           ),
+          cashSessionOpen: cashSessionOpen,
         ),
       );
     } on Failure catch (error) {
@@ -478,6 +489,10 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     emit(state.copyWith(status: NewSaleStatus.submitting, clearError: true));
 
     try {
+      if (!state.cashSessionOpen) {
+        throw const CashSessionRequiredFailure();
+      }
+
       final conversion = _conversion;
       if (conversion != null) {
         if (_convertQuickSale == null) {

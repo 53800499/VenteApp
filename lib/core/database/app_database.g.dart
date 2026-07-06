@@ -14622,6 +14622,2439 @@ class CategoryBudgetsCompanion extends UpdateCompanion<CategoryBudget> {
   }
 }
 
+class $CashSessionsTable extends CashSessions
+    with TableInfo<$CashSessionsTable, CashSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CashSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _openedByMeta = const VerificationMeta(
+    'openedBy',
+  );
+  @override
+  late final GeneratedColumn<int> openedBy = GeneratedColumn<int>(
+    'opened_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _closedByMeta = const VerificationMeta(
+    'closedBy',
+  );
+  @override
+  late final GeneratedColumn<int> closedBy = GeneratedColumn<int>(
+    'closed_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _openedAtMeta = const VerificationMeta(
+    'openedAt',
+  );
+  @override
+  late final GeneratedColumn<int> openedAt = GeneratedColumn<int>(
+    'opened_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<int> closedAt = GeneratedColumn<int>(
+    'closed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _openingCashMeta = const VerificationMeta(
+    'openingCash',
+  );
+  @override
+  late final GeneratedColumn<int> openingCash = GeneratedColumn<int>(
+    'opening_cash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _openingMomoMeta = const VerificationMeta(
+    'openingMomo',
+  );
+  @override
+  late final GeneratedColumn<int> openingMomo = GeneratedColumn<int>(
+    'opening_momo',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _salesCashMeta = const VerificationMeta(
+    'salesCash',
+  );
+  @override
+  late final GeneratedColumn<int> salesCash = GeneratedColumn<int>(
+    'sales_cash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _salesMomoMeta = const VerificationMeta(
+    'salesMomo',
+  );
+  @override
+  late final GeneratedColumn<int> salesMomo = GeneratedColumn<int>(
+    'sales_momo',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _expensesCashMeta = const VerificationMeta(
+    'expensesCash',
+  );
+  @override
+  late final GeneratedColumn<int> expensesCash = GeneratedColumn<int>(
+    'expenses_cash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _expensesMomoMeta = const VerificationMeta(
+    'expensesMomo',
+  );
+  @override
+  late final GeneratedColumn<int> expensesMomo = GeneratedColumn<int>(
+    'expenses_momo',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _depositsCashMeta = const VerificationMeta(
+    'depositsCash',
+  );
+  @override
+  late final GeneratedColumn<int> depositsCash = GeneratedColumn<int>(
+    'deposits_cash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _depositsMomoMeta = const VerificationMeta(
+    'depositsMomo',
+  );
+  @override
+  late final GeneratedColumn<int> depositsMomo = GeneratedColumn<int>(
+    'deposits_momo',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _withdrawalsCashMeta = const VerificationMeta(
+    'withdrawalsCash',
+  );
+  @override
+  late final GeneratedColumn<int> withdrawalsCash = GeneratedColumn<int>(
+    'withdrawals_cash',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _withdrawalsMomoMeta = const VerificationMeta(
+    'withdrawalsMomo',
+  );
+  @override
+  late final GeneratedColumn<int> withdrawalsMomo = GeneratedColumn<int>(
+    'withdrawals_momo',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _expectedCashMeta = const VerificationMeta(
+    'expectedCash',
+  );
+  @override
+  late final GeneratedColumn<int> expectedCash = GeneratedColumn<int>(
+    'expected_cash',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _expectedMomoMeta = const VerificationMeta(
+    'expectedMomo',
+  );
+  @override
+  late final GeneratedColumn<int> expectedMomo = GeneratedColumn<int>(
+    'expected_momo',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _countedCashMeta = const VerificationMeta(
+    'countedCash',
+  );
+  @override
+  late final GeneratedColumn<int> countedCash = GeneratedColumn<int>(
+    'counted_cash',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _countedMomoMeta = const VerificationMeta(
+    'countedMomo',
+  );
+  @override
+  late final GeneratedColumn<int> countedMomo = GeneratedColumn<int>(
+    'counted_momo',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _differenceCashMeta = const VerificationMeta(
+    'differenceCash',
+  );
+  @override
+  late final GeneratedColumn<int> differenceCash = GeneratedColumn<int>(
+    'difference_cash',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _differenceMomoMeta = const VerificationMeta(
+    'differenceMomo',
+  );
+  @override
+  late final GeneratedColumn<int> differenceMomo = GeneratedColumn<int>(
+    'difference_momo',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _saleCountMeta = const VerificationMeta(
+    'saleCount',
+  );
+  @override
+  late final GeneratedColumn<int> saleCount = GeneratedColumn<int>(
+    'sale_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('open'),
+  );
+  static const VerificationMeta _closingNoteMeta = const VerificationMeta(
+    'closingNote',
+  );
+  @override
+  late final GeneratedColumn<String> closingNote = GeneratedColumn<String>(
+    'closing_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    openedBy,
+    closedBy,
+    openedAt,
+    closedAt,
+    openingCash,
+    openingMomo,
+    salesCash,
+    salesMomo,
+    expensesCash,
+    expensesMomo,
+    depositsCash,
+    depositsMomo,
+    withdrawalsCash,
+    withdrawalsMomo,
+    expectedCash,
+    expectedMomo,
+    countedCash,
+    countedMomo,
+    differenceCash,
+    differenceMomo,
+    saleCount,
+    status,
+    closingNote,
+    createdAt,
+    updatedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cash_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CashSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('opened_by')) {
+      context.handle(
+        _openedByMeta,
+        openedBy.isAcceptableOrUnknown(data['opened_by']!, _openedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_openedByMeta);
+    }
+    if (data.containsKey('closed_by')) {
+      context.handle(
+        _closedByMeta,
+        closedBy.isAcceptableOrUnknown(data['closed_by']!, _closedByMeta),
+      );
+    }
+    if (data.containsKey('opened_at')) {
+      context.handle(
+        _openedAtMeta,
+        openedAt.isAcceptableOrUnknown(data['opened_at']!, _openedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_openedAtMeta);
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    if (data.containsKey('opening_cash')) {
+      context.handle(
+        _openingCashMeta,
+        openingCash.isAcceptableOrUnknown(
+          data['opening_cash']!,
+          _openingCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('opening_momo')) {
+      context.handle(
+        _openingMomoMeta,
+        openingMomo.isAcceptableOrUnknown(
+          data['opening_momo']!,
+          _openingMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sales_cash')) {
+      context.handle(
+        _salesCashMeta,
+        salesCash.isAcceptableOrUnknown(data['sales_cash']!, _salesCashMeta),
+      );
+    }
+    if (data.containsKey('sales_momo')) {
+      context.handle(
+        _salesMomoMeta,
+        salesMomo.isAcceptableOrUnknown(data['sales_momo']!, _salesMomoMeta),
+      );
+    }
+    if (data.containsKey('expenses_cash')) {
+      context.handle(
+        _expensesCashMeta,
+        expensesCash.isAcceptableOrUnknown(
+          data['expenses_cash']!,
+          _expensesCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expenses_momo')) {
+      context.handle(
+        _expensesMomoMeta,
+        expensesMomo.isAcceptableOrUnknown(
+          data['expenses_momo']!,
+          _expensesMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('deposits_cash')) {
+      context.handle(
+        _depositsCashMeta,
+        depositsCash.isAcceptableOrUnknown(
+          data['deposits_cash']!,
+          _depositsCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('deposits_momo')) {
+      context.handle(
+        _depositsMomoMeta,
+        depositsMomo.isAcceptableOrUnknown(
+          data['deposits_momo']!,
+          _depositsMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('withdrawals_cash')) {
+      context.handle(
+        _withdrawalsCashMeta,
+        withdrawalsCash.isAcceptableOrUnknown(
+          data['withdrawals_cash']!,
+          _withdrawalsCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('withdrawals_momo')) {
+      context.handle(
+        _withdrawalsMomoMeta,
+        withdrawalsMomo.isAcceptableOrUnknown(
+          data['withdrawals_momo']!,
+          _withdrawalsMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expected_cash')) {
+      context.handle(
+        _expectedCashMeta,
+        expectedCash.isAcceptableOrUnknown(
+          data['expected_cash']!,
+          _expectedCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expected_momo')) {
+      context.handle(
+        _expectedMomoMeta,
+        expectedMomo.isAcceptableOrUnknown(
+          data['expected_momo']!,
+          _expectedMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('counted_cash')) {
+      context.handle(
+        _countedCashMeta,
+        countedCash.isAcceptableOrUnknown(
+          data['counted_cash']!,
+          _countedCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('counted_momo')) {
+      context.handle(
+        _countedMomoMeta,
+        countedMomo.isAcceptableOrUnknown(
+          data['counted_momo']!,
+          _countedMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('difference_cash')) {
+      context.handle(
+        _differenceCashMeta,
+        differenceCash.isAcceptableOrUnknown(
+          data['difference_cash']!,
+          _differenceCashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('difference_momo')) {
+      context.handle(
+        _differenceMomoMeta,
+        differenceMomo.isAcceptableOrUnknown(
+          data['difference_momo']!,
+          _differenceMomoMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sale_count')) {
+      context.handle(
+        _saleCountMeta,
+        saleCount.isAcceptableOrUnknown(data['sale_count']!, _saleCountMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('closing_note')) {
+      context.handle(
+        _closingNoteMeta,
+        closingNote.isAcceptableOrUnknown(
+          data['closing_note']!,
+          _closingNoteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CashSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CashSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      openedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opened_by'],
+      )!,
+      closedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_by'],
+      ),
+      openedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opened_at'],
+      )!,
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_at'],
+      ),
+      openingCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opening_cash'],
+      )!,
+      openingMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opening_momo'],
+      )!,
+      salesCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sales_cash'],
+      )!,
+      salesMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sales_momo'],
+      )!,
+      expensesCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expenses_cash'],
+      )!,
+      expensesMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expenses_momo'],
+      )!,
+      depositsCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deposits_cash'],
+      )!,
+      depositsMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deposits_momo'],
+      )!,
+      withdrawalsCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}withdrawals_cash'],
+      )!,
+      withdrawalsMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}withdrawals_momo'],
+      )!,
+      expectedCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expected_cash'],
+      ),
+      expectedMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expected_momo'],
+      ),
+      countedCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}counted_cash'],
+      ),
+      countedMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}counted_momo'],
+      ),
+      differenceCash: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}difference_cash'],
+      ),
+      differenceMomo: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}difference_momo'],
+      ),
+      saleCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sale_count'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      closingNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}closing_note'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $CashSessionsTable createAlias(String alias) {
+    return $CashSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class CashSession extends DataClass implements Insertable<CashSession> {
+  final int id;
+  final int shopId;
+  final int openedBy;
+  final int? closedBy;
+  final int openedAt;
+  final int? closedAt;
+  final int openingCash;
+  final int openingMomo;
+  final int salesCash;
+  final int salesMomo;
+  final int expensesCash;
+  final int expensesMomo;
+  final int depositsCash;
+  final int depositsMomo;
+  final int withdrawalsCash;
+  final int withdrawalsMomo;
+  final int? expectedCash;
+  final int? expectedMomo;
+  final int? countedCash;
+  final int? countedMomo;
+  final int? differenceCash;
+  final int? differenceMomo;
+  final int saleCount;
+  final String status;
+  final String? closingNote;
+  final int createdAt;
+  final int updatedAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const CashSession({
+    required this.id,
+    required this.shopId,
+    required this.openedBy,
+    this.closedBy,
+    required this.openedAt,
+    this.closedAt,
+    required this.openingCash,
+    required this.openingMomo,
+    required this.salesCash,
+    required this.salesMomo,
+    required this.expensesCash,
+    required this.expensesMomo,
+    required this.depositsCash,
+    required this.depositsMomo,
+    required this.withdrawalsCash,
+    required this.withdrawalsMomo,
+    this.expectedCash,
+    this.expectedMomo,
+    this.countedCash,
+    this.countedMomo,
+    this.differenceCash,
+    this.differenceMomo,
+    required this.saleCount,
+    required this.status,
+    this.closingNote,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['opened_by'] = Variable<int>(openedBy);
+    if (!nullToAbsent || closedBy != null) {
+      map['closed_by'] = Variable<int>(closedBy);
+    }
+    map['opened_at'] = Variable<int>(openedAt);
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<int>(closedAt);
+    }
+    map['opening_cash'] = Variable<int>(openingCash);
+    map['opening_momo'] = Variable<int>(openingMomo);
+    map['sales_cash'] = Variable<int>(salesCash);
+    map['sales_momo'] = Variable<int>(salesMomo);
+    map['expenses_cash'] = Variable<int>(expensesCash);
+    map['expenses_momo'] = Variable<int>(expensesMomo);
+    map['deposits_cash'] = Variable<int>(depositsCash);
+    map['deposits_momo'] = Variable<int>(depositsMomo);
+    map['withdrawals_cash'] = Variable<int>(withdrawalsCash);
+    map['withdrawals_momo'] = Variable<int>(withdrawalsMomo);
+    if (!nullToAbsent || expectedCash != null) {
+      map['expected_cash'] = Variable<int>(expectedCash);
+    }
+    if (!nullToAbsent || expectedMomo != null) {
+      map['expected_momo'] = Variable<int>(expectedMomo);
+    }
+    if (!nullToAbsent || countedCash != null) {
+      map['counted_cash'] = Variable<int>(countedCash);
+    }
+    if (!nullToAbsent || countedMomo != null) {
+      map['counted_momo'] = Variable<int>(countedMomo);
+    }
+    if (!nullToAbsent || differenceCash != null) {
+      map['difference_cash'] = Variable<int>(differenceCash);
+    }
+    if (!nullToAbsent || differenceMomo != null) {
+      map['difference_momo'] = Variable<int>(differenceMomo);
+    }
+    map['sale_count'] = Variable<int>(saleCount);
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || closingNote != null) {
+      map['closing_note'] = Variable<String>(closingNote);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  CashSessionsCompanion toCompanion(bool nullToAbsent) {
+    return CashSessionsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      openedBy: Value(openedBy),
+      closedBy: closedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedBy),
+      openedAt: Value(openedAt),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      openingCash: Value(openingCash),
+      openingMomo: Value(openingMomo),
+      salesCash: Value(salesCash),
+      salesMomo: Value(salesMomo),
+      expensesCash: Value(expensesCash),
+      expensesMomo: Value(expensesMomo),
+      depositsCash: Value(depositsCash),
+      depositsMomo: Value(depositsMomo),
+      withdrawalsCash: Value(withdrawalsCash),
+      withdrawalsMomo: Value(withdrawalsMomo),
+      expectedCash: expectedCash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedCash),
+      expectedMomo: expectedMomo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedMomo),
+      countedCash: countedCash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(countedCash),
+      countedMomo: countedMomo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(countedMomo),
+      differenceCash: differenceCash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(differenceCash),
+      differenceMomo: differenceMomo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(differenceMomo),
+      saleCount: Value(saleCount),
+      status: Value(status),
+      closingNote: closingNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closingNote),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory CashSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CashSession(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      openedBy: serializer.fromJson<int>(json['openedBy']),
+      closedBy: serializer.fromJson<int?>(json['closedBy']),
+      openedAt: serializer.fromJson<int>(json['openedAt']),
+      closedAt: serializer.fromJson<int?>(json['closedAt']),
+      openingCash: serializer.fromJson<int>(json['openingCash']),
+      openingMomo: serializer.fromJson<int>(json['openingMomo']),
+      salesCash: serializer.fromJson<int>(json['salesCash']),
+      salesMomo: serializer.fromJson<int>(json['salesMomo']),
+      expensesCash: serializer.fromJson<int>(json['expensesCash']),
+      expensesMomo: serializer.fromJson<int>(json['expensesMomo']),
+      depositsCash: serializer.fromJson<int>(json['depositsCash']),
+      depositsMomo: serializer.fromJson<int>(json['depositsMomo']),
+      withdrawalsCash: serializer.fromJson<int>(json['withdrawalsCash']),
+      withdrawalsMomo: serializer.fromJson<int>(json['withdrawalsMomo']),
+      expectedCash: serializer.fromJson<int?>(json['expectedCash']),
+      expectedMomo: serializer.fromJson<int?>(json['expectedMomo']),
+      countedCash: serializer.fromJson<int?>(json['countedCash']),
+      countedMomo: serializer.fromJson<int?>(json['countedMomo']),
+      differenceCash: serializer.fromJson<int?>(json['differenceCash']),
+      differenceMomo: serializer.fromJson<int?>(json['differenceMomo']),
+      saleCount: serializer.fromJson<int>(json['saleCount']),
+      status: serializer.fromJson<String>(json['status']),
+      closingNote: serializer.fromJson<String?>(json['closingNote']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'openedBy': serializer.toJson<int>(openedBy),
+      'closedBy': serializer.toJson<int?>(closedBy),
+      'openedAt': serializer.toJson<int>(openedAt),
+      'closedAt': serializer.toJson<int?>(closedAt),
+      'openingCash': serializer.toJson<int>(openingCash),
+      'openingMomo': serializer.toJson<int>(openingMomo),
+      'salesCash': serializer.toJson<int>(salesCash),
+      'salesMomo': serializer.toJson<int>(salesMomo),
+      'expensesCash': serializer.toJson<int>(expensesCash),
+      'expensesMomo': serializer.toJson<int>(expensesMomo),
+      'depositsCash': serializer.toJson<int>(depositsCash),
+      'depositsMomo': serializer.toJson<int>(depositsMomo),
+      'withdrawalsCash': serializer.toJson<int>(withdrawalsCash),
+      'withdrawalsMomo': serializer.toJson<int>(withdrawalsMomo),
+      'expectedCash': serializer.toJson<int?>(expectedCash),
+      'expectedMomo': serializer.toJson<int?>(expectedMomo),
+      'countedCash': serializer.toJson<int?>(countedCash),
+      'countedMomo': serializer.toJson<int?>(countedMomo),
+      'differenceCash': serializer.toJson<int?>(differenceCash),
+      'differenceMomo': serializer.toJson<int?>(differenceMomo),
+      'saleCount': serializer.toJson<int>(saleCount),
+      'status': serializer.toJson<String>(status),
+      'closingNote': serializer.toJson<String?>(closingNote),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  CashSession copyWith({
+    int? id,
+    int? shopId,
+    int? openedBy,
+    Value<int?> closedBy = const Value.absent(),
+    int? openedAt,
+    Value<int?> closedAt = const Value.absent(),
+    int? openingCash,
+    int? openingMomo,
+    int? salesCash,
+    int? salesMomo,
+    int? expensesCash,
+    int? expensesMomo,
+    int? depositsCash,
+    int? depositsMomo,
+    int? withdrawalsCash,
+    int? withdrawalsMomo,
+    Value<int?> expectedCash = const Value.absent(),
+    Value<int?> expectedMomo = const Value.absent(),
+    Value<int?> countedCash = const Value.absent(),
+    Value<int?> countedMomo = const Value.absent(),
+    Value<int?> differenceCash = const Value.absent(),
+    Value<int?> differenceMomo = const Value.absent(),
+    int? saleCount,
+    String? status,
+    Value<String?> closingNote = const Value.absent(),
+    int? createdAt,
+    int? updatedAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => CashSession(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    openedBy: openedBy ?? this.openedBy,
+    closedBy: closedBy.present ? closedBy.value : this.closedBy,
+    openedAt: openedAt ?? this.openedAt,
+    closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    openingCash: openingCash ?? this.openingCash,
+    openingMomo: openingMomo ?? this.openingMomo,
+    salesCash: salesCash ?? this.salesCash,
+    salesMomo: salesMomo ?? this.salesMomo,
+    expensesCash: expensesCash ?? this.expensesCash,
+    expensesMomo: expensesMomo ?? this.expensesMomo,
+    depositsCash: depositsCash ?? this.depositsCash,
+    depositsMomo: depositsMomo ?? this.depositsMomo,
+    withdrawalsCash: withdrawalsCash ?? this.withdrawalsCash,
+    withdrawalsMomo: withdrawalsMomo ?? this.withdrawalsMomo,
+    expectedCash: expectedCash.present ? expectedCash.value : this.expectedCash,
+    expectedMomo: expectedMomo.present ? expectedMomo.value : this.expectedMomo,
+    countedCash: countedCash.present ? countedCash.value : this.countedCash,
+    countedMomo: countedMomo.present ? countedMomo.value : this.countedMomo,
+    differenceCash: differenceCash.present
+        ? differenceCash.value
+        : this.differenceCash,
+    differenceMomo: differenceMomo.present
+        ? differenceMomo.value
+        : this.differenceMomo,
+    saleCount: saleCount ?? this.saleCount,
+    status: status ?? this.status,
+    closingNote: closingNote.present ? closingNote.value : this.closingNote,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  CashSession copyWithCompanion(CashSessionsCompanion data) {
+    return CashSession(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      openedBy: data.openedBy.present ? data.openedBy.value : this.openedBy,
+      closedBy: data.closedBy.present ? data.closedBy.value : this.closedBy,
+      openedAt: data.openedAt.present ? data.openedAt.value : this.openedAt,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      openingCash: data.openingCash.present
+          ? data.openingCash.value
+          : this.openingCash,
+      openingMomo: data.openingMomo.present
+          ? data.openingMomo.value
+          : this.openingMomo,
+      salesCash: data.salesCash.present ? data.salesCash.value : this.salesCash,
+      salesMomo: data.salesMomo.present ? data.salesMomo.value : this.salesMomo,
+      expensesCash: data.expensesCash.present
+          ? data.expensesCash.value
+          : this.expensesCash,
+      expensesMomo: data.expensesMomo.present
+          ? data.expensesMomo.value
+          : this.expensesMomo,
+      depositsCash: data.depositsCash.present
+          ? data.depositsCash.value
+          : this.depositsCash,
+      depositsMomo: data.depositsMomo.present
+          ? data.depositsMomo.value
+          : this.depositsMomo,
+      withdrawalsCash: data.withdrawalsCash.present
+          ? data.withdrawalsCash.value
+          : this.withdrawalsCash,
+      withdrawalsMomo: data.withdrawalsMomo.present
+          ? data.withdrawalsMomo.value
+          : this.withdrawalsMomo,
+      expectedCash: data.expectedCash.present
+          ? data.expectedCash.value
+          : this.expectedCash,
+      expectedMomo: data.expectedMomo.present
+          ? data.expectedMomo.value
+          : this.expectedMomo,
+      countedCash: data.countedCash.present
+          ? data.countedCash.value
+          : this.countedCash,
+      countedMomo: data.countedMomo.present
+          ? data.countedMomo.value
+          : this.countedMomo,
+      differenceCash: data.differenceCash.present
+          ? data.differenceCash.value
+          : this.differenceCash,
+      differenceMomo: data.differenceMomo.present
+          ? data.differenceMomo.value
+          : this.differenceMomo,
+      saleCount: data.saleCount.present ? data.saleCount.value : this.saleCount,
+      status: data.status.present ? data.status.value : this.status,
+      closingNote: data.closingNote.present
+          ? data.closingNote.value
+          : this.closingNote,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CashSession(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('openedBy: $openedBy, ')
+          ..write('closedBy: $closedBy, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('openingCash: $openingCash, ')
+          ..write('openingMomo: $openingMomo, ')
+          ..write('salesCash: $salesCash, ')
+          ..write('salesMomo: $salesMomo, ')
+          ..write('expensesCash: $expensesCash, ')
+          ..write('expensesMomo: $expensesMomo, ')
+          ..write('depositsCash: $depositsCash, ')
+          ..write('depositsMomo: $depositsMomo, ')
+          ..write('withdrawalsCash: $withdrawalsCash, ')
+          ..write('withdrawalsMomo: $withdrawalsMomo, ')
+          ..write('expectedCash: $expectedCash, ')
+          ..write('expectedMomo: $expectedMomo, ')
+          ..write('countedCash: $countedCash, ')
+          ..write('countedMomo: $countedMomo, ')
+          ..write('differenceCash: $differenceCash, ')
+          ..write('differenceMomo: $differenceMomo, ')
+          ..write('saleCount: $saleCount, ')
+          ..write('status: $status, ')
+          ..write('closingNote: $closingNote, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    shopId,
+    openedBy,
+    closedBy,
+    openedAt,
+    closedAt,
+    openingCash,
+    openingMomo,
+    salesCash,
+    salesMomo,
+    expensesCash,
+    expensesMomo,
+    depositsCash,
+    depositsMomo,
+    withdrawalsCash,
+    withdrawalsMomo,
+    expectedCash,
+    expectedMomo,
+    countedCash,
+    countedMomo,
+    differenceCash,
+    differenceMomo,
+    saleCount,
+    status,
+    closingNote,
+    createdAt,
+    updatedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CashSession &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.openedBy == this.openedBy &&
+          other.closedBy == this.closedBy &&
+          other.openedAt == this.openedAt &&
+          other.closedAt == this.closedAt &&
+          other.openingCash == this.openingCash &&
+          other.openingMomo == this.openingMomo &&
+          other.salesCash == this.salesCash &&
+          other.salesMomo == this.salesMomo &&
+          other.expensesCash == this.expensesCash &&
+          other.expensesMomo == this.expensesMomo &&
+          other.depositsCash == this.depositsCash &&
+          other.depositsMomo == this.depositsMomo &&
+          other.withdrawalsCash == this.withdrawalsCash &&
+          other.withdrawalsMomo == this.withdrawalsMomo &&
+          other.expectedCash == this.expectedCash &&
+          other.expectedMomo == this.expectedMomo &&
+          other.countedCash == this.countedCash &&
+          other.countedMomo == this.countedMomo &&
+          other.differenceCash == this.differenceCash &&
+          other.differenceMomo == this.differenceMomo &&
+          other.saleCount == this.saleCount &&
+          other.status == this.status &&
+          other.closingNote == this.closingNote &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class CashSessionsCompanion extends UpdateCompanion<CashSession> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> openedBy;
+  final Value<int?> closedBy;
+  final Value<int> openedAt;
+  final Value<int?> closedAt;
+  final Value<int> openingCash;
+  final Value<int> openingMomo;
+  final Value<int> salesCash;
+  final Value<int> salesMomo;
+  final Value<int> expensesCash;
+  final Value<int> expensesMomo;
+  final Value<int> depositsCash;
+  final Value<int> depositsMomo;
+  final Value<int> withdrawalsCash;
+  final Value<int> withdrawalsMomo;
+  final Value<int?> expectedCash;
+  final Value<int?> expectedMomo;
+  final Value<int?> countedCash;
+  final Value<int?> countedMomo;
+  final Value<int?> differenceCash;
+  final Value<int?> differenceMomo;
+  final Value<int> saleCount;
+  final Value<String> status;
+  final Value<String?> closingNote;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const CashSessionsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.openedBy = const Value.absent(),
+    this.closedBy = const Value.absent(),
+    this.openedAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.openingCash = const Value.absent(),
+    this.openingMomo = const Value.absent(),
+    this.salesCash = const Value.absent(),
+    this.salesMomo = const Value.absent(),
+    this.expensesCash = const Value.absent(),
+    this.expensesMomo = const Value.absent(),
+    this.depositsCash = const Value.absent(),
+    this.depositsMomo = const Value.absent(),
+    this.withdrawalsCash = const Value.absent(),
+    this.withdrawalsMomo = const Value.absent(),
+    this.expectedCash = const Value.absent(),
+    this.expectedMomo = const Value.absent(),
+    this.countedCash = const Value.absent(),
+    this.countedMomo = const Value.absent(),
+    this.differenceCash = const Value.absent(),
+    this.differenceMomo = const Value.absent(),
+    this.saleCount = const Value.absent(),
+    this.status = const Value.absent(),
+    this.closingNote = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  CashSessionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int openedBy,
+    this.closedBy = const Value.absent(),
+    required int openedAt,
+    this.closedAt = const Value.absent(),
+    this.openingCash = const Value.absent(),
+    this.openingMomo = const Value.absent(),
+    this.salesCash = const Value.absent(),
+    this.salesMomo = const Value.absent(),
+    this.expensesCash = const Value.absent(),
+    this.expensesMomo = const Value.absent(),
+    this.depositsCash = const Value.absent(),
+    this.depositsMomo = const Value.absent(),
+    this.withdrawalsCash = const Value.absent(),
+    this.withdrawalsMomo = const Value.absent(),
+    this.expectedCash = const Value.absent(),
+    this.expectedMomo = const Value.absent(),
+    this.countedCash = const Value.absent(),
+    this.countedMomo = const Value.absent(),
+    this.differenceCash = const Value.absent(),
+    this.differenceMomo = const Value.absent(),
+    this.saleCount = const Value.absent(),
+    this.status = const Value.absent(),
+    this.closingNote = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       openedBy = Value(openedBy),
+       openedAt = Value(openedAt),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<CashSession> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? openedBy,
+    Expression<int>? closedBy,
+    Expression<int>? openedAt,
+    Expression<int>? closedAt,
+    Expression<int>? openingCash,
+    Expression<int>? openingMomo,
+    Expression<int>? salesCash,
+    Expression<int>? salesMomo,
+    Expression<int>? expensesCash,
+    Expression<int>? expensesMomo,
+    Expression<int>? depositsCash,
+    Expression<int>? depositsMomo,
+    Expression<int>? withdrawalsCash,
+    Expression<int>? withdrawalsMomo,
+    Expression<int>? expectedCash,
+    Expression<int>? expectedMomo,
+    Expression<int>? countedCash,
+    Expression<int>? countedMomo,
+    Expression<int>? differenceCash,
+    Expression<int>? differenceMomo,
+    Expression<int>? saleCount,
+    Expression<String>? status,
+    Expression<String>? closingNote,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (openedBy != null) 'opened_by': openedBy,
+      if (closedBy != null) 'closed_by': closedBy,
+      if (openedAt != null) 'opened_at': openedAt,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (openingCash != null) 'opening_cash': openingCash,
+      if (openingMomo != null) 'opening_momo': openingMomo,
+      if (salesCash != null) 'sales_cash': salesCash,
+      if (salesMomo != null) 'sales_momo': salesMomo,
+      if (expensesCash != null) 'expenses_cash': expensesCash,
+      if (expensesMomo != null) 'expenses_momo': expensesMomo,
+      if (depositsCash != null) 'deposits_cash': depositsCash,
+      if (depositsMomo != null) 'deposits_momo': depositsMomo,
+      if (withdrawalsCash != null) 'withdrawals_cash': withdrawalsCash,
+      if (withdrawalsMomo != null) 'withdrawals_momo': withdrawalsMomo,
+      if (expectedCash != null) 'expected_cash': expectedCash,
+      if (expectedMomo != null) 'expected_momo': expectedMomo,
+      if (countedCash != null) 'counted_cash': countedCash,
+      if (countedMomo != null) 'counted_momo': countedMomo,
+      if (differenceCash != null) 'difference_cash': differenceCash,
+      if (differenceMomo != null) 'difference_momo': differenceMomo,
+      if (saleCount != null) 'sale_count': saleCount,
+      if (status != null) 'status': status,
+      if (closingNote != null) 'closing_note': closingNote,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  CashSessionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? openedBy,
+    Value<int?>? closedBy,
+    Value<int>? openedAt,
+    Value<int?>? closedAt,
+    Value<int>? openingCash,
+    Value<int>? openingMomo,
+    Value<int>? salesCash,
+    Value<int>? salesMomo,
+    Value<int>? expensesCash,
+    Value<int>? expensesMomo,
+    Value<int>? depositsCash,
+    Value<int>? depositsMomo,
+    Value<int>? withdrawalsCash,
+    Value<int>? withdrawalsMomo,
+    Value<int?>? expectedCash,
+    Value<int?>? expectedMomo,
+    Value<int?>? countedCash,
+    Value<int?>? countedMomo,
+    Value<int?>? differenceCash,
+    Value<int?>? differenceMomo,
+    Value<int>? saleCount,
+    Value<String>? status,
+    Value<String?>? closingNote,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return CashSessionsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      openedBy: openedBy ?? this.openedBy,
+      closedBy: closedBy ?? this.closedBy,
+      openedAt: openedAt ?? this.openedAt,
+      closedAt: closedAt ?? this.closedAt,
+      openingCash: openingCash ?? this.openingCash,
+      openingMomo: openingMomo ?? this.openingMomo,
+      salesCash: salesCash ?? this.salesCash,
+      salesMomo: salesMomo ?? this.salesMomo,
+      expensesCash: expensesCash ?? this.expensesCash,
+      expensesMomo: expensesMomo ?? this.expensesMomo,
+      depositsCash: depositsCash ?? this.depositsCash,
+      depositsMomo: depositsMomo ?? this.depositsMomo,
+      withdrawalsCash: withdrawalsCash ?? this.withdrawalsCash,
+      withdrawalsMomo: withdrawalsMomo ?? this.withdrawalsMomo,
+      expectedCash: expectedCash ?? this.expectedCash,
+      expectedMomo: expectedMomo ?? this.expectedMomo,
+      countedCash: countedCash ?? this.countedCash,
+      countedMomo: countedMomo ?? this.countedMomo,
+      differenceCash: differenceCash ?? this.differenceCash,
+      differenceMomo: differenceMomo ?? this.differenceMomo,
+      saleCount: saleCount ?? this.saleCount,
+      status: status ?? this.status,
+      closingNote: closingNote ?? this.closingNote,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (openedBy.present) {
+      map['opened_by'] = Variable<int>(openedBy.value);
+    }
+    if (closedBy.present) {
+      map['closed_by'] = Variable<int>(closedBy.value);
+    }
+    if (openedAt.present) {
+      map['opened_at'] = Variable<int>(openedAt.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<int>(closedAt.value);
+    }
+    if (openingCash.present) {
+      map['opening_cash'] = Variable<int>(openingCash.value);
+    }
+    if (openingMomo.present) {
+      map['opening_momo'] = Variable<int>(openingMomo.value);
+    }
+    if (salesCash.present) {
+      map['sales_cash'] = Variable<int>(salesCash.value);
+    }
+    if (salesMomo.present) {
+      map['sales_momo'] = Variable<int>(salesMomo.value);
+    }
+    if (expensesCash.present) {
+      map['expenses_cash'] = Variable<int>(expensesCash.value);
+    }
+    if (expensesMomo.present) {
+      map['expenses_momo'] = Variable<int>(expensesMomo.value);
+    }
+    if (depositsCash.present) {
+      map['deposits_cash'] = Variable<int>(depositsCash.value);
+    }
+    if (depositsMomo.present) {
+      map['deposits_momo'] = Variable<int>(depositsMomo.value);
+    }
+    if (withdrawalsCash.present) {
+      map['withdrawals_cash'] = Variable<int>(withdrawalsCash.value);
+    }
+    if (withdrawalsMomo.present) {
+      map['withdrawals_momo'] = Variable<int>(withdrawalsMomo.value);
+    }
+    if (expectedCash.present) {
+      map['expected_cash'] = Variable<int>(expectedCash.value);
+    }
+    if (expectedMomo.present) {
+      map['expected_momo'] = Variable<int>(expectedMomo.value);
+    }
+    if (countedCash.present) {
+      map['counted_cash'] = Variable<int>(countedCash.value);
+    }
+    if (countedMomo.present) {
+      map['counted_momo'] = Variable<int>(countedMomo.value);
+    }
+    if (differenceCash.present) {
+      map['difference_cash'] = Variable<int>(differenceCash.value);
+    }
+    if (differenceMomo.present) {
+      map['difference_momo'] = Variable<int>(differenceMomo.value);
+    }
+    if (saleCount.present) {
+      map['sale_count'] = Variable<int>(saleCount.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (closingNote.present) {
+      map['closing_note'] = Variable<String>(closingNote.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CashSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('openedBy: $openedBy, ')
+          ..write('closedBy: $closedBy, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('openingCash: $openingCash, ')
+          ..write('openingMomo: $openingMomo, ')
+          ..write('salesCash: $salesCash, ')
+          ..write('salesMomo: $salesMomo, ')
+          ..write('expensesCash: $expensesCash, ')
+          ..write('expensesMomo: $expensesMomo, ')
+          ..write('depositsCash: $depositsCash, ')
+          ..write('depositsMomo: $depositsMomo, ')
+          ..write('withdrawalsCash: $withdrawalsCash, ')
+          ..write('withdrawalsMomo: $withdrawalsMomo, ')
+          ..write('expectedCash: $expectedCash, ')
+          ..write('expectedMomo: $expectedMomo, ')
+          ..write('countedCash: $countedCash, ')
+          ..write('countedMomo: $countedMomo, ')
+          ..write('differenceCash: $differenceCash, ')
+          ..write('differenceMomo: $differenceMomo, ')
+          ..write('saleCount: $saleCount, ')
+          ..write('status: $status, ')
+          ..write('closingNote: $closingNote, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CashMovementsTable extends CashMovements
+    with TableInfo<$CashMovementsTable, CashMovement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CashMovementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<int> sessionId = GeneratedColumn<int>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cash_sessions (id)',
+    ),
+  );
+  static const VerificationMeta _movementTypeMeta = const VerificationMeta(
+    'movementType',
+  );
+  @override
+  late final GeneratedColumn<String> movementType = GeneratedColumn<String>(
+    'movement_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _registerTypeMeta = const VerificationMeta(
+    'registerType',
+  );
+  @override
+  late final GeneratedColumn<String> registerType = GeneratedColumn<String>(
+    'register_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('cash'),
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<int> amount = GeneratedColumn<int>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    sessionId,
+    movementType,
+    registerType,
+    amount,
+    note,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cash_movements';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CashMovement> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('movement_type')) {
+      context.handle(
+        _movementTypeMeta,
+        movementType.isAcceptableOrUnknown(
+          data['movement_type']!,
+          _movementTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_movementTypeMeta);
+    }
+    if (data.containsKey('register_type')) {
+      context.handle(
+        _registerTypeMeta,
+        registerType.isAcceptableOrUnknown(
+          data['register_type']!,
+          _registerTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CashMovement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CashMovement(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_id'],
+      )!,
+      movementType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}movement_type'],
+      )!,
+      registerType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}register_type'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $CashMovementsTable createAlias(String alias) {
+    return $CashMovementsTable(attachedDatabase, alias);
+  }
+}
+
+class CashMovement extends DataClass implements Insertable<CashMovement> {
+  final int id;
+  final int shopId;
+  final int sessionId;
+  final String movementType;
+  final String registerType;
+  final int amount;
+  final String? note;
+  final int createdBy;
+  final int createdAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const CashMovement({
+    required this.id,
+    required this.shopId,
+    required this.sessionId,
+    required this.movementType,
+    required this.registerType,
+    required this.amount,
+    this.note,
+    required this.createdBy,
+    required this.createdAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['session_id'] = Variable<int>(sessionId);
+    map['movement_type'] = Variable<String>(movementType);
+    map['register_type'] = Variable<String>(registerType);
+    map['amount'] = Variable<int>(amount);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_by'] = Variable<int>(createdBy);
+    map['created_at'] = Variable<int>(createdAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  CashMovementsCompanion toCompanion(bool nullToAbsent) {
+    return CashMovementsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      sessionId: Value(sessionId),
+      movementType: Value(movementType),
+      registerType: Value(registerType),
+      amount: Value(amount),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdBy: Value(createdBy),
+      createdAt: Value(createdAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory CashMovement.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CashMovement(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      sessionId: serializer.fromJson<int>(json['sessionId']),
+      movementType: serializer.fromJson<String>(json['movementType']),
+      registerType: serializer.fromJson<String>(json['registerType']),
+      amount: serializer.fromJson<int>(json['amount']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdBy: serializer.fromJson<int>(json['createdBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'sessionId': serializer.toJson<int>(sessionId),
+      'movementType': serializer.toJson<String>(movementType),
+      'registerType': serializer.toJson<String>(registerType),
+      'amount': serializer.toJson<int>(amount),
+      'note': serializer.toJson<String?>(note),
+      'createdBy': serializer.toJson<int>(createdBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  CashMovement copyWith({
+    int? id,
+    int? shopId,
+    int? sessionId,
+    String? movementType,
+    String? registerType,
+    int? amount,
+    Value<String?> note = const Value.absent(),
+    int? createdBy,
+    int? createdAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => CashMovement(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    sessionId: sessionId ?? this.sessionId,
+    movementType: movementType ?? this.movementType,
+    registerType: registerType ?? this.registerType,
+    amount: amount ?? this.amount,
+    note: note.present ? note.value : this.note,
+    createdBy: createdBy ?? this.createdBy,
+    createdAt: createdAt ?? this.createdAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  CashMovement copyWithCompanion(CashMovementsCompanion data) {
+    return CashMovement(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      movementType: data.movementType.present
+          ? data.movementType.value
+          : this.movementType,
+      registerType: data.registerType.present
+          ? data.registerType.value
+          : this.registerType,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      note: data.note.present ? data.note.value : this.note,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CashMovement(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('movementType: $movementType, ')
+          ..write('registerType: $registerType, ')
+          ..write('amount: $amount, ')
+          ..write('note: $note, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    sessionId,
+    movementType,
+    registerType,
+    amount,
+    note,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CashMovement &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.sessionId == this.sessionId &&
+          other.movementType == this.movementType &&
+          other.registerType == this.registerType &&
+          other.amount == this.amount &&
+          other.note == this.note &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class CashMovementsCompanion extends UpdateCompanion<CashMovement> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> sessionId;
+  final Value<String> movementType;
+  final Value<String> registerType;
+  final Value<int> amount;
+  final Value<String?> note;
+  final Value<int> createdBy;
+  final Value<int> createdAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const CashMovementsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.movementType = const Value.absent(),
+    this.registerType = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  CashMovementsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int sessionId,
+    required String movementType,
+    this.registerType = const Value.absent(),
+    required int amount,
+    this.note = const Value.absent(),
+    required int createdBy,
+    required int createdAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       sessionId = Value(sessionId),
+       movementType = Value(movementType),
+       amount = Value(amount),
+       createdBy = Value(createdBy),
+       createdAt = Value(createdAt);
+  static Insertable<CashMovement> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? sessionId,
+    Expression<String>? movementType,
+    Expression<String>? registerType,
+    Expression<int>? amount,
+    Expression<String>? note,
+    Expression<int>? createdBy,
+    Expression<int>? createdAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (movementType != null) 'movement_type': movementType,
+      if (registerType != null) 'register_type': registerType,
+      if (amount != null) 'amount': amount,
+      if (note != null) 'note': note,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  CashMovementsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? sessionId,
+    Value<String>? movementType,
+    Value<String>? registerType,
+    Value<int>? amount,
+    Value<String?>? note,
+    Value<int>? createdBy,
+    Value<int>? createdAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return CashMovementsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      sessionId: sessionId ?? this.sessionId,
+      movementType: movementType ?? this.movementType,
+      registerType: registerType ?? this.registerType,
+      amount: amount ?? this.amount,
+      note: note ?? this.note,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<int>(sessionId.value);
+    }
+    if (movementType.present) {
+      map['movement_type'] = Variable<String>(movementType.value);
+    }
+    if (registerType.present) {
+      map['register_type'] = Variable<String>(registerType.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<int>(amount.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CashMovementsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('movementType: $movementType, ')
+          ..write('registerType: $registerType, ')
+          ..write('amount: $amount, ')
+          ..write('note: $note, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -14652,6 +17085,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CategoryBudgetsTable categoryBudgets = $CategoryBudgetsTable(
     this,
   );
+  late final $CashSessionsTable cashSessions = $CashSessionsTable(this);
+  late final $CashMovementsTable cashMovements = $CashMovementsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -14677,6 +17112,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     expenseAttachments,
     expenseHistoryEntries,
     categoryBudgets,
+    cashSessions,
+    cashMovements,
   ];
 }
 
@@ -15098,6 +17535,42 @@ final class $$ShopsTableReferences
     final cache = $_typedResult.readTableOrNull(
       _categoryBudgetsRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CashSessionsTable, List<CashSession>>
+  _cashSessionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cashSessions,
+    aliasName: $_aliasNameGenerator(db.shops.id, db.cashSessions.shopId),
+  );
+
+  $$CashSessionsTableProcessedTableManager get cashSessionsRefs {
+    final manager = $$CashSessionsTableTableManager(
+      $_db,
+      $_db.cashSessions,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cashSessionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CashMovementsTable, List<CashMovement>>
+  _cashMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cashMovements,
+    aliasName: $_aliasNameGenerator(db.shops.id, db.cashMovements.shopId),
+  );
+
+  $$CashMovementsTableProcessedTableManager get cashMovementsRefs {
+    final manager = $$CashMovementsTableTableManager(
+      $_db,
+      $_db.cashMovements,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cashMovementsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -15631,6 +18104,56 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
           }) => $$CategoryBudgetsTableFilterComposer(
             $db: $db,
             $table: $db.categoryBudgets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cashSessionsRefs(
+    Expression<bool> Function($$CashSessionsTableFilterComposer f) f,
+  ) {
+    final $$CashSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashSessions,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.cashSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cashMovementsRefs(
+    Expression<bool> Function($$CashMovementsTableFilterComposer f) f,
+  ) {
+    final $$CashMovementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashMovements,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashMovementsTableFilterComposer(
+            $db: $db,
+            $table: $db.cashMovements,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -16222,6 +18745,56 @@ class $$ShopsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> cashSessionsRefs<T extends Object>(
+    Expression<T> Function($$CashSessionsTableAnnotationComposer a) f,
+  ) {
+    final $$CashSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashSessions,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cashSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> cashMovementsRefs<T extends Object>(
+    Expression<T> Function($$CashMovementsTableAnnotationComposer a) f,
+  ) {
+    final $$CashMovementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashMovements,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashMovementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShopsTableTableManager
@@ -16257,6 +18830,8 @@ class $$ShopsTableTableManager
             bool expenseAttachmentsRefs,
             bool expenseHistoryEntriesRefs,
             bool categoryBudgetsRefs,
+            bool cashSessionsRefs,
+            bool cashMovementsRefs,
           })
         > {
   $$ShopsTableTableManager(_$AppDatabase db, $ShopsTable table)
@@ -16345,6 +18920,8 @@ class $$ShopsTableTableManager
                 expenseAttachmentsRefs = false,
                 expenseHistoryEntriesRefs = false,
                 categoryBudgetsRefs = false,
+                cashSessionsRefs = false,
+                cashMovementsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -16368,6 +18945,8 @@ class $$ShopsTableTableManager
                     if (expenseAttachmentsRefs) db.expenseAttachments,
                     if (expenseHistoryEntriesRefs) db.expenseHistoryEntries,
                     if (categoryBudgetsRefs) db.categoryBudgets,
+                    if (cashSessionsRefs) db.cashSessions,
+                    if (cashMovementsRefs) db.cashMovements,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -16719,6 +19298,48 @@ class $$ShopsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cashSessionsRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          CashSession
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._cashSessionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cashSessionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (cashMovementsRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          CashMovement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._cashMovementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cashMovementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -16759,6 +19380,8 @@ typedef $$ShopsTableProcessedTableManager =
         bool expenseAttachmentsRefs,
         bool expenseHistoryEntriesRefs,
         bool categoryBudgetsRefs,
+        bool cashSessionsRefs,
+        bool cashMovementsRefs,
       })
     >;
 typedef $$UsersTableCreateCompanionBuilder =
@@ -16923,6 +19546,24 @@ final class $$UsersTableReferences
     final cache = $_typedResult.readTableOrNull(
       _expenseHistoryEntriesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CashMovementsTable, List<CashMovement>>
+  _cashMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cashMovements,
+    aliasName: $_aliasNameGenerator(db.users.id, db.cashMovements.createdBy),
+  );
+
+  $$CashMovementsTableProcessedTableManager get cashMovementsRefs {
+    final manager = $$CashMovementsTableTableManager(
+      $_db,
+      $_db.cashMovements,
+    ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cashMovementsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -17173,6 +19814,31 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> cashMovementsRefs(
+    Expression<bool> Function($$CashMovementsTableFilterComposer f) f,
+  ) {
+    final $$CashMovementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashMovements,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashMovementsTableFilterComposer(
+            $db: $db,
+            $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -17527,6 +20193,31 @@ class $$UsersTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> cashMovementsRefs<T extends Object>(
+    Expression<T> Function($$CashMovementsTableAnnotationComposer a) f,
+  ) {
+    final $$CashMovementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashMovements,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashMovementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$UsersTableTableManager
@@ -17549,6 +20240,7 @@ class $$UsersTableTableManager
             bool stockMovementsRefs,
             bool expensesRefs,
             bool expenseHistoryEntriesRefs,
+            bool cashMovementsRefs,
           })
         > {
   $$UsersTableTableManager(_$AppDatabase db, $UsersTable table)
@@ -17660,6 +20352,7 @@ class $$UsersTableTableManager
                 stockMovementsRefs = false,
                 expensesRefs = false,
                 expenseHistoryEntriesRefs = false,
+                cashMovementsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -17669,6 +20362,7 @@ class $$UsersTableTableManager
                     if (stockMovementsRefs) db.stockMovements,
                     if (expensesRefs) db.expenses,
                     if (expenseHistoryEntriesRefs) db.expenseHistoryEntries,
+                    if (cashMovementsRefs) db.cashMovements,
                   ],
                   addJoins:
                       <
@@ -17801,6 +20495,27 @@ class $$UsersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cashMovementsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          CashMovement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._cashMovementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cashMovementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.createdBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -17828,6 +20543,7 @@ typedef $$UsersTableProcessedTableManager =
         bool stockMovementsRefs,
         bool expensesRefs,
         bool expenseHistoryEntriesRefs,
+        bool cashMovementsRefs,
       })
     >;
 typedef $$SettingsTableCreateCompanionBuilder =
@@ -29409,6 +32125,1791 @@ typedef $$CategoryBudgetsTableProcessedTableManager =
       CategoryBudget,
       PrefetchHooks Function({bool shopId, bool categoryId})
     >;
+typedef $$CashSessionsTableCreateCompanionBuilder =
+    CashSessionsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int openedBy,
+      Value<int?> closedBy,
+      required int openedAt,
+      Value<int?> closedAt,
+      Value<int> openingCash,
+      Value<int> openingMomo,
+      Value<int> salesCash,
+      Value<int> salesMomo,
+      Value<int> expensesCash,
+      Value<int> expensesMomo,
+      Value<int> depositsCash,
+      Value<int> depositsMomo,
+      Value<int> withdrawalsCash,
+      Value<int> withdrawalsMomo,
+      Value<int?> expectedCash,
+      Value<int?> expectedMomo,
+      Value<int?> countedCash,
+      Value<int?> countedMomo,
+      Value<int?> differenceCash,
+      Value<int?> differenceMomo,
+      Value<int> saleCount,
+      Value<String> status,
+      Value<String?> closingNote,
+      required int createdAt,
+      required int updatedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$CashSessionsTableUpdateCompanionBuilder =
+    CashSessionsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> openedBy,
+      Value<int?> closedBy,
+      Value<int> openedAt,
+      Value<int?> closedAt,
+      Value<int> openingCash,
+      Value<int> openingMomo,
+      Value<int> salesCash,
+      Value<int> salesMomo,
+      Value<int> expensesCash,
+      Value<int> expensesMomo,
+      Value<int> depositsCash,
+      Value<int> depositsMomo,
+      Value<int> withdrawalsCash,
+      Value<int> withdrawalsMomo,
+      Value<int?> expectedCash,
+      Value<int?> expectedMomo,
+      Value<int?> countedCash,
+      Value<int?> countedMomo,
+      Value<int?> differenceCash,
+      Value<int?> differenceMomo,
+      Value<int> saleCount,
+      Value<String> status,
+      Value<String?> closingNote,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$CashSessionsTableReferences
+    extends BaseReferences<_$AppDatabase, $CashSessionsTable, CashSession> {
+  $$CashSessionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.cashSessions.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _openedByTable(_$AppDatabase db) => db.users.createAlias(
+    $_aliasNameGenerator(db.cashSessions.openedBy, db.users.id),
+  );
+
+  $$UsersTableProcessedTableManager get openedBy {
+    final $_column = $_itemColumn<int>('opened_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_openedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _closedByTable(_$AppDatabase db) => db.users.createAlias(
+    $_aliasNameGenerator(db.cashSessions.closedBy, db.users.id),
+  );
+
+  $$UsersTableProcessedTableManager? get closedBy {
+    final $_column = $_itemColumn<int>('closed_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_closedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$CashMovementsTable, List<CashMovement>>
+  _cashMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cashMovements,
+    aliasName: $_aliasNameGenerator(
+      db.cashSessions.id,
+      db.cashMovements.sessionId,
+    ),
+  );
+
+  $$CashMovementsTableProcessedTableManager get cashMovementsRefs {
+    final manager = $$CashMovementsTableTableManager(
+      $_db,
+      $_db.cashMovements,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cashMovementsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$CashSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $CashSessionsTable> {
+  $$CashSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get openingCash => $composableBuilder(
+    column: $table.openingCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get openingMomo => $composableBuilder(
+    column: $table.openingMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get salesCash => $composableBuilder(
+    column: $table.salesCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get salesMomo => $composableBuilder(
+    column: $table.salesMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expensesCash => $composableBuilder(
+    column: $table.expensesCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expensesMomo => $composableBuilder(
+    column: $table.expensesMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get depositsCash => $composableBuilder(
+    column: $table.depositsCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get depositsMomo => $composableBuilder(
+    column: $table.depositsMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get withdrawalsCash => $composableBuilder(
+    column: $table.withdrawalsCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get withdrawalsMomo => $composableBuilder(
+    column: $table.withdrawalsMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expectedCash => $composableBuilder(
+    column: $table.expectedCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expectedMomo => $composableBuilder(
+    column: $table.expectedMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get countedCash => $composableBuilder(
+    column: $table.countedCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get countedMomo => $composableBuilder(
+    column: $table.countedMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get differenceCash => $composableBuilder(
+    column: $table.differenceCash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get differenceMomo => $composableBuilder(
+    column: $table.differenceMomo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get saleCount => $composableBuilder(
+    column: $table.saleCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get closingNote => $composableBuilder(
+    column: $table.closingNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get openedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.openedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get closedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> cashMovementsRefs(
+    Expression<bool> Function($$CashMovementsTableFilterComposer f) f,
+  ) {
+    final $$CashMovementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashMovements,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashMovementsTableFilterComposer(
+            $db: $db,
+            $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CashSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CashSessionsTable> {
+  $$CashSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get openingCash => $composableBuilder(
+    column: $table.openingCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get openingMomo => $composableBuilder(
+    column: $table.openingMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get salesCash => $composableBuilder(
+    column: $table.salesCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get salesMomo => $composableBuilder(
+    column: $table.salesMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expensesCash => $composableBuilder(
+    column: $table.expensesCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expensesMomo => $composableBuilder(
+    column: $table.expensesMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get depositsCash => $composableBuilder(
+    column: $table.depositsCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get depositsMomo => $composableBuilder(
+    column: $table.depositsMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get withdrawalsCash => $composableBuilder(
+    column: $table.withdrawalsCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get withdrawalsMomo => $composableBuilder(
+    column: $table.withdrawalsMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expectedCash => $composableBuilder(
+    column: $table.expectedCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expectedMomo => $composableBuilder(
+    column: $table.expectedMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get countedCash => $composableBuilder(
+    column: $table.countedCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get countedMomo => $composableBuilder(
+    column: $table.countedMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get differenceCash => $composableBuilder(
+    column: $table.differenceCash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get differenceMomo => $composableBuilder(
+    column: $table.differenceMomo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get saleCount => $composableBuilder(
+    column: $table.saleCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get closingNote => $composableBuilder(
+    column: $table.closingNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get openedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.openedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get closedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CashSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CashSessionsTable> {
+  $$CashSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get openedAt =>
+      $composableBuilder(column: $table.openedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get openingCash => $composableBuilder(
+    column: $table.openingCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get openingMomo => $composableBuilder(
+    column: $table.openingMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get salesCash =>
+      $composableBuilder(column: $table.salesCash, builder: (column) => column);
+
+  GeneratedColumn<int> get salesMomo =>
+      $composableBuilder(column: $table.salesMomo, builder: (column) => column);
+
+  GeneratedColumn<int> get expensesCash => $composableBuilder(
+    column: $table.expensesCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expensesMomo => $composableBuilder(
+    column: $table.expensesMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get depositsCash => $composableBuilder(
+    column: $table.depositsCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get depositsMomo => $composableBuilder(
+    column: $table.depositsMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get withdrawalsCash => $composableBuilder(
+    column: $table.withdrawalsCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get withdrawalsMomo => $composableBuilder(
+    column: $table.withdrawalsMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expectedCash => $composableBuilder(
+    column: $table.expectedCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expectedMomo => $composableBuilder(
+    column: $table.expectedMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get countedCash => $composableBuilder(
+    column: $table.countedCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get countedMomo => $composableBuilder(
+    column: $table.countedMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get differenceCash => $composableBuilder(
+    column: $table.differenceCash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get differenceMomo => $composableBuilder(
+    column: $table.differenceMomo,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get saleCount =>
+      $composableBuilder(column: $table.saleCount, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get closingNote => $composableBuilder(
+    column: $table.closingNote,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get openedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.openedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get closedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> cashMovementsRefs<T extends Object>(
+    Expression<T> Function($$CashMovementsTableAnnotationComposer a) f,
+  ) {
+    final $$CashMovementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cashMovements,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashMovementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$CashSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CashSessionsTable,
+          CashSession,
+          $$CashSessionsTableFilterComposer,
+          $$CashSessionsTableOrderingComposer,
+          $$CashSessionsTableAnnotationComposer,
+          $$CashSessionsTableCreateCompanionBuilder,
+          $$CashSessionsTableUpdateCompanionBuilder,
+          (CashSession, $$CashSessionsTableReferences),
+          CashSession,
+          PrefetchHooks Function({
+            bool shopId,
+            bool openedBy,
+            bool closedBy,
+            bool cashMovementsRefs,
+          })
+        > {
+  $$CashSessionsTableTableManager(_$AppDatabase db, $CashSessionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CashSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CashSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CashSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> openedBy = const Value.absent(),
+                Value<int?> closedBy = const Value.absent(),
+                Value<int> openedAt = const Value.absent(),
+                Value<int?> closedAt = const Value.absent(),
+                Value<int> openingCash = const Value.absent(),
+                Value<int> openingMomo = const Value.absent(),
+                Value<int> salesCash = const Value.absent(),
+                Value<int> salesMomo = const Value.absent(),
+                Value<int> expensesCash = const Value.absent(),
+                Value<int> expensesMomo = const Value.absent(),
+                Value<int> depositsCash = const Value.absent(),
+                Value<int> depositsMomo = const Value.absent(),
+                Value<int> withdrawalsCash = const Value.absent(),
+                Value<int> withdrawalsMomo = const Value.absent(),
+                Value<int?> expectedCash = const Value.absent(),
+                Value<int?> expectedMomo = const Value.absent(),
+                Value<int?> countedCash = const Value.absent(),
+                Value<int?> countedMomo = const Value.absent(),
+                Value<int?> differenceCash = const Value.absent(),
+                Value<int?> differenceMomo = const Value.absent(),
+                Value<int> saleCount = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> closingNote = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => CashSessionsCompanion(
+                id: id,
+                shopId: shopId,
+                openedBy: openedBy,
+                closedBy: closedBy,
+                openedAt: openedAt,
+                closedAt: closedAt,
+                openingCash: openingCash,
+                openingMomo: openingMomo,
+                salesCash: salesCash,
+                salesMomo: salesMomo,
+                expensesCash: expensesCash,
+                expensesMomo: expensesMomo,
+                depositsCash: depositsCash,
+                depositsMomo: depositsMomo,
+                withdrawalsCash: withdrawalsCash,
+                withdrawalsMomo: withdrawalsMomo,
+                expectedCash: expectedCash,
+                expectedMomo: expectedMomo,
+                countedCash: countedCash,
+                countedMomo: countedMomo,
+                differenceCash: differenceCash,
+                differenceMomo: differenceMomo,
+                saleCount: saleCount,
+                status: status,
+                closingNote: closingNote,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int openedBy,
+                Value<int?> closedBy = const Value.absent(),
+                required int openedAt,
+                Value<int?> closedAt = const Value.absent(),
+                Value<int> openingCash = const Value.absent(),
+                Value<int> openingMomo = const Value.absent(),
+                Value<int> salesCash = const Value.absent(),
+                Value<int> salesMomo = const Value.absent(),
+                Value<int> expensesCash = const Value.absent(),
+                Value<int> expensesMomo = const Value.absent(),
+                Value<int> depositsCash = const Value.absent(),
+                Value<int> depositsMomo = const Value.absent(),
+                Value<int> withdrawalsCash = const Value.absent(),
+                Value<int> withdrawalsMomo = const Value.absent(),
+                Value<int?> expectedCash = const Value.absent(),
+                Value<int?> expectedMomo = const Value.absent(),
+                Value<int?> countedCash = const Value.absent(),
+                Value<int?> countedMomo = const Value.absent(),
+                Value<int?> differenceCash = const Value.absent(),
+                Value<int?> differenceMomo = const Value.absent(),
+                Value<int> saleCount = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> closingNote = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => CashSessionsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                openedBy: openedBy,
+                closedBy: closedBy,
+                openedAt: openedAt,
+                closedAt: closedAt,
+                openingCash: openingCash,
+                openingMomo: openingMomo,
+                salesCash: salesCash,
+                salesMomo: salesMomo,
+                expensesCash: expensesCash,
+                expensesMomo: expensesMomo,
+                depositsCash: depositsCash,
+                depositsMomo: depositsMomo,
+                withdrawalsCash: withdrawalsCash,
+                withdrawalsMomo: withdrawalsMomo,
+                expectedCash: expectedCash,
+                expectedMomo: expectedMomo,
+                countedCash: countedCash,
+                countedMomo: countedMomo,
+                differenceCash: differenceCash,
+                differenceMomo: differenceMomo,
+                saleCount: saleCount,
+                status: status,
+                closingNote: closingNote,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CashSessionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                shopId = false,
+                openedBy = false,
+                closedBy = false,
+                cashMovementsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (cashMovementsRefs) db.cashMovements,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$CashSessionsTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$CashSessionsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (openedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.openedBy,
+                                    referencedTable:
+                                        $$CashSessionsTableReferences
+                                            ._openedByTable(db),
+                                    referencedColumn:
+                                        $$CashSessionsTableReferences
+                                            ._openedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (closedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.closedBy,
+                                    referencedTable:
+                                        $$CashSessionsTableReferences
+                                            ._closedByTable(db),
+                                    referencedColumn:
+                                        $$CashSessionsTableReferences
+                                            ._closedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (cashMovementsRefs)
+                        await $_getPrefetchedData<
+                          CashSession,
+                          $CashSessionsTable,
+                          CashMovement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CashSessionsTableReferences
+                              ._cashMovementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CashSessionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cashMovementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sessionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$CashSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CashSessionsTable,
+      CashSession,
+      $$CashSessionsTableFilterComposer,
+      $$CashSessionsTableOrderingComposer,
+      $$CashSessionsTableAnnotationComposer,
+      $$CashSessionsTableCreateCompanionBuilder,
+      $$CashSessionsTableUpdateCompanionBuilder,
+      (CashSession, $$CashSessionsTableReferences),
+      CashSession,
+      PrefetchHooks Function({
+        bool shopId,
+        bool openedBy,
+        bool closedBy,
+        bool cashMovementsRefs,
+      })
+    >;
+typedef $$CashMovementsTableCreateCompanionBuilder =
+    CashMovementsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int sessionId,
+      required String movementType,
+      Value<String> registerType,
+      required int amount,
+      Value<String?> note,
+      required int createdBy,
+      required int createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$CashMovementsTableUpdateCompanionBuilder =
+    CashMovementsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> sessionId,
+      Value<String> movementType,
+      Value<String> registerType,
+      Value<int> amount,
+      Value<String?> note,
+      Value<int> createdBy,
+      Value<int> createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$CashMovementsTableReferences
+    extends BaseReferences<_$AppDatabase, $CashMovementsTable, CashMovement> {
+  $$CashMovementsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.cashMovements.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CashSessionsTable _sessionIdTable(_$AppDatabase db) =>
+      db.cashSessions.createAlias(
+        $_aliasNameGenerator(db.cashMovements.sessionId, db.cashSessions.id),
+      );
+
+  $$CashSessionsTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<int>('session_id')!;
+
+    final manager = $$CashSessionsTableTableManager(
+      $_db,
+      $_db.cashSessions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _createdByTable(_$AppDatabase db) => db.users.createAlias(
+    $_aliasNameGenerator(db.cashMovements.createdBy, db.users.id),
+  );
+
+  $$UsersTableProcessedTableManager get createdBy {
+    final $_column = $_itemColumn<int>('created_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CashMovementsTableFilterComposer
+    extends Composer<_$AppDatabase, $CashMovementsTable> {
+  $$CashMovementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get movementType => $composableBuilder(
+    column: $table.movementType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get registerType => $composableBuilder(
+    column: $table.registerType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CashSessionsTableFilterComposer get sessionId {
+    final $$CashSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.cashSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.cashSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get createdBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CashMovementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CashMovementsTable> {
+  $$CashMovementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get movementType => $composableBuilder(
+    column: $table.movementType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get registerType => $composableBuilder(
+    column: $table.registerType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CashSessionsTableOrderingComposer get sessionId {
+    final $$CashSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.cashSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashSessionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.cashSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get createdBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CashMovementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CashMovementsTable> {
+  $$CashMovementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get movementType => $composableBuilder(
+    column: $table.movementType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get registerType => $composableBuilder(
+    column: $table.registerType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CashSessionsTableAnnotationComposer get sessionId {
+    final $$CashSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.cashSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CashSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cashSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get createdBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CashMovementsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CashMovementsTable,
+          CashMovement,
+          $$CashMovementsTableFilterComposer,
+          $$CashMovementsTableOrderingComposer,
+          $$CashMovementsTableAnnotationComposer,
+          $$CashMovementsTableCreateCompanionBuilder,
+          $$CashMovementsTableUpdateCompanionBuilder,
+          (CashMovement, $$CashMovementsTableReferences),
+          CashMovement,
+          PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
+        > {
+  $$CashMovementsTableTableManager(_$AppDatabase db, $CashMovementsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CashMovementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CashMovementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CashMovementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> sessionId = const Value.absent(),
+                Value<String> movementType = const Value.absent(),
+                Value<String> registerType = const Value.absent(),
+                Value<int> amount = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> createdBy = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => CashMovementsCompanion(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                movementType: movementType,
+                registerType: registerType,
+                amount: amount,
+                note: note,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int sessionId,
+                required String movementType,
+                Value<String> registerType = const Value.absent(),
+                required int amount,
+                Value<String?> note = const Value.absent(),
+                required int createdBy,
+                required int createdAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => CashMovementsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                movementType: movementType,
+                registerType: registerType,
+                amount: amount,
+                note: note,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CashMovementsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({shopId = false, sessionId = false, createdBy = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$CashMovementsTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$CashMovementsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sessionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sessionId,
+                                    referencedTable:
+                                        $$CashMovementsTableReferences
+                                            ._sessionIdTable(db),
+                                    referencedColumn:
+                                        $$CashMovementsTableReferences
+                                            ._sessionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (createdBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdBy,
+                                    referencedTable:
+                                        $$CashMovementsTableReferences
+                                            ._createdByTable(db),
+                                    referencedColumn:
+                                        $$CashMovementsTableReferences
+                                            ._createdByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$CashMovementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CashMovementsTable,
+      CashMovement,
+      $$CashMovementsTableFilterComposer,
+      $$CashMovementsTableOrderingComposer,
+      $$CashMovementsTableAnnotationComposer,
+      $$CashMovementsTableCreateCompanionBuilder,
+      $$CashMovementsTableUpdateCompanionBuilder,
+      (CashMovement, $$CashMovementsTableReferences),
+      CashMovement,
+      PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -29456,4 +33957,8 @@ class $AppDatabaseManager {
       $$ExpenseHistoryEntriesTableTableManager(_db, _db.expenseHistoryEntries);
   $$CategoryBudgetsTableTableManager get categoryBudgets =>
       $$CategoryBudgetsTableTableManager(_db, _db.categoryBudgets);
+  $$CashSessionsTableTableManager get cashSessions =>
+      $$CashSessionsTableTableManager(_db, _db.cashSessions);
+  $$CashMovementsTableTableManager get cashMovements =>
+      $$CashMovementsTableTableManager(_db, _db.cashMovements);
 }

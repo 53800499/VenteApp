@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/time.dart';
 import 'tables/auth_tables.dart';
 import 'tables/commerce_tables.dart';
+import 'tables/cash_session_tables.dart';
 import 'tables/expense_tables.dart';
 import 'tables/notification_tables.dart';
 import 'tables/sync_tables.dart';
@@ -35,6 +36,8 @@ part 'app_database.g.dart';
   ExpenseAttachments,
   ExpenseHistoryEntries,
   CategoryBudgets,
+  CashSessions,
+  CashMovements,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -42,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -139,6 +142,10 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(expenseAttachments);
             await m.createTable(expenseHistoryEntries);
             await m.createTable(categoryBudgets);
+          }
+          if (from < 16) {
+            await m.createTable(cashSessions);
+            await m.createTable(cashMovements);
           }
         },
       );

@@ -12,6 +12,7 @@ import '../../../../app/pages/api_settings_page.dart';
 import '../../../reports/presentation/pages/reports_page.dart';
 import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
 import '../../../expenses/presentation/pages/expenses_page.dart';
+import '../../../cash_sessions/presentation/pages/cash_sessions_page.dart';
 import '../../../audit/presentation/pages/audit_journal_page.dart';
 import '../../../debts/presentation/pages/forgiven_debts_page.dart';
 import '../../../notifications/presentation/pages/notification_settings_page.dart';
@@ -70,6 +71,11 @@ class MorePage extends StatelessWidget {
   bool get _canViewExpenses => PermissionGuard.can(
         session.user.permissions,
         Permission.expensesRead,
+      );
+
+  bool get _canViewCashSessions => PermissionGuard.can(
+        session.user.permissions,
+        Permission.cashSessionsRead,
       );
 
   bool get _canManageSync => session.user.role == UserRole.owner;
@@ -153,6 +159,18 @@ class MorePage extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ExpensesPage(session: activeSession),
+                    ),
+                  ),
+                ),
+              if (_canViewCashSessions)
+                _MoreTile(
+                  icon: Icons.point_of_sale_outlined,
+                  title: 'Gestion de caisse',
+                  subtitle: 'Ouverture, suivi et clôture de caisse',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CashSessionsPage(session: activeSession),
                     ),
                   ),
                 ),

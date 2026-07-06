@@ -8,6 +8,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
+import '../../../cash_sessions/domain/usecases/cash_session_usecases.dart';
 import '../widgets/sale_feedback.dart';
 import 'sale_receipt_page.dart';
 
@@ -49,10 +50,21 @@ class _QuickSalePageState extends State<QuickSalePage> {
     );
     if (confirmed != true || !mounted) return;
 
+    final openSession = await sl<FindOpenCashSession>()(session: widget.session);
+    if (openSession == null) {
+      setState(() {
+        _error =
+            'Ouvrez la caisse (Plus → Gestion de caisse) avant une vente.';
+      });
+      return;
+    }
+
     setState(() {
       _submitting = true;
       _error = null;
     });
+
+    ensureCashSessionDependencies();
 
     try {
       final sale = await SaleFeedback.runWithBlockingLoader<Sale>(

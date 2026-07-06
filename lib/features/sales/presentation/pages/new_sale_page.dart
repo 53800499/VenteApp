@@ -72,6 +72,7 @@ class _NewSalePageState extends State<NewSalePage>
         customerPrices: sl(),
         convertQuickSale: sl(),
         conversion: widget.conversion,
+        findOpenCashSession: sl(),
         session: widget.session,
       )..add(const NewSaleLoadRequested()),
       child: BlocListener<NewSaleBloc, NewSaleState>(
@@ -186,6 +187,37 @@ class _NewSalePageState extends State<NewSalePage>
         ),
       );
     }
+
+    if (!state.cashSessionOpen) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.point_of_sale_outlined,
+                  size: 48, color: Theme.of(context).colorScheme.error),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Caisse fermée',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Ouvrez la caisse depuis Plus → Gestion de caisse '
+                'avant d\'enregistrer une vente.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return _buildSaleFlow(context, state);
+  }
+
+  Widget _buildSaleFlow(BuildContext context, NewSaleState state) {
     if (state.status == NewSaleStatus.failure) {
       return _ErrorBody(
         message: state.errorMessage ?? 'Erreur de chargement',

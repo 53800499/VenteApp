@@ -6,6 +6,8 @@ abstract final class SyncEntityTable {
   static const sales = 'sales';
   static const debts = 'debts';
   static const expenses = 'expenses';
+  static const cashSessions = 'cash_sessions';
+  static const cashMovements = 'cash_movements';
 }
 
 /// Opérations poussées vers le cloud (FIFO).
@@ -18,4 +20,7 @@ abstract final class SyncOperation {
   static const forgive = 'forgive';
   static const cancel = 'cancel';
   static const saleQuick = 'sale_quick';
+  static const cashSessionOpen = 'cash_session_open';
+  static const cashSessionClose = 'cash_session_close';
+  static const cashMovementCreate = 'cash_movement_create';
 }

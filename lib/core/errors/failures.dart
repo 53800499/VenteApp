@@ -21,6 +21,12 @@ class ConflictFailure extends Failure {
   const ConflictFailure(super.message);
 }
 
+class CashSessionRequiredFailure extends Failure {
+  const CashSessionRequiredFailure([
+    super.message = 'Ouvrez la caisse avant d\'enregistrer une vente.',
+  ]);
+}
+
 /// Conflit d'installation avec erreurs par champ (doublons formulaire ou serveur).
 class SetupFieldConflictFailure extends ConflictFailure {
   const SetupFieldConflictFailure({

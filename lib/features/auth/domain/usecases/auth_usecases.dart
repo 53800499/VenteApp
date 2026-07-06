@@ -271,3 +271,12 @@ class RevokeDeviceSession {
   Future<void> call(String sessionId) =>
       _repository.revokeDeviceSession(sessionId);
 }
+
+class VerifyShopOwnerPin {
+  const VerifyShopOwnerPin(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<void> call({required int shopId, required String pin}) =>
+      _repository.verifyShopOwnerPin(shopId: shopId, pin: pin);
+}

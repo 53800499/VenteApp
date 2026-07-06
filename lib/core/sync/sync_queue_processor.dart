@@ -7,6 +7,9 @@ import '../../features/debts/data/datasources/remote/debts_remote_datasource.dar
 import '../../features/expenses/data/datasources/local/expenses_local_datasource.dart';
 import '../../features/expenses/data/datasources/remote/expenses_remote_datasource.dart';
 import '../../features/expenses/domain/entities/expense_entities.dart';
+import '../../features/cash_sessions/data/datasources/local/cash_sessions_local_datasource.dart';
+import '../../features/cash_sessions/data/datasources/remote/cash_sessions_remote_datasource.dart';
+import '../../features/cash_sessions/data/models/cash_session_api_models.dart';
 import '../../features/inventory/data/datasources/local/inventory_local_datasource.dart';
 import '../../features/inventory/data/datasources/remote/inventory_remote_datasource.dart';
 import '../../features/sales/data/datasources/local/sales_local_datasource.dart';
@@ -34,6 +37,8 @@ class SyncQueueProcessor {
     required DebtsRemoteDatasource debtsRemote,
     required ExpensesLocalDatasource expensesLocal,
     required ExpensesRemoteDatasource expensesRemote,
+    required CashSessionsLocalDatasource cashSessionsLocal,
+    required CashSessionsRemoteDatasource cashSessionsRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -45,7 +50,9 @@ class SyncQueueProcessor {
         _debtsLocal = debtsLocal,
         _debtsRemote = debtsRemote,
         _expensesLocal = expensesLocal,
-        _expensesRemote = expensesRemote;
+        _expensesRemote = expensesRemote,
+        _cashSessionsLocal = cashSessionsLocal,
+        _cashSessionsRemote = cashSessionsRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -59,6 +66,8 @@ class SyncQueueProcessor {
   final DebtsRemoteDatasource _debtsRemote;
   final ExpensesLocalDatasource _expensesLocal;
   final ExpensesRemoteDatasource _expensesRemote;
+  final CashSessionsLocalDatasource _cashSessionsLocal;
+  final CashSessionsRemoteDatasource _cashSessionsRemote;
 
   Future<SyncQueueProcessResult> process({required int shopId}) async {
     await _apiGuard.ensureReady();
@@ -115,6 +124,8 @@ class SyncQueueProcessor {
         SyncEntityTable.sales => 3,
         SyncEntityTable.debts => 4,
         SyncEntityTable.expenses => 5,
+        SyncEntityTable.cashSessions => 6,
+        SyncEntityTable.cashMovements => 7,
         _ => 99,
       };
 
@@ -137,6 +148,10 @@ class SyncQueueProcessor {
         return _processDebt(shopId, item, payload);
       case SyncEntityTable.expenses:
         return _processExpense(shopId, item, payload);
+      case SyncEntityTable.cashSessions:
+        return _processCashSession(shopId, item, payload);
+      case SyncEntityTable.cashMovements:
+        return _processCashMovement(shopId, item, payload);
       default:
         await _queue.markFailed(item.id, 'Table inconnue : ${item.entityTable}');
         return true;
@@ -492,6 +507,136 @@ class SyncQueueProcessor {
       default:
         throw ValidationFailure(
           'Opération dépense inconnue : ${item.operation}',
+        );
+    }
+  }
+
+  Future<bool> _processCashSession(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final session =
+        await _cashSessionsLocal.findSessionForSync(shopId, item.recordId);
+    if (session == null) return true;
+
+    final serverId =
+        await _cashSessionsLocal.findSessionServerId(shopId, item.recordId);
+
+    switch (item.operation) {
+      case SyncOperation.cashSessionOpen:
+        if (serverId != null) return true;
+        final opened = await _cashSessionsRemote.openSession(
+          OpenCashSessionApiRequest(
+            openingCash: session.openingCash,
+            openingMomo: session.openingMomo,
+          ),
+        );
+        await _cashSessionsLocal.updateSessionServerSync(
+          sessionId: session.id,
+          serverId: '${opened.id}',
+        );
+        return true;
+
+      case SyncOperation.cashSessionClose:
+        var remoteId = serverId;
+        if (remoteId == null) {
+          final opened = await _cashSessionsRemote.openSession(
+            OpenCashSessionApiRequest(
+              openingCash: session.openingCash,
+              openingMomo: session.openingMomo,
+            ),
+          );
+          remoteId = '${opened.id}';
+          await _cashSessionsLocal.updateSessionServerSync(
+            sessionId: session.id,
+            serverId: remoteId,
+          );
+        }
+        await _cashSessionsRemote.closeSession(
+          int.parse(remoteId),
+          CloseCashSessionApiRequest(
+            countedCash: (payload['countedCash'] as num?)?.toInt() ??
+                session.countedCash ??
+                0,
+            countedMomo: (payload['countedMomo'] as num?)?.toInt() ??
+                session.countedMomo ??
+                0,
+            closingNote: payload['closingNote'] as String? ?? session.closingNote,
+            ownerPin: payload['ownerPin'] as String?,
+            salesCash: (payload['salesCash'] as num?)?.toInt() ??
+                session.salesCash,
+            salesMomo: (payload['salesMomo'] as num?)?.toInt() ??
+                session.salesMomo,
+            expensesCash: (payload['expensesCash'] as num?)?.toInt() ??
+                session.expensesCash,
+            expensesMomo: (payload['expensesMomo'] as num?)?.toInt() ??
+                session.expensesMomo,
+            depositsCash: (payload['depositsCash'] as num?)?.toInt() ??
+                session.depositsCash,
+            depositsMomo: (payload['depositsMomo'] as num?)?.toInt() ??
+                session.depositsMomo,
+            withdrawalsCash: (payload['withdrawalsCash'] as num?)?.toInt() ??
+                session.withdrawalsCash,
+            withdrawalsMomo: (payload['withdrawalsMomo'] as num?)?.toInt() ??
+                session.withdrawalsMomo,
+            saleCount: (payload['saleCount'] as num?)?.toInt() ??
+                session.saleCount,
+          ),
+        );
+        await _cashSessionsLocal.updateSessionServerSync(
+          sessionId: session.id,
+          serverId: remoteId,
+        );
+        return true;
+
+      default:
+        throw ValidationFailure(
+          'Opération caisse inconnue : ${item.operation}',
+        );
+    }
+  }
+
+  Future<bool> _processCashMovement(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final movement =
+        await _cashSessionsLocal.findMovementForSync(shopId, item.recordId);
+    if (movement == null) return true;
+
+    final serverId =
+        await _cashSessionsLocal.findMovementServerId(shopId, item.recordId);
+    if (serverId != null) return true;
+
+    switch (item.operation) {
+      case SyncOperation.cashMovementCreate:
+        var sessionServerId = await _cashSessionsLocal.findSessionServerId(
+          shopId,
+          movement.sessionId,
+        );
+        if (sessionServerId == null) return false;
+        final created = await _cashSessionsRemote.createMovement(
+          int.parse(sessionServerId),
+          CreateCashMovementApiRequest(
+            movementType: payload['movementType'] as String? ??
+                movement.movementType.code,
+            registerType: payload['registerType'] as String? ??
+                movement.registerType.code,
+            amount: (payload['amount'] as num?)?.toInt() ?? movement.amount,
+            note: payload['note'] as String? ?? movement.note,
+          ),
+        );
+        await _cashSessionsLocal.updateMovementServerSync(
+          movementId: movement.id,
+          serverId: '${created.id}',
+        );
+        return true;
+
+      default:
+        throw ValidationFailure(
+          'Opération mouvement caisse inconnue : ${item.operation}',
         );
     }
   }

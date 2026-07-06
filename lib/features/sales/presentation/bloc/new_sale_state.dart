@@ -111,6 +111,7 @@ class NewSaleState extends Equatable {
     this.selectedPricingTier = SalePricingTier.retail,
     this.canOverridePrice = false,
     this.customerRememberedPrices = const {},
+    this.cashSessionOpen = true,
   });
 
   final NewSaleStatus status;
@@ -130,6 +131,7 @@ class NewSaleState extends Equatable {
   final SalePricingTier selectedPricingTier;
   final bool canOverridePrice;
   final Map<int, int> customerRememberedPrices;
+  final bool cashSessionOpen;
 
   int get subtotal => cart.fold<int>(0, (sum, line) => sum + line.lineTotal);
 
@@ -170,6 +172,7 @@ class NewSaleState extends Equatable {
     bool? canOverridePrice,
     Map<int, int>? customerRememberedPrices,
     bool clearRememberedPrices = false,
+    bool? cashSessionOpen,
   }) {
     return NewSaleState(
       status: status ?? this.status,
@@ -192,6 +195,7 @@ class NewSaleState extends Equatable {
       customerRememberedPrices: clearRememberedPrices
           ? const {}
           : (customerRememberedPrices ?? this.customerRememberedPrices),
+      cashSessionOpen: cashSessionOpen ?? this.cashSessionOpen,
     );
   }
 
@@ -214,5 +218,6 @@ class NewSaleState extends Equatable {
         selectedPricingTier,
         canOverridePrice,
         customerRememberedPrices,
+        cashSessionOpen,
       ];
 }

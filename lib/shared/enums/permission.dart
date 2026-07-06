@@ -44,7 +44,11 @@ enum Permission {
   shopsUpdate('shops:update'),
   shopsDeactivate('shops:deactivate'),
   shopsSwitch('shops:switch'),
-  shopsConsolidatedRead('shops:consolidated_read');
+  shopsConsolidatedRead('shops:consolidated_read'),
+  cashSessionsRead('cash_sessions:read'),
+  cashSessionsOpen('cash_sessions:open'),
+  cashSessionsClose('cash_sessions:close'),
+  cashSessionsAdjust('cash_sessions:adjust');
 
   const Permission(this.code);
 
@@ -66,6 +70,10 @@ const _sellerPermissions = <Permission>{
   Permission.debtsPayment,
   Permission.expensesRead,
   Permission.expensesCreate,
+  Permission.cashSessionsRead,
+  Permission.cashSessionsOpen,
+  Permission.cashSessionsClose,
+  Permission.cashSessionsAdjust,
 };
 
 const _viewerPermissions = <Permission>{
@@ -78,6 +86,7 @@ const _viewerPermissions = <Permission>{
   Permission.debtsRead,
   Permission.reportsRead,
   Permission.expensesRead,
+  Permission.cashSessionsRead,
 };
 
 Set<Permission> permissionsForRole(UserRole role) {

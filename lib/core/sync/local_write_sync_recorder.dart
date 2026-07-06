@@ -282,4 +282,45 @@ class LocalWriteSyncRecorder {
       payload: const {},
     );
   }
+
+  Future<void> recordCashSessionOpen({
+    required int shopId,
+    required int sessionId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.cashSessions,
+      recordId: sessionId,
+      operation: SyncOperation.cashSessionOpen,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordCashSessionClose({
+    required int shopId,
+    required int sessionId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.cashSessions,
+      recordId: sessionId,
+      operation: SyncOperation.cashSessionClose,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordCashMovement({
+    required int shopId,
+    required int movementId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.cashMovements,
+      recordId: movementId,
+      operation: SyncOperation.cashMovementCreate,
+      payload: payload,
+    );
+  }
 }

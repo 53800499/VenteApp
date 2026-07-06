@@ -85,4 +85,10 @@ abstract class AuthRepository {
   Future<List<DeviceSession>> listDeviceSessions({bool shopScope = false});
 
   Future<void> revokeDeviceSession(String sessionId);
+
+  /// Vérifie le PIN du patron de la boutique (sans connexion session).
+  Future<void> verifyShopOwnerPin({
+    required int shopId,
+    required String pin,
+  });
 }

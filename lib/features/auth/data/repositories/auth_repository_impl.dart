@@ -1979,4 +1979,36 @@ class AuthRepositoryImpl implements AuthRepository {
       user: authUser,
     );
   }
+
+  @override
+  Future<void> verifyShopOwnerPin({
+    required int shopId,
+    required String pin,
+  }) async {
+    final pinVo = Pin.create(pin);
+    final shop = await (_db.select(_db.shops)..where((s) => s.id.equals(shopId)))
+        .getSingleOrNull();
+
+    User? owner;
+    final ownerId = shop?.ownerUserId;
+    if (ownerId != null) {
+      owner = await (_db.select(_db.users)..where((u) => u.id.equals(ownerId)))
+          .getSingleOrNull();
+    }
+    owner ??= await (_db.select(_db.users)
+          ..where(
+            (u) =>
+                u.shopId.equals(shopId) &
+                u.role.equals('owner') &
+                u.isActive.equals(true),
+          ))
+        .getSingleOrNull();
+
+    if (owner == null) {
+      throw const NotFoundFailure('Patron introuvable pour cette boutique.');
+    }
+    if (!_pinHasher.compare(pinVo.value, owner.pinHash)) {
+      throw const UnauthorizedFailure('PIN du patron incorrect.');
+    }
+  }
 }

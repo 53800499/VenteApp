@@ -94,6 +94,12 @@ import '../../features/expenses/data/repositories/expense_repository_impl.dart';
 import '../../features/expenses/domain/repositories/expense_repository.dart';
 import '../../features/expenses/domain/usecases/expense_usecases.dart';
 import '../../features/expenses/presentation/services/expense_pdf_exporter.dart';
+import '../../features/cash_sessions/data/datasources/local/cash_sessions_local_datasource.dart';
+import '../../features/cash_sessions/data/datasources/remote/cash_sessions_remote_datasource.dart';
+import '../../features/cash_sessions/data/repositories/cash_session_repository_impl.dart';
+import '../../features/cash_sessions/domain/repositories/cash_session_repository.dart';
+import '../../features/cash_sessions/domain/usecases/cash_session_usecases.dart';
+import '../../features/cash_sessions/presentation/services/cash_session_pdf_exporter.dart';
 import '../../features/notifications/data/datasources/local/notifications_local_datasource.dart';
 import '../../features/notifications/data/datasources/remote/notifications_remote_datasource.dart';
 import '../../features/notifications/data/repositories/notification_repository_impl.dart';
@@ -290,6 +296,61 @@ void ensureExpensesDependencies() {
   }
   if (!sl.isRegistered<ExpensePdfExporter>()) {
     sl.registerLazySingleton(() => const ExpensePdfExporter());
+  }
+}
+
+/// Enregistre le module Gestion de caisse si absent.
+void ensureCashSessionDependencies() {
+  if (!sl.isRegistered<CashSessionsLocalDatasource>()) {
+    sl.registerLazySingleton(() => CashSessionsLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<CashSessionsRemoteDatasource>()) {
+    sl.registerLazySingleton(() => CashSessionsRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<CashSessionRepository>()) {
+    sl.registerLazySingleton<CashSessionRepository>(
+      () => CashSessionRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        recorder: sl(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<FindOpenCashSession>()) {
+    sl.registerLazySingleton(() => FindOpenCashSession(sl()));
+  }
+  if (!sl.isRegistered<ListCashSessions>()) {
+    sl.registerLazySingleton(() => ListCashSessions(sl()));
+  }
+  if (!sl.isRegistered<GetCashSession>()) {
+    sl.registerLazySingleton(() => GetCashSession(sl()));
+  }
+  if (!sl.isRegistered<GetCashSessionLiveTotals>()) {
+    sl.registerLazySingleton(() => GetCashSessionLiveTotals(sl()));
+  }
+  if (!sl.isRegistered<ListCashMovements>()) {
+    sl.registerLazySingleton(() => ListCashMovements(sl()));
+  }
+  if (!sl.isRegistered<OpenCashSession>()) {
+    sl.registerLazySingleton(() => OpenCashSession(sl()));
+  }
+  if (!sl.isRegistered<CloseCashSession>()) {
+    sl.registerLazySingleton(() => CloseCashSession(sl(), sl()));
+  }
+  if (!sl.isRegistered<RecordCashMovement>()) {
+    sl.registerLazySingleton(() => RecordCashMovement(sl()));
+  }
+  if (!sl.isRegistered<SyncCashSessionsFromRemote>()) {
+    sl.registerLazySingleton(() => SyncCashSessionsFromRemote(sl()));
+  }
+  if (!sl.isRegistered<CashSessionsRemoteSyncAdapter>()) {
+    sl.registerLazySingleton(
+      () => CashSessionsRemoteSyncAdapter(sl<CashSessionRepository>()),
+    );
+  }
+  if (!sl.isRegistered<CashSessionPdfExporter>()) {
+    sl.registerLazySingleton(() => const CashSessionPdfExporter());
   }
 }
 
@@ -518,6 +579,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => RestoreSession(sl()));
   sl.registerLazySingleton(() => GetLockScreen(sl()));
   sl.registerLazySingleton(() => LoginWithPin(sl()));
+  sl.registerLazySingleton(() => VerifyShopOwnerPin(sl()));
   sl.registerLazySingleton(() => LoginWithBiometric(sl(), sl()));
   sl.registerLazySingleton(() => SetupOwner(sl()));
   sl.registerLazySingleton(() => RequestWhatsappOtp(sl()));
@@ -588,6 +650,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => DashboardAggregationService());
   sl.registerLazySingleton(() => DashboardLocalDatasource(sl()));
   ensureExpensesDependencies();
+  ensureCashSessionDependencies();
   sl.registerLazySingleton<DashboardRepository>(
     () => DashboardRepositoryImpl(
       localDatasource: sl(),
@@ -681,6 +744,7 @@ Future<void> initDependencies() async {
       local: sl(),
       remote: sl(),
       apiGuard: sl(),
+      cashSessionsLocal: sl(),
       validation: sl(),
       recorder: sl(),
     ),
@@ -733,6 +797,8 @@ Future<void> initDependencies() async {
       debtsRemote: sl(),
       expensesLocal: sl(),
       expensesRemote: sl(),
+      cashSessionsLocal: sl(),
+      cashSessionsRemote: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -749,6 +815,7 @@ Future<void> initDependencies() async {
         sl<SalesRemoteSyncAdapter>(),
         sl<DebtsRemoteSyncAdapter>(),
         sl<ExpensesRemoteSyncAdapter>(),
+        sl<CashSessionsRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
     ),

@@ -4,6 +4,7 @@ import '../../../../core/database/app_database.dart' as db;
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/sync/local_write_sync_recorder.dart';
+import '../../../cash_sessions/data/datasources/local/cash_sessions_local_datasource.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/repositories/sale_repository.dart';
 import '../../domain/services/sale_validation_service.dart';
@@ -16,19 +17,29 @@ class SaleRepositoryImpl implements SaleRepository {
     required SalesLocalDatasource local,
     required SalesRemoteDatasource remote,
     required RemoteApiGuard apiGuard,
+    CashSessionsLocalDatasource? cashSessionsLocal,
     SaleValidationService? validation,
     LocalWriteSyncRecorder? recorder,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
+        _cashSessionsLocal = cashSessionsLocal,
         _validation = validation ?? const SaleValidationService(),
         _recorder = recorder;
 
   final SalesLocalDatasource _local;
   final SalesRemoteDatasource _remote;
   final RemoteApiGuard _apiGuard;
+  final CashSessionsLocalDatasource? _cashSessionsLocal;
   final SaleValidationService _validation;
   final LocalWriteSyncRecorder? _recorder;
+
+  Future<void> _assertOpenCashSession(int shopId) async {
+    final open = await _cashSessionsLocal?.findOpenSession(shopId);
+    if (open == null) {
+      throw const CashSessionRequiredFailure();
+    }
+  }
 
   @override
   Future<List<SaleListRow>> listSales({
@@ -66,6 +77,7 @@ class SaleRepositoryImpl implements SaleRepository {
     int? serverShopId,
     int? serverUserId,
   }) async {
+    await _assertOpenCashSession(shopId);
     _validation.assertStandardCart(input.items);
 
     final snapshots = <({
@@ -253,6 +265,7 @@ class SaleRepositoryImpl implements SaleRepository {
     required int userId,
     required CreateQuickSaleInput input,
   }) async {
+    await _assertOpenCashSession(shopId);
     final totals = _validation.computeQuickTotals(
       input.totalAmount,
       input.payment,
@@ -296,6 +309,7 @@ class SaleRepositoryImpl implements SaleRepository {
     required int saleId,
     required ConvertQuickSaleInput input,
   }) async {
+    await _assertOpenCashSession(shopId);
     final sale = await _local.findSale(shopId, saleId);
     if (sale == null) {
       throw const NotFoundFailure('Vente introuvable.');

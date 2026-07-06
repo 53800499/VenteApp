@@ -70,6 +70,10 @@ const _labels = <Permission, String>{
   Permission.shopsDeactivate: 'Désactiver une boutique',
   Permission.shopsSwitch: 'Changer de boutique',
   Permission.shopsConsolidatedRead: 'Vue consolidée',
+  Permission.cashSessionsRead: 'Consulter les sessions de caisse',
+  Permission.cashSessionsOpen: 'Ouvrir une caisse',
+  Permission.cashSessionsClose: 'Clôturer une caisse',
+  Permission.cashSessionsAdjust: 'Retraits et entrées de caisse',
 };
 
 String permissionModuleCode(Permission permission) {
