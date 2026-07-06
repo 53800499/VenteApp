@@ -29,6 +29,23 @@ class SalesAnalysisLocalDatasource {
       acc.add(row);
     }
 
+    final headless = await _fetchHeadlessSales(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    for (final sale in headless) {
+      final label = sale.saleType == 'quick'
+          ? SalesAnalysisHeadlessLabels.quickSale
+          : SalesAnalysisHeadlessLabels.standardSale;
+      final key = 'headless:${sale.saleType}';
+      final acc = byKey.putIfAbsent(
+        key,
+        () => _ProductAccumulator(productName: label),
+      );
+      acc.addHeadlessSale(sale);
+    }
+
     final catalogPrices = await _loadCatalogPrices(shopId);
     final summaries = byKey.values.map((acc) {
       final catalog =
@@ -57,6 +74,15 @@ class SalesAnalysisLocalDatasource {
     int? productId,
     required String productName,
   }) async {
+    if (SalesAnalysisHeadlessLabels.isHeadlessProductName(productName)) {
+      return _loadHeadlessProductDetail(
+        shopId: shopId,
+        fromMs: fromMs,
+        toMs: toMs,
+        productName: productName,
+      );
+    }
+
     final rows = await _fetchSaleItemRows(
       shopId: shopId,
       fromMs: fromMs,
@@ -199,6 +225,22 @@ class SalesAnalysisLocalDatasource {
       );
     }
 
+    final headless = await _fetchHeadlessSales(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    for (final sale in headless) {
+      final acc = byUser.putIfAbsent(
+        sale.userId,
+        () => _EmployeeAccumulator(
+          userId: sale.userId,
+          userName: sale.sellerName,
+        ),
+      );
+      acc.addHeadlessSale(amount: sale.totalAmount);
+    }
+
     return byUser.values.map((e) => e.toPerformance()).toList()
       ..sort((a, b) => b.saleLineCount.compareTo(a.saleLineCount));
   }
@@ -270,6 +312,23 @@ class SalesAnalysisLocalDatasource {
       );
     }
 
+    final headless = await _fetchHeadlessSales(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    for (final sale in headless) {
+      if (sale.customerId == null) continue;
+      final acc = byCustomer.putIfAbsent(
+        sale.customerId!,
+        () => _CustomerInsightAccumulator(
+          customerId: sale.customerId!,
+          customerName: sale.customerName ?? 'Client',
+        ),
+      );
+      acc.addHeadlessSale(sale.saleId, amount: sale.totalAmount);
+    }
+
     return byCustomer.values
         .map((e) => e.toInsight())
         .toList()
@@ -290,7 +349,7 @@ class SalesAnalysisLocalDatasource {
       innerJoin(_db.sales, _db.sales.id.equalsExp(_db.saleItems.saleId)),
     ])
       ..where(
-        _db.saleItems.shopId.equals(shopId) &
+        _db.sales.shopId.equals(shopId) &
             _db.sales.status.equals('completed') &
             _db.sales.customerId.equals(customerId) &
             _db.sales.createdAt.isBiggerOrEqualValue(fromMs) &
@@ -370,6 +429,23 @@ class SalesAnalysisLocalDatasource {
       acc.add(row);
     }
 
+    final headless = await _fetchHeadlessSales(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    if (headless.isNotEmpty) {
+      final acc = byCategory.putIfAbsent(
+        'headless',
+        () => _CategoryAccumulator(
+          categoryName: SalesAnalysisHeadlessLabels.categoryBucket,
+        ),
+      );
+      for (final sale in headless) {
+        acc.addHeadlessSale(sale);
+      }
+    }
+
     return byCategory.values
         .map((e) => e.toSummary())
         .toList()
@@ -387,7 +463,12 @@ class SalesAnalysisLocalDatasource {
       fromMs: fromMs,
       toMs: toMs,
     );
-    if (rows.isEmpty) return const MarginSummary.empty();
+    final headless = await _fetchHeadlessSales(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    );
+    if (rows.isEmpty && headless.isEmpty) return const MarginSummary.empty();
 
     var totalRevenue = 0;
     var totalCost = 0;
@@ -420,6 +501,10 @@ class SalesAnalysisLocalDatasource {
       );
     }
 
+    for (final sale in headless) {
+      totalRevenue += sale.totalAmount;
+    }
+
     final topProducts = byProduct.values
         .map((e) => e.toLine())
         .where((line) => line.estimatedCost > 0)
@@ -431,7 +516,7 @@ class SalesAnalysisLocalDatasource {
       totalCost: totalCost,
       estimatedProfit: totalRevenue - totalCost,
       linesWithCost: linesWithCost,
-      totalLines: rows.length,
+      totalLines: rows.length + headless.length,
       topProducts: topProducts.take(topLimit).toList(),
     );
   }
@@ -589,7 +674,7 @@ class SalesAnalysisLocalDatasource {
       ),
     ])
       ..where(
-        _db.saleItems.shopId.equals(shopId) &
+        _db.sales.shopId.equals(shopId) &
             _db.sales.status.equals('completed') &
             _db.sales.createdAt.isBiggerOrEqualValue(fromMs) &
             _db.sales.createdAt.isSmallerOrEqualValue(toMs) &
@@ -627,6 +712,153 @@ class SalesAnalysisLocalDatasource {
           ),
         )
         .toList();
+  }
+
+  /// Ventes complétées sans ligne `sale_items` (vente rapide, sync sans détail…).
+  Future<List<_HeadlessSaleRow>> _fetchHeadlessSales({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+  }) async {
+    final query = _db.select(_db.sales).join([
+      leftOuterJoin(
+        _db.saleItems,
+        _db.saleItems.saleId.equalsExp(_db.sales.id),
+      ),
+      leftOuterJoin(_db.users, _db.users.id.equalsExp(_db.sales.userId)),
+      leftOuterJoin(
+        _db.customers,
+        _db.customers.id.equalsExp(_db.sales.customerId),
+      ),
+    ])
+      ..where(
+        _db.sales.shopId.equals(shopId) &
+            _db.sales.status.equals('completed') &
+            _db.sales.createdAt.isBiggerOrEqualValue(fromMs) &
+            _db.sales.createdAt.isSmallerOrEqualValue(toMs) &
+            _db.saleItems.id.isNull(),
+      )
+      ..orderBy([
+        OrderingTerm.desc(_db.sales.createdAt),
+      ]);
+
+    final rows = await query.get();
+    return rows
+        .map(
+          (row) => _HeadlessSaleRow(
+            saleId: row.readTable(_db.sales).id,
+            soldAt: row.readTable(_db.sales).createdAt,
+            userId: row.readTable(_db.sales).userId,
+            saleType: row.readTable(_db.sales).saleType,
+            totalAmount: row.readTable(_db.sales).totalAmount,
+            sellerName: row.readTableOrNull(_db.users)?.name,
+            customerId: row.readTable(_db.sales).customerId,
+            customerName: row.readTableOrNull(_db.customers)?.name,
+          ),
+        )
+        .toList();
+  }
+
+  Future<ProductSalesDetail> _loadHeadlessProductDetail({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+    required String productName,
+  }) async {
+    final quick = productName == SalesAnalysisHeadlessLabels.quickSale;
+    final sales = (await _fetchHeadlessSales(
+      shopId: shopId,
+      fromMs: fromMs,
+      toMs: toMs,
+    ))
+        .where((s) => quick ? s.saleType == 'quick' : s.saleType != 'quick')
+        .toList();
+
+    if (sales.isEmpty) {
+      return ProductSalesDetail(
+        summary: ProductSalesSummary(
+          productName: productName,
+          quantitySold: 0,
+          revenue: 0,
+          averageUnitPrice: 0,
+        ),
+        stats: const ProductPriceStats(
+          minSoldPrice: 0,
+          maxSoldPrice: 0,
+          averageUnitPrice: 0,
+          quantitySold: 0,
+          revenue: 0,
+          saleLineCount: 0,
+        ),
+        lines: const [],
+        employeeStats: const [],
+      );
+    }
+
+    var revenue = 0;
+    int? minPrice;
+    int? maxPrice;
+    int? lastSaleAt;
+    final lines = <ProductSaleLine>[];
+    final employeeAcc = <int, _EmployeeAccumulator>{};
+
+    for (final sale in sales) {
+      revenue += sale.totalAmount;
+      minPrice = minPrice == null
+          ? sale.totalAmount
+          : (sale.totalAmount < minPrice ? sale.totalAmount : minPrice);
+      maxPrice = maxPrice == null
+          ? sale.totalAmount
+          : (sale.totalAmount > maxPrice ? sale.totalAmount : maxPrice);
+      if (lastSaleAt == null || sale.soldAt > lastSaleAt) {
+        lastSaleAt = sale.soldAt;
+      }
+
+      lines.add(
+        ProductSaleLine(
+          saleId: sale.saleId,
+          soldAt: sale.soldAt,
+          customerName: sale.customerName,
+          quantity: 1,
+          unitPrice: sale.totalAmount,
+          sellerName: sale.sellerName,
+          discountAmount: 0,
+        ),
+      );
+
+      final emp = employeeAcc.putIfAbsent(
+        sale.userId,
+        () => _EmployeeAccumulator(
+          userId: sale.userId,
+          userName: sale.sellerName,
+        ),
+      );
+      emp.addHeadlessSale(amount: sale.totalAmount);
+    }
+
+    final qty = sales.length.toDouble();
+    final summary = ProductSalesSummary(
+      productName: productName,
+      quantitySold: qty,
+      revenue: revenue,
+      averageUnitPrice: qty > 0 ? (revenue / qty).round() : 0,
+      lastSaleAt: lastSaleAt,
+    );
+
+    return ProductSalesDetail(
+      summary: summary,
+      stats: ProductPriceStats(
+        minSoldPrice: minPrice ?? 0,
+        maxSoldPrice: maxPrice ?? 0,
+        averageUnitPrice: qty > 0 ? (revenue / qty).round() : 0,
+        quantitySold: qty,
+        revenue: revenue,
+        saleLineCount: sales.length,
+      ),
+      lines: lines,
+      employeeStats: employeeAcc.values.map((e) => e.toPerformance()).toList()
+        ..sort((a, b) => b.saleLineCount.compareTo(a.saleLineCount)),
+    );
   }
 
   String _productKey(int? productId, String productName) =>
@@ -673,6 +905,28 @@ class _SaleItemRow {
   final String? categoryName;
 }
 
+class _HeadlessSaleRow {
+  const _HeadlessSaleRow({
+    required this.saleId,
+    required this.soldAt,
+    required this.userId,
+    required this.saleType,
+    required this.totalAmount,
+    this.sellerName,
+    this.customerId,
+    this.customerName,
+  });
+
+  final int saleId;
+  final int soldAt;
+  final int userId;
+  final String saleType;
+  final int totalAmount;
+  final String? sellerName;
+  final int? customerId;
+  final String? customerName;
+}
+
 class _ProductAccumulator {
   _ProductAccumulator({
     this.productId,
@@ -690,6 +944,14 @@ class _ProductAccumulator {
     revenue += row.lineTotal;
     if (lastSaleAt == null || row.soldAt > lastSaleAt!) {
       lastSaleAt = row.soldAt;
+    }
+  }
+
+  void addHeadlessSale(_HeadlessSaleRow sale) {
+    quantitySold += 1;
+    revenue += sale.totalAmount;
+    if (lastSaleAt == null || sale.soldAt > lastSaleAt!) {
+      lastSaleAt = sale.soldAt;
     }
   }
 }
@@ -717,6 +979,12 @@ class _EmployeeAccumulator {
     if (discountAmount > 0 || belowCatalog) {
       discountLineCount++;
     }
+  }
+
+  void addHeadlessSale({required int amount}) {
+    saleLineCount++;
+    totalLineRevenue += amount;
+    totalQuantity += 1;
   }
 
   EmployeePricePerformance toPerformance() {
@@ -757,6 +1025,13 @@ class _CustomerInsightAccumulator {
     totalQuantity += quantity;
   }
 
+  void addHeadlessSale(int saleId, {required int amount}) {
+    saleIds.add(saleId);
+    lineCount++;
+    totalRevenue += amount;
+    totalQuantity += 1;
+  }
+
   CustomerSalesInsight toInsight() {
     return CustomerSalesInsight(
       customerId: customerId,
@@ -787,6 +1062,12 @@ class _CategoryAccumulator {
     productKeys.add('${row.productId ?? 'null'}:${row.productName}');
     quantitySold += row.quantity;
     revenue += row.lineTotal;
+  }
+
+  void addHeadlessSale(_HeadlessSaleRow sale) {
+    productKeys.add('headless:${sale.saleId}');
+    quantitySold += 1;
+    revenue += sale.totalAmount;
   }
 
   CategorySalesSummary toSummary() {

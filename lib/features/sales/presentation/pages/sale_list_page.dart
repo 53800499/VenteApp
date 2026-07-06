@@ -6,6 +6,7 @@ import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../domain/entities/sale_entities.dart';
@@ -139,15 +140,10 @@ class _SaleListPageState extends State<SaleListPage> {
                                   );
                             },
                             child: state.sales.isEmpty
-                                ? ListView(
-                                    children: const [
-                                      SizedBox(height: 120),
-                                      Center(
-                                        child: Text(
-                                          'Aucune vente enregistrée',
-                                        ),
-                                      ),
-                                    ],
+                                ? EmptyListPlaceholder(
+                                    embedded: true,
+                                    icon: Icons.receipt_long_outlined,
+                                    title: 'Aucune vente enregistrée',
                                   )
                                 : ListView.separated(
                                     padding: const EdgeInsets.symmetric(

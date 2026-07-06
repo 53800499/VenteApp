@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/auth/app_lock_controller.dart';
+import '../../../../core/auth/pin_cold_start_policy.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
@@ -18,6 +19,8 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/domain/repositories/auth_repository.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../notifications/presentation/pages/notification_settings_page.dart';
+import '../../../../shared/components/feature_ui.dart';
+import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../domain/entities/settings_entities.dart';
 import '../../domain/services/settings_validation_service.dart';
 import '../../domain/usecases/settings_usecases.dart';
@@ -92,6 +95,7 @@ class _SettingsViewState extends State<_SettingsView> {
   bool _hydrated = false;
   int? _lastUpdatedAt;
   bool _biometricEnabled = false;
+  PinColdStartPolicy _pinColdStartPolicy = PinColdStartPolicy.always;
   String? _driveEmail;
   bool _driveAutoBackup = false;
 
@@ -99,6 +103,7 @@ class _SettingsViewState extends State<_SettingsView> {
   void initState() {
     super.initState();
     _biometricEnabled = widget.session.user.biometricEnabled;
+    _pinColdStartPolicy = sl<AppLockController>().pinColdStartPolicy;
     _loadDriveState();
   }
 
@@ -437,6 +442,45 @@ class _SettingsViewState extends State<_SettingsView> {
                                   }
                                 },
                         ),
+                        const SizedBox(height: AppSpacing.md),
+                        Text(
+                          'PIN au démarrage',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        DropdownButtonFormField<PinColdStartPolicy>(
+                          key: ValueKey('pin-cold-start-$_pinColdStartPolicy'),
+                          initialValue: _pinColdStartPolicy,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          items: PinColdStartPolicy.values
+                              .map(
+                                (policy) => DropdownMenuItem(
+                                  value: policy,
+                                  child: Text(policy.label),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: !widget.canWrite || state.isSaving
+                              ? null
+                              : (value) async {
+                                  if (value == null) return;
+                                  final confirmed =
+                                      await SettingsFeedback.confirm(
+                                    context: context,
+                                    title: 'Politique de PIN',
+                                    message:
+                                        'Appliquer « ${value.label} » au démarrage de l\'application ?',
+                                  );
+                                  if (confirmed == true && context.mounted) {
+                                    await sl<AppLockController>()
+                                        .setPinColdStartPolicy(value);
+                                    setState(() => _pinColdStartPolicy = value);
+                                  }
+                                },
+                        ),
                         if (widget.canWrite) ...[
                           const SizedBox(height: AppSpacing.sm),
                           OutlinedButton.icon(
@@ -608,6 +652,18 @@ class _SettingsViewState extends State<_SettingsView> {
                               : (v) => context.read<SettingsBloc>().add(
                                     SettingsSyncToggled(v),
                                   ),
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        const _SectionTitle(title: 'Aide & support'),
+                        ModuleActionTile(
+                          icon: Icons.menu_book_outlined,
+                          title: 'Centre d\'aide',
+                          subtitle: 'Guides détaillés pour chaque module',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const HelpHubPage(),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
                         const _SectionTitle(title: 'Notifications'),

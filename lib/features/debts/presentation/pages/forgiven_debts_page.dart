@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -103,7 +104,11 @@ class _ForgivenDebtsListState extends State<ForgivenDebtsList> {
       );
     }
     if (_entries.isEmpty) {
-      return const Center(child: Text('Aucune dette pardonnée.'));
+      return EmptyListPlaceholder.refreshable(
+        icon: Icons.volunteer_activism_outlined,
+        title: 'Aucune dette pardonnée',
+        onRefresh: _load,
+      );
     }
 
     return RefreshIndicator(

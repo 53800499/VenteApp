@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../constants/api_config.dart';
 import '../network/network_info.dart';
 import '../storage/auth_credentials_storage.dart';
+import '../utils/time.dart';
 
 /// Gère l'expiration du refresh token sans verrouiller l'application.
 class CloudSessionCoordinator {
   CloudSessionCoordinator({
     required AuthCredentialsStorage credentials,
     required NetworkInfo networkInfo,
+    required SharedPreferences prefs,
   })  : _credentials = credentials,
-        _networkInfo = networkInfo;
+        _networkInfo = networkInfo,
+        _prefs = prefs;
+
+  static const _invalidSinceKey = 'cloud_session_invalid_since_ms';
 
   final AuthCredentialsStorage _credentials;
   final NetworkInfo _networkInfo;
+  final SharedPreferences _prefs;
 
   GlobalKey<NavigatorState>? _navigatorKey;
   VoidCallback? _onReconnectRequested;
@@ -26,10 +34,28 @@ class CloudSessionCoordinator {
     _onReconnectRequested = onReconnectRequested;
   }
 
+  /// Session cloud rétablie (login ou refresh réussi).
+  void markCloudSessionValid() {
+    _prefs.remove(_invalidSinceKey);
+  }
+
   /// Refresh token rejeté alors que le réseau est disponible.
   Future<void> handleInvalidRefreshToken() async {
     if (!await _networkInfo.isConnected) {
       // Hors ligne : continuer silencieusement en local.
+      return;
+    }
+
+    final now = nowMs();
+    final invalidSince = _prefs.getInt(_invalidSinceKey);
+    if (invalidSince == null) {
+      await _prefs.setInt(_invalidSinceKey, now);
+      return;
+    }
+
+    final elapsedMs = now - invalidSince;
+    if (elapsedMs < ApiConfig.serverAccessibleGraceMs) {
+      // Période de grâce : travail local sans interruption.
       return;
     }
 
@@ -68,6 +94,7 @@ class CloudSessionCoordinator {
       }
     } finally {
       _dialogVisible = false;
+      markCloudSessionValid();
     }
   }
 }

@@ -31,6 +31,13 @@ abstract class AuthRepository {
     int? userId,
   });
 
+  Future<AuthSession> emergencyUnlockWithWhatsappOtp({
+    required String phone,
+    required String code,
+    required int shopId,
+    int? userId,
+  });
+
   Future<bool> enableBiometric({
     required int userId,
     required String sessionToken,
@@ -57,7 +64,22 @@ abstract class AuthRepository {
 
   Future<AuthSession?> restoreSession();
 
-  /// Verrouille l'app sans effacer les jetons hors ligne (7 jours).
+  /// Session locale persistée (≠ déconnexion).
+  Future<bool> hasRestorableSession();
+
+  /// Déverrouille l'app en conservant la session locale existante.
+  Future<AuthSession> unlockWithPin({
+    required String pin,
+    required int shopId,
+    int? userId,
+  });
+
+  Future<AuthSession> unlockWithBiometric({
+    required int shopId,
+    int? userId,
+  });
+
+  /// Efface la session locale (déconnexion uniquement — pas le verrouillage PIN).
   Future<void> lockActiveSession();
 
   Future<void> logout();

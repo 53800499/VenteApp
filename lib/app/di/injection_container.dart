@@ -235,6 +235,11 @@ void ensureSalesAnalysisDependencies() {
       () => GetSalesTrendAnalysis(sl<SalesAnalysisRepository>()),
     );
   }
+  if (!sl.isRegistered<ClearSalesAnalysisRemoteCache>()) {
+    sl.registerLazySingleton(
+      () => ClearSalesAnalysisRemoteCache(sl<SalesAnalysisRepository>()),
+    );
+  }
 }
 
 /// Enregistre le module Dépenses si absent.
@@ -526,6 +531,7 @@ Future<void> initDependencies() async {
     () => CloudSessionCoordinator(
       credentials: sl(),
       networkInfo: sl(),
+      prefs: sl<SharedPreferences>(),
     ),
   );
   sl.registerLazySingleton(
@@ -571,21 +577,30 @@ Future<void> initDependencies() async {
           sl<SyncService>().scheduleSync(shopId: shopId);
         }
       },
+      onCloudSessionRestored: () {
+        if (sl.isRegistered<CloudSessionCoordinator>()) {
+          sl<CloudSessionCoordinator>().markCloudSessionValid();
+        }
+      },
     ),
   );
 
   sl.registerLazySingleton(() => IsSetupComplete(sl()));
   sl.registerLazySingleton(() => WasLoggedOut(sl()));
   sl.registerLazySingleton(() => RestoreSession(sl()));
+  sl.registerLazySingleton(() => HasRestorableSession(sl()));
   sl.registerLazySingleton(() => GetLockScreen(sl()));
   sl.registerLazySingleton(() => LoginWithPin(sl()));
+  sl.registerLazySingleton(() => UnlockWithPin(sl()));
   sl.registerLazySingleton(() => VerifyShopOwnerPin(sl()));
   sl.registerLazySingleton(() => LoginWithBiometric(sl(), sl()));
+  sl.registerLazySingleton(() => UnlockWithBiometric(sl(), sl()));
   sl.registerLazySingleton(() => SetupOwner(sl()));
   sl.registerLazySingleton(() => RequestWhatsappOtp(sl()));
   sl.registerLazySingleton(() => VerifyWhatsappOtp(sl()));
   sl.registerLazySingleton(() => CompleteWhatsappLogin(sl()));
   sl.registerLazySingleton(() => EmergencyUnlock(sl()));
+  sl.registerLazySingleton(() => EmergencyUnlockWithWhatsappOtp(sl()));
   sl.registerLazySingleton(() => EnableBiometric(sl()));
   sl.registerLazySingleton(() => DisableBiometric(sl()));
   sl.registerLazySingleton(() => ChangeUserPin(sl()));
@@ -602,6 +617,7 @@ Future<void> initDependencies() async {
       remote: sl(),
       database: sl(),
       apiRunner: sl(),
+      lastShopStorage: sl(),
     ),
   );
   sl.registerLazySingleton(() => ListShops(sl()));
@@ -837,11 +853,16 @@ Future<void> initDependencies() async {
     () => AuthBloc(
       isSetupComplete: sl(),
       wasLoggedOut: sl(),
+      hasRestorableSession: sl(),
+      restoreSession: sl(),
       getLockScreen: sl(),
       loginWithPin: sl(),
+      unlockWithPin: sl(),
       loginWithBiometric: sl(),
+      unlockWithBiometric: sl(),
       setupOwner: sl(),
       emergencyUnlock: sl(),
+      emergencyUnlockWithWhatsappOtp: sl(),
       logout: sl(),
       listOwnedShops: sl(),
       switchShop: sl(),

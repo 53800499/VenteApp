@@ -1,6 +1,9 @@
 import '../entities/sales_analysis_entities.dart';
 
 abstract class SalesAnalysisRepository {
+  /// Invalide le cache API (changement de période, refresh).
+  void clearRemoteCache();
+
   Future<List<ProductSalesSummary>> listProductSummaries({
     required int shopId,
     required SalesAnalysisQuery query,

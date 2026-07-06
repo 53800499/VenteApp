@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -147,6 +147,10 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(cashSessions);
             await m.createTable(cashMovements);
           }
+          if (from < 17) {
+            await _addColumnIfMissing(m, shops, shops.parentShopId);
+            await _backfillShopHierarchy(this);
+          }
         },
       );
 
@@ -210,5 +214,29 @@ Future<void> _seedDefaultCategories(AppDatabase db) async {
             (p) => p.shopId.equals(shop.id) & p.categoryId.isNull(),
           ))
         .write(ProductsCompanion(categoryId: Value(categoryId)));
+  }
+}
+
+Future<void> _backfillShopHierarchy(AppDatabase db) async {
+  final shops = await db.select(db.shops).get();
+  if (shops.isEmpty) return;
+
+  final defaultByOwner = <int, Shop>{};
+  for (final shop in shops) {
+    if (shop.isDefault && shop.ownerUserId != null) {
+      defaultByOwner[shop.ownerUserId!] = shop;
+    }
+  }
+
+  for (final shop in shops) {
+    if (shop.parentShopId != null || shop.isDefault || shop.ownerUserId == null) {
+      continue;
+    }
+    final root = defaultByOwner[shop.ownerUserId!];
+    if (root == null || root.id == shop.id) continue;
+
+    await (db.update(db.shops)..where((s) => s.id.equals(shop.id))).write(
+      ShopsCompanion(parentShopId: Value(root.id)),
+    );
   }
 }

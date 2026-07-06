@@ -161,6 +161,23 @@ class AuthEmergencyUnlockRequested extends AuthEvent {
   List<Object?> get props => [recoveryToken, shopId, userId];
 }
 
+class AuthEmergencyUnlockWhatsappRequested extends AuthEvent {
+  const AuthEmergencyUnlockWhatsappRequested({
+    required this.phone,
+    required this.code,
+    this.shopId = 1,
+    this.userId,
+  });
+
+  final String phone;
+  final String code;
+  final int shopId;
+  final int? userId;
+
+  @override
+  List<Object?> get props => [phone, code, shopId, userId];
+}
+
 class AuthLogoutRequested extends AuthEvent {
   const AuthLogoutRequested();
 }

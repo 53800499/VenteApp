@@ -10,6 +10,7 @@ import '../../../sales_analysis/domain/usecases/sales_analysis_usecases.dart';
 import '../../../sales_analysis/presentation/utils/sales_analysis_formatters.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/entities/sale_pricing_entities.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../bloc/new_sale_bloc.dart';
 import '../widgets/sale_feedback.dart';
@@ -456,43 +457,28 @@ class _ProductList extends StatelessWidget {
         ],
         Expanded(
           child: products.isEmpty
-              ? LayoutBuilder(
-                  builder: (context, constraints) {
-                    return SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints:
-                            BoxConstraints(minHeight: constraints.maxHeight),
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  state.products.isEmpty
-                                      ? 'Aucun produit disponible.\nAjoutez des produits dans Inventaire, puis actualisez.'
-                                      : 'Aucun produit ne correspond à votre recherche.',
-                                  textAlign: TextAlign.center,
-                                ),
-                                if (state.products.isEmpty) ...[
-                                  const SizedBox(height: AppSpacing.md),
-                                  OutlinedButton.icon(
-                                    onPressed: () => context
-                                        .read<NewSaleBloc>()
-                                        .add(const NewSaleLoadRequested()),
-                                    icon: const Icon(Icons.refresh),
-                                    label: const Text('Actualiser'),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                )
+              ? state.products.isEmpty
+                  ? EmptyListPlaceholder.refreshable(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Aucun produit disponible',
+                      subtitle:
+                          'Ajoutez des produits dans Inventaire, puis actualisez',
+                      onRefresh: () async {
+                        context
+                            .read<NewSaleBloc>()
+                            .add(const NewSaleLoadRequested());
+                        await context.read<NewSaleBloc>().stream.firstWhere(
+                              (s) =>
+                                  s.status == NewSaleStatus.ready ||
+                                  s.status == NewSaleStatus.failure,
+                            );
+                      },
+                    )
+                  : EmptyListPlaceholder(
+                      embedded: true,
+                      icon: Icons.search_off_outlined,
+                      title: 'Aucun produit ne correspond à votre recherche',
+                    )
               : RefreshIndicator(
                   onRefresh: () async {
                     context

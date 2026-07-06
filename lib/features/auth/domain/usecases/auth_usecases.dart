@@ -148,6 +148,25 @@ class EmergencyUnlock {
       );
 }
 
+class EmergencyUnlockWithWhatsappOtp {
+  const EmergencyUnlockWithWhatsappOtp(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<AuthSession> call({
+    required String phone,
+    required String code,
+    int shopId = 1,
+    int? userId,
+  }) =>
+      _repository.emergencyUnlockWithWhatsappOtp(
+        phone: phone,
+        code: code,
+        shopId: shopId,
+        userId: userId,
+      );
+}
+
 class EnableBiometric {
   const EnableBiometric(this._repository);
 
@@ -219,6 +238,56 @@ class RestoreSession {
   final AuthRepository _repository;
 
   Future<AuthSession?> call() => _repository.restoreSession();
+}
+
+class HasRestorableSession {
+  const HasRestorableSession(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<bool> call() => _repository.hasRestorableSession();
+}
+
+class UnlockWithPin {
+  const UnlockWithPin(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<AuthSession> call({
+    required String pin,
+    int shopId = 1,
+    int? userId,
+  }) =>
+      _repository.unlockWithPin(pin: pin, shopId: shopId, userId: userId);
+}
+
+class UnlockWithBiometric {
+  const UnlockWithBiometric(this._repository, this._biometricDatasource);
+
+  final AuthRepository _repository;
+  final BiometricLocalDatasource _biometricDatasource;
+
+  Future<AuthSession> call({
+    int shopId = 1,
+    int? userId,
+  }) async {
+    final canUse = await _biometricDatasource.canCheckBiometrics();
+    if (!canUse) {
+      throw const UnauthorizedFailure(
+        'Aucune empreinte enregistrée sur cet appareil. '
+        'Ajoutez-en une dans les réglages du téléphone.',
+      );
+    }
+
+    final authenticated = await _biometricDatasource.authenticate();
+    if (!authenticated) {
+      throw const UnauthorizedFailure(
+        'Empreinte non reconnue. Utilisez votre code PIN.',
+      );
+    }
+
+    return _repository.unlockWithBiometric(shopId: shopId, userId: userId);
+  }
 }
 
 class Logout {

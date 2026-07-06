@@ -44,6 +44,15 @@ abstract final class ApiConfig {
   static const offlineGraceDays = 7;
   static const offlineGraceMs = offlineGraceDays * 24 * 60 * 60 * 1000;
 
+  /// Fenêtre (20–30 min) pendant laquelle le cloud reste accessible après un
+  /// refresh rejeté, avant dialogue et effacement des identifiants.
+  static const serverAccessibleGraceMinutes = 25;
+  static const serverAccessibleGraceMs =
+      serverAccessibleGraceMinutes * 60 * 1000;
+
+  @Deprecated('Utiliser serverAccessibleGraceMs')
+  static const cloudSessionPromptGraceMs = serverAccessibleGraceMs;
+
   /// Durée de la session locale (indépendante du verrouillage PIN).
   static const localSessionMaxDays = 3650;
   static const localSessionMaxMs =

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../../../core/database/app_database.dart' as db;
+import '../../../../../core/shop/shop_hierarchy.dart';
 import '../../../../../core/utils/time.dart';
 import '../../../domain/entities/customer_entities.dart';
 import '../../mappers/customer_mapper.dart';
@@ -29,16 +30,8 @@ class CustomersLocalDatasource {
   final db.AppDatabase _db;
 
   Future<Set<int>> _ownerShopIds(int shopId) async {
-    final shop = await (_db.select(_db.shops)
-          ..where((s) => s.id.equals(shopId)))
-        .getSingleOrNull();
-    if (shop?.ownerUserId == null) return {shopId};
-
-    final shops = await (_db.select(_db.shops)
-          ..where((s) => s.ownerUserId.equals(shop!.ownerUserId!)))
-        .get();
-    if (shops.length <= 1) return {shopId};
-    return shops.map((s) => s.id).toSet();
+    final ids = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+    return ids.toSet();
   }
 
   Expression<bool> _visibleCustomerExpr(

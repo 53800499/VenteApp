@@ -20,6 +20,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     required GetMarginAnalysis getMargins,
     required ListPriceDeviationAnalysis listPriceDeviations,
     required GetSalesTrendAnalysis getTrends,
+    required ClearSalesAnalysisRemoteCache clearRemoteCache,
     required AuthSession session,
   })  : _listProducts = listProducts,
         _listEmployees = listEmployees,
@@ -28,6 +29,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
         _getMargins = getMargins,
         _listPriceDeviations = listPriceDeviations,
         _getTrends = getTrends,
+        _clearRemoteCache = clearRemoteCache,
         _session = session,
         super(const SalesAnalysisState()) {
     on<SalesAnalysisLoadRequested>(_onLoad);
@@ -42,6 +44,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
   final GetMarginAnalysis _getMargins;
   final ListPriceDeviationAnalysis _listPriceDeviations;
   final GetSalesTrendAnalysis _getTrends;
+  final ClearSalesAnalysisRemoteCache _clearRemoteCache;
   final AuthSession _session;
 
   AuthSession get session => _session;
@@ -52,9 +55,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     SalesAnalysisLoadRequested event,
     Emitter<SalesAnalysisState> emit,
   ) async {
-    if (state.products.isEmpty) {
-      emit(state.copyWith(status: SalesAnalysisStatus.loading, clearError: true));
-    }
+    emit(state.copyWith(status: SalesAnalysisStatus.loading, clearError: true));
     await _fetch(emit);
   }
 
@@ -69,9 +70,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
           customFrom: event.customFrom,
           customTo: event.customTo,
         ),
-        status: state.products.isEmpty
-            ? SalesAnalysisStatus.loading
-            : SalesAnalysisStatus.loaded,
+        status: SalesAnalysisStatus.loading,
         clearError: true,
       ),
     );
@@ -86,6 +85,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
   }
 
   Future<void> _fetch(Emitter<SalesAnalysisState> emit) async {
+    _clearRemoteCache();
     try {
       final period = resolveReportPeriod(
         preset: state.query.period,
@@ -147,6 +147,22 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
         state.copyWith(
           status: SalesAnalysisStatus.failure,
           errorMessage: friendlyErrorMessage(error),
+        ),
+      );
+    } catch (_) {
+      if (state.products.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: SalesAnalysisStatus.loaded,
+            errorMessage: 'Certaines données n\'ont pas pu être actualisées.',
+          ),
+        );
+        return;
+      }
+      emit(
+        state.copyWith(
+          status: SalesAnalysisStatus.failure,
+          errorMessage: 'Impossible de charger l\'analyse des ventes.',
         ),
       );
     }

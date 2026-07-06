@@ -92,6 +92,20 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _parentShopIdMeta = const VerificationMeta(
+    'parentShopId',
+  );
+  @override
+  late final GeneratedColumn<int> parentShopId = GeneratedColumn<int>(
+    'parent_shop_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -134,6 +148,7 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
     ownerUserId,
     isActive,
     isDefault,
+    parentShopId,
     createdAt,
     serverId,
     syncedAt,
@@ -190,6 +205,15 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
       context.handle(
         _isDefaultMeta,
         isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
+    if (data.containsKey('parent_shop_id')) {
+      context.handle(
+        _parentShopIdMeta,
+        parentShopId.isAcceptableOrUnknown(
+          data['parent_shop_id']!,
+          _parentShopIdMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -249,6 +273,10 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_default'],
       )!,
+      parentShopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parent_shop_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -278,6 +306,7 @@ class Shop extends DataClass implements Insertable<Shop> {
   final int? ownerUserId;
   final bool isActive;
   final bool isDefault;
+  final int? parentShopId;
   final int createdAt;
   final String? serverId;
   final int? syncedAt;
@@ -289,6 +318,7 @@ class Shop extends DataClass implements Insertable<Shop> {
     this.ownerUserId,
     required this.isActive,
     required this.isDefault,
+    this.parentShopId,
     required this.createdAt,
     this.serverId,
     this.syncedAt,
@@ -309,6 +339,9 @@ class Shop extends DataClass implements Insertable<Shop> {
     }
     map['is_active'] = Variable<bool>(isActive);
     map['is_default'] = Variable<bool>(isDefault);
+    if (!nullToAbsent || parentShopId != null) {
+      map['parent_shop_id'] = Variable<int>(parentShopId);
+    }
     map['created_at'] = Variable<int>(createdAt);
     if (!nullToAbsent || serverId != null) {
       map['server_id'] = Variable<String>(serverId);
@@ -334,6 +367,9 @@ class Shop extends DataClass implements Insertable<Shop> {
           : Value(ownerUserId),
       isActive: Value(isActive),
       isDefault: Value(isDefault),
+      parentShopId: parentShopId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentShopId),
       createdAt: Value(createdAt),
       serverId: serverId == null && nullToAbsent
           ? const Value.absent()
@@ -357,6 +393,7 @@ class Shop extends DataClass implements Insertable<Shop> {
       ownerUserId: serializer.fromJson<int?>(json['ownerUserId']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
+      parentShopId: serializer.fromJson<int?>(json['parentShopId']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       serverId: serializer.fromJson<String?>(json['serverId']),
       syncedAt: serializer.fromJson<int?>(json['syncedAt']),
@@ -373,6 +410,7 @@ class Shop extends DataClass implements Insertable<Shop> {
       'ownerUserId': serializer.toJson<int?>(ownerUserId),
       'isActive': serializer.toJson<bool>(isActive),
       'isDefault': serializer.toJson<bool>(isDefault),
+      'parentShopId': serializer.toJson<int?>(parentShopId),
       'createdAt': serializer.toJson<int>(createdAt),
       'serverId': serializer.toJson<String?>(serverId),
       'syncedAt': serializer.toJson<int?>(syncedAt),
@@ -387,6 +425,7 @@ class Shop extends DataClass implements Insertable<Shop> {
     Value<int?> ownerUserId = const Value.absent(),
     bool? isActive,
     bool? isDefault,
+    Value<int?> parentShopId = const Value.absent(),
     int? createdAt,
     Value<String?> serverId = const Value.absent(),
     Value<int?> syncedAt = const Value.absent(),
@@ -398,6 +437,7 @@ class Shop extends DataClass implements Insertable<Shop> {
     ownerUserId: ownerUserId.present ? ownerUserId.value : this.ownerUserId,
     isActive: isActive ?? this.isActive,
     isDefault: isDefault ?? this.isDefault,
+    parentShopId: parentShopId.present ? parentShopId.value : this.parentShopId,
     createdAt: createdAt ?? this.createdAt,
     serverId: serverId.present ? serverId.value : this.serverId,
     syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
@@ -413,6 +453,9 @@ class Shop extends DataClass implements Insertable<Shop> {
           : this.ownerUserId,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      parentShopId: data.parentShopId.present
+          ? data.parentShopId.value
+          : this.parentShopId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       serverId: data.serverId.present ? data.serverId.value : this.serverId,
       syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
@@ -429,6 +472,7 @@ class Shop extends DataClass implements Insertable<Shop> {
           ..write('ownerUserId: $ownerUserId, ')
           ..write('isActive: $isActive, ')
           ..write('isDefault: $isDefault, ')
+          ..write('parentShopId: $parentShopId, ')
           ..write('createdAt: $createdAt, ')
           ..write('serverId: $serverId, ')
           ..write('syncedAt: $syncedAt')
@@ -445,6 +489,7 @@ class Shop extends DataClass implements Insertable<Shop> {
     ownerUserId,
     isActive,
     isDefault,
+    parentShopId,
     createdAt,
     serverId,
     syncedAt,
@@ -460,6 +505,7 @@ class Shop extends DataClass implements Insertable<Shop> {
           other.ownerUserId == this.ownerUserId &&
           other.isActive == this.isActive &&
           other.isDefault == this.isDefault &&
+          other.parentShopId == this.parentShopId &&
           other.createdAt == this.createdAt &&
           other.serverId == this.serverId &&
           other.syncedAt == this.syncedAt);
@@ -473,6 +519,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
   final Value<int?> ownerUserId;
   final Value<bool> isActive;
   final Value<bool> isDefault;
+  final Value<int?> parentShopId;
   final Value<int> createdAt;
   final Value<String?> serverId;
   final Value<int?> syncedAt;
@@ -484,6 +531,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
     this.ownerUserId = const Value.absent(),
     this.isActive = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.parentShopId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.serverId = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -496,6 +544,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
     this.ownerUserId = const Value.absent(),
     this.isActive = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.parentShopId = const Value.absent(),
     required int createdAt,
     this.serverId = const Value.absent(),
     this.syncedAt = const Value.absent(),
@@ -508,6 +557,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
     Expression<int>? ownerUserId,
     Expression<bool>? isActive,
     Expression<bool>? isDefault,
+    Expression<int>? parentShopId,
     Expression<int>? createdAt,
     Expression<String>? serverId,
     Expression<int>? syncedAt,
@@ -520,6 +570,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
       if (ownerUserId != null) 'owner_user_id': ownerUserId,
       if (isActive != null) 'is_active': isActive,
       if (isDefault != null) 'is_default': isDefault,
+      if (parentShopId != null) 'parent_shop_id': parentShopId,
       if (createdAt != null) 'created_at': createdAt,
       if (serverId != null) 'server_id': serverId,
       if (syncedAt != null) 'synced_at': syncedAt,
@@ -534,6 +585,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
     Value<int?>? ownerUserId,
     Value<bool>? isActive,
     Value<bool>? isDefault,
+    Value<int?>? parentShopId,
     Value<int>? createdAt,
     Value<String?>? serverId,
     Value<int?>? syncedAt,
@@ -546,6 +598,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
       ownerUserId: ownerUserId ?? this.ownerUserId,
       isActive: isActive ?? this.isActive,
       isDefault: isDefault ?? this.isDefault,
+      parentShopId: parentShopId ?? this.parentShopId,
       createdAt: createdAt ?? this.createdAt,
       serverId: serverId ?? this.serverId,
       syncedAt: syncedAt ?? this.syncedAt,
@@ -576,6 +629,9 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
     }
+    if (parentShopId.present) {
+      map['parent_shop_id'] = Variable<int>(parentShopId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -598,6 +654,7 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
           ..write('ownerUserId: $ownerUserId, ')
           ..write('isActive: $isActive, ')
           ..write('isDefault: $isDefault, ')
+          ..write('parentShopId: $parentShopId, ')
           ..write('createdAt: $createdAt, ')
           ..write('serverId: $serverId, ')
           ..write('syncedAt: $syncedAt')
@@ -17126,6 +17183,7 @@ typedef $$ShopsTableCreateCompanionBuilder =
       Value<int?> ownerUserId,
       Value<bool> isActive,
       Value<bool> isDefault,
+      Value<int?> parentShopId,
       required int createdAt,
       Value<String?> serverId,
       Value<int?> syncedAt,
@@ -17139,6 +17197,7 @@ typedef $$ShopsTableUpdateCompanionBuilder =
       Value<int?> ownerUserId,
       Value<bool> isActive,
       Value<bool> isDefault,
+      Value<int?> parentShopId,
       Value<int> createdAt,
       Value<String?> serverId,
       Value<int?> syncedAt,
@@ -17147,6 +17206,23 @@ typedef $$ShopsTableUpdateCompanionBuilder =
 final class $$ShopsTableReferences
     extends BaseReferences<_$AppDatabase, $ShopsTable, Shop> {
   $$ShopsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShopsTable _parentShopIdTable(_$AppDatabase db) => db.shops
+      .createAlias($_aliasNameGenerator(db.shops.parentShopId, db.shops.id));
+
+  $$ShopsTableProcessedTableManager? get parentShopId {
+    final $_column = $_itemColumn<int>('parent_shop_id');
+    if ($_column == null) return null;
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentShopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
 
   static MultiTypedResultKey<$UsersTable, List<User>> _usersRefsTable(
     _$AppDatabase db,
@@ -17634,6 +17710,29 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
     column: $table.syncedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  $$ShopsTableFilterComposer get parentShopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   Expression<bool> usersRefs(
     Expression<bool> Function($$UsersTableFilterComposer f) f,
@@ -18222,6 +18321,29 @@ class $$ShopsTableOrderingComposer
     column: $table.syncedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  $$ShopsTableOrderingComposer get parentShopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$ShopsTableAnnotationComposer
@@ -18264,6 +18386,29 @@ class $$ShopsTableAnnotationComposer
 
   GeneratedColumn<int> get syncedAt =>
       $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  $$ShopsTableAnnotationComposer get parentShopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 
   Expression<T> usersRefs<T extends Object>(
     Expression<T> Function($$UsersTableAnnotationComposer a) f,
@@ -18811,6 +18956,7 @@ class $$ShopsTableTableManager
           (Shop, $$ShopsTableReferences),
           Shop,
           PrefetchHooks Function({
+            bool parentShopId,
             bool usersRefs,
             bool settingsRefs,
             bool authSessionsRefs,
@@ -18854,6 +19000,7 @@ class $$ShopsTableTableManager
                 Value<int?> ownerUserId = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<int?> parentShopId = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<String?> serverId = const Value.absent(),
                 Value<int?> syncedAt = const Value.absent(),
@@ -18865,6 +19012,7 @@ class $$ShopsTableTableManager
                 ownerUserId: ownerUserId,
                 isActive: isActive,
                 isDefault: isDefault,
+                parentShopId: parentShopId,
                 createdAt: createdAt,
                 serverId: serverId,
                 syncedAt: syncedAt,
@@ -18878,6 +19026,7 @@ class $$ShopsTableTableManager
                 Value<int?> ownerUserId = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<int?> parentShopId = const Value.absent(),
                 required int createdAt,
                 Value<String?> serverId = const Value.absent(),
                 Value<int?> syncedAt = const Value.absent(),
@@ -18889,6 +19038,7 @@ class $$ShopsTableTableManager
                 ownerUserId: ownerUserId,
                 isActive: isActive,
                 isDefault: isDefault,
+                parentShopId: parentShopId,
                 createdAt: createdAt,
                 serverId: serverId,
                 syncedAt: syncedAt,
@@ -18901,6 +19051,7 @@ class $$ShopsTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
+                parentShopId = false,
                 usersRefs = false,
                 settingsRefs = false,
                 authSessionsRefs = false,
@@ -18948,7 +19099,38 @@ class $$ShopsTableTableManager
                     if (cashSessionsRefs) db.cashSessions,
                     if (cashMovementsRefs) db.cashMovements,
                   ],
-                  addJoins: null,
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (parentShopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentShopId,
+                                    referencedTable: $$ShopsTableReferences
+                                        ._parentShopIdTable(db),
+                                    referencedColumn: $$ShopsTableReferences
+                                        ._parentShopIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
                   getPrefetchedDataCallback: (items) async {
                     return [
                       if (usersRefs)
@@ -19361,6 +19543,7 @@ typedef $$ShopsTableProcessedTableManager =
       (Shop, $$ShopsTableReferences),
       Shop,
       PrefetchHooks Function({
+        bool parentShopId,
         bool usersRefs,
         bool settingsRefs,
         bool authSessionsRefs,

@@ -6,6 +6,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -299,33 +300,24 @@ class _ProductListView extends StatelessWidget {
         }
 
         if (state.products.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.inventory_2_outlined,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    state.filters.lowStockOnly
-                        ? 'Aucun produit en alerte'
-                        : 'Aucun produit',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  if (canWrite) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    const Text(
-                      'Ajoutez votre premier produit avec le bouton +',
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
+          return RefreshIndicator(
+            onRefresh: () async {
+              context
+                  .read<ProductListBloc>()
+                  .add(const ProductListRefreshRequested());
+              await context.read<ProductListBloc>().stream.firstWhere(
+                    (s) => !s.isRefreshing,
+                  );
+            },
+            child: EmptyListPlaceholder(
+              embedded: true,
+              icon: Icons.inventory_2_outlined,
+              title: state.filters.lowStockOnly
+                  ? 'Aucun produit en alerte'
+                  : 'Aucun produit',
+              subtitle: canWrite
+                  ? 'Ajoutez votre premier produit avec le bouton +'
+                  : null,
             ),
           );
         }

@@ -8,6 +8,7 @@ class Shops extends Table {
   IntColumn get ownerUserId => integer().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   BoolColumn get isDefault => boolean().withDefault(const Constant(true))();
+  IntColumn get parentShopId => integer().nullable().references(Shops, #id)();
   IntColumn get createdAt => integer()();
   TextColumn get serverId => text().nullable()();
   IntColumn get syncedAt => integer().nullable()();

@@ -29,6 +29,16 @@ class SalesAnalysisQuery extends Equatable {
   List<Object?> get props => [period, customFrom, customTo];
 }
 
+/// Libellés des ventes sans lignes `sale_items` (rapide, sync incomplète).
+abstract final class SalesAnalysisHeadlessLabels {
+  static const quickSale = 'Vente rapide (sans détail produit)';
+  static const standardSale = 'Vente sans lignes produit';
+  static const categoryBucket = 'Ventes sans détail produit';
+
+  static bool isHeadlessProductName(String name) =>
+      name == quickSale || name == standardSale;
+}
+
 class ProductSalesSummary extends Equatable {
   const ProductSalesSummary({
     this.productId,

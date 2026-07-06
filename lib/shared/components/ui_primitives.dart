@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_tokens.dart';
+import 'feature_ui.dart';
 
 class GradientBackground extends StatelessWidget {
   const GradientBackground({
@@ -52,31 +53,12 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       children: [
         if (icon != null) ...[
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [
-                  (iconColor ?? colorScheme.primary).withValues(alpha: 0.15),
-                  (iconColor ?? colorScheme.primary).withValues(alpha: 0.05),
-                ],
-              ),
-              border: Border.all(
-                color: (iconColor ?? colorScheme.primary).withValues(alpha: 0.2),
-              ),
-            ),
-            child: Icon(
-              icon,
-              size: 36,
-              color: iconColor ?? colorScheme.primary,
-            ),
+          FeatureIllustrationIcon(
+            icon: icon!,
+            color: iconColor,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
@@ -121,7 +103,7 @@ class ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: 20),
+          Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: AppSizes.iconSm),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(

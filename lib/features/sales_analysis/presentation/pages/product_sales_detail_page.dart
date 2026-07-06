@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sales_analysis_entities.dart';
 import '../../domain/usecases/sales_analysis_usecases.dart';
@@ -55,9 +56,26 @@ class _ProductSalesDetailPageState extends State<ProductSalesDetailPage> {
             return Center(child: Text('Erreur : ${snapshot.error}'));
           }
           final detail = snapshot.data!;
+          final isHeadless = SalesAnalysisHeadlessLabels.isHeadlessProductName(
+            widget.productName,
+          );
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
+              if (isHeadless)
+                Card(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Text(
+                      'Ces ventes n\'ont pas de lignes produit enregistrées '
+                      '(vente rapide ou synchronisation incomplète). '
+                      'Le montant affiché correspond au total de chaque vente.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ),
+              if (isHeadless) const SizedBox(height: AppSpacing.md),
               _StatsCard(stats: detail.stats),
               if (detail.employeeStats.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.lg),
@@ -86,7 +104,13 @@ class _ProductSalesDetailPageState extends State<ProductSalesDetailPage> {
               ),
               const SizedBox(height: AppSpacing.sm),
               if (detail.lines.isEmpty)
-                const Text('Aucune vente sur cette période.')
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: EmptyListPlaceholder(
+                    icon: Icons.receipt_long_outlined,
+                    title: 'Aucune vente sur cette période',
+                  ),
+                )
               else
                 ...detail.lines.map((line) => _SaleLineTile(line: line)),
             ],
@@ -162,6 +186,7 @@ class _SaleLineTile extends StatelessWidget {
     final customer = line.customerName ?? 'Client comptoir';
     final seller = line.sellerName ?? '—';
     final qty = formatQuantitySold(line.quantity);
+    final isHeadlessLine = line.catalogPrice == null && line.discountAmount == 0;
     final priceColor = line.catalogPrice != null &&
             line.unitPrice < line.catalogPrice!
         ? Theme.of(context).colorScheme.error
@@ -170,7 +195,11 @@ class _SaleLineTile extends StatelessWidget {
     return Card(
       child: ListTile(
         title: Text('${formatRelativeSaleDate(line.soldAt)} · $customer'),
-        subtitle: Text('Vendeur : $seller · Qté $qty'),
+        subtitle: Text(
+          isHeadlessLine
+              ? 'Vendeur : $seller · Vente #${line.saleId}'
+              : 'Vendeur : $seller · Qté $qty',
+        ),
         trailing: Text(
           formatFcfa(line.unitPrice),
           style: Theme.of(context).textTheme.titleSmall?.copyWith(

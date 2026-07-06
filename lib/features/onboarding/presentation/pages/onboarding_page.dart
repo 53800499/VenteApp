@@ -1,52 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
+import '../../data/onboarding_slides.dart';
+import '../widgets/onboarding_animated_slide.dart';
 
-class OnboardingSlide {
-  const OnboardingSlide({
-    required this.icon,
-    required this.title,
-    required this.description,
-    this.iconColor,
-  });
-
-  final IconData icon;
-  final String title;
-  final String description;
-  final Color? iconColor;
-}
-
-const _slides = [
-  OnboardingSlide(
-    icon: Icons.waving_hand_rounded,
-    title: 'Bienvenue sur VenteApp',
-    description:
-        'Votre assistant de gestion commerciale, conçu pour les boutiques au Bénin.',
-    iconColor: AppColors.secondary,
-  ),
-  OnboardingSlide(
-    icon: Icons.point_of_sale_rounded,
-    title: 'Ventes & inventaire',
-    description:
-        'Enregistrez vos ventes, suivez votre stock et consultez vos indicateurs en un coup d\'œil.',
-  ),
-  OnboardingSlide(
-    icon: Icons.cloud_off_rounded,
-    title: 'Travaillez hors ligne',
-    description:
-        'Continuez à vendre sans internet. Vos données se synchronisent dès que la connexion revient.',
-  ),
-  OnboardingSlide(
-    icon: Icons.lock_rounded,
-    title: 'Sécurisé & simple',
-    description:
-        'Connectez-vous avec votre code PIN. Le patron peut gérer plusieurs boutiques.',
-  ),
-];
-
-/// Présentation informative affichée une seule fois avant l'installation.
+/// Présentation immersive des modules VenteApp (première installation).
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({
     super.key,
@@ -63,7 +23,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   final _pageController = PageController();
   int _currentPage = 0;
 
-  bool get _isLastPage => _currentPage == _slides.length - 1;
+  bool get _isLastPage => _currentPage == onboardingSlides.length - 1;
 
   void _next() {
     if (_isLastPage) {
@@ -71,8 +31,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
       return;
     }
     _pageController.nextPage(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -84,88 +44,99 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final slide = onboardingSlides[_currentPage];
+    final accent = slide.gradientColors?.first ?? scheme.primary;
+
     return GradientBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: SafeArea(
-          child: ResponsivePage(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: widget.onComplete,
-                    child: const Text('Passer'),
-                  ),
-                ),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: _slides.length,
-                    onPageChanged: (index) => setState(() => _currentPage = index),
-                    itemBuilder: (context, index) {
-                      final slide = _slides[index];
-                      return _OnboardingSlideView(slide: slide);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_slides.length, (index) {
-                    final active = index == _currentPage;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: active ? 24 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: active
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(4),
+        body: Stack(
+          children: [
+            OnboardingBackgroundOrbs(pageIndex: _currentPage),
+            SafeArea(
+              child: ResponsivePage(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          '${_currentPage + 1}/${onboardingSlides.length}',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: widget.onComplete,
+                          child: const Text('Passer'),
+                        ),
+                      ],
+                    ),
+                    Expanded(
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: onboardingSlides.length,
+                        onPageChanged: (index) =>
+                            setState(() => _currentPage = index),
+                        itemBuilder: (context, index) {
+                          return OnboardingAnimatedSlide(
+                            slide: onboardingSlides[index],
+                            isActive: index == _currentPage,
+                          );
+                        },
                       ),
-                    );
-                  }),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(onboardingSlides.length, (index) {
+                        final active = index == _currentPage;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOut,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          width: active ? 28 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? accent
+                                : accent.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _next,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: accent,
+                        ),
+                        child: Text(
+                          _isLastPage ? 'Commencer' : 'Découvrir la suite',
+                        ),
+                      ),
+                    ),
+                    if (_isLastPage) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Retrouvez l\'aide détaillée dans Plus → Aide & guides',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _next,
-                    child: Text(_isLastPage ? 'Continuer' : 'Suivant'),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _OnboardingSlideView extends StatelessWidget {
-  const _OnboardingSlideView({required this.slide});
-
-  final OnboardingSlide slide;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        PageHeader(
-          icon: slide.icon,
-          iconColor: slide.iconColor,
-          title: slide.title,
-          subtitle: slide.description,
-        ),
-      ],
     );
   }
 }

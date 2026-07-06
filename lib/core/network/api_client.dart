@@ -67,6 +67,9 @@ class ApiClient {
   /// Appelé quand le refresh token est rejeté (401) — ne verrouille pas l'app.
   Future<void> Function()? onRefreshTokenInvalid;
 
+  /// Appelé après un refresh JWT réussi.
+  Future<void> Function()? onRefreshTokenRestored;
+
   String get baseUrl => _dio.options.baseUrl;
 
   void setBaseUrl(String url) {
@@ -219,5 +222,6 @@ class ApiClient {
       accessExpiresAt: tokens.accessExpiresAt,
       refreshExpiresAt: tokens.refreshExpiresAt,
     );
+    await onRefreshTokenRestored?.call();
   }
 }

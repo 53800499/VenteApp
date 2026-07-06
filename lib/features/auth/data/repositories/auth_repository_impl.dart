@@ -21,6 +21,7 @@ import '../../../../core/storage/device_id_storage.dart';
 import '../../../../core/storage/session_storage.dart';
 import '../../../../core/sync/cloud_sync_enabler.dart';
 import '../../../../core/utils/phone_util.dart';
+import '../../../../core/shop/shop_hierarchy.dart';
 import '../../../../core/utils/time.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -33,6 +34,7 @@ import '../datasources/remote/auth_remote_datasource.dart';
 import '../models/auth_api_models.dart';
 
 typedef OnlineSessionReadyCallback = void Function(int shopId);
+typedef CloudSessionRestoredCallback = void Function();
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -50,6 +52,7 @@ class AuthRepositoryImpl implements AuthRepository {
     ApiClient? apiClient,
     CloudSyncEnabler? cloudSyncEnabler,
     OnlineSessionReadyCallback? onOnlineSessionReady,
+    CloudSessionRestoredCallback? onCloudSessionRestored,
     Uuid? uuid,
     SetupValidationService? setupValidation,
   })  : _db = database,
@@ -66,6 +69,7 @@ class AuthRepositoryImpl implements AuthRepository {
         _apiClient = apiClient,
         _cloudSyncEnabler = cloudSyncEnabler,
         _onOnlineSessionReady = onOnlineSessionReady,
+        _onCloudSessionRestored = onCloudSessionRestored,
         _uuid = uuid ?? const Uuid(),
         _setupValidation = setupValidation ?? const SetupValidationService();
 
@@ -83,6 +87,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final ApiClient? _apiClient;
   final CloudSyncEnabler? _cloudSyncEnabler;
   final OnlineSessionReadyCallback? _onOnlineSessionReady;
+  final CloudSessionRestoredCallback? _onCloudSessionRestored;
   final Uuid _uuid;
   final SetupValidationService _setupValidation;
 
@@ -329,6 +334,7 @@ class AuthRepositoryImpl implements AuthRepository {
       accessExpiresAt: result.accessExpiresAt,
       refreshExpiresAt: result.refreshExpiresAt,
     );
+    _onCloudSessionRestored?.call();
     _activeShop.setServerShopId(result.shop.id);
     final user = await _upsertLocalUserFromApi(
       result.user,
@@ -512,6 +518,62 @@ class AuthRepositoryImpl implements AuthRepository {
       recoveryToken: recoveryToken,
       shopId: shopId,
       userId: userId,
+    );
+  }
+
+  @override
+  Future<AuthSession> emergencyUnlockWithWhatsappOtp({
+    required String phone,
+    required String code,
+    required int shopId,
+    int? userId,
+  }) async {
+    final verifyResult = await verifyWhatsappOtp(phone: phone, code: code);
+    if (verifyResult.memberships.isEmpty) {
+      throw const UnauthorizedFailure(
+        'Aucun accès boutique pour ce numéro.',
+      );
+    }
+
+    final serverShopId = await _resolveServerShopId(shopId);
+    AuthMembership? membership;
+    for (final candidate in verifyResult.memberships) {
+      if (candidate.shopId == serverShopId &&
+          (userId == null || candidate.userId == userId)) {
+        membership = candidate;
+        break;
+      }
+    }
+
+    membership ??= verifyResult.memberships.length == 1
+        ? verifyResult.memberships.first
+        : null;
+
+    if (membership == null) {
+      throw const UnauthorizedFailure(
+        'Ce numéro n\'a pas accès à cette boutique.',
+      );
+    }
+
+    final localShopId = await _resolveLocalShopId(membership.shopId);
+    final localUser = await (_db.select(_db.users)
+          ..where(
+            (u) =>
+                u.shopId.equals(localShopId) &
+                u.serverId.equals('${membership!.userId}'),
+          ))
+        .getSingleOrNull();
+    if (localUser != null) {
+      await _resetUserLockout(
+        localUser,
+        reason: 'Déblocage via OTP WhatsApp',
+      );
+    }
+
+    return completeWhatsappLogin(
+      verificationToken: verifyResult.verificationToken,
+      shopId: membership.shopId,
+      userId: membership.userId,
     );
   }
 
@@ -813,6 +875,101 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
+  @override
+  Future<bool> hasRestorableSession() async {
+    final token = await _sessionStorage.getSessionToken();
+    if (token == null) return false;
+
+    final dbSession = await (_db.select(_db.authSessions)
+          ..where((s) => s.id.equals(token)))
+        .getSingleOrNull();
+    return dbSession != null;
+  }
+
+  @override
+  Future<AuthSession> unlockWithPin({
+    required String pin,
+    required int shopId,
+    int? userId,
+  }) async {
+    final serverShopId = await _resolveServerShopId(shopId);
+    final localShopId = await _resolveLocalShopId(serverShopId);
+
+    if (await hasRestorableSession()) {
+      try {
+        final user = await _verifyPinForUser(
+          pin: pin,
+          shopId: localShopId,
+          userId: userId,
+        );
+        final session = await restoreSession();
+        if (session != null && session.user.id == user.id) {
+          if (_remote != null && await _networkInfo.isConnected) {
+            unawaited(
+              _refreshOnlineCredentialsAfterLocalPin(
+                pin: pin,
+                shopId: serverShopId,
+                localShopId: localShopId,
+                userId: user.id,
+              ),
+            );
+          }
+          return session;
+        }
+      } on InvalidPinFailure {
+        if (_remote != null && await _networkInfo.isConnected) {
+          return _loginWithPinOnline(
+            pin: pin,
+            serverShopId: serverShopId,
+            userId: userId,
+          );
+        }
+        rethrow;
+      }
+    }
+
+    return loginWithPin(pin: pin, shopId: shopId, userId: userId);
+  }
+
+  @override
+  Future<AuthSession> unlockWithBiometric({
+    required int shopId,
+    int? userId,
+  }) async {
+    final serverShopId = await _resolveServerShopId(shopId);
+    final localShopId = await _resolveLocalShopId(serverShopId);
+
+    if (await hasRestorableSession()) {
+      final user = await _resolveUser(shopId: localShopId, userId: userId);
+      if (!user.biometricEnabled) {
+        throw const UnauthorizedFailure(
+          'Biométrie non activée pour cet utilisateur.',
+        );
+      }
+
+      final lockState = _lockoutPolicy.evaluate(
+        lockedUntil: user.lockedUntil,
+        lockoutCount: user.lockoutCount,
+      );
+      if (lockState.isLocked) {
+        throw AccountLockedFailure(
+          lockedUntil: lockState.lockedUntil!,
+          remainingSeconds: lockState.remainingSeconds,
+        );
+      }
+      if (lockState.requiresEmergencyRecovery) {
+        throw const EmergencyRecoveryRequiredFailure();
+      }
+
+      final session = await restoreSession();
+      if (session != null && session.user.id == user.id) {
+        return session;
+      }
+    }
+
+    return loginWithBiometric(shopId: shopId, userId: userId);
+  }
+
   int? _parseServerId(String? serverId) {
     if (serverId == null || serverId.isEmpty) return null;
     return int.tryParse(serverId);
@@ -919,6 +1076,7 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       final dto = await _remote!.listOwnedShops();
+      await _syncOwnedShopsFromApi(dto.shops);
       return OwnedShopList(
         activeShopId: dto.activeShopId,
         shops: dto.shops
@@ -953,7 +1111,11 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     }
 
-    final shops = rows.map((row) {
+    final contextShopId = await _resolveContextLocalShopId();
+    final groupIds = ShopHierarchy.groupShopIds(rows, contextShopId).toSet();
+    final filtered = rows.where((row) => groupIds.contains(row.id)).toList();
+
+    final shops = filtered.map((row) {
       final serverId = int.tryParse(row.serverId ?? '') ?? row.id;
       return OwnedShop(
         id: serverId,
@@ -962,13 +1124,102 @@ class AuthRepositoryImpl implements AuthRepository {
         phone: row.phone,
         isActive: row.isActive,
         isDefault: row.isDefault,
-        isCurrent: row.isDefault,
+        isCurrent: row.id == contextShopId,
       );
     }).toList();
 
+    Shop activeRow;
+    try {
+      activeRow = filtered.firstWhere((row) => row.id == contextShopId);
+    } on StateError {
+      activeRow = filtered.first;
+    }
     final activeId =
-        shops.firstWhere((s) => s.isDefault, orElse: () => shops.first).id;
+        int.tryParse(activeRow.serverId ?? '') ?? activeRow.id;
     return OwnedShopList(activeShopId: activeId, shops: shops);
+  }
+
+  Future<int> _resolveContextLocalShopId() async {
+    final token = await _sessionStorage.getSessionToken();
+    if (token != null) {
+      final session = await (_db.select(_db.authSessions)
+            ..where((s) => s.id.equals(token)))
+          .getSingleOrNull();
+      if (session != null) return session.shopId;
+    }
+
+    final defaultShop = await (_db.select(_db.shops)
+          ..where((s) => s.isDefault.equals(true)))
+        .getSingleOrNull();
+    return defaultShop?.id ?? 1;
+  }
+
+  Future<void> _syncOwnedShopsFromApi(List<OwnedShopItemDto> shops) async {
+    final ownerUserId = await (_db.select(_db.users)
+          ..where((u) => u.role.equals('owner')))
+        .getSingleOrNull()
+        .then((user) => user?.id);
+
+    for (final shop in shops) {
+      final localParentId = await _resolveLocalParentShopId(shop.parentShopId);
+      final existing = await (_db.select(_db.shops)
+            ..where((s) => s.serverId.equals('${shop.id}')))
+          .getSingleOrNull();
+      final timestamp = nowMs();
+
+      if (existing == null) {
+        await _db.into(_db.shops).insert(
+              ShopsCompanion.insert(
+                name: Value(shop.name),
+                address: Value(shop.address),
+                phone: Value(shop.phone),
+                isActive: Value(shop.isActive),
+                isDefault: Value(shop.isDefault),
+                parentShopId: localParentId == null
+                    ? const Value.absent()
+                    : Value(localParentId),
+                createdAt: timestamp,
+                ownerUserId: ownerUserId == null
+                    ? const Value.absent()
+                    : Value(ownerUserId),
+                serverId: Value('${shop.id}'),
+                syncedAt: Value(timestamp),
+              ),
+            );
+        continue;
+      }
+
+      await (_db.update(_db.shops)..where((s) => s.id.equals(existing.id))).write(
+        ShopsCompanion(
+          name: Value(shop.name),
+          address: Value(shop.address),
+          phone: Value(shop.phone),
+          isActive: Value(shop.isActive),
+          isDefault: Value(shop.isDefault),
+          parentShopId: localParentId == null
+              ? const Value.absent()
+              : Value(localParentId),
+          ownerUserId: existing.ownerUserId == null && ownerUserId != null
+              ? Value(ownerUserId)
+              : const Value.absent(),
+          syncedAt: Value(timestamp),
+        ),
+      );
+    }
+  }
+
+  Future<int?> _resolveLocalParentShopId(int? serverParentShopId) async {
+    if (serverParentShopId == null) return null;
+
+    final byServer = await (_db.select(_db.shops)
+          ..where((s) => s.serverId.equals('$serverParentShopId')))
+        .getSingleOrNull();
+    if (byServer != null) return byServer.id;
+
+    final byId = await (_db.select(_db.shops)
+          ..where((s) => s.id.equals(serverParentShopId)))
+        .getSingleOrNull();
+    return byId?.id;
   }
 
   @override
@@ -1415,9 +1666,30 @@ class AuthRepositoryImpl implements AuthRepository {
     required int shopId,
     int? userId,
   }) async {
+    final updatedUser = await _verifyPinForUser(
+      pin: pin,
+      shopId: shopId,
+      userId: userId,
+    );
+    final settings = await _getSettings(shopId);
+    final permissions =
+        await _resolvePermissions(UserRole.fromCode(updatedUser.role));
+
+    return _createSession(
+      user: updatedUser,
+      settings: settings,
+      shopId: shopId,
+      permissions: permissions,
+    );
+  }
+
+  Future<User> _verifyPinForUser({
+    required String pin,
+    required int shopId,
+    int? userId,
+  }) async {
     final pinVo = Pin.create(pin);
     final user = await _resolveUser(shopId: shopId, userId: userId);
-    final settings = await _getSettings(shopId);
 
     final lockState = _lockoutPolicy.evaluate(
       lockedUntil: user.lockedUntil,
@@ -1451,22 +1723,52 @@ class AuthRepositoryImpl implements AuthRepository {
       ),
     );
 
-    final updatedUser = user.copyWith(
+    return user.copyWith(
       failedAttempts: 0,
       lockedUntil: const Value(null),
       lockoutCount: 0,
       lastLoginAt: Value(loginAt),
       version: user.version + 1,
     );
+  }
 
-    final permissions = await _resolvePermissions(UserRole.fromCode(user.role));
-
-    return _createSession(
-      user: updatedUser,
-      settings: settings,
-      shopId: shopId,
-      permissions: permissions,
+  Future<void> _resetUserLockout(
+    User user, {
+    String reason = 'Déblocage d\'urgence',
+  }) async {
+    final timestamp = nowMs();
+    await (_db.update(_db.users)..where((u) => u.id.equals(user.id))).write(
+      UsersCompanion(
+        failedAttempts: const Value(0),
+        lockedUntil: Value<int?>(null),
+        lockoutCount: const Value(0),
+        updatedAt: Value(timestamp),
+        version: Value(user.version + 1),
+      ),
     );
+
+    await _db.into(_db.auditLogs).insert(
+          AuditLogsCompanion.insert(
+            shopId: user.shopId,
+            userId: user.id,
+            action: 'emergency_unlock',
+            module: 'settings',
+            entityId: user.id,
+            entityTable: 'users',
+            oldValue: Value(
+              jsonEncode({
+                'failed_attempts': user.failedAttempts,
+                'locked_until': user.lockedUntil,
+                'lockout_count': user.lockoutCount,
+              }),
+            ),
+            newValue: const Value(
+              '{"failed_attempts":0,"locked_until":null,"lockout_count":0}',
+            ),
+            reason: Value(reason),
+            createdAt: timestamp,
+          ),
+        );
   }
 
   Future<AuthSession> _loginWithBiometricLocal({
@@ -1537,41 +1839,10 @@ class AuthRepositoryImpl implements AuthRepository {
       throw const UnauthorizedFailure('Fichier de récupération invalide.');
     }
 
-    final timestamp = nowMs();
-    await (_db.update(_db.users)..where((u) => u.id.equals(user.id))).write(
-      UsersCompanion(
-        failedAttempts: const Value(0),
-        lockedUntil: Value<int?>(null),
-        lockoutCount: const Value(0),
-        updatedAt: Value(timestamp),
-        version: Value(user.version + 1),
-      ),
+    await _resetUserLockout(
+      user,
+      reason: 'Déblocage via fichier de récupération d\'urgence',
     );
-
-    await _db.into(_db.auditLogs).insert(
-          AuditLogsCompanion.insert(
-            shopId: shopId,
-            userId: user.id,
-            action: 'emergency_unlock',
-            module: 'settings',
-            entityId: user.id,
-            entityTable: 'users',
-            oldValue: Value(
-              jsonEncode({
-                'failed_attempts': user.failedAttempts,
-                'locked_until': user.lockedUntil,
-                'lockout_count': user.lockoutCount,
-              }),
-            ),
-            newValue: const Value(
-              '{"failed_attempts":0,"locked_until":null,"lockout_count":0}',
-            ),
-            reason: const Value(
-              'Déblocage via fichier de récupération d\'urgence',
-            ),
-            createdAt: timestamp,
-          ),
-        );
 
     final updatedUser = user.copyWith(
       failedAttempts: 0,

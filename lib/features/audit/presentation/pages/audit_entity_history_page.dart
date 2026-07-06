@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/audit_entities.dart';
 import '../../domain/usecases/audit_usecases.dart';
@@ -76,8 +77,10 @@ class _AuditEntityHistoryPageState extends State<AuditEntityHistoryPage> {
 
           final history = snapshot.data!;
           if (history.timeline.isEmpty) {
-            return const Center(
-              child: Text('Aucun historique pour cette entité.'),
+            return EmptyListPlaceholder.refreshable(
+              icon: Icons.history,
+              title: 'Aucun historique pour cette entité',
+              onRefresh: () async => setState(_reload),
             );
           }
 

@@ -6,6 +6,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/utils/benin_period_range.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/feature_ui.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../customers/presentation/pages/customer_detail_page.dart';
 import '../../domain/entities/sales_analysis_entities.dart';
@@ -13,6 +14,53 @@ import '../../domain/usecases/sales_analysis_usecases.dart';
 import '../bloc/sales_analysis_bloc.dart';
 import '../utils/sales_analysis_formatters.dart';
 import 'product_sales_detail_page.dart';
+
+Future<void> _refreshSalesAnalysis(BuildContext context) async {
+  final bloc = context.read<SalesAnalysisBloc>();
+  bloc.add(const SalesAnalysisLoadRequested());
+  await bloc.stream.firstWhere(
+    (s) =>
+        s.status == SalesAnalysisStatus.loaded ||
+        s.status == SalesAnalysisStatus.failure,
+  );
+}
+
+/// État vide d'un onglet (sans RefreshIndicator — compatible TabBarView).
+Widget _analysisTabEmpty(
+  BuildContext context, {
+  required bool isLoading,
+  required IconData icon,
+  required String title,
+}) {
+  if (isLoading) {
+    return const Center(child: CircularProgressIndicator());
+  }
+  final theme = Theme.of(context);
+  return ListView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    children: [
+      const SizedBox(height: AppSizes.emptyStatePadding),
+      Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FeatureIllustrationIcon(icon: icon),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: AppSizes.emptyStatePadding),
+    ],
+  );
+}
 
 class SalesAnalysisPage extends StatelessWidget {
   const SalesAnalysisPage({super.key, required this.session});
@@ -32,6 +80,7 @@ class SalesAnalysisPage extends StatelessWidget {
         getMargins: sl<GetMarginAnalysis>(),
         listPriceDeviations: sl<ListPriceDeviationAnalysis>(),
         getTrends: sl<GetSalesTrendAnalysis>(),
+        clearRemoteCache: sl<ClearSalesAnalysisRemoteCache>(),
         session: session,
       )..add(const SalesAnalysisLoadRequested()),
       child: const _SalesAnalysisView(),
@@ -80,9 +129,23 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<SalesAnalysisBloc, SalesAnalysisState>(
+      listenWhen: (prev, curr) => prev.tabIndex != curr.tabIndex,
+      listener: (context, state) {
+        if (_tabController.index != state.tabIndex) {
+          _tabController.animateTo(state.tabIndex);
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Analyse des ventes'),
+        actions: [
+          IconButton(
+            tooltip: 'Actualiser',
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _refreshSalesAnalysis(context),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -108,8 +171,11 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
           Expanded(
             child: BlocBuilder<SalesAnalysisBloc, SalesAnalysisState>(
               builder: (context, state) {
-                if (state.status == SalesAnalysisStatus.loading &&
-                    state.products.isEmpty) {
+                final bootstrapping =
+                    (state.status == SalesAnalysisStatus.initial ||
+                            state.status == SalesAnalysisStatus.loading) &&
+                        state.products.isEmpty;
+                if (bootstrapping) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (state.status == SalesAnalysisStatus.failure &&
@@ -165,6 +231,7 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -185,12 +252,14 @@ class _PeriodBar extends StatelessWidget {
     );
     if (picked == null || !context.mounted) return;
 
-    final fromMs = DateTime(
+    const beninOffsetMs = 60 * 60 * 1000;
+    final fromMs = DateTime.utc(
       picked.start.year,
       picked.start.month,
       picked.start.day,
-    ).millisecondsSinceEpoch;
-    final toMs = DateTime(
+    ).millisecondsSinceEpoch -
+        beninOffsetMs;
+    final toMs = DateTime.utc(
       picked.end.year,
       picked.end.month,
       picked.end.day,
@@ -198,7 +267,8 @@ class _PeriodBar extends StatelessWidget {
       59,
       59,
       999,
-    ).millisecondsSinceEpoch;
+    ).millisecondsSinceEpoch -
+        beninOffsetMs;
 
     context.read<SalesAnalysisBloc>().add(
           SalesAnalysisPeriodChanged(
@@ -280,11 +350,11 @@ class _ProductsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Aucune vente produit sur cette période.')),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.inventory_2_outlined,
+        title: 'Aucune vente produit sur cette période',
       );
     }
 
@@ -378,6 +448,8 @@ class _ProductSummaryTile extends StatelessWidget {
     final lastSale = product.lastSaleAt != null
         ? formatRelativeSaleDate(product.lastSaleAt!)
         : '—';
+    final isHeadless =
+        SalesAnalysisHeadlessLabels.isHeadlessProductName(product.productName);
 
     return Card(
       child: InkWell(
@@ -424,10 +496,16 @@ class _ProductSummaryTile extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                'Dernière vente : $lastSale',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              if (isHeadless)
+                Text(
+                  'Ventes sans lignes produit — montant total par vente',
+                  style: Theme.of(context).textTheme.bodySmall,
+                )
+              else
+                Text(
+                  'Dernière vente : $lastSale',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
             ],
           ),
         ),
@@ -448,11 +526,11 @@ class _EmployeesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (employees.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Aucune vente sur cette période.')),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.badge_outlined,
+        title: 'Aucune vente sur cette période',
       );
     }
 
@@ -520,13 +598,11 @@ class _ClientsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (customers.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(
-            child: Text('Aucun client identifié sur cette période.'),
-          ),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.people_outline,
+        title: 'Aucun client identifié sur cette période',
       );
     }
 
@@ -596,11 +672,11 @@ class _CategoriesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (categories.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Aucune vente par catégorie sur cette période.')),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.category_outlined,
+        title: 'Aucune vente par catégorie sur cette période',
       );
     }
 
@@ -661,11 +737,11 @@ class _MarginsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (margins.totalRevenue == 0) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Aucune vente sur cette période.')),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.trending_up_outlined,
+        title: 'Aucune vente sur cette période',
       );
     }
 
@@ -814,15 +890,11 @@ class _PricesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (deviations.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(
-            child: Text(
-              'Aucun écart de prix par rapport au catalogue sur cette période.',
-            ),
-          ),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.price_change_outlined,
+        title: 'Aucun écart de prix par rapport au catalogue sur cette période',
       );
     }
 
@@ -897,11 +969,11 @@ class _TrendsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (trends.points.isEmpty) {
-      return ListView(
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('Aucune tendance sur cette période.')),
-        ],
+      return _analysisTabEmpty(
+        context,
+        isLoading: isLoading,
+        icon: Icons.show_chart_outlined,
+        title: 'Aucune tendance sur cette période',
       );
     }
 

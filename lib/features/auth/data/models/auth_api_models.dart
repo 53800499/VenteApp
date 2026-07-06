@@ -174,6 +174,7 @@ class OwnedShopItemDto {
     required this.isActive,
     required this.isDefault,
     required this.isCurrent,
+    this.parentShopId,
   });
 
   final int id;
@@ -183,6 +184,7 @@ class OwnedShopItemDto {
   final bool isActive;
   final bool isDefault;
   final bool isCurrent;
+  final int? parentShopId;
 
   factory OwnedShopItemDto.fromJson(Map<String, dynamic> json) {
     return OwnedShopItemDto(
@@ -193,6 +195,7 @@ class OwnedShopItemDto {
       isActive: json['isActive'] as bool? ?? true,
       isDefault: json['isDefault'] as bool? ?? false,
       isCurrent: json['isCurrent'] as bool? ?? false,
+      parentShopId: json['parentShopId'] as int?,
     );
   }
 }

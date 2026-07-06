@@ -8,6 +8,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/network/active_shop_context.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
@@ -183,8 +184,22 @@ class _ShopListView extends StatelessWidget {
 
                 final shops = state.activeShops;
                 if (shops.isEmpty) {
-                  return const ResponsivePage(
-                    child: Center(child: Text('Aucune boutique active')),
+                  return ResponsivePage(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        context
+                            .read<ShopListBloc>()
+                            .add(const ShopListRefreshRequested());
+                        await context.read<ShopListBloc>().stream.firstWhere(
+                              (s) => !s.isRefreshing,
+                            );
+                      },
+                      child: EmptyListPlaceholder(
+                        embedded: true,
+                        icon: Icons.store_outlined,
+                        title: 'Aucune boutique active',
+                      ),
+                    ),
                   );
                 }
 

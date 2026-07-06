@@ -7,6 +7,7 @@ import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -333,10 +334,13 @@ class ProductDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             if (detail.recentMovements.isEmpty)
-              const Card(
+              Card(
                 child: Padding(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  child: Text('Aucun mouvement enregistré'),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: EmptyListPlaceholder(
+                    icon: Icons.swap_vert,
+                    title: 'Aucun mouvement enregistré',
+                  ),
                 ),
               )
             else

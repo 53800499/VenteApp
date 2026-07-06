@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/network/remote_api_runner.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/shop/shop_hierarchy.dart';
+import '../../../../core/storage/last_shop_storage.dart';
 import '../../../../core/utils/time.dart';
 import '../../domain/entities/shop_entities.dart';
 import '../../domain/repositories/shop_repository.dart';
@@ -14,13 +16,16 @@ class ShopRepositoryImpl implements ShopRepository {
     required ShopRemoteDatasource remote,
     required AppDatabase database,
     required RemoteApiRunner apiRunner,
+    required LastShopStorage lastShopStorage,
   })  : _remote = remote,
         _db = database,
-        _apiRunner = apiRunner;
+        _apiRunner = apiRunner,
+        _lastShopStorage = lastShopStorage;
 
   final ShopRemoteDatasource _remote;
   final AppDatabase _db;
   final RemoteApiRunner _apiRunner;
+  final LastShopStorage _lastShopStorage;
 
   static const _writeOfflineMessage =
       'Connexion serveur requise pour gérer les boutiques. '
@@ -163,10 +168,25 @@ class ShopRepositoryImpl implements ShopRepository {
           phone: shop.phone,
           isActive: shop.isActive,
           isDefault: shop.isDefault,
+          parentShopId: shop.parentShopId,
           createdAt: shop.createdAt,
         ),
       );
     }
+  }
+
+  Future<int?> _resolveLocalParentId(int? serverParentShopId) async {
+    if (serverParentShopId == null) return null;
+
+    final byServer = await (_db.select(_db.shops)
+          ..where((s) => s.serverId.equals('$serverParentShopId')))
+        .getSingleOrNull();
+    if (byServer != null) return byServer.id;
+
+    final byId = await (_db.select(_db.shops)
+          ..where((s) => s.id.equals(serverParentShopId)))
+        .getSingleOrNull();
+    return byId?.id;
   }
 
   Future<void> _upsertShopLocally(ShopDetailDto dto) async {
@@ -175,6 +195,7 @@ class ShopRepositoryImpl implements ShopRepository {
         .getSingleOrNull();
 
     final ownerUserId = await _resolveLocalOwnerUserId();
+    final localParentId = await _resolveLocalParentId(dto.parentShopId);
     final timestamp = nowMs();
     if (existing == null) {
       await _db.into(_db.shops).insert(
@@ -184,6 +205,9 @@ class ShopRepositoryImpl implements ShopRepository {
               phone: Value(dto.phone),
               isActive: Value(dto.isActive),
               isDefault: Value(dto.isDefault),
+              parentShopId: localParentId == null
+                  ? const Value.absent()
+                  : Value(localParentId),
               createdAt: dto.createdAt ?? timestamp,
               ownerUserId: ownerUserId == null
                   ? const Value.absent()
@@ -202,6 +226,9 @@ class ShopRepositoryImpl implements ShopRepository {
         phone: Value(dto.phone),
         isActive: Value(dto.isActive),
         isDefault: Value(dto.isDefault),
+        parentShopId: localParentId == null
+            ? const Value.absent()
+            : Value(localParentId),
         ownerUserId: existing.ownerUserId == null && ownerUserId != null
             ? Value(ownerUserId)
             : const Value.absent(),
@@ -240,7 +267,11 @@ class ShopRepositoryImpl implements ShopRepository {
       return const ShopListResult(activeShopId: 0, shops: []);
     }
 
-    final shops = rows.map((row) {
+    final contextShopId = _lastShopStorage.lastShopId;
+    final groupIds = ShopHierarchy.groupShopIds(rows, contextShopId).toSet();
+    final filtered = rows.where((row) => groupIds.contains(row.id)).toList();
+
+    final shops = filtered.map((row) {
       final serverId = int.tryParse(row.serverId ?? '') ?? row.id;
       return ManagedShop(
         id: serverId,
@@ -249,12 +280,16 @@ class ShopRepositoryImpl implements ShopRepository {
         phone: row.phone,
         isActive: row.isActive,
         isDefault: row.isDefault,
-        isCurrent: row.isDefault,
+        isCurrent: row.id == contextShopId,
         createdAt: row.createdAt,
       );
     }).toList();
 
-    final activeId = shops.firstWhere((s) => s.isDefault, orElse: () => shops.first).id;
+    final activeRow = filtered.where((row) => row.id == contextShopId).isNotEmpty
+        ? filtered.firstWhere((row) => row.id == contextShopId)
+        : filtered.first;
+    final activeId =
+        int.tryParse(activeRow.serverId ?? '') ?? activeRow.id;
     return ShopListResult(activeShopId: activeId, shops: shops);
   }
 }

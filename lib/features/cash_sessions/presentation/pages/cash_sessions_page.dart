@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -120,10 +121,11 @@ class _CashSessionsView extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (state.history.isEmpty)
-                  const Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(AppSpacing.lg),
-                      child: Text('Aucune session enregistrée.'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                    child: EmptyListPlaceholder(
+                      icon: Icons.point_of_sale_outlined,
+                      title: 'Aucune session enregistrée',
                     ),
                   )
                 else

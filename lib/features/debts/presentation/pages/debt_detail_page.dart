@@ -8,6 +8,7 @@ import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/action_feedback.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
@@ -354,10 +355,13 @@ class _DebtDetailPageState extends State<DebtDetailPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           if (detail.payments.isEmpty)
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(AppSpacing.md),
-                child: Text('Aucun remboursement enregistré.'),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                child: EmptyListPlaceholder(
+                  icon: Icons.payments_outlined,
+                  title: 'Aucun remboursement enregistré',
+                ),
               ),
             )
           else

@@ -1,8 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
-/// Écran de démarrage affiché après le splash natif du système.
+/// Écran de démarrage animé affiché au lancement.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -11,28 +13,37 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+    with TickerProviderStateMixin {
+  late final AnimationController _entranceController;
+  late final AnimationController _ambientController;
   late final Animation<double> _fade;
   late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 1100),
     );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _scale = Tween<double>(begin: 0.85, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
+    _ambientController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
+    _fade = CurvedAnimation(
+      parent: _entranceController,
+      curve: Curves.easeOut,
     );
-    _controller.forward();
+    _scale = Tween<double>(begin: 0.75, end: 1).animate(
+      CurvedAnimation(parent: _entranceController, curve: Curves.easeOutBack),
+    );
+    _entranceController.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _entranceController.dispose();
+    _ambientController.dispose();
     super.dispose();
   }
 
@@ -42,69 +53,112 @@ class _SplashPageState extends State<SplashPage>
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
               AppColors.heroGradientStart,
               AppColors.heroGradientEnd,
+              Color(0xFF0A3D2E),
             ],
           ),
         ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fade,
-            child: Center(
-              child: ScaleTransition(
-                scale: _scale,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 96,
-                      height: 96,
+        child: Stack(
+          children: [
+            ...List.generate(3, (i) {
+              return AnimatedBuilder(
+                animation: _ambientController,
+                builder: (context, child) {
+                  final offset = _ambientController.value * 30;
+                  return Positioned(
+                    top: 80.0 + i * 120 + math.sin(offset + i) * 12,
+                    left: i.isEven ? -20.0 + offset : null,
+                    right: i.isOdd ? -20.0 - offset : null,
+                    child: Container(
+                      width: 100 + i * 40,
+                      height: 100 + i * 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.storefront_rounded,
-                        size: 52,
-                        color: Colors.white,
+                        color: Colors.white.withValues(alpha: 0.04 + i * 0.02),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'VenteApp',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  );
+                },
+              );
+            }),
+            SafeArea(
+              child: FadeTransition(
+                opacity: _fade,
+                child: Center(
+                  child: ScaleTransition(
+                    scale: _scale,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 108,
+                          height: 108,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.25),
+                                Colors.white.withValues(alpha: 0.08),
+                              ],
+                            ),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 32,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.storefront_rounded,
+                            size: 56,
                             color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
                           ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Gestion commerciale pour le Bénin',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'VenteApp',
+                          style:
+                              Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1,
+                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Gestion commerciale pour le Bénin',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.88),
+                                  ),
+                        ),
+                        const SizedBox(height: 48),
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white.withValues(alpha: 0.95),
                           ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

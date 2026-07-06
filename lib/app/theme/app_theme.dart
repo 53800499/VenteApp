@@ -43,7 +43,7 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(AppSizes.controlHeight),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -53,7 +53,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(AppSizes.controlHeight),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
           ),
@@ -74,7 +74,7 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 72,
+        height: AppSizes.listTileMinHeight,
         elevation: 0,
         backgroundColor: AppColors.surfaceCard,
         indicatorColor: colorScheme.primaryContainer,
@@ -92,6 +92,7 @@ class AppTheme {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,
         ),
+        constraints: const BoxConstraints(minHeight: AppSizes.controlHeight),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
           borderSide: BorderSide(color: colorScheme.outlineVariant),
@@ -122,6 +123,15 @@ class AppTheme {
         color: colorScheme.outlineVariant.withValues(alpha: 0.6),
         space: 1,
         thickness: 1,
+      ),
+      listTileTheme: ListTileThemeData(
+        minLeadingWidth: AppSizes.leadingAvatar,
+        minVerticalPadding: AppSpacing.sm,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        iconColor: colorScheme.onSurfaceVariant,
       ),
       splashFactory: InkSparkle.splashFactory,
     );

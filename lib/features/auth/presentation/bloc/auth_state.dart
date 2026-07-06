@@ -58,6 +58,7 @@ class AuthLocked extends AuthState {
     this.errorMessage,
     this.requiresEmergencyRecovery = false,
     this.canGoBack = false,
+    this.isUnlockOnly = false,
   });
 
   final LockScreenData lockScreen;
@@ -65,6 +66,8 @@ class AuthLocked extends AuthState {
   final String? errorMessage;
   final bool requiresEmergencyRecovery;
   final bool canGoBack;
+  /// Déverrouillage d'une session existante (≠ nouvelle connexion).
+  final bool isUnlockOnly;
 
   @override
   List<Object?> get props => [
@@ -73,6 +76,7 @@ class AuthLocked extends AuthState {
         errorMessage,
         requiresEmergencyRecovery,
         canGoBack,
+        isUnlockOnly,
       ];
 }
 

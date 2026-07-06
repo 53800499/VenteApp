@@ -7,6 +7,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../audit/presentation/pages/audit_entity_history_page.dart';
@@ -361,10 +362,12 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
 
   Widget _buildPurchasesTab() {
     if (_sales.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Text('Aucune vente enregistrée pour ce client.'),
+      return RefreshIndicator(
+        onRefresh: _load,
+        child: EmptyListPlaceholder(
+          embedded: true,
+          icon: Icons.receipt_long_outlined,
+          title: 'Aucune vente enregistrée pour ce client',
         ),
       );
     }

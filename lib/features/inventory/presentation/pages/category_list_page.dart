@@ -7,6 +7,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -133,7 +134,24 @@ class _CategoryListView extends StatelessWidget {
           }
 
           if (state.categories.isEmpty) {
-            return const Center(child: Text('Aucune catégorie'));
+            return RefreshIndicator(
+              onRefresh: () async {
+                context
+                    .read<CategoryListBloc>()
+                    .add(const CategoryListRefreshRequested());
+                await context.read<CategoryListBloc>().stream.firstWhere(
+                      (s) => !s.isRefreshing,
+                    );
+              },
+              child: EmptyListPlaceholder(
+                embedded: true,
+                icon: Icons.category_outlined,
+                title: 'Aucune catégorie',
+                subtitle: canWrite
+                    ? 'Ajoutez votre première catégorie avec le bouton +'
+                    : null,
+              ),
+            );
           }
 
           return Column(

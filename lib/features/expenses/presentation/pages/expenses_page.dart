@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -114,10 +115,13 @@ class _ExpensesView extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     if (state.expenses.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                        child: Center(
-                          child: Text('Aucune dépense enregistrée.'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.xl,
+                        ),
+                        child: EmptyListPlaceholder(
+                          icon: Icons.receipt_outlined,
+                          title: 'Aucune dépense enregistrée',
                         ),
                       )
                     else

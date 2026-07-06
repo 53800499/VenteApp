@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../../../core/database/app_database.dart';
+import '../../../../../core/shop/shop_hierarchy.dart';
 import '../../../domain/services/report_aggregation_service.dart';
 
 class ReportsLocalDatasource {
@@ -35,48 +36,12 @@ class ReportsLocalDatasource {
     );
   }
 
-  Future<List<int>> activeShopIdsForOwner(int ownerUserId) async {
-    final rows = await (_db.select(_db.shops)
-          ..where(
-            (s) =>
-                s.ownerUserId.equals(ownerUserId) &
-                s.isActive.equals(true),
-          ))
-        .get();
-    if (rows.isEmpty) return [];
-    return rows.map((s) => s.id).toList();
-  }
-
-  /// Boutiques à agréger en vue consolidée (offline).
+  /// Boutiques à agréger en vue consolidée (réseau de la boutique active).
   Future<List<int>> resolveConsolidatedShopIds({
     required int activeShopId,
     required int ownerUserId,
   }) async {
-    final byOwner = await activeShopIdsForOwner(ownerUserId);
-    if (byOwner.length > 1) return byOwner;
-
-    final activeShop = await (_db.select(_db.shops)
-          ..where((s) => s.id.equals(activeShopId)))
-        .getSingleOrNull();
-
-    final ownerId = activeShop?.ownerUserId ?? ownerUserId;
-    final siblings = await (_db.select(_db.shops)
-          ..where(
-            (s) => s.ownerUserId.equals(ownerId) & s.isActive.equals(true),
-          ))
-        .get();
-    if (siblings.length > 1) {
-      return siblings.map((s) => s.id).toList();
-    }
-
-    final allActive = await (_db.select(_db.shops)
-          ..where((s) => s.isActive.equals(true)))
-        .get();
-    if (allActive.length > 1) {
-      return allActive.map((s) => s.id).toList();
-    }
-
-    return [activeShopId];
+    return ShopHierarchy.groupShopIdsFromDb(_db, activeShopId);
   }
 
   Future<List<ReportSaleRow>> _fetchSales(

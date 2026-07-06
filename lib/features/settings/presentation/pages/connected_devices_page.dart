@@ -5,6 +5,7 @@ import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/action_feedback.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
@@ -180,8 +181,10 @@ class _ConnectedDevicesPageState extends State<ConnectedDevicesPage> {
       );
     }
     if (_devices.isEmpty) {
-      return const Center(
-        child: Text('Aucun appareil connecté au cloud.'),
+      return EmptyListPlaceholder.refreshable(
+        icon: Icons.devices_outlined,
+        title: 'Aucun appareil connecté au cloud',
+        onRefresh: _load,
       );
     }
 

@@ -63,6 +63,10 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
       return cloudCoordinator.handleInvalidRefreshToken();
     };
 
+    apiClient.onRefreshTokenRestored = () async {
+      cloudCoordinator.markCloudSessionValid();
+    };
+
     _authBloc.add(const AuthBootstrapRequested());
 
   }

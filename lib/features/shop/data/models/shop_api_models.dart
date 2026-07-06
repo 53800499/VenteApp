@@ -7,6 +7,7 @@ class ShopItemDto {
     required this.isActive,
     required this.isDefault,
     required this.isCurrent,
+    this.parentShopId,
     this.createdAt,
   });
 
@@ -17,6 +18,7 @@ class ShopItemDto {
   final bool isActive;
   final bool isDefault;
   final bool isCurrent;
+  final int? parentShopId;
   final int? createdAt;
 
   factory ShopItemDto.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class ShopItemDto {
       isActive: json['isActive'] as bool? ?? true,
       isDefault: json['isDefault'] as bool? ?? false,
       isCurrent: json['isCurrent'] as bool? ?? false,
+      parentShopId: json['parentShopId'] as int?,
       createdAt: json['createdAt'] as int?,
     );
   }
@@ -60,6 +63,7 @@ class ShopDetailDto {
     this.phone,
     required this.isActive,
     required this.isDefault,
+    this.parentShopId,
     this.createdAt,
   });
 
@@ -69,6 +73,7 @@ class ShopDetailDto {
   final String? phone;
   final bool isActive;
   final bool isDefault;
+  final int? parentShopId;
   final int? createdAt;
 
   factory ShopDetailDto.fromJson(Map<String, dynamic> json) {
@@ -79,6 +84,7 @@ class ShopDetailDto {
       phone: json['phone'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       isDefault: json['isDefault'] as bool? ?? false,
+      parentShopId: json['parentShopId'] as int?,
       createdAt: json['createdAt'] as int?,
     );
   }

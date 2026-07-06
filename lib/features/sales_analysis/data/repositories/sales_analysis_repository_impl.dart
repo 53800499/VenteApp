@@ -24,6 +24,13 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
   SalesAnalysisRemoteBundle? _cachedRemoteBundle;
   Future<SalesAnalysisRemoteBundle?>? _inFlightRemote;
 
+  @override
+  void clearRemoteCache() {
+    _cachedRemoteQuery = null;
+    _cachedRemoteBundle = null;
+    _inFlightRemote = null;
+  }
+
   ResolvedReportPeriod _resolve(SalesAnalysisQuery query) {
     return resolveReportPeriod(
       preset: query.period,
@@ -165,7 +172,9 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     try {
       final remote = await _loadRemoteBundle(query)
           .timeout(const Duration(seconds: 2), onTimeout: () => null);
-      if (remote != null) return remote.categories;
+      if (remote != null && remote.categories.isNotEmpty) {
+        return remote.categories;
+      }
     } catch (_) {}
 
     return local;
@@ -186,7 +195,10 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     try {
       final remote = await _loadRemoteBundle(query)
           .timeout(const Duration(seconds: 2), onTimeout: () => null);
-      if (remote?.margins != null) return remote!.margins!;
+      final remoteMargins = remote?.margins;
+      if (remoteMargins != null && remoteMargins.totalRevenue > 0) {
+        return remoteMargins;
+      }
     } catch (_) {}
 
     return local;
@@ -207,7 +219,9 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     try {
       final remote = await _loadRemoteBundle(query)
           .timeout(const Duration(seconds: 2), onTimeout: () => null);
-      if (remote != null) return remote.priceDeviations;
+      if (remote != null && remote.priceDeviations.isNotEmpty) {
+        return remote.priceDeviations;
+      }
     } catch (_) {}
 
     return local;
@@ -228,7 +242,9 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     try {
       final remote = await _loadRemoteBundle(query)
           .timeout(const Duration(seconds: 2), onTimeout: () => null);
-      if (remote != null) return remote.trends;
+      if (remote != null && remote.trends.points.isNotEmpty) {
+        return remote.trends;
+      }
     } catch (_) {}
 
     return local;

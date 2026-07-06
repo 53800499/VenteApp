@@ -7,6 +7,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/sync/sync_conflict_service.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../shared/components/action_feedback.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -97,11 +98,10 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
     }
 
     if (_conflicts.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Text('Aucun conflit en attente.'),
-        ),
+      return EmptyListPlaceholder.refreshable(
+        icon: Icons.sync_problem_outlined,
+        title: 'Aucun conflit en attente',
+        onRefresh: _load,
       );
     }
 

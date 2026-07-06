@@ -5,6 +5,7 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/utils/benin_day_range.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -354,12 +355,10 @@ class _JournalList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.items.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 80),
-          Center(child: Text('Aucune entrée dans le journal.')),
-        ],
+      return EmptyListPlaceholder(
+        embedded: true,
+        icon: Icons.fact_check_outlined,
+        title: 'Aucune entrée dans le journal',
       );
     }
 

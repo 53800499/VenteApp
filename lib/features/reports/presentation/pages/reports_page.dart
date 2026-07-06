@@ -16,6 +16,7 @@ import '../../../dashboard/presentation/widgets/kpi_card.dart';
 import '../../domain/entities/report_entities.dart';
 import '../../domain/usecases/get_report.dart';
 import '../../../../shared/components/action_feedback.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../services/report_pdf_exporter.dart';
 import '../bloc/report_bloc.dart';
 
@@ -336,21 +337,10 @@ class _EmptyPeriodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          children: [
-            Icon(
-              Icons.insights_outlined,
-              size: 48,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              message ?? 'Aucune vente sur cette période.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ],
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        child: EmptyListPlaceholder(
+          icon: Icons.insights_outlined,
+          title: message ?? 'Aucune vente sur cette période',
         ),
       ),
     );
@@ -521,7 +511,13 @@ class _TopProductsSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         if (products.isEmpty)
-          const Text('Aucun produit vendu sur la période.')
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+            child: EmptyListPlaceholder(
+              icon: Icons.inventory_2_outlined,
+              title: 'Aucun produit vendu sur la période',
+            ),
+          )
         else
           Card(
             child: Column(

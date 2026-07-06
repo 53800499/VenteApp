@@ -6,6 +6,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -198,8 +199,22 @@ class _UserListView extends StatelessWidget {
 
                 final users = state.users.where((u) => u.isActive).toList();
                 if (users.isEmpty) {
-                  return const ResponsivePage(
-                    child: Center(child: Text('Aucun utilisateur actif')),
+                  return ResponsivePage(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        context
+                            .read<UserListBloc>()
+                            .add(const UserListRefreshRequested());
+                        await context.read<UserListBloc>().stream.firstWhere(
+                              (s) => !s.isRefreshing,
+                            );
+                      },
+                      child: EmptyListPlaceholder(
+                        embedded: true,
+                        icon: Icons.group_outlined,
+                        title: 'Aucun utilisateur actif',
+                      ),
+                    ),
                   );
                 }
 

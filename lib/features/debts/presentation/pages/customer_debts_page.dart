@@ -5,6 +5,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -127,7 +128,11 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
       );
     }
     if (_openDebts.isEmpty) {
-      return const Center(child: Text('Aucune dette ouverte pour ce client.'));
+      return EmptyListPlaceholder.refreshable(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'Aucune dette ouverte pour ce client',
+        onRefresh: _loadOpenDebts,
+      );
     }
 
     return RefreshIndicator(

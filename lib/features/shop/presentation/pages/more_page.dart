@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/theme/app_tokens.dart';
-import '../../../../core/network/widgets/offline_mode_banner.dart';
+import '../../../../shared/components/feature_ui.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
@@ -19,6 +19,7 @@ import '../../../notifications/presentation/pages/notification_settings_page.dar
 import '../../../sync/presentation/pages/sync_conflicts_page.dart';
 import '../../../users/presentation/pages/user_list_page.dart';
 import '../../../rbac/presentation/pages/roles_catalog_page.dart';
+import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import 'shop_list_page.dart';
 
@@ -94,8 +95,17 @@ class MorePage extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
+              ModuleActionTile(
+                icon: Icons.menu_book_outlined,
+                title: 'Aide & guides',
+                subtitle:
+                    'Documentation détaillée de tous les modules VenteApp',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const HelpHubPage()),
+                ),
+              ),
               if (_canManageShops)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.store_mall_directory_outlined,
                   title: 'Mes boutiques',
                   subtitle:
@@ -107,7 +117,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canManageUsers)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.people_outline,
                   title: 'Équipe',
                   subtitle: 'Vendeurs, lecteurs et droits',
@@ -118,7 +128,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewRoles)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.admin_panel_settings_outlined,
                   title: 'Rôles & permissions',
                   subtitle: 'Catalogue des rôles et droits',
@@ -129,7 +139,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewReports)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.insights_outlined,
                   title: 'Statistiques',
                   subtitle: 'CA, bénéfice, top produits et recouvrement',
@@ -140,7 +150,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewReports)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.analytics_outlined,
                   title: 'Analyse des ventes',
                   subtitle: 'Prix pratiqués, produits vendus et écarts',
@@ -152,7 +162,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewExpenses)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.payments_outlined,
                   title: 'Dépenses',
                   subtitle: 'Charges, caisse et bénéfice réel',
@@ -163,7 +173,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewCashSessions)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.point_of_sale_outlined,
                   title: 'Gestion de caisse',
                   subtitle: 'Ouverture, suivi et clôture de caisse',
@@ -175,7 +185,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewDebts)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.volunteer_activism_outlined,
                   title: 'Dettes pardonnées',
                   subtitle: 'Motif, date et montant annulé',
@@ -187,7 +197,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canManageSettings)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.tune_outlined,
                   title: 'Paramètres',
                   subtitle: 'Boutique, sécurité, reçus et sauvegarde',
@@ -198,7 +208,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canManageSync)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.sync_problem_outlined,
                   title: 'Conflits de synchronisation',
                   subtitle: 'Résoudre les différences local / serveur',
@@ -210,7 +220,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canManageAlerts)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.notifications_outlined,
                   title: 'Alertes',
                   subtitle: 'Stock, dettes, résumé du jour et sauvegarde',
@@ -222,7 +232,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ),
               if (_canViewAudit)
-                _MoreTile(
+                ModuleActionTile(
                   icon: Icons.history_outlined,
                   title: 'Journal d\'audit',
                   subtitle: 'Actions sensibles — patron uniquement',
@@ -232,7 +242,7 @@ class MorePage extends StatelessWidget {
                     ),
                   ),
                 ),
-              _MoreTile(
+              ModuleActionTile(
                 icon: Icons.dns_outlined,
                 title: 'Connexion serveur',
                 subtitle: 'Backend cloud ou adresse personnalisée',
@@ -240,16 +250,19 @@ class MorePage extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => const ApiSettingsPage()),
                 ),
               ),
-              _MoreTile(
+              ModuleActionTile(
                 icon: Icons.lock_outline_rounded,
                 title: 'Verrouiller',
                 subtitle: 'Retour à l\'écran PIN (session conservée)',
                 onTap: () =>
                     context.read<AuthBloc>().add(const AuthAppLockedRequested()),
               ),
-              _LogoutTile(
-                shopName: activeSession.shop.name,
-                onLogout: () => _confirmLogout(context, activeSession.shop.name),
+              ModuleActionTile(
+                icon: Icons.logout_rounded,
+                title: 'Déconnexion',
+                subtitle: 'Quitter le compte — reconnexion WhatsApp',
+                destructive: true,
+                onTap: () => _confirmLogout(context, activeSession.shop.name),
               ),
                 ],
               ),
@@ -286,70 +299,5 @@ class MorePage extends StatelessWidget {
     if (confirmed == true && context.mounted) {
       context.read<AuthBloc>().add(const AuthLogoutRequested());
     }
-  }
-}
-
-class _LogoutTile extends StatelessWidget {
-  const _LogoutTile({
-    required this.shopName,
-    required this.onLogout,
-  });
-
-  final String shopName;
-  final VoidCallback onLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: colorScheme.errorContainer,
-          child: Icon(Icons.logout_rounded, color: colorScheme.error),
-        ),
-        title: Text(
-          'Déconnexion',
-          style: TextStyle(color: colorScheme.error),
-        ),
-        subtitle: const Text('Quitter le compte — reconnexion WhatsApp'),
-        trailing: Icon(Icons.chevron_right, color: colorScheme.error),
-        onTap: onLogout,
-      ),
-    );
-  }
-}
-
-class _MoreTile extends StatelessWidget {
-  const _MoreTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: colorScheme.primaryContainer,
-          child: Icon(icon, color: colorScheme.primary),
-        ),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
-    );
   }
 }

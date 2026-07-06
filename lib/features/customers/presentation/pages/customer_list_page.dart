@@ -7,6 +7,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -231,17 +232,11 @@ class _CustomerListBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.customers.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
-          Center(
-            child: Text(
-              'Aucun client trouvé.\nCréez votre premier client.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
+      return EmptyListPlaceholder(
+        embedded: true,
+        icon: Icons.people_outline,
+        title: 'Aucun client trouvé',
+        subtitle: 'Créez votre premier client avec le bouton +',
       );
     }
 

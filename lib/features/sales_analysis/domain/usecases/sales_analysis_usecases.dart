@@ -143,3 +143,11 @@ class GetSalesTrendAnalysis {
     return _repository.loadSalesTrends(shopId: shopId, query: query);
   }
 }
+
+class ClearSalesAnalysisRemoteCache {
+  const ClearSalesAnalysisRemoteCache(this._repository);
+
+  final SalesAnalysisRepository _repository;
+
+  void call() => _repository.clearRemoteCache();
+}
