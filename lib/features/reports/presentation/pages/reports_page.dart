@@ -19,6 +19,13 @@ import '../../../../shared/components/action_feedback.dart';
 import '../services/report_pdf_exporter.dart';
 import '../bloc/report_bloc.dart';
 
+bool _canUseConsolidatedView(AuthSession session) =>
+    session.user.role == UserRole.owner &&
+    PermissionGuard.can(
+      session.user.permissions,
+      Permission.shopsConsolidatedRead,
+    );
+
 class ReportsPage extends StatelessWidget {
   const ReportsPage({super.key, required this.session});
 
@@ -76,7 +83,17 @@ class _ReportsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<ReportBloc, ReportState>(
+      listenWhen: (prev, curr) =>
+          curr.errorMessage != null && curr.errorMessage != prev.errorMessage,
+      listener: (context, state) {
+        final message = state.errorMessage;
+        if (message == null || message.isEmpty) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Statistiques'),
         actions: [
@@ -113,8 +130,8 @@ class _ReportsView extends StatelessWidget {
             child: switch (state.status) {
               ReportStatus.initial || ReportStatus.loading =>
                 ListView(
-                  physics: AlwaysScrollableScrollPhysics(),
-                  children: [
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: const [
                     SizedBox(height: 120),
                     Center(child: CircularProgressIndicator()),
                   ],
@@ -145,8 +162,14 @@ class _ReportsView extends StatelessWidget {
                     ),
                   ],
                 ),
-              ReportStatus.success => _ReportBody(
-                  state: state,
+              ReportStatus.success => Column(
+                  children: [
+                    if (state.isRefreshing)
+                      const LinearProgressIndicator(minHeight: 2),
+                    Expanded(
+                      child: _ReportBody(state: state),
+                    ),
+                  ],
                 ),
             },
           );
@@ -154,6 +177,7 @@ class _ReportsView extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -172,11 +196,7 @@ class _ReportBody extends StatelessWidget {
       session.user.permissions,
       Permission.reportsFinancial,
     );
-    final canConsolidated = session.user.role == UserRole.owner &&
-        PermissionGuard.can(
-          session.user.permissions,
-          Permission.shopsConsolidatedRead,
-        );
+    final canConsolidated = _canUseConsolidatedView(session);
 
     return ResponsivePage(
       child: ListView(
@@ -194,12 +214,27 @@ class _ReportBody extends StatelessWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Vue consolidée (toutes boutiques)'),
-              subtitle: const Text('V3 — patron uniquement'),
+              subtitle: Text(
+                state.query.consolidated
+                    ? '${report.shopIds.length} boutique(s) agrégée(s)'
+                    : 'Patron uniquement — toutes vos boutiques',
+              ),
               value: state.query.consolidated,
               onChanged: (v) => context
                   .read<ReportBloc>()
                   .add(ReportConsolidatedToggled(v)),
             ),
+            if (state.query.consolidated)
+              Card(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.store_mall_directory_outlined),
+                  title: Text(
+                    '${report.shopIds.length} boutique(s) agrégée(s)',
+                  ),
+                ),
+              ),
           ],
           const SizedBox(height: AppSpacing.lg),
           if (report.empty)
@@ -408,6 +443,26 @@ class _FinancialSection extends StatelessWidget {
               title: Text(financial.profitWarning!),
             ),
           ),
+        if (financial.totalExpenses > 0) ...[
+          const SizedBox(height: AppSpacing.sm),
+          KpiCard(
+            label: 'Dépenses',
+            value: formatFcfa(financial.totalExpenses),
+            icon: Icons.receipt_long_outlined,
+            accentColor: Theme.of(context).colorScheme.error,
+          ),
+        ],
+        if (financial.netProfit != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          KpiCard(
+            label: 'Bénéfice net',
+            value: formatFcfa(financial.netProfit!),
+            icon: Icons.account_balance_wallet_outlined,
+            accentColor: financial.netProfit! >= 0
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.error,
+          ),
+        ],
         const SizedBox(height: AppSpacing.sm),
         if (financial.recoveryRateAvailable && financial.recoveryRate != null)
           KpiCard(

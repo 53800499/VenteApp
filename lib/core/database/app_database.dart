@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/time.dart';
 import 'tables/auth_tables.dart';
 import 'tables/commerce_tables.dart';
+import 'tables/expense_tables.dart';
 import 'tables/notification_tables.dart';
 import 'tables/sync_tables.dart';
 
@@ -29,6 +30,11 @@ part 'app_database.g.dart';
   SyncQueue,
   NotificationDailyStates,
   CustomerProductPrices,
+  ExpenseCategories,
+  Expenses,
+  ExpenseAttachments,
+  ExpenseHistoryEntries,
+  CategoryBudgets,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -36,7 +42,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -126,6 +132,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 14) {
             await _addColumnIfMissing(m, categories, categories.description);
+          }
+          if (from < 15) {
+            await m.createTable(expenseCategories);
+            await m.createTable(expenses);
+            await m.createTable(expenseAttachments);
+            await m.createTable(expenseHistoryEntries);
+            await m.createTable(categoryBudgets);
           }
         },
       );

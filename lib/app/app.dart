@@ -93,10 +93,13 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
     }
 
     if (state == AppLifecycleState.resumed) {
+      final lock = sl<AppLockController>();
+      if (lock.isLockSuppressed) return;
+
       final authState = _authBloc.state;
       if (authState is AuthAuthenticated) {
         final autoLockMinutes = authState.session.autoLockMinutes;
-        if (sl<AppLockController>().requiresPinOnResume(autoLockMinutes)) {
+        if (lock.requiresPinOnResume(autoLockMinutes)) {
           _authBloc.add(const AuthAppLockedRequested());
         }
       }

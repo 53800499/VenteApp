@@ -114,6 +114,8 @@ class ReportFinancialKpis extends Equatable {
     required this.recoveryRateAvailable,
     required this.debtsCreatedAmount,
     required this.debtsRepaidAmount,
+    this.totalExpenses = 0,
+    this.netProfit,
   });
 
   final int? estimatedProfit;
@@ -123,6 +125,8 @@ class ReportFinancialKpis extends Equatable {
   final bool recoveryRateAvailable;
   final int debtsCreatedAmount;
   final int debtsRepaidAmount;
+  final int totalExpenses;
+  final int? netProfit;
 
   @override
   List<Object?> get props => [
@@ -133,6 +137,8 @@ class ReportFinancialKpis extends Equatable {
         recoveryRateAvailable,
         debtsCreatedAmount,
         debtsRepaidAmount,
+        totalExpenses,
+        netProfit,
       ];
 }
 

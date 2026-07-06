@@ -127,6 +127,8 @@ class ReportFinancialApiDto {
     required this.recoveryRateAvailable,
     required this.debtsCreatedAmount,
     required this.debtsRepaidAmount,
+    this.totalExpenses = 0,
+    this.netProfit,
   });
 
   final int? estimatedProfit;
@@ -136,6 +138,8 @@ class ReportFinancialApiDto {
   final bool recoveryRateAvailable;
   final int debtsCreatedAmount;
   final int debtsRepaidAmount;
+  final int totalExpenses;
+  final int? netProfit;
 
   factory ReportFinancialApiDto.fromJson(Map<String, dynamic> json) {
     return ReportFinancialApiDto(
@@ -146,6 +150,8 @@ class ReportFinancialApiDto {
       recoveryRateAvailable: json['recoveryRateAvailable'] as bool? ?? false,
       debtsCreatedAmount: (json['debtsCreatedAmount'] as num?)?.toInt() ?? 0,
       debtsRepaidAmount: (json['debtsRepaidAmount'] as num?)?.toInt() ?? 0,
+      totalExpenses: (json['totalExpenses'] as num?)?.toInt() ?? 0,
+      netProfit: (json['netProfit'] as num?)?.toInt(),
     );
   }
 }

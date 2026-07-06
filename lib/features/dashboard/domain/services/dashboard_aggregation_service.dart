@@ -37,6 +37,7 @@ class DashboardAggregationService {
     required DashboardSalesStats salesStats,
     required List<SaleProfitRow> profitLines,
     required DashboardDebtStats debts,
+    int totalExpenses = 0,
   }) {
     final hasCostData = profitLines.any(
       (line) => line.unitCost != null && line.unitCost! > 0,
@@ -64,6 +65,9 @@ class DashboardAggregationService {
       profitAvailable: hasCostData,
       profitWarning: profitWarning,
       totalDebt: debts.totalDebt,
+      totalExpenses: totalExpenses,
+      netProfit:
+          estimatedProfit != null ? estimatedProfit - totalExpenses : null,
     );
   }
 

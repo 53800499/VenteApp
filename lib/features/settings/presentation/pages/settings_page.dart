@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/app_lock_controller.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
@@ -1053,10 +1054,12 @@ class _SettingsViewState extends State<_SettingsView> {
     );
     if (confirmed != true || !context.mounted) return;
 
-    final picked = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['venteapp'],
-      withData: true,
+    final picked = await sl<AppLockController>().runWithLockSuppressed(
+      () => FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['venteapp'],
+        withData: true,
+      ),
     );
     if (picked == null || picked.files.isEmpty || !context.mounted) return;
     final bytes = picked.files.first.bytes;

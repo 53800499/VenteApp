@@ -33,6 +33,11 @@ enum Permission {
   rbacOverride('rbac:override'),
   reportsRead('reports:read'),
   reportsFinancial('reports:financial'),
+  expensesRead('expenses:read'),
+  expensesCreate('expenses:create'),
+  expensesUpdate('expenses:update'),
+  expensesArchive('expenses:archive'),
+  expensesCategories('expenses:categories'),
   auditRead('audit:read'),
   shopsRead('shops:read'),
   shopsCreate('shops:create'),
@@ -59,6 +64,8 @@ const _sellerPermissions = <Permission>{
   Permission.customersWrite,
   Permission.debtsRead,
   Permission.debtsPayment,
+  Permission.expensesRead,
+  Permission.expensesCreate,
 };
 
 const _viewerPermissions = <Permission>{
@@ -70,6 +77,7 @@ const _viewerPermissions = <Permission>{
   Permission.customersRead,
   Permission.debtsRead,
   Permission.reportsRead,
+  Permission.expensesRead,
 };
 
 Set<Permission> permissionsForRole(UserRole role) {

@@ -89,6 +89,7 @@ class SyncQueueDatasource {
       SyncEntityTable.products: 'produit(s)',
       SyncEntityTable.sales: 'vente(s)',
       SyncEntityTable.debts: 'créance(s)',
+      SyncEntityTable.expenses: 'dépense(s)',
     };
 
     final parts = byTable.entries

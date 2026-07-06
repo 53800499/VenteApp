@@ -1,5 +1,6 @@
 import '../../../../core/sync/remote_sync_port.dart';
 import '../../features/customers/domain/repositories/customer_repository.dart';
+import '../../features/expenses/domain/repositories/expense_repository.dart';
 import '../../features/debts/domain/repositories/debt_repository.dart';
 import '../../features/inventory/domain/repositories/inventory_repository.dart';
 import '../../features/sales/domain/repositories/sale_repository.dart';
@@ -53,6 +54,20 @@ class DebtsRemoteSyncAdapter implements RemoteSyncPort {
 
   @override
   String get moduleName => 'debts';
+
+  @override
+  Future<void> syncFromRemote({required int shopId}) {
+    return _repository.syncFromRemote(shopId: shopId);
+  }
+}
+
+class ExpensesRemoteSyncAdapter implements RemoteSyncPort {
+  ExpensesRemoteSyncAdapter(this._repository);
+
+  final ExpenseRepository _repository;
+
+  @override
+  String get moduleName => 'expenses';
 
   @override
   Future<void> syncFromRemote({required int shopId}) {

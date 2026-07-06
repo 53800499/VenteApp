@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 
 import '../errors/exception_mapper.dart';
@@ -5,6 +7,10 @@ import '../errors/failures.dart';
 import '../storage/auth_credentials_storage.dart';
 import 'api_client.dart';
 import 'network_info.dart';
+
+/// Délais max pour les lectures hybrides (offline-first).
+const remoteReadEnsureReadyTimeout = Duration(seconds: 3);
+const remoteReadFetchTimeout = Duration(seconds: 6);
 
 /// Vérifie que les appels API protégés peuvent être effectués.
 class RemoteApiGuard {
@@ -20,7 +26,19 @@ class RemoteApiGuard {
   final AuthCredentialsStorage _credentials;
   final ApiClient _apiClient;
 
-  Future<void> ensureReady() async {
+  Future<void> ensureReady({
+    Duration timeout = remoteReadEnsureReadyTimeout,
+  }) async {
+    try {
+      await _ensureReady().timeout(timeout);
+    } on TimeoutException {
+      throw const NetworkFailure(
+        'Serveur trop lent ou injoignable. Données locales affichées.',
+      );
+    }
+  }
+
+  Future<void> _ensureReady() async {
     if (!await _networkInfo.isConnected) {
       throw const NetworkFailure(
         'Connexion internet requise. Vérifiez le réseau et l\'adresse du serveur (Plus → Connexion serveur).',

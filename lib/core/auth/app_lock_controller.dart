@@ -12,6 +12,29 @@ class AppLockController {
 
   bool _unlockedThisProcess = false;
   int? _backgroundedAtMs;
+  int _transientTaskCount = 0;
+
+  bool get isLockSuppressed => _transientTaskCount > 0;
+
+  /// Empêche le verrouillage pendant une action système (galerie, fichier…).
+  void beginTransientTask() {
+    _transientTaskCount++;
+  }
+
+  void endTransientTask() {
+    if (_transientTaskCount > 0) {
+      _transientTaskCount--;
+    }
+  }
+
+  Future<T> runWithLockSuppressed<T>(Future<T> Function() action) async {
+    beginTransientTask();
+    try {
+      return await action();
+    } finally {
+      endTransientTask();
+    }
+  }
 
   void markUnlocked() {
     _unlockedThisProcess = true;
@@ -20,6 +43,7 @@ class AppLockController {
   }
 
   void markBackgrounded() {
+    if (isLockSuppressed) return;
     final timestamp = nowMs();
     _backgroundedAtMs = timestamp;
     _unlockedThisProcess = false;
@@ -34,6 +58,7 @@ class AppLockController {
 
   /// Au retour de l'arrière-plan : PIN après [autoLockMinutes] d'inactivité.
   bool requiresPinOnResume(int autoLockMinutes) {
+    if (isLockSuppressed) return false;
     final backgroundedAt = _backgroundedAtMs ?? _prefs.getInt(_backgroundedAtKey);
     if (backgroundedAt == null) return false;
     final elapsedMs = nowMs() - backgroundedAt;

@@ -117,7 +117,12 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
                   return _ErrorBody(message: state.errorMessage ?? 'Erreur');
                 }
 
-                return TabBarView(
+                return Column(
+                  children: [
+                    if (state.status == SalesAnalysisStatus.loading)
+                      const LinearProgressIndicator(minHeight: 2),
+                    Expanded(
+                      child: TabBarView(
                   controller: _tabController,
                   children: [
                     _ProductsTab(
@@ -149,6 +154,9 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
                     _TrendsTab(
                       trends: state.trends,
                       isLoading: state.status == SalesAnalysisStatus.loading,
+                    ),
+                  ],
+                      ),
                     ),
                   ],
                 );

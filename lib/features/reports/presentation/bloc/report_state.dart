@@ -8,18 +8,21 @@ class ReportState extends Equatable {
     this.query = const ReportQuery(),
     this.report,
     this.errorMessage,
+    this.isRefreshing = false,
   });
 
   final ReportStatus status;
   final ReportQuery query;
   final Report? report;
   final String? errorMessage;
+  final bool isRefreshing;
 
   ReportState copyWith({
     ReportStatus? status,
     ReportQuery? query,
     Report? report,
     String? errorMessage,
+    bool? isRefreshing,
     bool clearError = false,
   }) {
     return ReportState(
@@ -27,9 +30,10 @@ class ReportState extends Equatable {
       query: query ?? this.query,
       report: report ?? this.report,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      isRefreshing: isRefreshing ?? this.isRefreshing,
     );
   }
 
   @override
-  List<Object?> get props => [status, query, report, errorMessage];
+  List<Object?> get props => [status, query, report, errorMessage, isRefreshing];
 }

@@ -61,11 +61,11 @@ abstract final class Breakpoints {
     bool withSubtitle = false,
   }) {
     final base = switch (type) {
-      ScreenType.compact => 132.0,
-      ScreenType.medium => 124.0,
-      ScreenType.expanded => 116.0,
+      ScreenType.compact => 136.0,
+      ScreenType.medium => 128.0,
+      ScreenType.expanded => 120.0,
     };
-    return withSubtitle ? base + 32 : base;
+    return withSubtitle ? base + 44 : base;
   }
 
   static bool useNavigationRail(ScreenType type) => type != ScreenType.compact;

@@ -4,13 +4,16 @@ import '../../features/customers/data/datasources/local/customers_local_datasour
 import '../../features/customers/data/datasources/remote/customers_remote_datasource.dart';
 import '../../features/debts/data/datasources/local/debts_local_datasource.dart';
 import '../../features/debts/data/datasources/remote/debts_remote_datasource.dart';
+import '../../features/expenses/data/datasources/local/expenses_local_datasource.dart';
+import '../../features/expenses/data/datasources/remote/expenses_remote_datasource.dart';
+import '../../features/expenses/domain/entities/expense_entities.dart';
 import '../../features/inventory/data/datasources/local/inventory_local_datasource.dart';
 import '../../features/inventory/data/datasources/remote/inventory_remote_datasource.dart';
 import '../../features/sales/data/datasources/local/sales_local_datasource.dart';
 import '../../features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import '../../features/sales/data/models/sale_api_models.dart';
 import '../../features/sales/domain/entities/sale_entities.dart';
-import '../database/app_database.dart' hide Sale;
+import '../database/app_database.dart' hide Sale, Expense;
 import '../errors/failures.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
@@ -29,6 +32,8 @@ class SyncQueueProcessor {
     required SalesRemoteDatasource salesRemote,
     required DebtsLocalDatasource debtsLocal,
     required DebtsRemoteDatasource debtsRemote,
+    required ExpensesLocalDatasource expensesLocal,
+    required ExpensesRemoteDatasource expensesRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -38,7 +43,9 @@ class SyncQueueProcessor {
         _salesLocal = salesLocal,
         _salesRemote = salesRemote,
         _debtsLocal = debtsLocal,
-        _debtsRemote = debtsRemote;
+        _debtsRemote = debtsRemote,
+        _expensesLocal = expensesLocal,
+        _expensesRemote = expensesRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -50,6 +57,8 @@ class SyncQueueProcessor {
   final SalesRemoteDatasource _salesRemote;
   final DebtsLocalDatasource _debtsLocal;
   final DebtsRemoteDatasource _debtsRemote;
+  final ExpensesLocalDatasource _expensesLocal;
+  final ExpensesRemoteDatasource _expensesRemote;
 
   Future<SyncQueueProcessResult> process({required int shopId}) async {
     await _apiGuard.ensureReady();
@@ -105,6 +114,7 @@ class SyncQueueProcessor {
         SyncEntityTable.products => 2,
         SyncEntityTable.sales => 3,
         SyncEntityTable.debts => 4,
+        SyncEntityTable.expenses => 5,
         _ => 99,
       };
 
@@ -125,6 +135,8 @@ class SyncQueueProcessor {
         return _processSale(shopId, item, payload);
       case SyncEntityTable.debts:
         return _processDebt(shopId, item, payload);
+      case SyncEntityTable.expenses:
+        return _processExpense(shopId, item, payload);
       default:
         await _queue.markFailed(item.id, 'Table inconnue : ${item.entityTable}');
         return true;
@@ -427,6 +439,105 @@ class SyncQueueProcessor {
     }
 
     throw ValidationFailure('Opération dette inconnue : ${item.operation}');
+  }
+
+  Future<bool> _processExpense(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final expense = await _expensesLocal.findExpenseForSync(shopId, item.recordId);
+    if (expense == null) return true;
+
+    final isDeleted = await _expensesLocal.expenseIsDeleted(item.recordId);
+    final serverId = await _expensesLocal.findExpenseServerId(shopId, item.recordId);
+
+    if (isDeleted) {
+      if (serverId == null) return true;
+      await _expensesRemote.deleteExpense(int.parse(serverId));
+      return true;
+    }
+
+    switch (item.operation) {
+      case SyncOperation.create:
+        if (serverId != null) return true;
+        final body = await _buildExpenseBody(shopId, expense);
+        final remote = await _expensesRemote.createExpense(body);
+        final remoteId = remote['id'];
+        if (remoteId == null) return false;
+        await _expensesLocal.updateExpenseServerSync(
+          expenseId: expense.id,
+          serverId: '$remoteId',
+        );
+        return true;
+
+      case SyncOperation.update:
+        if (serverId == null) {
+          final body = await _buildExpenseBody(shopId, expense);
+          final remote = await _expensesRemote.createExpense(body);
+          final remoteId = remote['id'];
+          if (remoteId == null) return false;
+          await _expensesLocal.updateExpenseServerSync(
+            expenseId: expense.id,
+            serverId: '$remoteId',
+          );
+          return true;
+        }
+        await _expensesRemote.updateExpense(
+          int.parse(serverId),
+          await _buildExpenseBody(shopId, expense),
+        );
+        return true;
+
+      default:
+        throw ValidationFailure(
+          'Opération dépense inconnue : ${item.operation}',
+        );
+    }
+  }
+
+  Future<Map<String, dynamic>> _buildExpenseBody(
+    int shopId,
+    Expense expense,
+  ) async {
+    int? categoryId;
+    if (expense.categoryId != null) {
+      categoryId = await _resolveExpenseCategoryServerId(
+        shopId,
+        expense.categoryId!,
+      );
+    }
+
+    return {
+      if (categoryId != null) 'categoryId': categoryId,
+      'title': expense.title,
+      if (expense.description != null) 'description': expense.description,
+      'amount': expense.amount,
+      'expenseDate': expense.expenseDate,
+      'paymentMethod': expense.paymentMethod.code,
+      if (expense.supplier != null) 'supplier': expense.supplier,
+      if (expense.invoiceNumber != null) 'invoiceNumber': expense.invoiceNumber,
+      'repeatSchedule': expense.repeatSchedule.code,
+      'status': expense.status.code,
+    };
+  }
+
+  Future<int?> _resolveExpenseCategoryServerId(
+    int shopId,
+    int localCategoryId,
+  ) async {
+    final category = await _expensesLocal.findCategory(shopId, localCategoryId);
+    if (category == null) return null;
+
+    final remoteCategories = await _expensesRemote.fetchCategories();
+    final matches = remoteCategories.where(
+      (c) =>
+          (c['name'] as String?)?.toLowerCase() ==
+          category.name.toLowerCase(),
+    );
+    if (matches.isEmpty) return null;
+    final id = matches.first['id'];
+    return id is num ? id.toInt() : null;
   }
 
   Future<int?> _resolveCategoryServerId(int shopId, int? localCategoryId) async {

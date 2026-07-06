@@ -29,8 +29,13 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
     SaleListLoadRequested event,
     Emitter<SaleListState> emit,
   ) async {
-    emit(state.copyWith(status: SaleListStatus.loading, clearError: true));
-    await _fetch(emit);
+    final keepStale = state.sales.isNotEmpty;
+    if (keepStale) {
+      emit(state.copyWith(isRefreshing: true, clearError: true));
+    } else {
+      emit(state.copyWith(status: SaleListStatus.loading, clearError: true));
+    }
+    await _fetch(emit, keepStale: keepStale);
   }
 
   Future<void> _onRefresh(
@@ -38,7 +43,7 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
     Emitter<SaleListState> emit,
   ) async {
     emit(state.copyWith(isRefreshing: true, clearError: true));
-    await _fetch(emit);
+    await _fetch(emit, keepStale: state.sales.isNotEmpty);
   }
 
   Future<void> _onSearch(
@@ -54,10 +59,13 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         isRefreshing: state.status == SaleListStatus.loaded,
       ),
     );
-    await _fetch(emit);
+    await _fetch(emit, keepStale: state.status == SaleListStatus.loaded);
   }
 
-  Future<void> _fetch(Emitter<SaleListState> emit) async {
+  Future<void> _fetch(
+    Emitter<SaleListState> emit, {
+    required bool keepStale,
+  }) async {
     try {
       final sales = await _listSales(
         session: _session,
@@ -72,6 +80,16 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         ),
       );
     } on Failure catch (e) {
+      if (keepStale) {
+        emit(
+          state.copyWith(
+            status: SaleListStatus.loaded,
+            isRefreshing: false,
+            errorMessage: friendlyErrorMessage(e),
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: SaleListStatus.failure,
@@ -80,6 +98,16 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         ),
       );
     } catch (_) {
+      if (keepStale) {
+        emit(
+          state.copyWith(
+            status: SaleListStatus.loaded,
+            isRefreshing: false,
+            errorMessage: 'Impossible de charger les ventes.',
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: SaleListStatus.failure,

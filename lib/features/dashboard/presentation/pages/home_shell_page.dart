@@ -17,6 +17,7 @@ import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/sync/widgets/sync_status_indicator.dart';
 import '../../../../core/notifications/notification_orchestrator.dart';
 import '../../../../core/notifications/notification_permission_prompter.dart';
+import '../../../sales/presentation/bloc/sale_list_bloc.dart';
 import '../../../sales/presentation/pages/new_sale_page.dart';
 import '../../../sales/presentation/pages/sale_list_page.dart';
 import '../../../inventory/presentation/pages/product_list_page.dart';
@@ -79,6 +80,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
         );
         if (!mounted) return;
         context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+        context.read<SaleListBloc>().add(const SaleListRefreshRequested());
         setState(() => _currentIndex = 1);
       }
     });
@@ -113,9 +115,6 @@ class _HomeShellPageState extends State<HomeShellPage> {
       if (index != 3) _debtorsFilter = false;
       if (index == 3) _customersTabKey++;
     });
-    if (index == 0) {
-      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
-    }
   }
 
   @override
@@ -127,11 +126,21 @@ class _HomeShellPageState extends State<HomeShellPage> {
           Permission.shopsSwitch,
         );
 
-    return BlocProvider(
-      create: (_) => DashboardBloc(
-        getDashboard: sl(),
-        session: widget.session,
-      ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => DashboardBloc(
+            getDashboard: sl(),
+            session: widget.session,
+          )..add(const DashboardLoadRequested()),
+        ),
+        BlocProvider(
+          create: (_) => SaleListBloc(
+            listSales: sl(),
+            session: widget.session,
+          )..add(const SaleListLoadRequested()),
+        ),
+      ],
       child: ResponsiveBuilder(
         builder: (context, screenType) {
           final useRail = Breakpoints.useNavigationRail(screenType);

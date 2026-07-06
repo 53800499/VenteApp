@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -40,17 +39,10 @@ class _SaleListPageState extends State<SaleListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => SaleListBloc(
-        listSales: sl(),
-        session: widget.session,
-      )..add(const SaleListLoadRequested()),
-      child: Builder(
-        builder: (context) {
-          return Scaffold(
-            body: Column(
-              children: [
-                BlocBuilder<SaleListBloc, SaleListState>(
+    return Scaffold(
+      body: Column(
+        children: [
+          BlocBuilder<SaleListBloc, SaleListState>(
                   buildWhen: (prev, curr) =>
                       prev.isRefreshing != curr.isRefreshing,
                   builder: (context, state) {
@@ -104,9 +96,10 @@ class _SaleListPageState extends State<SaleListPage> {
                     builder: (context, state) {
                       return switch (state.status) {
                         SaleListStatus.initial ||
-                        SaleListStatus.loading =>
+                        SaleListStatus.loading when state.sales.isEmpty =>
                           const Center(child: CircularProgressIndicator()),
-                        SaleListStatus.failure => Center(
+                        SaleListStatus.failure when state.sales.isEmpty =>
+                          Center(
                             child: Padding(
                               padding: const EdgeInsets.all(AppSpacing.lg),
                               child: Column(
@@ -128,7 +121,10 @@ class _SaleListPageState extends State<SaleListPage> {
                               ),
                             ),
                           ),
-                        SaleListStatus.loaded => RefreshIndicator(
+                        SaleListStatus.loaded ||
+                        SaleListStatus.loading ||
+                        SaleListStatus.failure =>
+                          RefreshIndicator(
                             onRefresh: () async {
                               context
                                   .read<SaleListBloc>()
@@ -173,6 +169,8 @@ class _SaleListPageState extends State<SaleListPage> {
                                     },
                                   ),
                           ),
+                        SaleListStatus.initial =>
+                          const Center(child: CircularProgressIndicator()),
                       };
                     },
                   ),
@@ -199,9 +197,6 @@ class _SaleListPageState extends State<SaleListPage> {
                     ],
                   )
                 : null,
-          );
-        },
-      ),
     );
   }
 

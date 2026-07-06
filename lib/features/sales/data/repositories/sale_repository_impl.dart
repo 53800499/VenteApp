@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../../core/database/app_database.dart' as db;
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
@@ -132,18 +134,41 @@ class SaleRepositoryImpl implements SaleRepository {
       timestamp: timestamp,
     );
 
+    unawaited(
+      _finalizeStandardSaleSync(
+        shopId: shopId,
+        sale: sale,
+        input: input,
+        snapshots: snapshots,
+        totals: totals,
+        customerId: input.customerId,
+      ),
+    );
+
+    return sale;
+  }
+
+  Future<void> _finalizeStandardSaleSync({
+    required int shopId,
+    required Sale sale,
+    required CreateStandardSaleInput input,
+    required List<({
+      db.Product product,
+      SaleLineDraft line,
+      int lineTotal,
+    })> snapshots,
+    required ComputedSaleTotals totals,
+    required int? customerId,
+  }) async {
     await _trySyncStandardSale(
       shopId: shopId,
       sale: sale,
       input: input,
       snapshots: snapshots,
       totals: totals,
-      customerId: input.customerId,
+      customerId: customerId,
     );
-
     await _recordSaleIfPending(shopId: shopId, saleId: sale.id);
-
-    return sale;
   }
 
   Future<void> _recordSaleIfPending({
@@ -337,25 +362,25 @@ class SaleRepositoryImpl implements SaleRepository {
       timestamp: timestamp,
     );
 
-    await _trySyncStandardSale(
-      shopId: shopId,
-      sale: converted,
-      input: CreateStandardSaleInput(
-        items: input.items,
-        discountAmount: input.discountAmount,
-        payment: PaymentDraft(
-          method: sale.paymentMethod,
-          amountCash: sale.amountCash,
-          amountMomo: sale.amountMomo,
-          amountCredit: sale.amountCredit,
+    unawaited(
+      _finalizeStandardSaleSync(
+        shopId: shopId,
+        sale: converted,
+        input: CreateStandardSaleInput(
+          items: input.items,
+          discountAmount: input.discountAmount,
+          payment: PaymentDraft(
+            method: sale.paymentMethod,
+            amountCash: sale.amountCash,
+            amountMomo: sale.amountMomo,
+            amountCredit: sale.amountCredit,
+          ),
         ),
+        snapshots: snapshots,
+        totals: totals,
+        customerId: sale.customerId,
       ),
-      snapshots: snapshots,
-      totals: totals,
-      customerId: sale.customerId,
     );
-
-    await _recordSaleIfPending(shopId: shopId, saleId: converted.id);
 
     return converted;
   }

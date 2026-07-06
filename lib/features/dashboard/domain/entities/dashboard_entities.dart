@@ -81,6 +81,8 @@ class DashboardFinancialKpis {
     required this.profitAvailable,
     this.profitWarning,
     required this.totalDebt,
+    this.totalExpenses = 0,
+    this.netProfit,
   });
 
   final int totalCash;
@@ -90,6 +92,8 @@ class DashboardFinancialKpis {
   final bool profitAvailable;
   final String? profitWarning;
   final int totalDebt;
+  final int totalExpenses;
+  final int? netProfit;
 }
 
 class DashboardRecentSale {

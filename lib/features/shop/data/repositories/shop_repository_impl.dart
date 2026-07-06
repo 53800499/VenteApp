@@ -174,6 +174,7 @@ class ShopRepositoryImpl implements ShopRepository {
           ..where((s) => s.serverId.equals('${dto.id}')))
         .getSingleOrNull();
 
+    final ownerUserId = await _resolveLocalOwnerUserId();
     final timestamp = nowMs();
     if (existing == null) {
       await _db.into(_db.shops).insert(
@@ -184,6 +185,9 @@ class ShopRepositoryImpl implements ShopRepository {
               isActive: Value(dto.isActive),
               isDefault: Value(dto.isDefault),
               createdAt: dto.createdAt ?? timestamp,
+              ownerUserId: ownerUserId == null
+                  ? const Value.absent()
+                  : Value(ownerUserId),
               serverId: Value('${dto.id}'),
               syncedAt: Value(timestamp),
             ),
@@ -198,9 +202,19 @@ class ShopRepositoryImpl implements ShopRepository {
         phone: Value(dto.phone),
         isActive: Value(dto.isActive),
         isDefault: Value(dto.isDefault),
+        ownerUserId: existing.ownerUserId == null && ownerUserId != null
+            ? Value(ownerUserId)
+            : const Value.absent(),
         syncedAt: Value(timestamp),
       ),
     );
+  }
+
+  Future<int?> _resolveLocalOwnerUserId() async {
+    final owner = await (_db.select(_db.users)
+          ..where((u) => u.role.equals('owner')))
+        .getSingleOrNull();
+    return owner?.id;
   }
 
   Future<int> _resolveLocalShopId(int serverShopId) async {

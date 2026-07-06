@@ -56,12 +56,14 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     SalesAnalysisQuery query,
   ) async {
     try {
-      await _apiGuard.ensureReady();
-      final dto = await _remote.fetchAnalysis(
-        period: query.period,
-        from: query.customFrom,
-        to: query.customTo,
-      );
+      await _apiGuard.ensureReady().timeout(const Duration(seconds: 2));
+      final dto = await _remote
+          .fetchAnalysis(
+            period: query.period,
+            from: query.customFrom,
+            to: query.customTo,
+          )
+          .timeout(const Duration(seconds: 4));
       return SalesAnalysisMapper.fromApi(dto);
     } on Failure {
       return null;
@@ -153,15 +155,20 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     required int shopId,
     required SalesAnalysisQuery query,
   }) async {
-    final remote = await _loadRemoteBundle(query);
-    if (remote != null) return remote.categories;
-
     final period = _resolve(query);
-    return _local.listCategorySummaries(
+    final local = await _local.listCategorySummaries(
       shopId: shopId,
       fromMs: period.fromMs,
       toMs: period.toMs,
     );
+
+    try {
+      final remote = await _loadRemoteBundle(query)
+          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+      if (remote != null) return remote.categories;
+    } catch (_) {}
+
+    return local;
   }
 
   @override
@@ -169,15 +176,20 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     required int shopId,
     required SalesAnalysisQuery query,
   }) async {
-    final remote = await _loadRemoteBundle(query);
-    if (remote?.margins != null) return remote!.margins!;
-
     final period = _resolve(query);
-    return _local.loadMarginSummary(
+    final local = await _local.loadMarginSummary(
       shopId: shopId,
       fromMs: period.fromMs,
       toMs: period.toMs,
     );
+
+    try {
+      final remote = await _loadRemoteBundle(query)
+          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+      if (remote?.margins != null) return remote!.margins!;
+    } catch (_) {}
+
+    return local;
   }
 
   @override
@@ -185,15 +197,20 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     required int shopId,
     required SalesAnalysisQuery query,
   }) async {
-    final remote = await _loadRemoteBundle(query);
-    if (remote != null) return remote.priceDeviations;
-
     final period = _resolve(query);
-    return _local.listPriceDeviations(
+    final local = await _local.listPriceDeviations(
       shopId: shopId,
       fromMs: period.fromMs,
       toMs: period.toMs,
     );
+
+    try {
+      final remote = await _loadRemoteBundle(query)
+          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+      if (remote != null) return remote.priceDeviations;
+    } catch (_) {}
+
+    return local;
   }
 
   @override
@@ -201,14 +218,19 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     required int shopId,
     required SalesAnalysisQuery query,
   }) async {
-    final remote = await _loadRemoteBundle(query);
-    if (remote != null) return remote.trends;
-
     final period = _resolve(query);
-    return _local.loadSalesTrends(
+    final local = await _local.loadSalesTrends(
       shopId: shopId,
       fromMs: period.fromMs,
       toMs: period.toMs,
     );
+
+    try {
+      final remote = await _loadRemoteBundle(query)
+          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+      if (remote != null) return remote.trends;
+    } catch (_) {}
+
+    return local;
   }
 }

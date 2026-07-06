@@ -40,6 +40,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       );
       emit(DashboardLoaded(data));
     } catch (error) {
+      if (previous is DashboardLoaded) {
+        emit(DashboardLoaded(previous.data, isRefreshing: false));
+        return;
+      }
       emit(DashboardFailure(error.toString()));
     }
   }

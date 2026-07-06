@@ -35,13 +35,47 @@ class KpiCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final tight = constraints.maxHeight < 128;
+            final boundedHeight = constraints.hasBoundedHeight &&
+                constraints.maxHeight.isFinite;
+            final tight = boundedHeight && constraints.maxHeight < 128;
             final padding = tight ? AppSpacing.sm : AppSpacing.md;
             final valueStyle = tight
                 ? Theme.of(context).textTheme.titleLarge
                 : Theme.of(context).textTheme.headlineSmall;
 
+            final valueBlock = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: valueStyle?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: accent,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    subtitle!,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: tight ? 11 : 12,
+                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            );
+
             return Container(
+              width: constraints.maxWidth.isFinite ? constraints.maxWidth : null,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 border: Border.all(
@@ -58,7 +92,8 @@ class KpiCard extends StatelessWidget {
               padding: EdgeInsets.all(padding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize:
+                    boundedHeight ? MainAxisSize.max : MainAxisSize.min,
                 children: [
                   Row(
                     children: [
@@ -69,44 +104,30 @@ class KpiCard extends StatelessWidget {
                             color: accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(icon, size: tight ? 16 : 18, color: accent),
+                          child:
+                              Icon(icon, size: tight ? 16 : 18, color: accent),
                         ),
-                      if (icon != null) SizedBox(width: tight ? 6 : AppSpacing.sm),
+                      if (icon != null)
+                        SizedBox(width: tight ? 6 : AppSpacing.sm),
                       Expanded(
                         child: Text(
                           label,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: AppColors.onSurfaceMuted,
-                                fontSize: tight ? 12 : null,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    color: AppColors.onSurfaceMuted,
+                                    fontSize: tight ? 12 : null,
+                                  ),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: tight ? AppSpacing.xs : AppSpacing.sm + 4),
-                  Text(
-                    value,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: valueStyle?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: accent,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      subtitle!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: tight ? 11 : null,
-                          ),
-                      maxLines: tight ? 1 : 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                  SizedBox(height: tight ? AppSpacing.xs : AppSpacing.sm),
+                  if (boundedHeight)
+                    Expanded(child: valueBlock)
+                  else
+                    valueBlock,
                 ],
               ),
             );

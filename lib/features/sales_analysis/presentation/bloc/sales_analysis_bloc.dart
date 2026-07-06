@@ -52,7 +52,9 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     SalesAnalysisLoadRequested event,
     Emitter<SalesAnalysisState> emit,
   ) async {
-    emit(state.copyWith(status: SalesAnalysisStatus.loading, clearError: true));
+    if (state.products.isEmpty) {
+      emit(state.copyWith(status: SalesAnalysisStatus.loading, clearError: true));
+    }
     await _fetch(emit);
   }
 
@@ -67,7 +69,9 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
           customFrom: event.customFrom,
           customTo: event.customTo,
         ),
-        status: SalesAnalysisStatus.loading,
+        status: state.products.isEmpty
+            ? SalesAnalysisStatus.loading
+            : SalesAnalysisStatus.loaded,
         clearError: true,
       ),
     );
@@ -88,49 +92,57 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
         customFrom: state.query.customFrom,
         customTo: state.query.customTo,
       );
-      final products = await _listProducts(
-        shopId: shopId,
-        query: state.query,
-      );
-      final employees = await _listEmployees(
-        shopId: shopId,
-        query: state.query,
-      );
-      final customers = await _listCustomers(
-        shopId: shopId,
-        query: state.query,
-      );
-      final categories = await _listCategories(
-        shopId: shopId,
-        query: state.query,
-      );
-      final margins = await _getMargins(
-        shopId: shopId,
-        query: state.query,
-      );
-      final priceDeviations = await _listPriceDeviations(
-        shopId: shopId,
-        query: state.query,
-      );
-      final trends = await _getTrends(
-        shopId: shopId,
-        query: state.query,
-      );
+
+      final localResults = await Future.wait([
+        _listProducts(shopId: shopId, query: state.query),
+        _listEmployees(shopId: shopId, query: state.query),
+        _listCustomers(shopId: shopId, query: state.query),
+      ]);
+
       emit(
         state.copyWith(
           status: SalesAnalysisStatus.loaded,
           periodLabel: period.label,
-          products: products,
-          employees: employees,
-          customers: customers,
-          categories: categories,
-          margins: margins,
-          priceDeviations: priceDeviations,
-          trends: trends,
+          products: localResults[0] as List<ProductSalesSummary>,
+          employees: localResults[1] as List<EmployeePricePerformance>,
+          customers: localResults[2] as List<CustomerSalesInsight>,
+          clearError: true,
+        ),
+      );
+
+      final remoteResults = await Future.wait([
+        _listCategories(shopId: shopId, query: state.query),
+        _getMargins(shopId: shopId, query: state.query),
+        _listPriceDeviations(shopId: shopId, query: state.query),
+        _getTrends(shopId: shopId, query: state.query),
+      ]);
+
+      if (emit.isDone) return;
+
+      emit(
+        state.copyWith(
+          status: SalesAnalysisStatus.loaded,
+          periodLabel: period.label,
+          products: localResults[0] as List<ProductSalesSummary>,
+          employees: localResults[1] as List<EmployeePricePerformance>,
+          customers: localResults[2] as List<CustomerSalesInsight>,
+          categories: remoteResults[0] as List<CategorySalesSummary>,
+          margins: remoteResults[1] as MarginSummary,
+          priceDeviations: remoteResults[2] as List<PriceDeviationLine>,
+          trends: remoteResults[3] as SalesTrendSummary,
           clearError: true,
         ),
       );
     } on Failure catch (error) {
+      if (state.products.isNotEmpty) {
+        emit(
+          state.copyWith(
+            status: SalesAnalysisStatus.loaded,
+            errorMessage: friendlyErrorMessage(error),
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: SalesAnalysisStatus.failure,

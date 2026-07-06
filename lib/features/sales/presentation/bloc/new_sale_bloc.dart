@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -536,17 +538,20 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       );
 
       if (customerId != null) {
-        await _customerPrices.saveAfterSale(
-          shopId: _session.shop.id,
-          customerId: customerId,
-          lines: state.cart
-              .map(
-                (line) => (
-                  productId: line.productId,
-                  unitPrice: line.unitPrice,
-                ),
-              )
-              .toList(),
+        final lines = state.cart
+            .map(
+              (line) => (
+                productId: line.productId,
+                unitPrice: line.unitPrice,
+              ),
+            )
+            .toList();
+        unawaited(
+          _customerPrices.saveAfterSale(
+            shopId: _session.shop.id,
+            customerId: customerId,
+            lines: lines,
+          ),
         );
       }
 

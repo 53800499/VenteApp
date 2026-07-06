@@ -47,6 +47,38 @@ class ReportsLocalDatasource {
     return rows.map((s) => s.id).toList();
   }
 
+  /// Boutiques à agréger en vue consolidée (offline).
+  Future<List<int>> resolveConsolidatedShopIds({
+    required int activeShopId,
+    required int ownerUserId,
+  }) async {
+    final byOwner = await activeShopIdsForOwner(ownerUserId);
+    if (byOwner.length > 1) return byOwner;
+
+    final activeShop = await (_db.select(_db.shops)
+          ..where((s) => s.id.equals(activeShopId)))
+        .getSingleOrNull();
+
+    final ownerId = activeShop?.ownerUserId ?? ownerUserId;
+    final siblings = await (_db.select(_db.shops)
+          ..where(
+            (s) => s.ownerUserId.equals(ownerId) & s.isActive.equals(true),
+          ))
+        .get();
+    if (siblings.length > 1) {
+      return siblings.map((s) => s.id).toList();
+    }
+
+    final allActive = await (_db.select(_db.shops)
+          ..where((s) => s.isActive.equals(true)))
+        .get();
+    if (allActive.length > 1) {
+      return allActive.map((s) => s.id).toList();
+    }
+
+    return [activeShopId];
+  }
+
   Future<List<ReportSaleRow>> _fetchSales(
     List<int> shopIds,
     int fromMs,

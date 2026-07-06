@@ -38,6 +38,7 @@ class ReportAggregationService {
   ReportFinancialKpis aggregateFinancial({
     required List<ReportProfitLine> profitLines,
     required ReportDebtRecoveryRaw debtRecovery,
+    int totalExpenses = 0,
   }) {
     final hasCostData = profitLines.any(
       (line) => line.unitCost != null && line.unitCost! > 0,
@@ -76,6 +77,10 @@ class ReportAggregationService {
       recoveryRateAvailable: recoveryRateAvailable,
       debtsCreatedAmount: debtsCreatedAmount,
       debtsRepaidAmount: debtsRepaidAmount,
+      totalExpenses: totalExpenses,
+      netProfit: estimatedProfit != null
+          ? estimatedProfit - totalExpenses
+          : null,
     );
   }
 

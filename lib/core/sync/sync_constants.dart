@@ -5,6 +5,7 @@ abstract final class SyncEntityTable {
   static const products = 'products';
   static const sales = 'sales';
   static const debts = 'debts';
+  static const expenses = 'expenses';
 }
 
 /// Opérations poussées vers le cloud (FIFO).

@@ -37,6 +37,8 @@ class ReportMapper {
               recoveryRateAvailable: dto.financial!.recoveryRateAvailable,
               debtsCreatedAmount: dto.financial!.debtsCreatedAmount,
               debtsRepaidAmount: dto.financial!.debtsRepaidAmount,
+              totalExpenses: dto.financial!.totalExpenses,
+              netProfit: dto.financial!.netProfit,
             ),
       topProducts: dto.topProducts
           .map(

@@ -34,12 +34,6 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<DashboardBloc>().add(const DashboardLoadRequested());
-  }
-
   void _showComingSoon(String module) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$module — bientôt disponible')),
@@ -317,6 +311,26 @@ class _FinancialSection extends StatelessWidget {
                 ),
               ),
             ),
+          if (financial.totalExpenses > 0) ...[
+            const SizedBox(height: AppSpacing.sm + 4),
+            KpiCard(
+              label: 'Dépenses du jour',
+              value: formatFcfa(financial.totalExpenses),
+              icon: Icons.receipt_long_outlined,
+              accentColor: AppColors.warning,
+            ),
+          ],
+          if (financial.netProfit != null) ...[
+            const SizedBox(height: AppSpacing.sm + 4),
+            KpiCard(
+              label: 'Bénéfice net',
+              value: formatFcfa(financial.netProfit!),
+              icon: Icons.account_balance_wallet_outlined,
+              accentColor: financial.netProfit! >= 0
+                  ? AppColors.success
+                  : Theme.of(context).colorScheme.error,
+            ),
+          ],
         ],
       ],
     );

@@ -256,4 +256,30 @@ class LocalWriteSyncRecorder {
       payload: {'reason': reason},
     );
   }
+
+  Future<void> recordExpenseCreate({
+    required int shopId,
+    required int localId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.expenses,
+      recordId: localId,
+      operation: SyncOperation.create,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordExpenseUpdate({
+    required int shopId,
+    required int localId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.expenses,
+      recordId: localId,
+      operation: SyncOperation.update,
+      payload: const {},
+    );
+  }
 }

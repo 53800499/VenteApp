@@ -2,6 +2,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/utils/benin_period_range.dart';
 import '../../../../core/utils/time.dart';
+import '../../../expenses/data/datasources/local/expenses_local_datasource.dart';
 import '../../domain/entities/report_entities.dart';
 import '../../domain/repositories/report_repository.dart';
 import '../../domain/services/report_aggregation_service.dart';
@@ -16,15 +17,18 @@ class ReportRepositoryImpl implements ReportRepository {
     required ReportsLocalDatasource local,
     required ReportsRemoteDatasource remote,
     required RemoteApiGuard apiGuard,
+    ExpensesLocalDatasource? expensesLocal,
     ReportAggregationService? aggregation,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
+        _expensesLocal = expensesLocal,
         _aggregation = aggregation ?? const ReportAggregationService();
 
   final ReportsLocalDatasource _local;
   final ReportsRemoteDatasource _remote;
   final RemoteApiGuard _apiGuard;
+  final ExpensesLocalDatasource? _expensesLocal;
   final ReportAggregationService _aggregation;
 
   @override
@@ -44,14 +48,16 @@ class ReportRepositoryImpl implements ReportRepository {
 
     try {
       await _apiGuard.ensureReady();
-      final remote = await _remote.fetchReport(
-        period: query.period,
-        from: query.customFrom,
-        to: query.customTo,
-        consolidated: query.consolidated,
-        topBy: query.topBy,
-        topLimit: query.topLimit,
-      );
+      final remote = await _remote
+          .fetchReport(
+            period: query.period,
+            from: query.customFrom,
+            to: query.customTo,
+            consolidated: query.consolidated,
+            topBy: query.topBy,
+            topLimit: query.topLimit,
+          )
+          .timeout(remoteReadFetchTimeout);
       return ReportMapper.fromApi(remote);
     } on Failure {
       // Données locales — offline-first §13.1
@@ -112,10 +118,22 @@ class ReportRepositoryImpl implements ReportRepository {
         )
         .toList();
 
+    var totalExpenses = 0;
+    if (canViewFinancial && _expensesLocal != null) {
+      for (final id in shopIds) {
+        totalExpenses += await _expensesLocal.sumValidatedExpenses(
+          shopId: id,
+          fromMs: periodRange.fromMs,
+          toMs: periodRange.toMs,
+        );
+      }
+    }
+
     final financial = canViewFinancial
         ? _aggregation.aggregateFinancial(
             profitLines: raw.profitLines,
             debtRecovery: raw.debtRecovery,
+            totalExpenses: totalExpenses,
           )
         : null;
 
@@ -160,7 +178,9 @@ class ReportRepositoryImpl implements ReportRepository {
   }) async {
     if (!consolidated) return [activeShopId];
 
-    final owned = await _local.activeShopIdsForOwner(ownerUserId);
-    return owned.isEmpty ? [activeShopId] : owned;
+    return _local.resolveConsolidatedShopIds(
+      activeShopId: activeShopId,
+      ownerUserId: ownerUserId,
+    );
   }
 }

@@ -88,6 +88,12 @@ import '../../features/sales_analysis/data/datasources/remote/sales_analysis_rem
 import '../../features/sales_analysis/data/repositories/sales_analysis_repository_impl.dart';
 import '../../features/sales_analysis/domain/repositories/sales_analysis_repository.dart';
 import '../../features/sales_analysis/domain/usecases/sales_analysis_usecases.dart';
+import '../../features/expenses/data/datasources/local/expenses_local_datasource.dart';
+import '../../features/expenses/data/datasources/remote/expenses_remote_datasource.dart';
+import '../../features/expenses/data/repositories/expense_repository_impl.dart';
+import '../../features/expenses/domain/repositories/expense_repository.dart';
+import '../../features/expenses/domain/usecases/expense_usecases.dart';
+import '../../features/expenses/presentation/services/expense_pdf_exporter.dart';
 import '../../features/notifications/data/datasources/local/notifications_local_datasource.dart';
 import '../../features/notifications/data/datasources/remote/notifications_remote_datasource.dart';
 import '../../features/notifications/data/repositories/notification_repository_impl.dart';
@@ -128,6 +134,8 @@ final sl = GetIt.instance;
 void ensureReportsDependencies() {
   if (sl.isRegistered<GetReport>()) return;
 
+  ensureExpensesDependencies();
+
   if (!sl.isRegistered<ReportAggregationService>()) {
     sl.registerLazySingleton(() => const ReportAggregationService());
   }
@@ -143,6 +151,7 @@ void ensureReportsDependencies() {
         local: sl(),
         remote: sl(),
         apiGuard: sl(),
+        expensesLocal: sl<ExpensesLocalDatasource>(),
         aggregation: sl(),
       ),
     );
@@ -219,6 +228,68 @@ void ensureSalesAnalysisDependencies() {
     sl.registerLazySingleton(
       () => GetSalesTrendAnalysis(sl<SalesAnalysisRepository>()),
     );
+  }
+}
+
+/// Enregistre le module Dépenses si absent.
+void ensureExpensesDependencies() {
+  if (!sl.isRegistered<ExpensesLocalDatasource>()) {
+    sl.registerLazySingleton(() => ExpensesLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<ExpensesRemoteDatasource>()) {
+    sl.registerLazySingleton(() => ExpensesRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<ExpenseRepository>()) {
+    sl.registerLazySingleton<ExpenseRepository>(
+      () => ExpenseRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        recorder: sl(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<ListExpenses>()) {
+    sl.registerLazySingleton(() => ListExpenses(sl()));
+  }
+  if (!sl.isRegistered<CreateExpense>()) {
+    sl.registerLazySingleton(() => CreateExpense(sl()));
+  }
+  if (!sl.isRegistered<UpdateExpense>()) {
+    sl.registerLazySingleton(() => UpdateExpense(sl()));
+  }
+  if (!sl.isRegistered<DeleteExpense>()) {
+    sl.registerLazySingleton(() => DeleteExpense(sl()));
+  }
+  if (!sl.isRegistered<GetExpenseSummary>()) {
+    sl.registerLazySingleton(() => GetExpenseSummary(sl()));
+  }
+  if (!sl.isRegistered<ListExpenseCategories>()) {
+    sl.registerLazySingleton(() => ListExpenseCategories(sl()));
+  }
+  if (!sl.isRegistered<CreateExpenseCategory>()) {
+    sl.registerLazySingleton(() => CreateExpenseCategory(sl()));
+  }
+  if (!sl.isRegistered<GetExpensesByCategory>()) {
+    sl.registerLazySingleton(() => GetExpensesByCategory(sl()));
+  }
+  if (!sl.isRegistered<SumValidatedExpenses>()) {
+    sl.registerLazySingleton(() => SumValidatedExpenses(sl()));
+  }
+  if (!sl.isRegistered<GetExpenseDetail>()) {
+    sl.registerLazySingleton(() => GetExpenseDetail(sl()));
+  }
+  if (!sl.isRegistered<UpsertCategoryBudget>()) {
+    sl.registerLazySingleton(() => UpsertCategoryBudget(sl()));
+  }
+  if (!sl.isRegistered<GenerateRecurringExpenses>()) {
+    sl.registerLazySingleton(() => GenerateRecurringExpenses(sl()));
+  }
+  if (!sl.isRegistered<SyncExpensesFromRemote>()) {
+    sl.registerLazySingleton(() => SyncExpensesFromRemote(sl()));
+  }
+  if (!sl.isRegistered<ExpensePdfExporter>()) {
+    sl.registerLazySingleton(() => const ExpensePdfExporter());
   }
 }
 
@@ -516,8 +587,12 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton(() => DashboardAggregationService());
   sl.registerLazySingleton(() => DashboardLocalDatasource(sl()));
+  ensureExpensesDependencies();
   sl.registerLazySingleton<DashboardRepository>(
-    () => DashboardRepositoryImpl(localDatasource: sl()),
+    () => DashboardRepositoryImpl(
+      localDatasource: sl(),
+      expensesLocal: sl<ExpensesLocalDatasource>(),
+    ),
   );
   sl.registerLazySingleton(() => GetDashboard(sl()));
 
@@ -622,6 +697,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => InventoryRemoteSyncAdapter(sl<InventoryRepository>()));
   sl.registerLazySingleton(() => SalesRemoteSyncAdapter(sl<SaleRepository>()));
   sl.registerLazySingleton(() => DebtsRemoteSyncAdapter(sl<DebtRepository>()));
+  sl.registerLazySingleton(
+    () => ExpensesRemoteSyncAdapter(sl<ExpenseRepository>()),
+  );
   sl.registerLazySingleton(() => SyncPolicy(sl(), sl()));
   sl.registerLazySingleton(() => SyncQueueDatasource(sl()));
   sl.registerLazySingleton(() => LocalAuditWriter(sl()));
@@ -653,6 +731,8 @@ Future<void> initDependencies() async {
       salesRemote: sl(),
       debtsLocal: sl(),
       debtsRemote: sl(),
+      expensesLocal: sl(),
+      expensesRemote: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -668,6 +748,7 @@ Future<void> initDependencies() async {
         sl<InventoryRemoteSyncAdapter>(),
         sl<SalesRemoteSyncAdapter>(),
         sl<DebtsRemoteSyncAdapter>(),
+        sl<ExpensesRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
     ),

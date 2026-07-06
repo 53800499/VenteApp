@@ -48,7 +48,6 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
     ReportLoadRequested event,
     Emitter<ReportState> emit,
   ) async {
-    emit(state.copyWith(status: ReportStatus.loading, clearError: true));
     await _fetch(emit);
   }
 
@@ -57,12 +56,13 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
     Emitter<ReportState> emit,
   ) async {
     if (event.period == ReportPeriodPreset.custom) {
-      emit(state.copyWith(status: ReportStatus.loading));
+      if (state.report == null) {
+        emit(state.copyWith(status: ReportStatus.loading));
+      }
       return;
     }
     emit(
       state.copyWith(
-        status: ReportStatus.loading,
         query: state.query.copyWith(period: event.period),
         clearError: true,
       ),
@@ -76,7 +76,6 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
   ) async {
     emit(
       state.copyWith(
-        status: ReportStatus.loading,
         query: state.query.copyWith(
           period: ReportPeriodPreset.custom,
           customFrom: event.fromMs,
@@ -94,7 +93,6 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
   ) async {
     emit(
       state.copyWith(
-        status: ReportStatus.loading,
         query: state.query.copyWith(topBy: event.sort),
         clearError: true,
       ),
@@ -106,17 +104,32 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
     ReportConsolidatedToggled event,
     Emitter<ReportState> emit,
   ) async {
+    final previousConsolidated = state.query.consolidated;
     emit(
       state.copyWith(
-        status: ReportStatus.loading,
         query: state.query.copyWith(consolidated: event.enabled),
         clearError: true,
       ),
     );
-    await _fetch(emit);
+    final failed = await _fetch(emit);
+    if (failed && previousConsolidated != event.enabled) {
+      emit(
+        state.copyWith(
+          query: state.query.copyWith(consolidated: previousConsolidated),
+        ),
+      );
+    }
   }
 
-  Future<void> _fetch(Emitter<ReportState> emit) async {
+  /// Retourne `true` si le chargement a échoué.
+  Future<bool> _fetch(Emitter<ReportState> emit) async {
+    final keepStale = state.report != null;
+    if (!keepStale) {
+      emit(state.copyWith(status: ReportStatus.loading, clearError: true));
+    } else {
+      emit(state.copyWith(isRefreshing: true, clearError: true));
+    }
+
     try {
       final report = await _getReport(
         session: _session,
@@ -129,23 +142,49 @@ class ReportBloc extends Bloc<ReportEvent, ReportState> {
         state.copyWith(
           status: ReportStatus.success,
           report: report,
+          isRefreshing: false,
           clearError: true,
         ),
       );
+      return false;
     } on Failure catch (error) {
+      if (keepStale) {
+        emit(
+          state.copyWith(
+            status: ReportStatus.success,
+            isRefreshing: false,
+            errorMessage: error.message,
+          ),
+        );
+        return true;
+      }
       emit(
         state.copyWith(
           status: ReportStatus.failure,
+          isRefreshing: false,
           errorMessage: error.message,
         ),
       );
+      return true;
     } catch (error) {
+      if (keepStale) {
+        emit(
+          state.copyWith(
+            status: ReportStatus.success,
+            isRefreshing: false,
+            errorMessage: error.toString(),
+          ),
+        );
+        return true;
+      }
       emit(
         state.copyWith(
           status: ReportStatus.failure,
+          isRefreshing: false,
           errorMessage: error.toString(),
         ),
       );
+      return true;
     }
   }
 }
