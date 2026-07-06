@@ -88,7 +88,10 @@ class AuthRepositoryImpl implements AuthRepository {
 
   bool get _isOnlineMode => _remote != null;
 
-  static const _onlinePinRefreshTimeout = Duration(seconds: 8);
+  static const _onlinePinRefreshTimeout = Duration(seconds: 5);
+  static const _onlinePinTimeoutMessage =
+      'Le serveur met trop de temps à répondre. '
+      'Vérifiez la connexion (Plus → Connexion serveur) ou réessayez.';
 
   @override
   Future<bool> isSetupComplete() async {
@@ -124,9 +127,23 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     if (_remote != null && await _networkInfo.isConnected) {
-      final remote = await _remote!.getLockScreen(serverShopId);
-      await _syncLockScreenFromApi(remote);
-      return _mapLockScreenDto(remote, localShopId: localShopId);
+      try {
+        final remote = await _remote!
+            .getLockScreen(serverShopId)
+            .timeout(
+              _onlinePinRefreshTimeout,
+              onTimeout: () =>
+                  throw const NetworkFailure(_onlinePinTimeoutMessage),
+            );
+        await _syncLockScreenFromApi(remote);
+        return _mapLockScreenDto(remote, localShopId: localShopId);
+      } on NetworkFailure {
+        rethrow;
+      } on Object {
+        throw const NetworkFailure(
+          'Impossible de charger l\'écran PIN depuis le serveur.',
+        );
+      }
     }
 
       throw const NotFoundFailure('Boutique introuvable.');
@@ -162,11 +179,13 @@ class AuthRepositoryImpl implements AuthRepository {
           userId: userId,
         );
         if (_remote != null && await _networkInfo.isConnected) {
-          await _refreshOnlineCredentialsAfterLocalPin(
-            pin: pin,
-            shopId: serverShopId,
-            localShopId: localShopId,
-            userId: userId,
+          unawaited(
+            _refreshOnlineCredentialsAfterLocalPin(
+              pin: pin,
+              shopId: serverShopId,
+              localShopId: localShopId,
+              userId: userId,
+            ),
           );
         }
         return session;
@@ -218,7 +237,10 @@ class AuthRepositoryImpl implements AuthRepository {
       userId: serverUserId,
       deviceId: device.deviceId,
       deviceLabel: device.deviceLabel,
-    ).timeout(_onlinePinRefreshTimeout);
+    ).timeout(
+      _onlinePinRefreshTimeout,
+      onTimeout: () => throw const NetworkFailure(_onlinePinTimeoutMessage),
+    );
     return _finalizeOnlineLogin(result, pin: pin);
   }
 

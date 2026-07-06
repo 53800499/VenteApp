@@ -1220,7 +1220,7 @@ class _ProductCartControlsState extends State<_ProductCartControls> {
   }
 }
 
-class _AmountField extends StatelessWidget {
+class _AmountField extends StatefulWidget {
   const _AmountField({
     required this.label,
     required this.value,
@@ -1232,21 +1232,58 @@ class _AmountField extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
+  State<_AmountField> createState() => _AmountFieldState();
+}
+
+class _AmountFieldState extends State<_AmountField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _controller = TextEditingController(text: _textForValue(widget.value));
+  }
+
+  @override
+  void didUpdateWidget(covariant _AmountField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value == oldWidget.value) return;
+
+    final current = int.tryParse(_controller.text) ?? 0;
+    if (widget.value != current && !_focusNode.hasFocus) {
+      _controller.text = _textForValue(widget.value);
+    }
+  }
+
+  String _textForValue(int value) => value > 0 ? '$value' : '';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: TextFormField(
-        key: ValueKey('$label-$value'),
-        initialValue: value > 0 ? '$value' : '',
+        controller: _controller,
+        focusNode: _focusNode,
         decoration: InputDecoration(
-          labelText: label,
+          labelText: widget.label,
           border: const OutlineInputBorder(),
         ),
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         onChanged: (text) {
           final parsed = int.tryParse(text) ?? 0;
-          onChanged(parsed);
+          if (parsed != widget.value) {
+            widget.onChanged(parsed);
+          }
         },
       ),
     );

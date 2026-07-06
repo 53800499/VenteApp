@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -9,6 +11,11 @@ import 'failures.dart';
 String friendlyErrorMessage(Object error) {
   if (error is Failure) {
     return humanizeAuthErrorMessage(error.message);
+  }
+  if (error is TimeoutException) {
+    return humanizeAuthErrorMessage(
+      'Le serveur met trop de temps à répondre. Réessayez.',
+    );
   }
   if (error is DioException) return mapDioException(error).message;
   if (error is SqliteException) {
