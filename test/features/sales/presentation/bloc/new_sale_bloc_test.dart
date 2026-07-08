@@ -15,6 +15,8 @@ import 'package:venteapp/features/sales/domain/repositories/sale_repository.dart
 import 'package:venteapp/features/sales/domain/usecases/sale_usecases.dart';
 import 'package:venteapp/features/sales/presentation/bloc/new_sale_bloc.dart';
 import 'package:venteapp/shared/enums/user_role.dart';
+import 'package:venteapp/features/settings/data/datasources/local/settings_local_datasource.dart';
+import 'package:venteapp/features/sales/data/datasources/local/customer_product_price_local_datasource.dart';
 
 import '../../../../support/auth_test_helpers.dart';
 
@@ -109,6 +111,8 @@ void main() {
       createStandardSale: CreateStandardSale(saleRepo),
       createCustomer: CreateCustomer(_UnusedCustomerRepository()),
       session: session,
+      settingsLocal: SettingsLocalDatasource(database),
+      customerPrices: CustomerProductPriceLocalDatasource(database),
     );
   });
 

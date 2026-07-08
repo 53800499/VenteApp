@@ -12,6 +12,10 @@ import '../network/network_info.dart';
 
 import '../network/remote_api_guard.dart';
 
+import '../network/api_client.dart';
+
+import '../network/active_shop_context.dart';
+
 import '../../features/settings/data/datasources/local/settings_local_datasource.dart';
 import 'remote_sync_port.dart';
 
@@ -59,6 +63,10 @@ class SyncService {
 
     SettingsLocalDatasource? settingsLocal,
 
+    ActiveShopContext? activeShop,
+
+    Future<void> Function()? onServerContact,
+
   })  : _connectivity = connectivity,
 
         _networkInfo = networkInfo,
@@ -73,7 +81,11 @@ class SyncService {
 
         _ports = ports,
 
-        _settingsLocal = settingsLocal;
+        _settingsLocal = settingsLocal,
+
+        _activeShop = activeShop,
+
+        _onServerContact = onServerContact;
 
 
 
@@ -91,6 +103,10 @@ class SyncService {
 
   final List<RemoteSyncPort> _ports;
   final SettingsLocalDatasource? _settingsLocal;
+  final ActiveShopContext? _activeShop;
+
+  /// Notifié à chaque cycle ayant réellement joint le serveur (pull/push OK).
+  final Future<void> Function()? _onServerContact;
 
 
 
@@ -190,6 +206,17 @@ class SyncService {
     final shopId = _shopId;
     if (shopId == null) return;
 
+    // Épingle tout le cycle (pull des ports + push de la file) sur la boutique
+    // serveur active au démarrage. Un changement de boutique concurrent ne peut
+    // plus détourner l'en-tête X-Shop-Id : les données restent liées à la bonne
+    // boutique côté serveur, même si le contexte global bascule en cours de route.
+    await ApiClient.runScopedToServerShop(
+      _activeShop?.serverShopId,
+      () => _runSyncCycleBody(shopId),
+    );
+  }
+
+  Future<void> _runSyncCycleBody(int shopId) async {
     final context = await _policy.resolve(shopId: shopId);
     var pendingCount = await _queue.countPending(shopId: shopId);
     final conflictCount = await _queue.countConflicts(shopId: shopId);
@@ -328,6 +355,15 @@ class SyncService {
       await _settingsLocal?.touchCloudLastSyncAt(shopId);
     }
 
+    // Contact serveur avéré (au moins un pull réussi ou file traitée sans échec
+    // réseau) : réinitialise l'ancienneté qui pilote la politique 3 niveaux.
+    final reachedServer = apiFailure == null &&
+        (results.any((r) => r.success) || queueResult != null);
+    final onServerContact = _onServerContact;
+    if (reachedServer && onServerContact != null) {
+      await onServerContact();
+    }
+
     _emit(
       SyncSnapshot(
         phase: SyncRunPhase.completed,
@@ -399,6 +435,119 @@ class SyncService {
     await _processor.process(shopId: shopId);
   }
 
+  /// Flush « best effort » de la file d'attente avant un changement de boutique.
+  ///
+  /// Tente d'envoyer les écritures en attente de [shopId] pendant au plus
+  /// [timeout], en épinglant les requêtes sur la boutique serveur active. Ne
+  /// bloque jamais indéfiniment : si le réseau est absent, si le délai est
+  /// dépassé ou si aucun progrès n'est possible (dépendances manquantes), la
+  /// méthode rend la main en indiquant le nombre d'éléments restants pour que
+  /// l'appelant informe l'utilisateur (ces éléments partiront plus tard via la
+  /// synchronisation de fond).
+  Future<ShopFlushOutcome> flushPendingBeforeSwitch({
+    required int shopId,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    final pendingBefore = await _queue.countPending(shopId: shopId);
+    if (pendingBefore == 0) {
+      return const ShopFlushOutcome(
+        pendingBefore: 0,
+        pendingAfter: 0,
+        wasOffline: false,
+        timedOut: false,
+      );
+    }
+
+    final context = await _policy.resolve(shopId: shopId);
+    if (!context.shouldUseSyncQueue) {
+      return ShopFlushOutcome(
+        pendingBefore: pendingBefore,
+        pendingAfter: pendingBefore,
+        wasOffline: false,
+        timedOut: false,
+      );
+    }
+
+    if (!await _networkInfo.isConnected) {
+      return ShopFlushOutcome(
+        pendingBefore: pendingBefore,
+        pendingAfter: pendingBefore,
+        wasOffline: true,
+        timedOut: false,
+      );
+    }
+
+    final deadline = DateTime.now().add(timeout);
+    var pendingAfter = pendingBefore;
+    var timedOut = false;
+
+    // Empêche un nouveau cycle de fond de démarrer pendant le flush.
+    final wasRunning = _running;
+    _running = true;
+    try {
+      await ApiClient.runScopedToServerShop(_activeShop?.serverShopId, () async {
+        var lastPending = pendingBefore;
+        while (true) {
+          try {
+            await _processor.process(shopId: shopId);
+          } on Failure {
+            break;
+          } catch (_) {
+            break;
+          }
+
+          pendingAfter = await _queue.countPending(shopId: shopId);
+          if (pendingAfter == 0) break;
+          if (pendingAfter >= lastPending) break; // aucun progrès : inutile d'insister
+          lastPending = pendingAfter;
+
+          if (DateTime.now().isAfter(deadline)) {
+            timedOut = true;
+            break;
+          }
+        }
+      });
+    } finally {
+      _running = wasRunning;
+    }
+
+    return ShopFlushOutcome(
+      pendingBefore: pendingBefore,
+      pendingAfter: pendingAfter,
+      wasOffline: false,
+      timedOut: timedOut,
+    );
+  }
+
+}
+
+/// Résultat d'un flush « best effort » de la file avant un changement de
+/// boutique (voir [SyncService.flushPendingBeforeSwitch]).
+class ShopFlushOutcome {
+  const ShopFlushOutcome({
+    required this.pendingBefore,
+    required this.pendingAfter,
+    required this.wasOffline,
+    required this.timedOut,
+  });
+
+  /// Nombre d'éléments en attente avant la tentative de flush.
+  final int pendingBefore;
+
+  /// Nombre d'éléments encore en attente après la tentative.
+  final int pendingAfter;
+
+  /// Vrai si le flush n'a pas pu s'exécuter faute de réseau.
+  final bool wasOffline;
+
+  /// Vrai si le délai imparti a été atteint avant de vider la file.
+  final bool timedOut;
+
+  /// Y avait-il des écritures en attente au départ ?
+  bool get hadPending => pendingBefore > 0;
+
+  /// Toutes les écritures ont-elles été envoyées ?
+  bool get fullyFlushed => pendingAfter == 0;
 }
 
 

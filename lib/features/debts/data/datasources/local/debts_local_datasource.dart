@@ -323,13 +323,14 @@ class DebtsLocalDatasource {
     required DebtApiDto remote,
     int? localSaleId,
   }) async {
-    final existing = await (_db.select(_db.debts)
+    final existingRows = await (_db.select(_db.debts)
           ..where(
             (d) =>
                 d.shopId.equals(shopId) &
                 d.serverId.equals('${remote.id}'),
           ))
-        .getSingleOrNull();
+        .get();
+    final existing = existingRows.isEmpty ? null : existingRows.first;
 
     final timestamp = nowMs();
     if (existing != null) {
@@ -344,6 +345,10 @@ class DebtsLocalDatasource {
           updatedAt: Value(remote.updatedAt ?? timestamp),
         ),
       );
+      if (existingRows.length > 1) {
+        final duplicateIds = existingRows.skip(1).map((d) => d.id).toList();
+        await (_db.delete(_db.debts)..where((d) => d.id.isIn(duplicateIds))).go();
+      }
       return;
     }
 

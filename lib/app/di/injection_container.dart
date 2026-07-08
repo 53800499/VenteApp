@@ -8,6 +8,9 @@ import '../../core/backup/shop_backup_service.dart';
 import '../../core/database/app_database.dart';
 import '../../core/auth/app_lock_controller.dart';
 import '../../core/auth/cloud_session_coordinator.dart';
+import '../../core/auth/cloud_session_controller.dart';
+import '../../core/auth/cloud_session_repair_service.dart';
+import '../../core/auth/recent_pin_proof.dart';
 import '../../core/network/online_session_policy.dart';
 import '../../core/network/remote_api_runner.dart';
 import '../../core/network/remote_api_guard.dart';
@@ -188,6 +191,11 @@ void ensureSalesAnalysisDependencies() {
   if (!sl.isRegistered<ListProductSalesAnalysis>()) {
     sl.registerLazySingleton(
       () => ListProductSalesAnalysis(sl<SalesAnalysisRepository>()),
+    );
+  }
+  if (!sl.isRegistered<ListProductSummariesByCategory>()) {
+    sl.registerLazySingleton(
+      () => ListProductSummariesByCategory(sl<SalesAnalysisRepository>()),
     );
   }
   if (!sl.isRegistered<GetProductSalesDetail>()) {
@@ -508,7 +516,17 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => DeviceIdStorage(sl()));
   await sl<DeviceIdStorage>().getOrCreate();
   sl.registerLazySingleton(Connectivity.new);
-  sl.registerLazySingleton(() => NetworkInfo(sl()));
+  sl.registerLazySingleton(() => NetworkInfo(
+        sl(),
+        hostProvider: () {
+          try {
+            final url = sl<ApiClient>().baseUrl;
+            return Uri.parse(url).host;
+          } catch (_) {
+            return null;
+          }
+        },
+      ));
   sl.registerLazySingleton(ActiveShopContext.new);
   final apiBaseUrl = sl<ApiSettingsStorage>().resolveEffectiveUrl();
   sl.registerLazySingleton(() => ApiClient(
@@ -521,11 +539,21 @@ Future<void> initDependencies() async {
       networkInfo: sl(),
       credentials: sl(),
       apiClient: sl(),
+      cloudSessionRepair: sl(),
     ),
   );
   sl.registerLazySingleton(OnlineSessionPolicy.new);
   sl.registerLazySingleton(
     () => AppLockController(sl<SharedPreferences>()),
+  );
+  sl.registerLazySingleton(RecentPinProof.new);
+  sl.registerLazySingleton(
+    () => CloudSessionRepairService(
+      credentials: sl(),
+      apiClient: sl(),
+      networkInfo: sl(),
+      recentPinProof: sl(),
+    ),
   );
   sl.registerLazySingleton(
     () => CloudSessionCoordinator(
@@ -533,6 +561,9 @@ Future<void> initDependencies() async {
       networkInfo: sl(),
       prefs: sl<SharedPreferences>(),
     ),
+  );
+  sl.registerLazySingleton(
+    () => CloudSessionController(credentials: sl<AuthCredentialsStorage>()),
   );
   sl.registerLazySingleton(
     () => RemoteApiRunner(
@@ -558,7 +589,9 @@ Future<void> initDependencies() async {
   );
 
   sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(
+    () {
+      final repair = sl<CloudSessionRepairService>();
+      final repo = AuthRepositoryImpl(
       database: sl(),
       pinHasher: sl(),
       lockoutPolicy: sl(),
@@ -572,6 +605,8 @@ Future<void> initDependencies() async {
       networkInfo: sl(),
       apiClient: sl(),
       cloudSyncEnabler: sl(),
+      cloudSessionRepair: repair,
+      recentPinProof: sl(),
       onOnlineSessionReady: (shopId) {
         if (sl.isRegistered<SyncService>()) {
           sl<SyncService>().scheduleSync(shopId: shopId);
@@ -581,8 +616,36 @@ Future<void> initDependencies() async {
         if (sl.isRegistered<CloudSessionCoordinator>()) {
           sl<CloudSessionCoordinator>().markCloudSessionValid();
         }
+        repair.clearAwaitingState();
+        if (sl.isRegistered<CloudSessionController>()) {
+          sl<CloudSessionController>().refresh();
+        }
       },
-    ),
+    );
+      repair.registerPinLoginRepair(
+        (proof) => repo.repairCloudSessionWithPin(
+          pin: proof.pin,
+          serverShopId: proof.serverShopId,
+          localShopId: proof.localShopId,
+          serverUserId: proof.serverUserId,
+        ),
+      );
+      repair.onSessionRestored = () async {
+        if (sl.isRegistered<CloudSessionCoordinator>()) {
+          sl<CloudSessionCoordinator>().markCloudSessionValid();
+        }
+        repair.clearAwaitingState();
+        if (sl.isRegistered<CloudSessionController>()) {
+          await sl<CloudSessionController>().refresh();
+        }
+      };
+      repair.onRepairExhausted = () => sl<CloudSessionCoordinator>()
+          .handleInvalidRefreshToken(
+            offerWhatsAppReconnect: true,
+            skipGrace: true,
+          );
+      return repo;
+    },
   );
 
   sl.registerLazySingleton(() => IsSetupComplete(sl()));
@@ -834,6 +897,8 @@ Future<void> initDependencies() async {
         sl<CashSessionsRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
+      activeShop: sl(),
+      onServerContact: () => sl<CloudSessionController>().recordContact(),
     ),
   );
 
@@ -850,7 +915,7 @@ Future<void> initDependencies() async {
   );
 
   sl.registerFactory(
-    () => AuthBloc(
+    () => AppSessionBloc(
       isSetupComplete: sl(),
       wasLoggedOut: sl(),
       hasRestorableSession: sl(),

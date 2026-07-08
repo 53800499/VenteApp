@@ -41,6 +41,15 @@ void main() {
       );
     });
 
+    test('handleFailure ignore CloudReconnectRequiredFailure', () async {
+      var count = 0;
+      policy.onCloudSessionExpired = () => count++;
+
+      policy.handleFailure(const CloudReconnectRequiredFailure());
+      await Future<void>.delayed(const Duration(milliseconds: 900));
+      expect(count, 0);
+    });
+
     test('handleFailure déclenche onCloudSessionExpired une seule fois', () async {
       var count = 0;
       policy.onCloudSessionExpired = () => count++;

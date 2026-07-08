@@ -8,6 +8,7 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/auth/app_lock_controller.dart';
 import '../../../../core/auth/pin_cold_start_policy.dart';
+import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
@@ -701,6 +702,13 @@ class _SettingsViewState extends State<_SettingsView> {
 
   Future<void> _saveShop(BuildContext context) async {
     if (!_shopFormKey.currentState!.validate()) return;
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: 'Modifier les informations de la boutique',
+    )) {
+      return;
+    }
+    if (!context.mounted) return;
     final confirmed = await SettingsFeedback.confirm(
       context: context,
       title: 'Enregistrer la boutique',
@@ -915,6 +923,13 @@ class _SettingsViewState extends State<_SettingsView> {
   }
 
   Future<void> _saveToGoogleDrive(BuildContext context, String shopName) async {
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: 'Sauvegarder sur Google Drive',
+    )) {
+      return;
+    }
+    if (!context.mounted) return;
     final passphrase = await _askPassphrase(
       context,
       title: 'Sauvegarde Google Drive',

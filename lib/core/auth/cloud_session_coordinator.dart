@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -22,79 +24,66 @@ class CloudSessionCoordinator {
   final NetworkInfo _networkInfo;
   final SharedPreferences _prefs;
 
-  GlobalKey<NavigatorState>? _navigatorKey;
-  VoidCallback? _onReconnectRequested;
-  bool _dialogVisible = false;
-
   void bind({
     required GlobalKey<NavigatorState> navigatorKey,
     required VoidCallback onReconnectRequested,
   }) {
-    _navigatorKey = navigatorKey;
-    _onReconnectRequested = onReconnectRequested;
+    // Pas d'affichage de boîte de dialogue requis, donc pas d'action nécessaire.
   }
 
-  /// Session cloud rétablie (login ou refresh réussi).
+  /// Session cloud rétablie (login ou refresh réussi) : réouvre la fenêtre et
+  /// enregistre le contact serveur (réinitialise la politique 3 niveaux).
   void markCloudSessionValid() {
     _prefs.remove(_invalidSinceKey);
+    unawaited(_credentials.renewServerAccessWindow());
+    unawaited(_credentials.recordServerContact());
   }
 
   /// Refresh token rejeté alors que le réseau est disponible.
-  Future<void> handleInvalidRefreshToken() async {
+  ///
+  /// Par défaut n'affiche pas WhatsApp : la réparation par PIN au prochain
+  /// déverrouillage est préférée. [offerWhatsAppReconnect] force le dialogue
+  /// (échec après PIN récent ou action utilisateur explicite).
+  Future<void> handleInvalidRefreshToken({
+    bool offerWhatsAppReconnect = false,
+    bool skipGrace = false,
+  }) async {
     if (!await _networkInfo.isConnected) {
       // Hors ligne : continuer silencieusement en local.
       return;
     }
 
+    // Fenêtre glissante ouverte à la connexion et renouvelée à chaque contact
+    // serveur réussi : tant qu'elle est ouverte, on continue de viser le
+    // serveur en permanence sans proposer de reconnexion.
+    if (await _credentials.isWithinServerAccessWindow()) {
+      return;
+    }
+
+    // Fenêtre fermée : plancher de grâce depuis le premier échec avant dialogue.
     final now = nowMs();
     final invalidSince = _prefs.getInt(_invalidSinceKey);
     if (invalidSince == null) {
       await _prefs.setInt(_invalidSinceKey, now);
+      if (!offerWhatsAppReconnect) return;
+    }
+
+    final elapsedMs = invalidSince == null ? 0 : now - invalidSince;
+    if (!offerWhatsAppReconnect && elapsedMs < ApiConfig.serverAccessibleGraceMs) {
+      // Période de grâce : travail local sans interruption ni dialogue.
       return;
     }
 
-    final elapsedMs = now - invalidSince;
-    if (elapsedMs < ApiConfig.serverAccessibleGraceMs) {
-      // Période de grâce : travail local sans interruption.
+    if (!offerWhatsAppReconnect) {
+      // Pas de PIN récent : message discret via bannière, pas de WhatsApp.
+      return;
+    }
+
+    if (!skipGrace && elapsedMs < ApiConfig.serverAccessibleGraceMs) {
       return;
     }
 
     await _credentials.clear();
-
-    final context = _navigatorKey?.currentContext;
-    if (context == null || !context.mounted || _dialogVisible) return;
-
-    _dialogVisible = true;
-    try {
-      final reconnect = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Session cloud expirée'),
-          content: const Text(
-            'Votre session cloud a expiré ou a été révoquée.\n\n'
-            'Vous pouvez continuer à travailler hors ligne ou vous reconnecter '
-            'avec WhatsApp pour resynchroniser.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Continuer hors ligne'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Reconnecter'),
-            ),
-          ],
-        ),
-      );
-
-      if (reconnect == true) {
-        _onReconnectRequested?.call();
-      }
-    } finally {
-      _dialogVisible = false;
-      markCloudSessionValid();
-    }
+    markCloudSessionValid();
   }
 }

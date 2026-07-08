@@ -149,38 +149,76 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
         itemCount: _openDebts.length,
         itemBuilder: (context, index) {
           final debt = _openDebts[index];
+          final canReadDebts = PermissionGuard.can(
+            widget.session.user.permissions,
+            Permission.debtsRead,
+          );
+
           return Card(
-            child: ListTile(
-              title: Text(
-                debt.receiptNumber != null
-                    ? 'Vente ${debt.receiptNumber}'
-                    : 'Dette #${debt.id}',
-              ),
-              subtitle: Text(
-                'Payé : ${formatFcfa(debt.amountPaid)} / '
-                '${formatFcfa(debt.originalAmount)}',
-              ),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatFcfa(debt.amountRemaining),
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: debt.isCritical
-                          ? AppColors.danger
-                          : AppColors.warning,
-                    ),
-                  ),
-                  if (debt.isCritical)
-                    const Text(
-                      'Critique',
-                      style: TextStyle(fontSize: 11, color: AppColors.danger),
-                    ),
-                ],
-              ),
+            child: InkWell(
               onTap: () => _openDetail(debt),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            debt.receiptNumber != null
+                                ? 'Vente ${debt.receiptNumber}'
+                                : 'Dette #${debt.id}',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Payé : ${formatFcfa(debt.amountPaid)} / ${formatFcfa(debt.originalAmount)}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          formatFcfa(debt.amountRemaining),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: debt.isCritical
+                                    ? AppColors.danger
+                                    : AppColors.warning,
+                              ),
+                        ),
+                        if (debt.isCritical) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Critique',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: AppColors.danger,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (canReadDebts) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           );
         },

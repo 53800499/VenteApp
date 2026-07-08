@@ -67,6 +67,49 @@ class SalesAnalysisLocalDatasource {
     return summaries;
   }
 
+  Future<List<ProductSalesSummary>> listProductSummariesByCategory({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+    required int? categoryId,
+  }) async {
+    final rows = await _fetchSaleItemRows(shopId: shopId, fromMs: fromMs, toMs: toMs);
+    final byKey = <String, _ProductAccumulator>{};
+
+    for (final row in rows) {
+      if (row.categoryId != categoryId) continue;
+      final key = _productKey(row.productId, row.productName);
+      final acc = byKey.putIfAbsent(
+        key,
+        () => _ProductAccumulator(
+          productId: row.productId,
+          productName: row.productName,
+        ),
+      );
+      acc.add(row);
+    }
+
+    final catalogPrices = await _loadCatalogPrices(shopId);
+    final summaries = byKey.values.map((acc) {
+      final catalog =
+          acc.productId != null ? catalogPrices[acc.productId!] : null;
+      return ProductSalesSummary(
+        productId: acc.productId,
+        productName: acc.productName,
+        catalogPrice: catalog,
+        quantitySold: acc.quantitySold,
+        revenue: acc.revenue,
+        averageUnitPrice: acc.quantitySold > 0
+            ? (acc.revenue / acc.quantitySold).round()
+            : 0,
+        lastSaleAt: acc.lastSaleAt,
+      );
+    }).toList();
+
+    summaries.sort((a, b) => b.revenue.compareTo(a.revenue));
+    return summaries;
+  }
+
   Future<ProductSalesDetail> loadProductDetail({
     required int shopId,
     required int fromMs,

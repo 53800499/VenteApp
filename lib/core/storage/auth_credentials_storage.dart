@@ -21,6 +21,14 @@ class AuthCredentialsStorage {
   static const accessExpiresAtKey = 'access_expires_at';
   static const refreshExpiresAtKey = 'refresh_expires_at';
 
+  /// Fenêtre glissante (25 min) pendant laquelle le serveur reste visé en
+  /// permanence : ouverte à la connexion, renouvelée à chaque contact réussi.
+  static const serverAccessWindowUntilKey = 'server_access_window_until';
+
+  /// Horodatage (ms) du dernier contact serveur réussi (login, refresh, pull).
+  /// Source de vérité de la politique de session cloud graduée (3 niveaux).
+  static const lastServerContactAtKey = 'last_server_contact_at';
+
   final FlutterSecureStorage? _storage;
   final Map<String, String>? _memory;
 
@@ -40,6 +48,8 @@ class AuthCredentialsStorage {
     await _write(offlineValidUntilKey, offlineUntil.toString());
     await _write(accessExpiresAtKey, accessExpiresAt.toString());
     await _write(refreshExpiresAtKey, refreshExpiresAt.toString());
+    await renewServerAccessWindow();
+    await recordServerContact();
   }
 
   Future<void> updateTokens({
@@ -54,6 +64,44 @@ class AuthCredentialsStorage {
     await _write(accessExpiresAtKey, accessExpiresAt.toString());
     await _write(refreshExpiresAtKey, refreshExpiresAt.toString());
     await _write(offlineValidUntilKey, offlineUntil.toString());
+    await renewServerAccessWindow();
+    await recordServerContact();
+  }
+
+  /// (Ré)ouvre la fenêtre d'accès serveur pour [ApiConfig.serverAccessibleGraceMs].
+  Future<void> renewServerAccessWindow() async {
+    final until = nowMs() + ApiConfig.serverAccessibleGraceMs;
+    await _write(serverAccessWindowUntilKey, until.toString());
+  }
+
+  /// Enregistre un contact serveur réussi (login, refresh, pull/sync abouti).
+  /// Réinitialise l'ancienneté qui pilote la politique de session cloud.
+  Future<void> recordServerContact() async {
+    await _write(lastServerContactAtKey, nowMs().toString());
+  }
+
+  /// Dernier contact serveur réussi (ms). À défaut d'enregistrement explicite,
+  /// se rabat sur l'ancien octroi hors ligne (`offlineValidUntil - 7 j`) pour
+  /// rester cohérent avec les sessions ouvertes avant cette fonctionnalité.
+  Future<int?> getLastServerContactAt() async {
+    final value = await _read(lastServerContactAtKey);
+    final parsed = value == null ? null : int.tryParse(value);
+    if (parsed != null) return parsed;
+
+    final offlineUntil = await getOfflineValidUntil();
+    if (offlineUntil == null) return null;
+    return offlineUntil - ApiConfig.offlineGraceMs;
+  }
+
+  Future<int?> getServerAccessWindowUntil() async {
+    final value = await _read(serverAccessWindowUntilKey);
+    return value == null ? null : int.tryParse(value);
+  }
+
+  /// Vrai tant qu'on est dans la fenêtre glissante : le serveur reste visé.
+  Future<bool> isWithinServerAccessWindow() async {
+    final until = await getServerAccessWindowUntil();
+    return until != null && until > nowMs();
   }
 
   Future<void> updateProfileShopId(int shopId) async {
@@ -134,6 +182,8 @@ class AuthCredentialsStorage {
       offlineValidUntilKey,
       accessExpiresAtKey,
       refreshExpiresAtKey,
+      serverAccessWindowUntilKey,
+      lastServerContactAtKey,
     ]) {
       await _delete(key);
     }

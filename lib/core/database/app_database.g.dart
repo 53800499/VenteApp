@@ -713,6 +713,21 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _pinProvisionalMeta = const VerificationMeta(
+    'pinProvisional',
+  );
+  @override
+  late final GeneratedColumn<bool> pinProvisional = GeneratedColumn<bool>(
+    'pin_provisional',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pin_provisional" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _roleMeta = const VerificationMeta('role');
   @override
   late final GeneratedColumn<String> role = GeneratedColumn<String>(
@@ -894,6 +909,7 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
     shopId,
     name,
     pinHash,
+    pinProvisional,
     role,
     isActive,
     avatarPath,
@@ -948,6 +964,15 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
       );
     } else if (isInserting) {
       context.missing(_pinHashMeta);
+    }
+    if (data.containsKey('pin_provisional')) {
+      context.handle(
+        _pinProvisionalMeta,
+        pinProvisional.isAcceptableOrUnknown(
+          data['pin_provisional']!,
+          _pinProvisionalMeta,
+        ),
+      );
     }
     if (data.containsKey('role')) {
       context.handle(
@@ -1086,6 +1111,10 @@ class $UsersTable extends Users with TableInfo<$UsersTable, User> {
         DriftSqlType.string,
         data['${effectivePrefix}pin_hash'],
       )!,
+      pinProvisional: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pin_provisional'],
+      )!,
       role: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}role'],
@@ -1160,6 +1189,10 @@ class User extends DataClass implements Insertable<User> {
   final int shopId;
   final String name;
   final String pinHash;
+
+  /// PIN local encore provisoire (hash aléatoire créé après connexion WhatsApp
+  /// sur un nouvel appareil) : autorise une validation serveur au 1er PIN.
+  final bool pinProvisional;
   final String role;
   final bool isActive;
   final String? avatarPath;
@@ -1180,6 +1213,7 @@ class User extends DataClass implements Insertable<User> {
     required this.shopId,
     required this.name,
     required this.pinHash,
+    required this.pinProvisional,
     required this.role,
     required this.isActive,
     this.avatarPath,
@@ -1203,6 +1237,7 @@ class User extends DataClass implements Insertable<User> {
     map['shop_id'] = Variable<int>(shopId);
     map['name'] = Variable<String>(name);
     map['pin_hash'] = Variable<String>(pinHash);
+    map['pin_provisional'] = Variable<bool>(pinProvisional);
     map['role'] = Variable<String>(role);
     map['is_active'] = Variable<bool>(isActive);
     if (!nullToAbsent || avatarPath != null) {
@@ -1241,6 +1276,7 @@ class User extends DataClass implements Insertable<User> {
       shopId: Value(shopId),
       name: Value(name),
       pinHash: Value(pinHash),
+      pinProvisional: Value(pinProvisional),
       role: Value(role),
       isActive: Value(isActive),
       avatarPath: avatarPath == null && nullToAbsent
@@ -1283,6 +1319,7 @@ class User extends DataClass implements Insertable<User> {
       shopId: serializer.fromJson<int>(json['shopId']),
       name: serializer.fromJson<String>(json['name']),
       pinHash: serializer.fromJson<String>(json['pinHash']),
+      pinProvisional: serializer.fromJson<bool>(json['pinProvisional']),
       role: serializer.fromJson<String>(json['role']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       avatarPath: serializer.fromJson<String?>(json['avatarPath']),
@@ -1310,6 +1347,7 @@ class User extends DataClass implements Insertable<User> {
       'shopId': serializer.toJson<int>(shopId),
       'name': serializer.toJson<String>(name),
       'pinHash': serializer.toJson<String>(pinHash),
+      'pinProvisional': serializer.toJson<bool>(pinProvisional),
       'role': serializer.toJson<String>(role),
       'isActive': serializer.toJson<bool>(isActive),
       'avatarPath': serializer.toJson<String?>(avatarPath),
@@ -1335,6 +1373,7 @@ class User extends DataClass implements Insertable<User> {
     int? shopId,
     String? name,
     String? pinHash,
+    bool? pinProvisional,
     String? role,
     bool? isActive,
     Value<String?> avatarPath = const Value.absent(),
@@ -1355,6 +1394,7 @@ class User extends DataClass implements Insertable<User> {
     shopId: shopId ?? this.shopId,
     name: name ?? this.name,
     pinHash: pinHash ?? this.pinHash,
+    pinProvisional: pinProvisional ?? this.pinProvisional,
     role: role ?? this.role,
     isActive: isActive ?? this.isActive,
     avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
@@ -1379,6 +1419,9 @@ class User extends DataClass implements Insertable<User> {
       shopId: data.shopId.present ? data.shopId.value : this.shopId,
       name: data.name.present ? data.name.value : this.name,
       pinHash: data.pinHash.present ? data.pinHash.value : this.pinHash,
+      pinProvisional: data.pinProvisional.present
+          ? data.pinProvisional.value
+          : this.pinProvisional,
       role: data.role.present ? data.role.value : this.role,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       avatarPath: data.avatarPath.present
@@ -1420,6 +1463,7 @@ class User extends DataClass implements Insertable<User> {
           ..write('shopId: $shopId, ')
           ..write('name: $name, ')
           ..write('pinHash: $pinHash, ')
+          ..write('pinProvisional: $pinProvisional, ')
           ..write('role: $role, ')
           ..write('isActive: $isActive, ')
           ..write('avatarPath: $avatarPath, ')
@@ -1445,6 +1489,7 @@ class User extends DataClass implements Insertable<User> {
     shopId,
     name,
     pinHash,
+    pinProvisional,
     role,
     isActive,
     avatarPath,
@@ -1469,6 +1514,7 @@ class User extends DataClass implements Insertable<User> {
           other.shopId == this.shopId &&
           other.name == this.name &&
           other.pinHash == this.pinHash &&
+          other.pinProvisional == this.pinProvisional &&
           other.role == this.role &&
           other.isActive == this.isActive &&
           other.avatarPath == this.avatarPath &&
@@ -1491,6 +1537,7 @@ class UsersCompanion extends UpdateCompanion<User> {
   final Value<int> shopId;
   final Value<String> name;
   final Value<String> pinHash;
+  final Value<bool> pinProvisional;
   final Value<String> role;
   final Value<bool> isActive;
   final Value<String?> avatarPath;
@@ -1511,6 +1558,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     this.shopId = const Value.absent(),
     this.name = const Value.absent(),
     this.pinHash = const Value.absent(),
+    this.pinProvisional = const Value.absent(),
     this.role = const Value.absent(),
     this.isActive = const Value.absent(),
     this.avatarPath = const Value.absent(),
@@ -1532,6 +1580,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     required int shopId,
     required String name,
     required String pinHash,
+    this.pinProvisional = const Value.absent(),
     this.role = const Value.absent(),
     this.isActive = const Value.absent(),
     this.avatarPath = const Value.absent(),
@@ -1557,6 +1606,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     Expression<int>? shopId,
     Expression<String>? name,
     Expression<String>? pinHash,
+    Expression<bool>? pinProvisional,
     Expression<String>? role,
     Expression<bool>? isActive,
     Expression<String>? avatarPath,
@@ -1578,6 +1628,7 @@ class UsersCompanion extends UpdateCompanion<User> {
       if (shopId != null) 'shop_id': shopId,
       if (name != null) 'name': name,
       if (pinHash != null) 'pin_hash': pinHash,
+      if (pinProvisional != null) 'pin_provisional': pinProvisional,
       if (role != null) 'role': role,
       if (isActive != null) 'is_active': isActive,
       if (avatarPath != null) 'avatar_path': avatarPath,
@@ -1602,6 +1653,7 @@ class UsersCompanion extends UpdateCompanion<User> {
     Value<int>? shopId,
     Value<String>? name,
     Value<String>? pinHash,
+    Value<bool>? pinProvisional,
     Value<String>? role,
     Value<bool>? isActive,
     Value<String?>? avatarPath,
@@ -1623,6 +1675,7 @@ class UsersCompanion extends UpdateCompanion<User> {
       shopId: shopId ?? this.shopId,
       name: name ?? this.name,
       pinHash: pinHash ?? this.pinHash,
+      pinProvisional: pinProvisional ?? this.pinProvisional,
       role: role ?? this.role,
       isActive: isActive ?? this.isActive,
       avatarPath: avatarPath ?? this.avatarPath,
@@ -1656,6 +1709,9 @@ class UsersCompanion extends UpdateCompanion<User> {
     }
     if (pinHash.present) {
       map['pin_hash'] = Variable<String>(pinHash.value);
+    }
+    if (pinProvisional.present) {
+      map['pin_provisional'] = Variable<bool>(pinProvisional.value);
     }
     if (role.present) {
       map['role'] = Variable<String>(role.value);
@@ -1714,6 +1770,7 @@ class UsersCompanion extends UpdateCompanion<User> {
           ..write('shopId: $shopId, ')
           ..write('name: $name, ')
           ..write('pinHash: $pinHash, ')
+          ..write('pinProvisional: $pinProvisional, ')
           ..write('role: $role, ')
           ..write('isActive: $isActive, ')
           ..write('avatarPath: $avatarPath, ')
@@ -19573,6 +19630,7 @@ typedef $$UsersTableCreateCompanionBuilder =
       required int shopId,
       required String name,
       required String pinHash,
+      Value<bool> pinProvisional,
       Value<String> role,
       Value<bool> isActive,
       Value<String?> avatarPath,
@@ -19595,6 +19653,7 @@ typedef $$UsersTableUpdateCompanionBuilder =
       Value<int> shopId,
       Value<String> name,
       Value<String> pinHash,
+      Value<bool> pinProvisional,
       Value<String> role,
       Value<bool> isActive,
       Value<String?> avatarPath,
@@ -19773,6 +19832,11 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
 
   ColumnFilters<String> get pinHash => $composableBuilder(
     column: $table.pinHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pinProvisional => $composableBuilder(
+    column: $table.pinProvisional,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -20050,6 +20114,11 @@ class $$UsersTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get pinProvisional => $composableBuilder(
+    column: $table.pinProvisional,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get role => $composableBuilder(
     column: $table.role,
     builder: (column) => ColumnOrderings(column),
@@ -20166,6 +20235,11 @@ class $$UsersTableAnnotationComposer
 
   GeneratedColumn<String> get pinHash =>
       $composableBuilder(column: $table.pinHash, builder: (column) => column);
+
+  GeneratedColumn<bool> get pinProvisional => $composableBuilder(
+    column: $table.pinProvisional,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get role =>
       $composableBuilder(column: $table.role, builder: (column) => column);
@@ -20443,6 +20517,7 @@ class $$UsersTableTableManager
                 Value<int> shopId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> pinHash = const Value.absent(),
+                Value<bool> pinProvisional = const Value.absent(),
                 Value<String> role = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<String?> avatarPath = const Value.absent(),
@@ -20463,6 +20538,7 @@ class $$UsersTableTableManager
                 shopId: shopId,
                 name: name,
                 pinHash: pinHash,
+                pinProvisional: pinProvisional,
                 role: role,
                 isActive: isActive,
                 avatarPath: avatarPath,
@@ -20485,6 +20561,7 @@ class $$UsersTableTableManager
                 required int shopId,
                 required String name,
                 required String pinHash,
+                Value<bool> pinProvisional = const Value.absent(),
                 Value<String> role = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<String?> avatarPath = const Value.absent(),
@@ -20505,6 +20582,7 @@ class $$UsersTableTableManager
                 shopId: shopId,
                 name: name,
                 pinHash: pinHash,
+                pinProvisional: pinProvisional,
                 role: role,
                 isActive: isActive,
                 avatarPath: avatarPath,

@@ -45,7 +45,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -150,6 +150,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 17) {
             await _addColumnIfMissing(m, shops, shops.parentShopId);
             await _backfillShopHierarchy(this);
+          }
+          if (from < 18) {
+            await _addColumnIfMissing(m, users, users.pinProvisional);
           }
         },
       );

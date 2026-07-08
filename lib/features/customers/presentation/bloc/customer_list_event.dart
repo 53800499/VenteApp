@@ -15,6 +15,12 @@ final class CustomerListRefreshRequested extends CustomerListEvent {
   const CustomerListRefreshRequested();
 }
 
+/// Relecture locale déclenchée par la fin d'un cycle de synchronisation
+/// (les données distantes sont déjà en base — pas de pull réseau redondant).
+final class CustomerListSyncRefreshRequested extends CustomerListEvent {
+  const CustomerListSyncRefreshRequested();
+}
+
 final class CustomerListSearchChanged extends CustomerListEvent {
   const CustomerListSearchChanged(this.query);
 

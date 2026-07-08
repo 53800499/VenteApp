@@ -257,8 +257,9 @@ class _ShopListView extends StatelessWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await performShopSwitch(context, serverShopId: shop.id);
+      final switched = await performShopSwitch(context, serverShopId: shop.id);
       if (!context.mounted) return;
+      if (!switched) return;
       Navigator.of(context).popUntil((r) => r.isFirst);
     } on Failure catch (e) {
       if (!context.mounted) return;

@@ -34,8 +34,11 @@ class CustomerRepositoryImpl implements CustomerRepository {
       await _apiGuard.ensureReady();
       final remoteCustomers = await _fetchAllRemoteCustomers();
       for (final remote in remoteCustomers) {
+        final localShopId = remote.shopId > 0
+            ? await _local.resolveLocalShopId(remote.shopId)
+            : shopId;
         await _local.upsertFromRemote(
-          shopId: remote.shopId > 0 ? remote.shopId : shopId,
+          shopId: localShopId,
           remoteId: remote.id,
           name: remote.name,
           phone: remote.phone,
@@ -47,7 +50,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
           updatedAt: remote.updatedAt,
         );
       }
-    } on Failure {
+    } catch (_) {
       // Pull optionnel — la liste locale reste utilisable (offline-first).
     }
   }
@@ -88,8 +91,11 @@ class CustomerRepositoryImpl implements CustomerRepository {
       if (local.serverId != null) {
         await _apiGuard.ensureReady();
         final remote = await _remote.getCustomer(int.parse(local.serverId!));
+        final localShopId = remote.shopId > 0
+            ? await _local.resolveLocalShopId(remote.shopId)
+            : shopId;
         await _local.upsertFromRemote(
-          shopId: remote.shopId > 0 ? remote.shopId : shopId,
+          shopId: localShopId,
           remoteId: remote.id,
           name: remote.name,
           phone: remote.phone,
@@ -101,7 +107,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
           updatedAt: remote.updatedAt,
         );
       }
-    } on Failure {
+    } catch (_) {
       // Données locales utilisées.
     }
 
@@ -128,7 +134,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
             .map((s) => s.toEntity())
             .toList();
       }
-    } on Failure {
+    } catch (_) {
       // Fallback local.
     }
 
@@ -154,7 +160,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
           return remote.map((s) => s.toEntity()).toList();
         }
       }
-    } on Failure {
+    } catch (_) {
       // Fallback agrégation locale multi-boutiques.
     }
 
@@ -169,7 +175,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
     try {
       await _apiGuard.ensureReady();
       return (await _remote.listDebtors()).toEntity();
-    } on Failure {
+    } catch (_) {
       return _local.listDebtors(shopId: shopId);
     }
   }
@@ -188,7 +194,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
         return (await _remote.getDebtReminder(int.parse(customer.serverId!)))
             .toEntity();
       }
-    } on Failure {
+    } catch (_) {
       // Fallback local.
     }
 
@@ -296,7 +302,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
           isShared: input.isShared,
         );
       }
-    } on Failure {
+    } catch (_) {
       // Mise à jour locale maintenue.
     }
 
@@ -348,7 +354,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
         await _apiGuard.ensureReady();
         await _remote.archiveCustomer(int.parse(existing.serverId!));
       }
-    } on Failure {
+    } catch (_) {
       // Archivage local si hors ligne.
     }
 

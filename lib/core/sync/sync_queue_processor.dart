@@ -176,6 +176,17 @@ class SyncQueueProcessor {
     switch (item.operation) {
       case SyncOperation.create:
         if (customer.serverId != null) return true;
+        final remoteCustomers = await _customersRemote.listCustomers(includeArchived: true);
+        final existing = remoteCustomers
+            .where((c) => c.name.toLowerCase() == customer.name.toLowerCase())
+            .firstOrNull;
+        if (existing != null) {
+          await _customersLocal.updateServerSync(
+            customerId: customer.id,
+            serverId: '${existing.id}',
+          );
+          return true;
+        }
         final remote = await _customersRemote.createCustomer(
           name: payload['name'] as String? ?? customer.name,
           phone: payload['phone'] as String? ?? customer.phone,
@@ -298,6 +309,20 @@ class SyncQueueProcessor {
                 : 'Catégorie « ${localCat.name} » non synchronisée sur le serveur.',
           );
           return false;
+        }
+
+        // Deduplication: check if product exists on the server
+        final remoteProducts = await _inventoryRemote.listProducts(includeArchived: true);
+        final existing = remoteProducts
+            .where((p) => p.name.toLowerCase() == product.name.toLowerCase())
+            .firstOrNull;
+
+        if (existing != null) {
+          await _inventoryLocal.updateProductServerSync(
+            productId: product.id,
+            serverId: '${existing.id}',
+          );
+          return true;
         }
 
         final priceSell = _coercePositivePrice(

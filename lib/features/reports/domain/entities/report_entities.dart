@@ -206,6 +206,24 @@ class Report extends Equatable {
   final List<ReportSellerPerformance>? sellerPerformance;
   final int generatedAt;
 
+  Report copyWith({
+    List<ReportTopProduct>? topProducts,
+  }) {
+    return Report(
+      shopId: shopId,
+      shopIds: shopIds,
+      consolidated: consolidated,
+      period: period,
+      empty: empty,
+      emptyMessage: emptyMessage,
+      sales: sales,
+      financial: financial,
+      topProducts: topProducts ?? this.topProducts,
+      sellerPerformance: sellerPerformance,
+      generatedAt: generatedAt,
+    );
+  }
+
   @override
   List<Object?> get props => [
         shopId,

@@ -31,8 +31,9 @@ class AuthEntryPage extends StatelessWidget {
               padding: EdgeInsets.zero,
               children: [
                 const SizedBox(height: AppSpacing.lg),
+                const Center(child: AppLogo(size: 88)),
+                const SizedBox(height: AppSpacing.md),
                 const PageHeader(
-                  icon: Icons.storefront_outlined,
                   title: 'Comment utilisez-vous VenteApp ?',
                   subtitle:
                       'Créez une boutique ou connectez-vous avec votre numéro WhatsApp.',

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -269,6 +270,13 @@ class _UserListView extends StatelessWidget {
   }
 
   Future<void> _openCreateForm(BuildContext context) async {
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: "Ajouter un membre d'équipe",
+    )) {
+      return;
+    }
+    if (!context.mounted) return;
     final result = await Navigator.of(context).push<UserFormResult>(
       MaterialPageRoute(builder: (_) => const UserFormPage()),
     );
@@ -277,6 +285,13 @@ class _UserListView extends StatelessWidget {
   }
 
   Future<void> _changeRole(BuildContext context, ShopUser user) async {
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: "Changer le rôle d'un membre",
+    )) {
+      return;
+    }
+    if (!context.mounted) return;
     final role = await showAssignableRolePicker(
       context: context,
       title: 'Rôle de ${user.name}',
@@ -297,6 +312,13 @@ class _UserListView extends StatelessWidget {
   }
 
   Future<void> _deactivate(BuildContext context, ShopUser user) async {
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: "Désactiver un membre d'équipe",
+    )) {
+      return;
+    }
+    if (!context.mounted) return;
     final confirmed = await UserFeedback.confirm(
       context: context,
       title: 'Désactiver ${user.name} ?',
@@ -322,6 +344,13 @@ class _UserListView extends StatelessWidget {
   }
 
   Future<void> _assignShop(BuildContext context, ShopUser user) async {
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: 'Réaffecter un membre à une boutique',
+    )) {
+      return;
+    }
+    if (!context.mounted) return;
     List<ManagedShop>? shops;
     try {
       shops = await UserFeedback.runWithBlockingLoader(

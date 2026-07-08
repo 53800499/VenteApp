@@ -37,6 +37,86 @@ class GradientBackground extends StatelessWidget {
   }
 }
 
+/// Logo de l'application : le badge circulaire avec l'icône « storefront »
+/// utilisé sur l'écran de démarrage (splash). Réutilisé partout où l'identité
+/// visuelle de l'app doit apparaître (accueil de connexion, etc.).
+///
+/// - Variante par défaut : dégradé vert de marque + icône blanche (fond clair).
+/// - [AppLogo.onDark] : verre dépoli translucide (fond sombre, comme le splash).
+class AppLogo extends StatelessWidget {
+  const AppLogo({super.key, this.size = 96}) : _onDark = false;
+
+  /// Variante pour fond sombre/dégradé (identique au splash).
+  const AppLogo.onDark({super.key, this.size = 108}) : _onDark = true;
+
+  final double size;
+  final bool _onDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = size * 0.52;
+
+    if (_onDark) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: 0.25),
+              Colors.white.withValues(alpha: 0.08),
+            ],
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.3),
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Icon(
+          Icons.storefront_rounded,
+          size: iconSize,
+          color: Colors.white,
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.heroGradientStart, AppColors.heroGradientEnd],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.heroGradientStart.withValues(alpha: 0.3),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.storefront_rounded,
+        size: iconSize,
+        color: Colors.white,
+      ),
+    );
+  }
+}
+
 class PageHeader extends StatelessWidget {
   const PageHeader({
     super.key,

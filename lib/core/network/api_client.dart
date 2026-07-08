@@ -1,9 +1,15 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 
 import '../constants/api_config.dart';
 import '../storage/auth_credentials_storage.dart';
 import '../../features/auth/data/models/auth_api_models.dart';
 import 'active_shop_context.dart';
+
+/// Clé de zone servant à épingler l'en-tête `X-Shop-Id` sur une boutique
+/// serveur précise pour toutes les requêtes émises dans un contexte donné.
+const Object _scopedServerShopIdZoneKey = #venteAppScopedServerShopId;
 
 class ApiClient {
   ApiClient({
@@ -17,8 +23,8 @@ class ApiClient {
             Dio(
               BaseOptions(
                 baseUrl: baseUrl ?? ApiConfig.defaultBaseUrl(),
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 30),
+                connectTimeout: const Duration(seconds: 6),
+                receiveTimeout: const Duration(seconds: 10),
                 headers: const {
                   'Content-Type': 'application/json',
                   'Accept': 'application/json',
@@ -48,7 +54,7 @@ class ApiClient {
               return handler.resolve(response);
             } on Object {
               if (error.response?.statusCode == 401) {
-                await onRefreshTokenInvalid?.call();
+                unawaited(onRefreshTokenInvalid?.call());
               }
               return handler.next(error);
             }
@@ -77,6 +83,27 @@ class ApiClient {
   }
 
   bool get isConfigured => baseUrl.isNotEmpty;
+
+  /// Exécute [action] en épinglant l'en-tête `X-Shop-Id` à [serverShopId] pour
+  /// toutes les requêtes émises (et leurs continuations async) dans ce contexte.
+  ///
+  /// Cet épinglage est propagé via une [Zone] : il prime sur le contexte global
+  /// [ActiveShopContext] uniquement à l'intérieur de [action], et n'affecte donc
+  /// pas les requêtes concurrentes (ex. lectures de l'UI) exécutées hors de cette
+  /// zone. Cela protège un cycle de synchronisation d'un changement de boutique
+  /// concurrent : les écritures/lectures serveur restent liées à la boutique
+  /// active au démarrage du cycle. Si [serverShopId] est nul, aucun épinglage
+  /// n'est appliqué (comportement global inchangé).
+  static Future<T> runScopedToServerShop<T>(
+    int? serverShopId,
+    Future<T> Function() action,
+  ) {
+    if (serverShopId == null) return action();
+    return runZoned(
+      action,
+      zoneValues: {_scopedServerShopIdZoneKey: serverShopId},
+    );
+  }
 
   Future<Response<T>> get<T>(
     String path, {
@@ -147,7 +174,8 @@ class ApiClient {
       }
     }
 
-    final shopId = _activeShop?.serverShopId;
+    final scopedShopId = Zone.current[_scopedServerShopIdZoneKey];
+    final shopId = scopedShopId is int ? scopedShopId : _activeShop?.serverShopId;
     if (shopId != null) {
       options.headers['X-Shop-Id'] = '$shopId';
     }
@@ -166,6 +194,22 @@ class ApiClient {
           requestOptions: RequestOptions(path: '/auth/refresh'),
           statusCode: 401,
         ),
+      );
+    }
+    await _refreshTokens();
+  }
+
+  /// Force une tentative de refresh même si l'expiration locale est dépassée,
+  /// tant qu'un refresh token est stocké (le serveur reste l'autorité).
+  /// Utilisé pendant la fenêtre de grâce pour continuer à viser le serveur.
+  Future<void> forceRefreshTokens() async {
+    final credentials = _credentials;
+    if (credentials == null) return;
+    final refreshToken = await credentials.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) {
+      throw DioException(
+        requestOptions: RequestOptions(path: '/auth/refresh'),
+        type: DioExceptionType.badResponse,
       );
     }
     await _refreshTokens();
@@ -195,7 +239,7 @@ class ApiClient {
 
     final statusCode = response.statusCode;
     if (statusCode == 401 || statusCode == 403) {
-      await onRefreshTokenInvalid?.call();
+      unawaited(onRefreshTokenInvalid?.call());
       throw DioException(
         requestOptions: RequestOptions(path: '/auth/refresh'),
         response: response,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../shared/components/action_feedback.dart';
@@ -328,6 +329,13 @@ class _UserPermissionsPageState extends State<UserPermissionsPage> {
   }
 
   Future<void> _saveOverrides() async {
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: 'Modifier les droits personnalisés',
+    )) {
+      return;
+    }
+    if (!mounted) return;
     setState(() => _saving = true);
     try {
       await sl<ReplaceUserPermissionOverrides>()(

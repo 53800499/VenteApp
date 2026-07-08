@@ -52,10 +52,13 @@ class _ProductListPageState extends State<ProductListPage> {
       create: (_) => ProductListBloc(
         listProducts: sl(),
         listCategories: sl(),
+        repository: sl(),
+        syncPolicy: sl(),
         session: widget.session,
         initialFilters: ProductListFilters(
           lowStockOnly: widget.initialLowStockOnly,
         ),
+        syncService: sl(),
       )..add(const ProductListLoadRequested()),
       child: Builder(
         builder: (context) {

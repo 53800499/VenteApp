@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
 import '../../auth/cloud_link_status.dart';
+import '../../auth/cloud_session_controller.dart';
+import '../../auth/cloud_session_status.dart';
+import '../../auth/cloud_session_repair_service.dart';
 import '../../sync/sync_service.dart';
 import '../../sync/sync_snapshot.dart';
 import '../network_info.dart';
@@ -36,7 +41,15 @@ class OfflineModeBanner extends StatefulWidget {
 }
 
 class _OfflineModeBannerState extends State<OfflineModeBanner> {
+  /// Durée d'affichage du bandeau « Synchronisé » avant disparition auto.
+  /// Les autres états (hors ligne, en cours, erreur) restent affichés.
+  static const _syncedAutoHideDelay = Duration(minutes: 3);
+
   bool? _offline;
+
+  /// Vrai lorsque le bandeau « Synchronisé » a été masqué après son délai.
+  bool _syncedDismissed = false;
+  Timer? _syncedHideTimer;
 
   @override
   void initState() {
@@ -44,6 +57,34 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     sl<NetworkInfo>().isConnected.then((connected) {
       if (mounted) setState(() => _offline = !connected);
     });
+  }
+
+  @override
+  void dispose() {
+    _syncedHideTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Gère la disparition automatique du seul état « synchronisé ».
+  ///
+  /// - État synchronisé : programme un masquage après [_syncedAutoHideDelay].
+  /// - Tout autre état : réarme (le bandeau réapparaîtra brièvement au prochain
+  ///   retour à l'état synchronisé) et n'est jamais masqué automatiquement.
+  void _handleSyncedVisibility(CloudLinkStatus status) {
+    final isSynced = status == CloudLinkStatus.connected;
+    if (isSynced && widget.showWhenSynced) {
+      if (!_syncedDismissed && _syncedHideTimer == null) {
+        _syncedHideTimer = Timer(_syncedAutoHideDelay, () {
+          _syncedHideTimer = null;
+          if (mounted) setState(() => _syncedDismissed = true);
+        });
+      }
+    } else {
+      _syncedHideTimer?.cancel();
+      _syncedHideTimer = null;
+      // Réarme pour que le prochain « Synchronisé » soit de nouveau affiché.
+      _syncedDismissed = false;
+    }
   }
 
   String _messageForStatus(CloudLinkStatus status) {
@@ -93,60 +134,143 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<ConnectivityResult>>(
-      stream: Connectivity().onConnectivityChanged,
-      builder: (context, connectivitySnapshot) {
-        final offline = connectivitySnapshot.hasData
-            ? connectivitySnapshot.data!
-                .every((r) => r == ConnectivityResult.none)
-            : _offline;
+    return ValueListenableBuilder<CloudSessionStatus>(
+      valueListenable: sl<CloudSessionController>().notifier,
+      builder: (context, session, _) {
+        return StreamBuilder<List<ConnectivityResult>>(
+          stream: Connectivity().onConnectivityChanged,
+          builder: (context, connectivitySnapshot) {
+            final offline = connectivitySnapshot.hasData
+                ? connectivitySnapshot.data!
+                    .every((r) => r == ConnectivityResult.none)
+                : _offline;
 
-        return StreamBuilder(
-          stream: sl<SyncService>().snapshots,
-          builder: (context, syncSnapshot) {
-            final sync = syncSnapshot.data ?? const SyncSnapshot.idle();
-            final status = resolveCloudLinkStatus(
-              isConnected: offline != true,
-              sync: sync,
-            );
+            return StreamBuilder(
+              stream: sl<SyncService>().snapshots,
+              builder: (context, syncSnapshot) {
+                return ValueListenableBuilder<bool>(
+                  valueListenable: sl<CloudSessionRepairService>()
+                      .awaitingPinUnlockNotifier,
+                  builder: (context, isAwaitingPin, child) {
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: sl<CloudSessionRepairService>()
+                          .repairInProgressNotifier,
+                      builder: (context, isRepairing, _) {
+                        final sync = syncSnapshot.data ?? const SyncSnapshot.idle();
+                        final repair = sl<CloudSessionRepairService>();
 
-            if (status == CloudLinkStatus.connected && !widget.showWhenSynced) {
-              return const SizedBox.shrink();
-            }
+                        if (isRepairing && sync.blockReason == null && offline != true) {
+                          return _sessionBanner(
+                            context,
+                            message: 'Reconnexion au serveur en cours…',
+                            background: Theme.of(context).colorScheme.secondaryContainer,
+                            foreground: Theme.of(context).colorScheme.onSecondaryContainer,
+                            icon: Icons.cloud_sync_outlined,
+                            emoji: '🔄',
+                          );
+                        }
 
-            final message = _messageForStatus(status);
-            final foreground = _foregroundForStatus(context, status);
+                        final status = resolveCloudLinkStatus(
+                          isConnected: offline != true,
+                          sync: sync,
+                        );
 
-            return Material(
-              color: _backgroundForStatus(context, status),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _iconForStatus(status),
-                      size: 18,
-                      color: foreground,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        '${status.emoji} $message',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: foreground,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                        if (isAwaitingPin &&
+                            sync.blockReason == null &&
+                            offline != true) {
+                          return _sessionBanner(
+                            context,
+                            message: CloudSessionRepairService.awaitingPinUnlockMessage,
+                            background: Theme.of(context).colorScheme.tertiaryContainer,
+                            foreground: Theme.of(context).colorScheme.onTertiaryContainer,
+                            icon: Icons.cloud_off_outlined,
+                            emoji: '🟠',
+                          );
+                        }
+
+                        // Niveaux dégradés de session cloud : priment sur l'indicateur de
+                        // synchro, restent visibles (pas de disparition auto).
+                        if (session.level == CloudSessionLevel.actionRequired) {
+                          return _sessionBanner(
+                            context,
+                            message: session.userMessage,
+                            background: Theme.of(context).colorScheme.errorContainer,
+                            foreground: Theme.of(context).colorScheme.onErrorContainer,
+                            icon: Icons.gpp_maybe_outlined,
+                            emoji: '⛔',
+                          );
+                        }
+                        if (session.level == CloudSessionLevel.offlineProlonged) {
+                          return _sessionBanner(
+                            context,
+                            message: session.userMessage,
+                            background: Theme.of(context).colorScheme.tertiaryContainer,
+                            foreground: Theme.of(context).colorScheme.onTertiaryContainer,
+                            icon: Icons.cloud_off_outlined,
+                            emoji: '🟠',
+                          );
+                        }
+
+                        _handleSyncedVisibility(status);
+
+                        if (status == CloudLinkStatus.connected &&
+                            (!widget.showWhenSynced || _syncedDismissed)) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final message = sync.blockReason ?? _messageForStatus(status);
+                        final foreground = _foregroundForStatus(context, status);
+
+                        return _sessionBanner(
+                          context,
+                          message: message,
+                          background: _backgroundForStatus(context, status),
+                          foreground: foreground,
+                          icon: _iconForStatus(status),
+                          emoji: status.emoji,
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             );
           },
         );
       },
+    );
+  }
+
+  Widget _sessionBanner(
+    BuildContext context, {
+    required String message,
+    required Color background,
+    required Color foreground,
+    required IconData icon,
+    required String emoji,
+  }) {
+    return Material(
+      color: background,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: foreground),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                '$emoji $message',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: foreground,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

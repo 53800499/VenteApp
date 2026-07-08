@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'dart:async';
+
 import '../core/auth/app_lock_controller.dart';
 import '../core/auth/cloud_session_coordinator.dart';
+import '../core/auth/cloud_session_controller.dart';
+import '../core/auth/cloud_session_repair_service.dart';
 import '../core/network/api_client.dart';
 import '../core/network/online_session_policy.dart';
 import 'pages/app_bootstrap_page.dart';
@@ -29,7 +33,9 @@ class VenteApp extends StatefulWidget {
 
 class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
-  late final AuthBloc _authBloc;
+  late final AppSessionBloc _authBloc;
+  late final CloudSessionController _cloudSession;
+  StreamSubscription<AuthState>? _authSub;
   final _navigatorKey = GlobalKey<NavigatorState>();
 
 
@@ -42,10 +48,18 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
     WidgetsBinding.instance.addObserver(this);
 
-    _authBloc = sl<AuthBloc>();
+    _authBloc = sl<AppSessionBloc>();
+
+    _cloudSession = sl<CloudSessionController>()..start();
+    _authSub = _authBloc.stream.listen((state) {
+      if (state is AuthAuthenticated) {
+        unawaited(_cloudSession.refresh());
+      }
+    });
 
     final sessionPolicy = sl<OnlineSessionPolicy>();
     final cloudCoordinator = sl<CloudSessionCoordinator>();
+    final cloudRepair = sl<CloudSessionRepairService>();
     final apiClient = sl<ApiClient>();
 
     cloudCoordinator.bind(
@@ -56,15 +70,28 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
     );
 
     sessionPolicy.onCloudSessionExpired = () {
-      cloudCoordinator.handleInvalidRefreshToken();
+      cloudCoordinator.handleInvalidRefreshToken(
+        offerWhatsAppReconnect: true,
+      );
     };
 
-    apiClient.onRefreshTokenInvalid = () {
-      return cloudCoordinator.handleInvalidRefreshToken();
+    apiClient.onRefreshTokenInvalid = () async {
+      final outcome = await cloudRepair.onRefreshTokenRejected();
+      if (outcome == CloudRepairOutcome.alreadyValid ||
+          outcome == CloudRepairOutcome.refreshed ||
+          outcome == CloudRepairOutcome.pinLogin) {
+        cloudCoordinator.markCloudSessionValid();
+      } else if (outcome == CloudRepairOutcome.failed) {
+        await cloudCoordinator.handleInvalidRefreshToken(
+          offerWhatsAppReconnect: true,
+          skipGrace: true,
+        );
+      }
     };
 
     apiClient.onRefreshTokenRestored = () async {
       cloudCoordinator.markCloudSessionValid();
+      unawaited(_cloudSession.refresh());
     };
 
     _authBloc.add(const AuthBootstrapRequested());
@@ -78,6 +105,8 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
   void dispose() {
 
     WidgetsBinding.instance.removeObserver(this);
+
+    _authSub?.cancel();
 
     _authBloc.close();
 
@@ -97,6 +126,7 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
     }
 
     if (state == AppLifecycleState.resumed) {
+      unawaited(_cloudSession.refresh());
       final lock = sl<AppLockController>();
       if (lock.isLockSuppressed) return;
 

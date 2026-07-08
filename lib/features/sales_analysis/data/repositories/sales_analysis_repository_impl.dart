@@ -63,14 +63,14 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
     SalesAnalysisQuery query,
   ) async {
     try {
-      await _apiGuard.ensureReady().timeout(const Duration(seconds: 2));
+      await _apiGuard.ensureReady().timeout(const Duration(seconds: 10));
       final dto = await _remote
           .fetchAnalysis(
             period: query.period,
             from: query.customFrom,
             to: query.customTo,
           )
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(seconds: 15));
       return SalesAnalysisMapper.fromApi(dto);
     } on Failure {
       return null;
@@ -89,6 +89,21 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
       shopId: shopId,
       fromMs: period.fromMs,
       toMs: period.toMs,
+    );
+  }
+
+  @override
+  Future<List<ProductSalesSummary>> listProductSummariesByCategory({
+    required int shopId,
+    required SalesAnalysisQuery query,
+    required int? categoryId,
+  }) async {
+    final period = _resolve(query);
+    return _local.listProductSummariesByCategory(
+      shopId: shopId,
+      fromMs: period.fromMs,
+      toMs: period.toMs,
+      categoryId: categoryId,
     );
   }
 
@@ -171,7 +186,7 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
 
     try {
       final remote = await _loadRemoteBundle(query)
-          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+          .timeout(const Duration(seconds: 15), onTimeout: () => null);
       if (remote != null && remote.categories.isNotEmpty) {
         return remote.categories;
       }
@@ -194,7 +209,7 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
 
     try {
       final remote = await _loadRemoteBundle(query)
-          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+          .timeout(const Duration(seconds: 15), onTimeout: () => null);
       final remoteMargins = remote?.margins;
       if (remoteMargins != null && remoteMargins.totalRevenue > 0) {
         return remoteMargins;
@@ -218,7 +233,7 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
 
     try {
       final remote = await _loadRemoteBundle(query)
-          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+          .timeout(const Duration(seconds: 15), onTimeout: () => null);
       if (remote != null && remote.priceDeviations.isNotEmpty) {
         return remote.priceDeviations;
       }
@@ -241,7 +256,7 @@ class SalesAnalysisRepositoryImpl implements SalesAnalysisRepository {
 
     try {
       final remote = await _loadRemoteBundle(query)
-          .timeout(const Duration(seconds: 2), onTimeout: () => null);
+          .timeout(const Duration(seconds: 15), onTimeout: () => null);
       if (remote != null && remote.trends.points.isNotEmpty) {
         return remote.trends;
       }

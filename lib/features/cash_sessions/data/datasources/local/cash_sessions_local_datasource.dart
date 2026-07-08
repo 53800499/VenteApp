@@ -410,11 +410,12 @@ class CashSessionsLocalDatasource {
   }
 
   Future<int?> findLocalSessionIdByServerId(int shopId, String serverSessionId) async {
-    final row = await (_db.select(_db.cashSessions)
+    final rows = await (_db.select(_db.cashSessions)
           ..where(
             (s) => s.shopId.equals(shopId) & s.serverId.equals(serverSessionId),
           ))
-        .getSingleOrNull();
+        .get();
+    final row = rows.isEmpty ? null : rows.first;
     return row?.id;
   }
 
@@ -425,11 +426,12 @@ class CashSessionsLocalDatasource {
     final serverId = json['serverId']?.toString() ?? json['id']?.toString();
     if (serverId == null) return;
 
-    final existing = await (_db.select(_db.cashSessions)
+    final existingRows = await (_db.select(_db.cashSessions)
           ..where(
             (s) => s.shopId.equals(shopId) & s.serverId.equals(serverId),
           ))
-        .getSingleOrNull();
+        .get();
+    final existing = existingRows.isEmpty ? null : existingRows.first;
 
     final companion = db.CashSessionsCompanion(
       shopId: Value(shopId),
@@ -469,6 +471,10 @@ class CashSessionsLocalDatasource {
       await (_db.update(_db.cashSessions)
             ..where((s) => s.id.equals(existing.id)))
           .write(companion);
+      if (existingRows.length > 1) {
+        final duplicateIds = existingRows.skip(1).map((s) => s.id).toList();
+        await (_db.delete(_db.cashSessions)..where((s) => s.id.isIn(duplicateIds))).go();
+      }
     }
   }
 

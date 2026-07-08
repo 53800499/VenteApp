@@ -57,6 +57,7 @@ class _CustomerListPageState extends State<CustomerListPage> {
         initialFilters: CustomerListFilters(
           hasDebtOnly: widget.initialDebtorsOnly,
         ),
+        syncService: sl(),
       )..add(
           widget.initialDebtorsOnly
               ? const CustomerListShowDebtorsToggled(true)
@@ -377,61 +378,270 @@ class _CustomerListTile extends StatelessWidget {
     final initial =
         customer.name.isNotEmpty ? customer.name[0].toUpperCase() : '?';
     final hasDebt = customer.hasDebt;
+    final isCompact = context.isCompactScreen;
 
-    return Card(
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: hasDebt
-              ? Theme.of(context).colorScheme.errorContainer
-              : Theme.of(context).colorScheme.primaryContainer,
-          child: Text(
-            initial,
-            style: TextStyle(
-              color: hasDebt
-                  ? Theme.of(context).colorScheme.onErrorContainer
-                  : Theme.of(context).colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
+    final cardBorderColor = hasDebt
+        ? (customer.isCriticalDebt
+            ? Theme.of(context).colorScheme.error
+            : AppColors.warning)
+        : null;
+
+    if (isCompact && hasDebt) {
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: Container(
+          decoration: cardBorderColor != null
+              ? BoxDecoration(
+                  border: Border(
+                    left: BorderSide(
+                      color: cardBorderColor,
+                      width: 5.5,
+                    ),
+                  ),
+                )
+              : null,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                    child: Text(
+                      initial,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                customer.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: customer.isCriticalDebt
+                                    ? Theme.of(context).colorScheme.errorContainer
+                                    : Theme.of(context).colorScheme.tertiaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'EN DETTE',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: customer.isCriticalDebt
+                                          ? Theme.of(context).colorScheme.onErrorContainer
+                                          : Theme.of(context).colorScheme.onTertiaryContainer,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              customer.phone != null && customer.phone!.isNotEmpty
+                                  ? customer.phone!
+                                  : 'Pas de numéro',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  formatFcfa(customer.balanceDue),
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: customer.isCriticalDebt
+                                            ? Theme.of(context).colorScheme.error
+                                            : AppColors.warning,
+                                      ),
+                                ),
+                                if (customer.isCriticalDebt) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(Critique)',
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.error,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                            if (customer.isShared) 'Partagé',
+                            if (customer.purchaseCount > 0)
+                              '${customer.purchaseCount} achat(s)',
+                          ].join(' · '),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-        title: Text(customer.name),
-        subtitle: Text(
-          [
-            if (customer.isShared) 'Partagé',
-            if (customer.phone != null && customer.phone!.isNotEmpty)
-              customer.phone!,
-            if (customer.purchaseCount > 0)
-              '${customer.purchaseCount} achat(s)',
-          ].join(' · '),
-        ),
-        trailing: hasDebt
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    formatFcfa(customer.balanceDue),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: customer.isCriticalDebt
-                              ? Theme.of(context).colorScheme.error
-                              : AppColors.warning,
-                        ),
+      );
+    }
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: cardBorderColor != null
+            ? BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: cardBorderColor,
+                    width: 5.5,
                   ),
-                  if (customer.isCriticalDebt)
-                    Text(
-                      'Critique',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                    ),
-                ],
+                ),
               )
-            : Icon(
-                Icons.chevron_right,
-                color: Theme.of(context).colorScheme.outline,
-              ),
+            : null,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: hasDebt
+                      ? Theme.of(context).colorScheme.errorContainer
+                      : Theme.of(context).colorScheme.primaryContainer,
+                  child: Text(
+                    initial,
+                    style: TextStyle(
+                      color: hasDebt
+                          ? Theme.of(context).colorScheme.onErrorContainer
+                          : Theme.of(context).colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              customer.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: hasDebt ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          if (hasDebt) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xs,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: customer.isCriticalDebt
+                                    ? Theme.of(context).colorScheme.errorContainer
+                                    : Theme.of(context).colorScheme.tertiaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'EN DETTE',
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: customer.isCriticalDebt
+                                          ? Theme.of(context).colorScheme.onErrorContainer
+                                          : Theme.of(context).colorScheme.onTertiaryContainer,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        [
+                          if (customer.isShared) 'Partagé',
+                          if (customer.phone != null && customer.phone!.isNotEmpty)
+                            customer.phone!,
+                          if (customer.purchaseCount > 0)
+                            '${customer.purchaseCount} achat(s)',
+                        ].join(' · '),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                if (hasDebt)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatFcfa(customer.balanceDue),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: customer.isCriticalDebt
+                                  ? Theme.of(context).colorScheme.error
+                                  : AppColors.warning,
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      if (customer.isCriticalDebt)
+                        Text(
+                          'Critique',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                        ),
+                    ],
+                  )
+                else
+                  Icon(
+                    Icons.chevron_right,
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

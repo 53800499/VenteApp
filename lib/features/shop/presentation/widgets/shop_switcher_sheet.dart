@@ -3,9 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/storage/last_shop_storage.dart';
+import '../../../../core/sync/sync_service.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import '../../../rbac/domain/usecases/refresh_session_permissions.dart';
@@ -13,17 +15,63 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../widgets/shop_feedback.dart';
 
 /// Bascule la boutique active côté serveur et met à jour la session locale.
-Future<void> performShopSwitch(
+///
+/// Avant de basculer, tente un flush « best effort » des écritures en attente
+/// de la boutique courante (voir [SyncService.flushPendingBeforeSwitch]). Si des
+/// données ne peuvent pas être envoyées (hors ligne / délai dépassé), l'utilisateur
+/// est informé et peut confirmer le changement malgré tout.
+///
+/// Retourne `true` si la boutique a effectivement changé, `false` si l'opération
+/// a été annulée ou n'était pas nécessaire.
+Future<bool> performShopSwitch(
   BuildContext context, {
   required int serverShopId,
 }) async {
   final authBloc = context.read<AuthBloc>();
   final state = authBloc.state;
-  if (state is! AuthAuthenticated) return;
-  if (state.session.shop.apiShopId == serverShopId) return;
+  if (state is! AuthAuthenticated) return false;
+  if (state.session.shop.apiShopId == serverShopId) return false;
+
+  // Opération à confiance serveur : bloquée au Niveau 3 (>7 j sans validation).
+  if (!await ensureCloudTrustedOperation(
+    context,
+    actionLabel: 'Changer de boutique',
+  )) {
+    return false;
+  }
+  if (!context.mounted) return false;
+
+  // Flush « best effort » des écritures en attente de la boutique courante
+  // afin qu'elles ne restent pas bloquées jusqu'au prochain retour dessus.
+  final currentLocalShopId = state.session.shop.id;
+  final flush = await ShopFeedback.runWithBlockingLoader<ShopFlushOutcome>(
+    context: context,
+    message: 'Envoi des données en attente…',
+    action: () => sl<SyncService>()
+        .flushPendingBeforeSwitch(shopId: currentLocalShopId),
+  );
+  if (!context.mounted) return false;
+
+  if (flush != null && flush.hadPending && !flush.fullyFlushed) {
+    final remaining = flush.pendingAfter;
+    final proceed = await ShopFeedback.confirm(
+      context: context,
+      title: 'Données non synchronisées',
+      message: flush.wasOffline
+          ? '$remaining élément(s) de cette boutique ne sont pas encore '
+              'envoyés (hors ligne). Ils seront synchronisés automatiquement '
+              'plus tard. Changer de boutique quand même ?'
+          : '$remaining élément(s) de cette boutique ne sont pas encore '
+              'envoyés. Ils seront synchronisés automatiquement plus tard. '
+              'Changer de boutique quand même ?',
+      confirmLabel: 'Changer quand même',
+      cancelLabel: 'Rester',
+    );
+    if (proceed != true || !context.mounted) return false;
+  }
 
   final session = await sl<SwitchShop>()(shopId: serverShopId);
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   AuthSession refreshed = session;
   try {
     final updated = await sl<RefreshSessionPermissions>()();
@@ -31,9 +79,10 @@ Future<void> performShopSwitch(
   } catch (_) {
     // Droits du switchShop conservés si /rbac/me échoue.
   }
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
   authBloc.add(AuthSessionRefreshed(refreshed));
   await sl<LastShopStorage>().save(refreshed.shop.id);
+  return true;
 }
 
 /// Feuille modale : liste des boutiques du patron pour changer de contexte.
@@ -111,8 +160,9 @@ class _ShopSwitcherSheetState extends State<ShopSwitcherSheet> {
 
     setState(() => _switchingShopId = shop.id);
     try {
-      await performShopSwitch(context, serverShopId: shop.id);
+      final switched = await performShopSwitch(context, serverShopId: shop.id);
       if (!mounted) return;
+      if (!switched) return;
       Navigator.pop(context);
       await ShopFeedback.showSuccess(
         context: context,

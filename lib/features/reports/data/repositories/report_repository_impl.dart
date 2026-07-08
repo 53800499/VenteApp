@@ -58,7 +58,22 @@ class ReportRepositoryImpl implements ReportRepository {
             topLimit: query.topLimit,
           )
           .timeout(remoteReadFetchTimeout);
-      return ReportMapper.fromApi(remote);
+      final remoteReport = ReportMapper.fromApi(remote);
+
+      // Le serveur a des ventes mais aucun top produits (ventes pas encore
+      // synchronisées côté serveur, ou détail indisponible) : on complète avec
+      // le local sans jamais écraser un top produits serveur non vide.
+      if (!remoteReport.empty && remoteReport.topProducts.isEmpty) {
+        final localTop = await _computeLocalTopProducts(
+          activeShopId: activeShopId,
+          ownerUserId: ownerUserId,
+          query: query,
+        );
+        if (localTop.isNotEmpty) {
+          return remoteReport.copyWith(topProducts: localTop);
+        }
+      }
+      return remoteReport;
     } on Failure {
       // Données locales — offline-first §13.1
     } catch (_) {
@@ -103,20 +118,7 @@ class ReportRepositoryImpl implements ReportRepository {
     final salesKpis = _aggregation.aggregateSales(raw.sales);
     final empty = salesKpis.saleCount == 0;
 
-    final topSorted = _aggregation
-        .sortTopProducts(raw.topProducts, query.topBy, query.topLimit)
-        .asMap()
-        .entries
-        .map(
-          (e) => ReportTopProduct(
-            rank: e.key + 1,
-            productId: e.value.productId,
-            productName: e.value.productName,
-            quantitySold: e.value.quantitySold,
-            revenue: e.value.revenue,
-          ),
-        )
-        .toList();
+    final topSorted = _mapTopProducts(raw.topProducts, query);
 
     var totalExpenses = 0;
     if (canViewFinancial && _expensesLocal != null) {
@@ -169,6 +171,52 @@ class ReportRepositoryImpl implements ReportRepository {
       sellerPerformance: empty ? null : sellers,
       generatedAt: nowMs(),
     );
+  }
+
+  List<ReportTopProduct> _mapTopProducts(
+    List<ReportTopProductRow> rows,
+    ReportQuery query,
+  ) {
+    return _aggregation
+        .sortTopProducts(rows, query.topBy, query.topLimit)
+        .asMap()
+        .entries
+        .map(
+          (e) => ReportTopProduct(
+            rank: e.key + 1,
+            productId: e.value.productId,
+            productName: e.value.productName,
+            quantitySold: e.value.quantitySold,
+            revenue: e.value.revenue,
+          ),
+        )
+        .toList();
+  }
+
+  /// Top produits calculé depuis la base locale (utilisé pour compléter un
+  /// rapport serveur dépourvu de top produits).
+  Future<List<ReportTopProduct>> _computeLocalTopProducts({
+    required int activeShopId,
+    required int ownerUserId,
+    required ReportQuery query,
+  }) async {
+    final periodRange = resolveReportPeriod(
+      preset: query.period,
+      customFrom: query.customFrom,
+      customTo: query.customTo,
+    );
+    final shopIds = await _resolveShopIds(
+      activeShopId: activeShopId,
+      ownerUserId: ownerUserId,
+      consolidated: query.consolidated,
+    );
+    final raw = await _local.loadPeriodData(
+      shopIds: shopIds,
+      fromMs: periodRange.fromMs,
+      toMs: periodRange.toMs,
+      includeSellerPerformance: false,
+    );
+    return _mapTopProducts(raw.topProducts, query);
   }
 
   Future<List<int>> _resolveShopIds({

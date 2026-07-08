@@ -10,6 +10,7 @@ import 'package:venteapp/features/sales/data/datasources/local/sales_local_datas
 import 'package:venteapp/features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import 'package:venteapp/features/sales/data/repositories/sale_repository_impl.dart';
 import 'package:venteapp/features/sales/domain/entities/sale_entities.dart';
+import 'package:venteapp/features/cash_sessions/data/datasources/local/cash_sessions_local_datasource.dart';
 
 import '../../../../support/auth_test_helpers.dart';
 
@@ -31,6 +32,7 @@ void main() {
         credentials: AuthCredentialsStorage.inMemory(),
         apiClient: apiClient,
       ),
+      cashSessionsLocal: CashSessionsLocalDatasource(database),
     );
 
     final timestamp = nowMs();
@@ -56,6 +58,15 @@ void main() {
             priceSell: 2500,
             priceBuy: const Value(2000),
             quantityInStock: const Value(10),
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+    await database.into(database.cashSessions).insert(
+          CashSessionsCompanion.insert(
+            shopId: shopId,
+            openedBy: userId,
+            openedAt: timestamp,
             createdAt: timestamp,
             updatedAt: timestamp,
           ),

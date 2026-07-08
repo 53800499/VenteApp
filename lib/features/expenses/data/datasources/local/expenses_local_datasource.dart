@@ -493,13 +493,14 @@ class ExpensesLocalDatasource {
   }) async {
     final timestamp = nowMs();
 
-    final byServer = await (_db.select(_db.expenseCategories)
+    final byServerRows = await (_db.select(_db.expenseCategories)
           ..where(
             (c) =>
                 c.shopId.equals(shopId) &
                 c.serverId.equals('${remote.id}'),
           ))
-        .getSingleOrNull();
+        .get();
+    final byServer = byServerRows.isEmpty ? null : byServerRows.first;
     if (byServer != null) {
       await (_db.update(_db.expenseCategories)
             ..where((c) => c.id.equals(byServer.id)))
@@ -513,14 +514,19 @@ class ExpensesLocalDatasource {
           syncedAt: Value(timestamp),
         ),
       );
+      if (byServerRows.length > 1) {
+        final duplicateIds = byServerRows.skip(1).map((c) => c.id).toList();
+        await (_db.delete(_db.expenseCategories)..where((c) => c.id.isIn(duplicateIds))).go();
+      }
       return byServer.id;
     }
 
-    final byName = await (_db.select(_db.expenseCategories)
+    final byNameRows = await (_db.select(_db.expenseCategories)
           ..where(
             (c) => c.shopId.equals(shopId) & c.name.equals(remote.name),
           ))
-        .getSingleOrNull();
+        .get();
+    final byName = byNameRows.isEmpty ? null : byNameRows.first;
     if (byName != null) {
       await (_db.update(_db.expenseCategories)
             ..where((c) => c.id.equals(byName.id)))
@@ -533,6 +539,10 @@ class ExpensesLocalDatasource {
           updatedAt: Value(timestamp),
         ),
       );
+      if (byNameRows.length > 1) {
+        final duplicateIds = byNameRows.skip(1).map((c) => c.id).toList();
+        await (_db.delete(_db.expenseCategories)..where((c) => c.id.isIn(duplicateIds))).go();
+      }
       return byName.id;
     }
 
@@ -560,11 +570,12 @@ class ExpensesLocalDatasource {
     final timestamp = nowMs();
     final serverId = '${remote.id}';
 
-    final existing = await (_db.select(_db.expenses)
+    final existingRows = await (_db.select(_db.expenses)
           ..where(
             (e) => e.shopId.equals(shopId) & e.serverId.equals(serverId),
           ))
-        .getSingleOrNull();
+        .get();
+    final existing = existingRows.isEmpty ? null : existingRows.first;
 
     if (existing != null) {
       await (_db.update(_db.expenses)..where((e) => e.id.equals(existing.id)))
@@ -586,6 +597,10 @@ class ExpensesLocalDatasource {
           syncStatus: const Value('synced'),
         ),
       );
+      if (existingRows.length > 1) {
+        final duplicateIds = existingRows.skip(1).map((e) => e.id).toList();
+        await (_db.delete(_db.expenses)..where((e) => e.id.isIn(duplicateIds))).go();
+      }
       return;
     }
 

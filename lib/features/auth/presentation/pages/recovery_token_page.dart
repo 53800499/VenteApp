@@ -11,14 +11,47 @@ import '../../../../shared/components/ui_primitives.dart';
 import '../../domain/entities/auth_entities.dart';
 import '../bloc/auth_bloc.dart';
 
-class RecoveryTokenPage extends StatelessWidget {
+class RecoveryTokenPage extends StatefulWidget {
   const RecoveryTokenPage({super.key, required this.result});
 
   final SetupOwnerResult result;
 
   @override
+  State<RecoveryTokenPage> createState() => _RecoveryTokenPageState();
+}
+
+class _RecoveryTokenPageState extends State<RecoveryTokenPage> {
+  bool _copied = false;
+  bool _acknowledged = false;
+
+  SetupOwnerResult get _result => widget.result;
+
+  Future<void> _copyToken() async {
+    await Clipboard.setData(ClipboardData(text: _result.recoveryToken));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await ActionFeedback.showSuccess(
+      context: context,
+      title: 'Jeton copié',
+      message:
+          'Collez-le dans un gestionnaire de mots de passe ou une note sûre, '
+          'puis cochez la case pour continuer.',
+    );
+  }
+
+  void _continue() {
+    context.read<AuthBloc>().add(
+          AuthLockScreenRequested(
+            shopId: _result.shopId,
+            canGoBack: false,
+          ),
+        );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final canContinue = _copied && _acknowledged;
 
     return PopScope(
       canPop: false,
@@ -36,8 +69,9 @@ class RecoveryTokenPage extends StatelessWidget {
                     icon: Icons.shield_outlined,
                     title: 'Fichier de récupération',
                     subtitle:
-                        'Étape 1 sur 2 — conservez ce jeton hors de l\'appareil. '
-                        'Ensuite, vous saisirez votre PIN pour ouvrir l\'application.',
+                        'Étape obligatoire — sans ce jeton, un PIN oublié ou un '
+                        'appareil perdu signifie la perte définitive de l\'accès. '
+                        'Sauvegardez-le hors de l\'appareil avant de continuer.',
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Container(
@@ -58,10 +92,11 @@ class RecoveryTokenPage extends StatelessWidget {
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
-                            result.message,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            _result.message,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
@@ -81,38 +116,47 @@ class RecoveryTokenPage extends StatelessWidget {
                       border: Border.all(color: colorScheme.outlineVariant),
                     ),
                     child: SelectableText(
-                      result.recoveryToken,
+                      _result.recoveryToken,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'monospace',
                             letterSpacing: 0.5,
                           ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: AppSpacing.md),
                   OutlinedButton.icon(
-                    onPressed: () async {
-                      await Clipboard.setData(
-                        ClipboardData(text: result.recoveryToken),
-                      );
-                      if (!context.mounted) return;
-                      await ActionFeedback.showSuccess(
-                        context: context,
-                        title: 'Jeton copié',
-                        message:
-                            'Le jeton a été copié dans le presse-papiers.',
-                      );
-                    },
-                    icon: const Icon(Icons.copy_outlined),
-                    label: const Text('Copier le jeton'),
+                    onPressed: _copyToken,
+                    icon: Icon(
+                      _copied ? Icons.check_circle_outline : Icons.copy_outlined,
+                    ),
+                    label: Text(_copied ? 'Jeton copié' : 'Copier le jeton'),
+                  ),
+                  const Spacer(),
+                  CheckboxListTile(
+                    value: _acknowledged,
+                    onChanged: _copied
+                        ? (value) =>
+                            setState(() => _acknowledged = value ?? false)
+                        : null,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    title: Text(
+                      'J\'ai sauvegardé ce jeton en lieu sûr, hors de cet appareil.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    subtitle: _copied
+                        ? null
+                        : Text(
+                            'Copiez d\'abord le jeton pour activer cette case.',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.outline,
+                                    ),
+                          ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   FilledButton(
-                    onPressed: () => context.read<AuthBloc>().add(
-                          AuthLockScreenRequested(
-                            shopId: result.shopId,
-                            canGoBack: false,
-                          ),
-                        ),
+                    onPressed: canContinue ? _continue : null,
                     child: const Text('Continuer — saisir mon PIN'),
                   ),
                 ],

@@ -11,6 +11,13 @@ class SalesAnalysisLoadRequested extends SalesAnalysisEvent {
   const SalesAnalysisLoadRequested();
 }
 
+/// Rechargement déclenché par la fin d'un cycle de synchronisation : recalcule
+/// l'analyse sans repasser par l'état « chargement » (les données actuelles
+/// restent affichées pendant l'actualisation).
+class SalesAnalysisSyncRefreshRequested extends SalesAnalysisEvent {
+  const SalesAnalysisSyncRefreshRequested();
+}
+
 class SalesAnalysisPeriodChanged extends SalesAnalysisEvent {
   const SalesAnalysisPeriodChanged({
     required this.period,

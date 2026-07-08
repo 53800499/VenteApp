@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/sync/sync_policy.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../../core/sync/sync_snapshot.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/customer_entities.dart';
 import '../../domain/repositories/customer_repository.dart';
@@ -20,6 +24,7 @@ class CustomerListBloc extends Bloc<CustomerListEvent, CustomerListState> {
     required SyncPolicy syncPolicy,
     required AuthSession session,
     CustomerListFilters initialFilters = const CustomerListFilters(),
+    SyncService? syncService,
   })  : _listCustomers = listCustomers,
         _listDebtors = listDebtors,
         _repository = repository,
@@ -28,10 +33,15 @@ class CustomerListBloc extends Bloc<CustomerListEvent, CustomerListState> {
         super(CustomerListState(filters: initialFilters)) {
     on<CustomerListLoadRequested>(_onLoad);
     on<CustomerListRefreshRequested>(_onRefresh);
+    on<CustomerListSyncRefreshRequested>(_onSyncRefresh);
     on<CustomerListSearchChanged>(_onSearch);
     on<CustomerListDebtFilterToggled>(_onDebtFilter);
     on<CustomerListSortChanged>(_onSort);
     on<CustomerListShowDebtorsToggled>(_onShowDebtors);
+
+    // Relit la liste locale à la fin de chaque cycle de sync (données déjà
+    // pull en base — pas de pull réseau redondant ici).
+    _syncSub = syncService?.snapshots.listen(_onSyncSnapshot);
   }
 
   final ListCustomers _listCustomers;
@@ -39,6 +49,27 @@ class CustomerListBloc extends Bloc<CustomerListEvent, CustomerListState> {
   final CustomerRepository _repository;
   final SyncPolicy _syncPolicy;
   final AuthSession _session;
+
+  StreamSubscription<SyncSnapshot>? _syncSub;
+  DateTime? _lastHandledSyncAt;
+
+  void _onSyncSnapshot(SyncSnapshot snapshot) {
+    if (snapshot.phase != SyncRunPhase.completed) return;
+    if (snapshot.shopId != null && snapshot.shopId != _session.shop.id) return;
+
+    final completedAt = snapshot.lastCompletedAt;
+    if (completedAt != null && completedAt == _lastHandledSyncAt) return;
+    _lastHandledSyncAt = completedAt;
+
+    if (isClosed) return;
+    add(const CustomerListSyncRefreshRequested());
+  }
+
+  @override
+  Future<void> close() {
+    _syncSub?.cancel();
+    return super.close();
+  }
 
   Future<void> _onLoad(
     CustomerListLoadRequested event,
@@ -54,6 +85,14 @@ class CustomerListBloc extends Bloc<CustomerListEvent, CustomerListState> {
   ) async {
     emit(state.copyWith(isRefreshing: true, clearError: true));
     await _fetch(emit, syncRemote: true);
+  }
+
+  Future<void> _onSyncRefresh(
+    CustomerListSyncRefreshRequested event,
+    Emitter<CustomerListState> emit,
+  ) async {
+    emit(state.copyWith(isRefreshing: true, clearError: true));
+    await _fetch(emit);
   }
 
   Future<void> _onSearch(
@@ -79,7 +118,7 @@ class CustomerListBloc extends Bloc<CustomerListEvent, CustomerListState> {
     emit(
       state.copyWith(
         filters: state.filters.copyWith(hasDebtOnly: event.enabled),
-        showDebtorsOverview: false,
+        showDebtorsOverview: event.enabled,
         isRefreshing: state.status == CustomerListStatus.ready,
       ),
     );

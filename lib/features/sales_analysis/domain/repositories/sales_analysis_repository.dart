@@ -9,6 +9,12 @@ abstract class SalesAnalysisRepository {
     required SalesAnalysisQuery query,
   });
 
+  Future<List<ProductSalesSummary>> listProductSummariesByCategory({
+    required int shopId,
+    required SalesAnalysisQuery query,
+    required int? categoryId,
+  });
+
   Future<ProductSalesDetail> loadProductDetail({
     required int shopId,
     required SalesAnalysisQuery query,

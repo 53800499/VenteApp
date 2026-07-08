@@ -351,7 +351,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         localCategoryId: localCategoryId,
         remote: dto,
       );
-    } on Failure {
+    } catch (_) {
       // Données locales conservées.
     }
   }

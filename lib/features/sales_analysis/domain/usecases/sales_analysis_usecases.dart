@@ -14,6 +14,24 @@ class ListProductSalesAnalysis {
   }
 }
 
+class ListProductSummariesByCategory {
+  const ListProductSummariesByCategory(this._repository);
+
+  final SalesAnalysisRepository _repository;
+
+  Future<List<ProductSalesSummary>> call({
+    required int shopId,
+    required SalesAnalysisQuery query,
+    required int? categoryId,
+  }) {
+    return _repository.listProductSummariesByCategory(
+      shopId: shopId,
+      query: query,
+      categoryId: categoryId,
+    );
+  }
+}
+
 class GetProductSalesDetail {
   const GetProductSalesDetail(this._repository);
 

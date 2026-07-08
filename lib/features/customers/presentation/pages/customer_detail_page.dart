@@ -380,15 +380,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
         itemBuilder: (context, index) {
           final sale = _sales[index];
           return Card(
-            child: ListTile(
-              title: Text(sale.receiptNumber ?? 'Vente #${sale.id}'),
-              subtitle: Text(
-                [
-                  _formatDate(sale.createdAt),
-                  if (sale.shopName != null) sale.shopName,
-                ].join(' · '),
-              ),
-              trailing: Text(formatFcfa(sale.totalAmount)),
+            child: InkWell(
               onTap: _canViewSales
                   ? () => Navigator.of(context).push(
                         MaterialPageRoute(
@@ -399,6 +391,50 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
                         ),
                       )
                   : null,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            sale.receiptNumber ?? 'Vente #${sale.id}',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            [
+                              _formatDate(sale.createdAt),
+                              if (sale.shopName != null) sale.shopName,
+                            ].join(' · '),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      formatFcfa(sale.totalAmount),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    if (_canViewSales) ...[
+                      const SizedBox(width: AppSpacing.xs),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           );
         },

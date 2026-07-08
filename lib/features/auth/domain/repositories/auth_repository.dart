@@ -113,4 +113,12 @@ abstract class AuthRepository {
     required int shopId,
     required String pin,
   });
+
+  /// Répare la session cloud avec un PIN récemment validé (preuve en mémoire).
+  Future<bool> repairCloudSessionWithPin({
+    required String pin,
+    required int serverShopId,
+    required int localShopId,
+    int? serverUserId,
+  });
 }

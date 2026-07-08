@@ -366,11 +366,12 @@ class InventoryLocalDatasource {
     int? updatedAt,
   }) async {
     final timestamp = nowMs();
-    final existing = await (_db.select(_db.products)
+    final existingRows = await (_db.select(_db.products)
           ..where(
             (p) => p.shopId.equals(shopId) & p.serverId.equals(serverId),
           ))
-        .getSingleOrNull();
+        .get();
+    final existing = existingRows.isEmpty ? null : existingRows.first;
 
     if (existing != null) {
       await updateProductRow(
@@ -390,6 +391,10 @@ class InventoryLocalDatasource {
           syncedAt: Value(timestamp),
         ),
       );
+      if (existingRows.length > 1) {
+        final duplicateIds = existingRows.skip(1).map((p) => p.id).toList();
+        await (_db.delete(_db.products)..where((p) => p.id.isIn(duplicateIds))).go();
+      }
       return;
     }
 

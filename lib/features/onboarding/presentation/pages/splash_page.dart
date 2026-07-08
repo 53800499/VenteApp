@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../shared/components/ui_primitives.dart';
 
 /// Écran de démarrage animé affiché au lancement.
 class SplashPage extends StatefulWidget {
@@ -94,37 +95,7 @@ class _SplashPageState extends State<SplashPage>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 108,
-                          height: 108,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white.withValues(alpha: 0.25),
-                                Colors.white.withValues(alpha: 0.08),
-                              ],
-                            ),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                blurRadius: 32,
-                                offset: const Offset(0, 12),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.storefront_rounded,
-                            size: 56,
-                            color: Colors.white,
-                          ),
-                        ),
+                        const AppLogo.onDark(size: 108),
                         const SizedBox(height: 28),
                         Text(
                           'VenteApp',

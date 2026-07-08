@@ -14,8 +14,11 @@ import '../../domain/entities/auth_entities.dart';
 part 'auth_event.dart';
 part 'auth_state.dart';
 
-class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  AuthBloc({
+/// Orchestrateur de session applicative : bootstrap, identité, session,
+/// verrouillage, workspace (boutique) et refresh cloud. Le nom historique
+/// `AuthBloc` reste disponible via un typedef déprécié.
+class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
+  AppSessionBloc({
     required IsSetupComplete isSetupComplete,
     required WasLoggedOut wasLoggedOut,
     required HasRestorableSession hasRestorableSession,
@@ -116,53 +119,68 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthNeedsSetup(localSetupAvailable: localSetupAvailable));
   }
 
+  /// Bootstrap en étapes indépendantes : Installation → Session → Verrouillage.
+  /// Chaque étape a une responsabilité unique et peut s'enrichir isolément
+  /// (invitations, abonnement, migration…) sans complexifier les autres.
   Future<void> _onBootstrap(
     AuthBootstrapRequested event,
     Emitter<AuthState> emit,
   ) async {
     emit(const AuthLoading());
     try {
-      final setupDone = await _isSetupComplete();
-      if (!setupDone) {
-        emit(const AuthNeedsSetup());
+      // Étape 1 — Installation : l'app est-elle prête à déverrouiller ?
+      final installationStep = await _resolveInstallationStep();
+      if (installationStep != null) {
+        emit(installationStep);
         return;
       }
 
-      final loggedOut = await _wasLoggedOut();
-      if (loggedOut) {
-        emit(AuthNeedsSetup(localSetupAvailable: true));
-        return;
-      }
-
-      final hasSession = await _hasRestorableSession();
-      if (!hasSession) {
-        emit(AuthNeedsSetup(localSetupAvailable: true));
-        return;
-      }
-
-      final needsPin = _appLockController.requiresPinOnColdStart(
-        setupComplete: setupDone,
-        wasLoggedOut: loggedOut,
-      );
-
-      if (!needsPin) {
-        final session = await _restoreSession();
-        if (session != null) {
-          _appLockController.markUnlocked();
-          await _lastShopStorage.save(session.shop.id);
-          _scheduleBackgroundSync(session);
-          emit(AuthAuthenticated(session));
-          return;
-        }
-      }
-
-      final lockScreen = await _getLockScreen(shopId: _defaultShopId);
-      emit(AuthLocked(lockScreen, canGoBack: false, isUnlockOnly: true));
+      // Étapes 2 & 3 — Session puis Verrouillage : restaurer ou demander le PIN.
+      emit(await _resolveSessionUnlockStep());
     } on NotFoundFailure {
       emit(const AuthNeedsSetup());
     } catch (error) {
       emit(AuthFailure(friendlyErrorMessage(error)));
     }
+  }
+
+  /// Étape Installation : renvoie l'écran d'entrée si l'app n'est pas prête à
+  /// déverrouiller une session, sinon `null` pour poursuivre le bootstrap.
+  Future<AuthState?> _resolveInstallationStep() async {
+    if (!await _isSetupComplete()) {
+      return const AuthNeedsSetup();
+    }
+    if (await _wasLoggedOut()) {
+      return const AuthNeedsSetup(localSetupAvailable: true);
+    }
+    if (!await _hasRestorableSession()) {
+      return const AuthNeedsSetup(localSetupAvailable: true);
+    }
+    return null;
+  }
+
+  /// Étapes Session + Verrouillage : ouvre directement la session si le PIN
+  /// n'est pas requis au démarrage à froid, sinon présente l'écran de
+  /// déverrouillage. N'est atteinte qu'avec une installation prête (setup fait,
+  /// non déconnecté, session restaurable).
+  Future<AuthState> _resolveSessionUnlockStep() async {
+    final needsPin = _appLockController.requiresPinOnColdStart(
+      setupComplete: true,
+      wasLoggedOut: false,
+    );
+
+    if (!needsPin) {
+      final session = await _restoreSession();
+      if (session != null) {
+        _appLockController.markUnlocked();
+        await _lastShopStorage.save(session.shop.id);
+        _scheduleBackgroundSync(session);
+        return AuthAuthenticated(session);
+      }
+    }
+
+    final lockScreen = await _getLockScreen(shopId: _defaultShopId);
+    return AuthLocked(lockScreen, canGoBack: false, isUnlockOnly: true);
   }
 
   Future<void> _onProceedToPinLogin(
@@ -464,9 +482,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     try {
-      final useUnlock = (current is AuthLocked && current.isUnlockOnly) ||
-          await _hasRestorableSession();
-      final session = useUnlock
+      final session = await _shouldUnlockExistingSession(current)
           ? await _unlockWithPin(
               pin: event.pin,
               shopId: event.shopId,
@@ -522,9 +538,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     try {
-      final useUnlock = (current is AuthLocked && current.isUnlockOnly) ||
-          await _hasRestorableSession();
-      final session = useUnlock
+      final session = await _shouldUnlockExistingSession(current)
           ? await _unlockWithBiometric(
               shopId: event.shopId,
               userId: event.userId,
@@ -560,30 +574,61 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  /// Stratégie d'accès par PIN/biométrie. Le facteur (PIN/biométrie) ne
+  /// **décide** jamais s'il faut créer une session : il répond seulement
+  /// « valide ? ». Cette méthode oriente ensuite :
+  ///  - **Déverrouillage** (`unlock*`) : vérifie le facteur et réutilise la
+  ///    session locale existante, sans nouvelle authentification serveur.
+  ///  - **Authentification** (`login*`) : ouvre une nouvelle session.
+  Future<bool> _shouldUnlockExistingSession(AuthState current) async {
+    if (current is AuthLocked && current.isUnlockOnly) return true;
+    return _hasRestorableSession();
+  }
+
   Future<void> _completeLogin(
     AuthSession session,
     Emitter<AuthState> emit,
   ) async {
     _appLockController.markUnlocked();
 
-    if (session.user.role == UserRole.owner) {
-      try {
-        final shops = await _listOwnedShops().timeout(
-          const Duration(seconds: 3),
-          onTimeout: () => throw const NetworkFailure('Délai dépassé'),
-        );
-        if (shops.activeShops.length > 1) {
-          emit(AuthShopSelection(
-            provisionalSession: session,
-            shops: shops,
-          ));
-          return;
-        }
-      } on Object {
-        // Réseau lent ou indisponible : ouvrir l'app avec la boutique courante.
-      }
-    }
+    // Étape Workspace — choisir le contexte de travail (≠ authentification).
+    if (await _resolveWorkspaceSelection(session, emit)) return;
 
+    await _enterWorkspace(session, emit);
+  }
+
+  /// Étape Workspace : un patron multi-boutiques choisit son contexte de
+  /// travail après ouverture de session. Ce n'est pas de l'authentification —
+  /// c'est la sélection de l'espace de travail. Retourne `true` si un choix est
+  /// requis (état émis), `false` pour entrer directement dans la boutique
+  /// courante. Isolée ici pour pouvoir être extraite plus tard dans un
+  /// `WorkspaceBloc` dédié sans toucher à l'authentification.
+  Future<bool> _resolveWorkspaceSelection(
+    AuthSession session,
+    Emitter<AuthState> emit,
+  ) async {
+    if (session.user.role != UserRole.owner) return false;
+    try {
+      final shops = await _listOwnedShops().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () => throw const NetworkFailure('Délai dépassé'),
+      );
+      if (shops.activeShops.length > 1) {
+        emit(AuthShopSelection(provisionalSession: session, shops: shops));
+        return true;
+      }
+    } on Object {
+      // Réseau lent ou indisponible : ouvrir l'app avec la boutique courante.
+    }
+    return false;
+  }
+
+  /// Entrée effective dans l'espace de travail : persiste la boutique courante,
+  /// programme la synchro et bascule sur l'application.
+  Future<void> _enterWorkspace(
+    AuthSession session,
+    Emitter<AuthState> emit,
+  ) async {
     await _lastShopStorage.save(session.shop.id);
     _scheduleBackgroundSync(session);
     emit(AuthAuthenticated(session));
@@ -612,9 +657,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               ),
             );
 
-      await _lastShopStorage.save(session.shop.id);
-      _scheduleBackgroundSync(session);
-      emit(AuthAuthenticated(session));
+      await _enterWorkspace(session, emit);
     } on Failure catch (failure) {
       emit(AuthShopSelection(
         provisionalSession: current.provisionalSession,
@@ -634,9 +677,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthSessionRefreshed event,
     Emitter<AuthState> emit,
   ) async {
-    await _lastShopStorage.save(event.session.shop.id);
-    _scheduleBackgroundSync(event.session);
-    emit(AuthAuthenticated(event.session));
+    await _enterWorkspace(event.session, emit);
   }
 
   Future<void> _onSetupRequested(
@@ -767,3 +808,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     await _emitEntryScreen(emit);
   }
 }
+
+/// Alias de compatibilité ascendante (tests, code tiers). Le nom canonique est
+/// `AppSessionBloc` : ce bloc dépasse la seule authentification (session,
+/// verrouillage, workspace, refresh cloud).
+typedef AuthBloc = AppSessionBloc;

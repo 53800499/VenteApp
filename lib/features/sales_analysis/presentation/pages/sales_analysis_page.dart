@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
+import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/benin_period_range.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/feature_ui.dart';
@@ -82,6 +83,7 @@ class SalesAnalysisPage extends StatelessWidget {
         getTrends: sl<GetSalesTrendAnalysis>(),
         clearRemoteCache: sl<ClearSalesAnalysisRemoteCache>(),
         session: session,
+        syncService: sl(),
       )..add(const SalesAnalysisLoadRequested()),
       child: const _SalesAnalysisView(),
     );
@@ -358,50 +360,53 @@ class _ProductsTab extends StatelessWidget {
       );
     }
 
+    final isCompact = context.isCompactScreen;
+
     return Stack(
       children: [
         ListView(
           padding: const EdgeInsets.all(AppSpacing.sm),
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        'Produit',
-                        style: Theme.of(context).textTheme.labelLarge,
+            if (!isCompact)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Text(
+                          'Produit',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Qté',
-                        textAlign: TextAlign.end,
-                        style: Theme.of(context).textTheme.labelLarge,
+                      Expanded(
+                        child: Text(
+                          'Qté',
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        'CA',
-                        textAlign: TextAlign.end,
-                        style: Theme.of(context).textTheme.labelLarge,
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'CA',
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      flex: 2,
-                      child: Text(
-                        'Prix moy.',
-                        textAlign: TextAlign.end,
-                        style: Theme.of(context).textTheme.labelLarge,
+                      Expanded(
+                        flex: 2,
+                        child: Text(
+                          'Prix moy.',
+                          textAlign: TextAlign.end,
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
             ...products.map(
               (product) => _ProductSummaryTile(
                 product: product,
@@ -450,6 +455,115 @@ class _ProductSummaryTile extends StatelessWidget {
         : '—';
     final isHeadless =
         SalesAnalysisHeadlessLabels.isHeadlessProductName(product.productName);
+    final isCompact = context.isCompactScreen;
+
+    if (isCompact) {
+      return Card(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        product.productName,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${formatQuantitySold(product.quantitySold)} u',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                const Divider(height: 1),
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Chiffre d\'affaires',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          formatFcfa(product.revenue),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Prix moyen',
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          formatFcfa(product.averageUnitPrice),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                if (isHeadless)
+                  Text(
+                    'Ventes sans lignes produit — montant total par vente',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                        ),
+                  )
+                else
+                  Text(
+                    'Dernière vente : $lastSale',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Card(
       child: InkWell(
@@ -669,6 +783,24 @@ class _CategoriesTab extends StatelessWidget {
   final List<CategorySalesSummary> categories;
   final bool isLoading;
 
+  void _showCategoryDetails(BuildContext context, CategorySalesSummary category) {
+    final session = context.read<SalesAnalysisBloc>().session;
+    final query = context.read<SalesAnalysisBloc>().state.query;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _CategoryProductsBottomSheet(
+          session: session,
+          query: query,
+          category: category,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (categories.isEmpty) {
@@ -690,22 +822,33 @@ class _CategoriesTab extends StatelessWidget {
             final category = categories[index];
             return Card(
               child: ListTile(
+                onTap: () => _showCategoryDetails(context, category),
                 title: Text(category.categoryName),
                 subtitle: Text(
                   '${category.productCount} produit(s) · '
                   '${formatQuantitySold(category.quantitySold)} vendu(s)',
                 ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      'CA',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'CA',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        Text(
+                          formatFcfa(category.revenue),
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ],
                     ),
-                    Text(
-                      formatFcfa(category.revenue),
-                      style: Theme.of(context).textTheme.titleSmall,
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                   ],
                 ),
@@ -917,27 +1060,51 @@ class _PricesTab extends StatelessWidget {
 
             return Card(
               child: ListTile(
+                onTap: () {
+                  final session = context.read<SalesAnalysisBloc>().session;
+                  final query = context.read<SalesAnalysisBloc>().state.query;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProductSalesDetailPage(
+                        session: session,
+                        query: query,
+                        productId: line.productId,
+                        productName: line.productName,
+                      ),
+                    ),
+                  );
+                },
                 title: Text(line.productName),
                 subtitle: Text(
                   '${formatRelativeSaleDate(line.soldAt)} · '
                   '${line.sellerName ?? 'Vendeur'} · $deltaLabel',
                 ),
-                trailing: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (line.catalogPrice != null)
-                      Text(
-                        'Cat. ${formatFcfa(line.catalogPrice!)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    Text(
-                      formatFcfa(line.unitPrice),
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: delta != null && delta < 0
-                                ? Theme.of(context).colorScheme.error
-                                : null,
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (line.catalogPrice != null)
+                          Text(
+                            'Cat. ${formatFcfa(line.catalogPrice!)}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
+                        Text(
+                          formatFcfa(line.unitPrice),
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                color: delta != null && delta < 0
+                                    ? Theme.of(context).colorScheme.error
+                                    : null,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                   ],
                 ),
@@ -1103,6 +1270,265 @@ class _ErrorBody extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CategoryProductsBottomSheet extends StatefulWidget {
+  const _CategoryProductsBottomSheet({
+    required this.session,
+    required this.query,
+    required this.category,
+  });
+
+  final AuthSession session;
+  final SalesAnalysisQuery query;
+  final CategorySalesSummary category;
+
+  @override
+  State<_CategoryProductsBottomSheet> createState() =>
+      _CategoryProductsBottomSheetState();
+}
+
+class _CategoryProductsBottomSheetState
+    extends State<_CategoryProductsBottomSheet> {
+  late Future<List<ProductSalesSummary>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = sl<ListProductSummariesByCategory>()(
+      shopId: widget.session.shop.id,
+      query: widget.query,
+      categoryId: widget.category.categoryId,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Text(
+                  widget.category.categoryName,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: FutureBuilder<List<ProductSalesSummary>>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Erreur : ${snapshot.error}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.error,
+                          ),
+                        ),
+                      );
+                    }
+                    final products = snapshot.data ?? [];
+                    if (products.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'Aucun produit vendu dans cette catégorie.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        final product = products[index];
+                        final isHeadless =
+                            SalesAnalysisHeadlessLabels.isHeadlessProductName(
+                          product.productName,
+                        );
+                        final lastSale = product.lastSaleAt != null
+                            ? formatRelativeSaleDate(product.lastSaleAt!)
+                            : '—';
+
+                        return Card(
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ProductSalesDetailPage(
+                                    session: widget.session,
+                                    query: widget.query,
+                                    productId: product.productId,
+                                    productName: product.productName,
+                                  ),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          product.productName,
+                                          style: theme.textTheme.titleSmall
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: AppSpacing.sm),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme
+                                              .secondaryContainer,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '${formatQuantitySold(product.quantitySold)} u',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme
+                                                .onSecondaryContainer,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Chiffre d\'affaires',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                              fontSize: 10,
+                                              color: theme.colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            formatFcfa(product.revenue),
+                                            style: theme.textTheme.titleSmall
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            'Prix moyen',
+                                            style: theme.textTheme.labelSmall
+                                                ?.copyWith(
+                                              fontSize: 10,
+                                              color: theme.colorScheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            formatFcfa(
+                                                product.averageUnitPrice),
+                                            style: theme.textTheme.titleSmall
+                                                ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color:
+                                                  theme.colorScheme.primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  if (isHeadless)
+                                    Text(
+                                      'Ventes sans lignes produit — montant total par vente',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      'Dernière vente : $lastSale',
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

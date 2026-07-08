@@ -86,3 +86,11 @@ class OfflineGraceExpiredFailure extends Failure {
           'Votre accès hors ligne a expiré. Connectez-vous à internet pour vous reconnecter.',
         );
 }
+
+/// Session cloud expirée sans PIN récent — pas de dialogue WhatsApp immédiat.
+class CloudReconnectRequiredFailure extends Failure {
+  const CloudReconnectRequiredFailure([
+    super.message = 'Connexion au serveur requise. La synchronisation reprendra '
+        'après une nouvelle authentification cloud.',
+  ]);
+}

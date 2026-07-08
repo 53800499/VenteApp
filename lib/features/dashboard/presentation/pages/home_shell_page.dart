@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/widgets/cloud_session_notice.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
@@ -45,8 +46,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _bootstrapNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _bootstrapNotifications();
+      if (mounted) {
+        await maybeShowCloudSessionStartupNotice(context);
+      }
     });
   }
 
@@ -65,7 +69,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
     }
   }
 
-  void _openNewSale() {
+  void _openNewSale(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NewSalePage(session: widget.session),
@@ -108,13 +112,16 @@ class _HomeShellPageState extends State<HomeShellPage> {
     });
   }
 
-  void _onTabSelected(int index) {
+  void _onTabSelected(BuildContext context, int index) {
     setState(() {
       _currentIndex = index;
       if (index != 2) _lowStockFilter = false;
       if (index != 3) _debtorsFilter = false;
       if (index == 3) _customersTabKey++;
     });
+    if (index == 0) {
+      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+    }
   }
 
   @override
@@ -132,12 +139,16 @@ class _HomeShellPageState extends State<HomeShellPage> {
           create: (_) => DashboardBloc(
             getDashboard: sl(),
             session: widget.session,
+            syncService: sl(),
           )..add(const DashboardLoadRequested()),
         ),
         BlocProvider(
           create: (_) => SaleListBloc(
             listSales: sl(),
+            repository: sl(),
+            syncPolicy: sl(),
             session: widget.session,
+            syncService: sl(),
           )..add(const SaleListLoadRequested()),
         ),
       ],
@@ -153,7 +164,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
             debtorsFilter: _debtorsFilter,
             onLowStockTap: _openLowStockProducts,
             onDebtorsTap: _openDebtors,
-            onNewSaleTap: _openNewSale,
+            onNewSaleTap: () => _openNewSale(context),
             onSalesHistoryTap: _openSalesTab,
           );
 
@@ -170,7 +181,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                         ? NavigationRailLabelType.all
                         : NavigationRailLabelType.selected,
                     indicatorColor: colorScheme.primaryContainer,
-                    onDestinationSelected: _onTabSelected,
+                    onDestinationSelected: (index) => _onTabSelected(context, index),
                     leading: Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: _ShellAvatar(
@@ -272,7 +283,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                     child: SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: _openNewSale,
+                        onPressed: () => _openNewSale(context),
                         icon: const Icon(Icons.add_rounded),
                         label: const Text('Nouvelle vente'),
                       ),
@@ -296,7 +307,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                       backgroundColor: Colors.transparent,
                       elevation: 0,
                       indicatorColor: colorScheme.primaryContainer,
-                      onDestinationSelected: _onTabSelected,
+                      onDestinationSelected: (index) => _onTabSelected(context, index),
                       destinations: const [
                         NavigationDestination(
                           icon: Icon(Icons.home_outlined),

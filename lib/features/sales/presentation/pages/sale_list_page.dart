@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../dashboard/presentation/bloc/dashboard_bloc.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -204,6 +205,7 @@ class _SaleListPageState extends State<SaleListPage> {
     );
     if (created == true && context.mounted) {
       context.read<SaleListBloc>().add(const SaleListRefreshRequested());
+      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
     }
   }
 
@@ -215,6 +217,7 @@ class _SaleListPageState extends State<SaleListPage> {
     );
     if (created == true && context.mounted) {
       context.read<SaleListBloc>().add(const SaleListRefreshRequested());
+      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
     }
   }
 
@@ -242,6 +245,69 @@ class _SaleListTile extends StatelessWidget {
     final time =
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     final isCancelled = sale.status == SaleStatus.cancelled;
+    final isCompact = context.isCompactScreen;
+
+    final titleWidget = Text(
+      sale.receiptNumber ?? 'Vente #${sale.id}',
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        decoration: isCancelled ? TextDecoration.lineThrough : null,
+      ),
+    );
+
+    final detailsText = [
+      time,
+      if (sale.customerName != null) sale.customerName!,
+      if (isCancelled) 'Annulée',
+    ].join(' · ');
+
+    final priceWidget = Text(
+      formatFcfa(sale.totalAmount),
+      style: (isCompact
+              ? Theme.of(context).textTheme.titleSmall
+              : Theme.of(context).textTheme.titleMedium)
+          ?.copyWith(
+        color: isCancelled
+            ? Theme.of(context).colorScheme.outline
+            : Theme.of(context).colorScheme.primary,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
+    if (isCompact) {
+      return Card(
+        child: ListTile(
+          onTap: onTap,
+          leading: CircleAvatar(
+            backgroundColor: isCancelled
+                ? Theme.of(context).colorScheme.errorContainer
+                : Theme.of(context).colorScheme.primaryContainer,
+            child: Icon(
+              sale.saleType == SaleType.quick
+                  ? Icons.flash_on
+                  : Icons.receipt_long_outlined,
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ),
+          title: titleWidget,
+          subtitle: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  detailsText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              priceWidget,
+            ],
+          ),
+        ),
+      );
+    }
 
     return Card(
       child: ListTile(
@@ -257,27 +323,9 @@ class _SaleListTile extends StatelessWidget {
             color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),
-        title: Text(
-          sale.receiptNumber ?? 'Vente #${sale.id}',
-          style: TextStyle(
-            decoration: isCancelled ? TextDecoration.lineThrough : null,
-          ),
-        ),
-        subtitle: Text(
-          [
-            time,
-            if (sale.customerName != null) sale.customerName!,
-            if (isCancelled) 'Annulée',
-          ].join(' · '),
-        ),
-        trailing: Text(
-          formatFcfa(sale.totalAmount),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: isCancelled
-                    ? Theme.of(context).colorScheme.outline
-                    : null,
-              ),
-        ),
+        title: titleWidget,
+        subtitle: Text(detailsText),
+        trailing: priceWidget,
       ),
     );
   }

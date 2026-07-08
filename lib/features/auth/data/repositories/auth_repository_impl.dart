@@ -5,6 +5,8 @@ import 'package:drift/drift.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/auth/cloud_session_repair_service.dart';
+import '../../../../core/auth/recent_pin_proof.dart';
 import '../../../../core/database/app_database.dart' hide AuthSession;
 import '../../../../core/errors/auth_error_humanizer.dart';
 import '../../../../core/constants/api_config.dart';
@@ -51,6 +53,8 @@ class AuthRepositoryImpl implements AuthRepository {
     NetworkInfo? networkInfo,
     ApiClient? apiClient,
     CloudSyncEnabler? cloudSyncEnabler,
+    CloudSessionRepairService? cloudSessionRepair,
+    RecentPinProof? recentPinProof,
     OnlineSessionReadyCallback? onOnlineSessionReady,
     CloudSessionRestoredCallback? onCloudSessionRestored,
     Uuid? uuid,
@@ -68,6 +72,8 @@ class AuthRepositoryImpl implements AuthRepository {
         _networkInfo = networkInfo ?? const NetworkInfo.alwaysOffline(),
         _apiClient = apiClient,
         _cloudSyncEnabler = cloudSyncEnabler,
+        _cloudSessionRepair = cloudSessionRepair,
+        _recentPinProof = recentPinProof ?? RecentPinProof(),
         _onOnlineSessionReady = onOnlineSessionReady,
         _onCloudSessionRestored = onCloudSessionRestored,
         _uuid = uuid ?? const Uuid(),
@@ -86,6 +92,8 @@ class AuthRepositoryImpl implements AuthRepository {
   final NetworkInfo _networkInfo;
   final ApiClient? _apiClient;
   final CloudSyncEnabler? _cloudSyncEnabler;
+  final CloudSessionRepairService? _cloudSessionRepair;
+  final RecentPinProof _recentPinProof;
   final OnlineSessionReadyCallback? _onOnlineSessionReady;
   final CloudSessionRestoredCallback? _onCloudSessionRestored;
   final Uuid _uuid;
@@ -195,11 +203,20 @@ class AuthRepositoryImpl implements AuthRepository {
         }
         return session;
       } on InvalidPinFailure {
-        if (_remote != null && await _networkInfo.isConnected) {
-          return _loginWithPinOnline(
-            pin: pin,
-            serverShopId: serverShopId,
-            userId: userId,
+        // Le cloud ne tranche que pour un PIN local provisoire (nouvel appareil
+        // post-WhatsApp). Un PIN erroné d'un utilisateur établi reste une erreur
+        // locale : on ne contacte pas le serveur.
+        if (await _isPinProvisional(localShopId: localShopId, userId: userId)) {
+          if (_remote != null && await _networkInfo.isConnected) {
+            return _loginWithPinOnline(
+              pin: pin,
+              serverShopId: serverShopId,
+              userId: userId,
+            );
+          }
+          throw const NetworkFailure(
+            'Connexion internet requise pour valider ce PIN la première fois '
+            'sur cet appareil.',
           );
         }
         rethrow;
@@ -250,6 +267,53 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   Future<void> _refreshOnlineCredentialsAfterLocalPin({
+    required String pin,
+    required int shopId,
+    required int localShopId,
+    int? userId,
+  }) async {
+    final repair = _cloudSessionRepair;
+    if (repair == null) {
+      await _legacyRefreshOnlineCredentialsAfterLocalPin(
+        pin: pin,
+        shopId: shopId,
+        localShopId: localShopId,
+        userId: userId,
+      );
+      return;
+    }
+
+    try {
+      final serverUserId = userId != null
+          ? await _resolveServerUserId(
+              localShopId: localShopId,
+              userId: userId,
+            )
+          : null;
+
+      _recentPinProof.record(
+        pin: pin,
+        serverShopId: shopId,
+        localShopId: localShopId,
+        serverUserId: serverUserId,
+      );
+
+      final outcome = await repair.repairAfterPinUnlock();
+      if (outcome == CloudRepairOutcome.alreadyValid ||
+          outcome == CloudRepairOutcome.refreshed ||
+          outcome == CloudRepairOutcome.pinLogin) {
+        _onOnlineSessionReady?.call(localShopId);
+        _recentPinProof.clear();
+      } else if (outcome == CloudRepairOutcome.failed) {
+        _recentPinProof.clear();
+        await repair.onRepairExhausted?.call();
+      }
+    } on Object {
+      // La session locale est déjà ouverte ; la synchro API peut attendre.
+    }
+  }
+
+  Future<void> _legacyRefreshOnlineCredentialsAfterLocalPin({
     required String pin,
     required int shopId,
     required int localShopId,
@@ -314,6 +378,21 @@ class AuthRepositoryImpl implements AuthRepository {
     return true;
   }
 
+  @override
+  Future<bool> repairCloudSessionWithPin({
+    required String pin,
+    required int serverShopId,
+    required int localShopId,
+    int? serverUserId,
+  }) {
+    return _attemptOnlinePinLoginForCredentials(
+      pin: pin,
+      serverShopId: serverShopId,
+      localShopId: localShopId,
+      serverUserId: serverUserId,
+    );
+  }
+
   Future<User> _persistOnlineLoginResult(
     LoginSuccessData result, {
     String? pin,
@@ -362,11 +441,12 @@ class AuthRepositoryImpl implements AuthRepository {
       );
     }
 
-    return _loginWithBiometricLocal(shopId: localShopId, userId: userId)
-        .then((session) async {
-      await _ensureOnlineSessionAfterUnlock(localShopId);
-      return session;
-    });
+    final session =
+        await _loginWithBiometricLocal(shopId: localShopId, userId: userId);
+    // Non bloquant : la session locale est ouverte immédiatement, la session
+    // en ligne s'établit en arrière-plan (évite tout loader infini).
+    unawaited(_ensureOnlineSessionAfterUnlock(localShopId));
+    return session;
   }
 
   @override
@@ -710,6 +790,7 @@ class AuthRepositoryImpl implements AuthRepository {
     await (_db.update(_db.users)..where((u) => u.id.equals(userId))).write(
       UsersCompanion(
         pinHash: Value(newHash),
+        pinProvisional: const Value(false),
         updatedAt: Value(timestamp),
         version: Value(user.version + 1),
       ),
@@ -717,7 +798,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
     await _db.into(_db.auditLogs).insert(
           AuditLogsCompanion.insert(
-            shopId: shopId,
+      shopId: shopId,
             userId: userId,
             action: 'pin_changed',
             module: 'auth',
@@ -725,7 +806,7 @@ class AuthRepositoryImpl implements AuthRepository {
             entityTable: 'users',
             createdAt: timestamp,
           ),
-        );
+    );
   }
 
   @override
@@ -815,23 +896,12 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     if (_isOnlineMode && await _networkInfo.isConnected) {
-      if (await _credentials.hasCredentials()) {
-        if (!await _credentials.hasValidAccessToken() &&
-            await _credentials.hasValidRefreshToken()) {
-          try {
-            await _apiClient?.refreshTokensIfNeeded();
-          } on Object {
-            // Refresh transitoire — travail offline conservé.
-          }
-        }
-
-        if (!await _credentials.hasValidAccessToken() &&
-            !await _credentials.hasValidRefreshToken()) {
-          await _credentials.clear();
-        }
-      }
-
-      await _ensureOnlineSessionAfterUnlock(shopId);
+      // Déverrouillage/restauration instantané : le rafraîchissement de la
+      // session en ligne s'exécute en arrière-plan pour ne JAMAIS bloquer l'UI.
+      // Le PIN ne fait que valider ; la session locale est déjà ouverte et la
+      // synchro cloud peut se faire ensuite sans laisser l'écran sur un loader
+      // (serveur lent, refresh token rejeté, dialogue de reconnexion…).
+      unawaited(_refreshOnlineSessionAfterRestore(shopId));
     }
 
     final settings = await _getSettings(shopId);
@@ -917,11 +987,18 @@ class AuthRepositoryImpl implements AuthRepository {
           return session;
         }
       } on InvalidPinFailure {
-        if (_remote != null && await _networkInfo.isConnected) {
-          return _loginWithPinOnline(
-            pin: pin,
-            serverShopId: serverShopId,
-            userId: userId,
+        // Idem : bascule serveur uniquement pour un PIN provisoire.
+        if (await _isPinProvisional(localShopId: localShopId, userId: userId)) {
+          if (_remote != null && await _networkInfo.isConnected) {
+            return _loginWithPinOnline(
+              pin: pin,
+              serverShopId: serverShopId,
+              userId: userId,
+            );
+          }
+          throw const NetworkFailure(
+            'Connexion internet requise pour valider ce PIN la première fois '
+            'sur cet appareil.',
           );
         }
         rethrow;
@@ -947,19 +1024,19 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      final lockState = _lockoutPolicy.evaluate(
-        lockedUntil: user.lockedUntil,
-        lockoutCount: user.lockoutCount,
+    final lockState = _lockoutPolicy.evaluate(
+      lockedUntil: user.lockedUntil,
+      lockoutCount: user.lockoutCount,
+    );
+    if (lockState.isLocked) {
+      throw AccountLockedFailure(
+        lockedUntil: lockState.lockedUntil!,
+        remainingSeconds: lockState.remainingSeconds,
       );
-      if (lockState.isLocked) {
-        throw AccountLockedFailure(
-          lockedUntil: lockState.lockedUntil!,
-          remainingSeconds: lockState.remainingSeconds,
-        );
-      }
-      if (lockState.requiresEmergencyRecovery) {
-        throw const EmergencyRecoveryRequiredFailure();
-      }
+    }
+    if (lockState.requiresEmergencyRecovery) {
+      throw const EmergencyRecoveryRequiredFailure();
+    }
 
       final session = await restoreSession();
       if (session != null && session.user.id == user.id) {
@@ -1007,6 +1084,17 @@ class AuthRepositoryImpl implements AuthRepository {
 
     if (!await _credentials.hasCredentials()) return;
 
+    final repair = _cloudSessionRepair;
+    if (repair != null) {
+      final outcome = await repair.repair(attemptRefresh: true);
+      if (outcome == CloudRepairOutcome.alreadyValid ||
+          outcome == CloudRepairOutcome.refreshed ||
+          outcome == CloudRepairOutcome.pinLogin) {
+        _onOnlineSessionReady?.call(localShopId);
+      }
+      return;
+    }
+
     if (!await _credentials.hasValidAccessToken() &&
         await _credentials.hasValidRefreshToken()) {
       try {
@@ -1018,6 +1106,33 @@ class AuthRepositoryImpl implements AuthRepository {
 
     if (await _credentials.hasValidAccessToken()) {
       _onOnlineSessionReady?.call(localShopId);
+    }
+  }
+
+  /// Rafraîchit la session en ligne après une restauration/déverrouillage
+  /// **sans bloquer** le retour de [restoreSession]. Toute erreur réseau est
+  /// avalée : la session locale reste ouverte et la synchro retentera plus tard.
+  Future<void> _refreshOnlineSessionAfterRestore(int shopId) async {
+    try {
+      if (await _credentials.hasCredentials()) {
+        if (!await _credentials.hasValidAccessToken() &&
+            await _credentials.hasValidRefreshToken()) {
+          try {
+            await _apiClient?.refreshTokensIfNeeded();
+          } on Object {
+            // Refresh transitoire — travail offline conservé.
+          }
+        }
+
+        if (!await _credentials.hasValidAccessToken() &&
+            !await _credentials.hasValidRefreshToken()) {
+          await _credentials.clear();
+        }
+      }
+
+      await _ensureOnlineSessionAfterUnlock(shopId);
+    } on Object {
+      // Session locale déjà ouverte ; la synchro API peut attendre.
     }
   }
 
@@ -1042,6 +1157,8 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> lockActiveSession() async {
+    _recentPinProof.clear();
+    _cloudSessionRepair?.clearAwaitingState();
     final token = await _sessionStorage.getSessionToken();
     if (token != null) {
       await (_db.delete(_db.authSessions)..where((s) => s.id.equals(token)))
@@ -1708,6 +1825,11 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     if (!_pinHasher.compare(pinVo.value, user.pinHash)) {
+      if (user.pinProvisional) {
+        // Hash local encore provisoire (post-WhatsApp sur nouvel appareil) :
+        // ne pas pénaliser localement, le serveur reste l'autorité du PIN.
+        throw const InvalidPinFailure(0);
+      }
       await _handleFailedAttempt(user);
     }
 
@@ -1803,8 +1925,8 @@ class AuthRepositoryImpl implements AuthRepository {
         lastLoginAt: Value(loginAt),
         updatedAt: Value(loginAt),
         version: Value(user.version + 1),
-      ),
-    );
+          ),
+        );
 
     final updatedUser = user.copyWith(
       lastLoginAt: Value(loginAt),
@@ -1890,6 +2012,9 @@ class AuthRepositoryImpl implements AuthRepository {
           pinHash: pin != null
               ? Value(_pinHasher.hash(Pin.create(pin).value))
               : const Value.absent(),
+          // Un vrai PIN vient d'être enregistré → le hash n'est plus provisoire.
+          pinProvisional:
+              pin != null ? const Value(false) : const Value.absent(),
           updatedAt: Value(timestamp),
           version: Value(existing.version + 1),
           serverId: Value('${apiUser.id}'),
@@ -1911,6 +2036,8 @@ class AuthRepositoryImpl implements AuthRepository {
             shopId: localShopId,
             name: apiUser.name,
             pinHash: pinHash,
+            // Sans PIN fourni, le hash est aléatoire → provisoire.
+            pinProvisional: Value(pin == null),
             role: Value(apiUser.role),
             biometricEnabled: Value(apiUser.biometricEnabled),
             lastLoginAt: Value(apiUser.lastLoginAt),
@@ -1961,7 +2088,7 @@ class AuthRepositoryImpl implements AuthRepository {
     if (byServerId != null) return shopId;
 
     return shopId;
-  }
+    }
 
   Future<int> _resolveLocalShopId(int serverShopId, {String? shopName}) async {
     final byServer = await (_db.select(_db.shops)
@@ -2109,6 +2236,20 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     return users.first;
+  }
+
+  /// Vrai si le PIN local de l'utilisateur ciblé est encore provisoire
+  /// (hash aléatoire post-WhatsApp), seul cas où le serveur valide le PIN.
+  Future<bool> _isPinProvisional({
+    required int localShopId,
+    int? userId,
+  }) async {
+    try {
+      final user = await _resolveUser(shopId: localShopId, userId: userId);
+      return user.pinProvisional;
+    } on Object {
+      return false;
+    }
   }
 
   /// Convertit un id utilisateur local (écran PIN) en id serveur pour l'API.

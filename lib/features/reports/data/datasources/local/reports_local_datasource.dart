@@ -4,6 +4,10 @@ import '../../../../../core/database/app_database.dart';
 import '../../../../../core/shop/shop_hierarchy.dart';
 import '../../../domain/services/report_aggregation_service.dart';
 
+/// Libellé du poste regroupant les ventes complétées sans détail produit
+/// (ventes rapides, ventes synchronisées depuis le serveur sans lignes).
+const _headlessTopProductLabel = 'Ventes sans détail produit';
+
 class ReportsLocalDatasource {
   ReportsLocalDatasource(this._db);
 
@@ -84,7 +88,9 @@ class ReportsLocalDatasource {
       innerJoin(_db.sales, _db.sales.id.equalsExp(_db.saleItems.saleId)),
     ])
       ..where(
-        _db.saleItems.shopId.isIn(shopIds) &
+        // Scope par la vente (source autoritaire) plutôt que par la ligne :
+        // certaines lignes synchronisées peuvent avoir un shopId non fiable.
+        _db.sales.shopId.isIn(shopIds) &
             _db.sales.status.equals('completed') &
             _db.sales.createdAt.isBiggerOrEqualValue(fromMs) &
             _db.sales.createdAt.isSmallerOrEqualValue(toMs),
@@ -111,7 +117,8 @@ class ReportsLocalDatasource {
       innerJoin(_db.sales, _db.sales.id.equalsExp(_db.saleItems.saleId)),
     ])
       ..where(
-        _db.saleItems.shopId.isIn(shopIds) &
+        // Scope par la vente (source autoritaire), pas par la ligne.
+        _db.sales.shopId.isIn(shopIds) &
             _db.sales.status.equals('completed') &
             _db.sales.createdAt.isBiggerOrEqualValue(fromMs) &
             _db.sales.createdAt.isSmallerOrEqualValue(toMs),
@@ -144,7 +151,52 @@ class ReportsLocalDatasource {
       }
     }
 
+    // Ventes complétées sans lignes produit (ventes rapides, ventes
+    // synchronisées depuis le serveur sans détail) : regroupées dans un poste
+    // dédié pour ne pas les masquer dans le top produits.
+    final headless = await _fetchHeadlessSaleTotals(shopIds, fromMs, toMs);
+    if (headless.count > 0) {
+      byKey[_headlessTopProductLabel] = ReportTopProductRow(
+        productName: _headlessTopProductLabel,
+        quantitySold: headless.count.toDouble(),
+        revenue: headless.revenue,
+      );
+    }
+
     return byKey.values.toList();
+  }
+
+  /// Totaux des ventes complétées de la période dépourvues de lignes produit.
+  Future<({int count, int revenue})> _fetchHeadlessSaleTotals(
+    List<int> shopIds,
+    int fromMs,
+    int toMs,
+  ) async {
+    final sales = await (_db.select(_db.sales)
+          ..where(
+            (s) =>
+                s.shopId.isIn(shopIds) &
+                s.status.equals('completed') &
+                s.createdAt.isBiggerOrEqualValue(fromMs) &
+                s.createdAt.isSmallerOrEqualValue(toMs),
+          ))
+        .get();
+    if (sales.isEmpty) return (count: 0, revenue: 0);
+
+    final saleIds = sales.map((s) => s.id).toList();
+    final itemRows = await (_db.select(_db.saleItems)
+          ..where((i) => i.saleId.isIn(saleIds)))
+        .get();
+    final salesWithItems = itemRows.map((i) => i.saleId).toSet();
+
+    var count = 0;
+    var revenue = 0;
+    for (final sale in sales) {
+      if (salesWithItems.contains(sale.id)) continue;
+      count++;
+      revenue += sale.totalAmount;
+    }
+    return (count: count, revenue: revenue);
   }
 
   Future<List<ReportSellerRow>> _fetchSellerPerformance(

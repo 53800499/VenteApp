@@ -134,11 +134,12 @@ class CustomersLocalDatasource {
   }
 
   Future<Customer?> findCustomerByServerId(int shopId, String serverId) async {
-    final row = await (_db.select(_db.customers)
+    final rows = await (_db.select(_db.customers)
           ..where(
             (c) => c.shopId.equals(shopId) & c.serverId.equals(serverId),
           ))
-        .getSingleOrNull();
+        .get();
+    final row = rows.isEmpty ? null : rows.first;
     if (row == null) return null;
 
     final stats = await _statsForCustomer(shopId, row.id);
@@ -355,13 +356,14 @@ class CustomersLocalDatasource {
     required int createdAt,
     required int updatedAt,
   }) async {
-    final existing = await (_db.select(_db.customers)
+    final existingRows = await (_db.select(_db.customers)
           ..where(
             (c) =>
                 c.shopId.equals(shopId) &
                 c.serverId.equals('$remoteId'),
           ))
-        .getSingleOrNull();
+        .get();
+    final existing = existingRows.isEmpty ? null : existingRows.first;
 
     if (existing != null) {
       await (_db.update(_db.customers)..where((c) => c.id.equals(existing.id)))
@@ -377,6 +379,10 @@ class CustomersLocalDatasource {
           syncedAt: Value(nowMs()),
         ),
       );
+      if (existingRows.length > 1) {
+        final duplicateIds = existingRows.skip(1).map((c) => c.id).toList();
+        await (_db.delete(_db.customers)..where((c) => c.id.isIn(duplicateIds))).go();
+      }
       return;
     }
 
@@ -516,5 +522,12 @@ class CustomersLocalDatasource {
       totalPurchases: totalPurchases,
       lastActivityAt: lastActivityAt,
     );
+  }
+
+  Future<int> resolveLocalShopId(int serverShopId) async {
+    final row = await (_db.select(_db.shops)
+          ..where((s) => s.serverId.equals('$serverShopId')))
+        .getSingleOrNull();
+    return row?.id ?? serverShopId;
   }
 }

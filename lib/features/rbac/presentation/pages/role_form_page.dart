@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../domain/entities/rbac_entities.dart';
@@ -87,6 +88,14 @@ class _RoleFormPageState extends State<RoleFormPage> {
       );
       return;
     }
+
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: widget.isEditing ? 'Modifier un rôle' : 'Créer un rôle',
+    )) {
+      return;
+    }
+    if (!mounted) return;
 
     setState(() => _saving = true);
     try {

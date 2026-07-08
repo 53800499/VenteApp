@@ -19,6 +19,10 @@ class Users extends Table {
   IntColumn get shopId => integer().references(Shops, #id)();
   TextColumn get name => text()();
   TextColumn get pinHash => text()();
+  /// PIN local encore provisoire (hash aléatoire créé après connexion WhatsApp
+  /// sur un nouvel appareil) : autorise une validation serveur au 1er PIN.
+  BoolColumn get pinProvisional =>
+      boolean().withDefault(const Constant(false))();
   TextColumn get role =>
       text().withDefault(const Constant('owner'))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();

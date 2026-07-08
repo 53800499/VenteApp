@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/enums/permission.dart';
@@ -105,6 +106,14 @@ class _RoleDetailPageState extends State<RoleDetailPage> {
   Future<void> _deleteRole() async {
     final role = _role;
     if (role == null) return;
+
+    if (!await ensureCloudTrustedOperation(
+      context,
+      actionLabel: 'Supprimer un rôle',
+    )) {
+      return;
+    }
+    if (!mounted) return;
 
     final confirmed = await ActionFeedback.confirm(
       context: context,

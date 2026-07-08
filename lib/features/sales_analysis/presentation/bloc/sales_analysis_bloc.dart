@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../../core/sync/sync_snapshot.dart';
 import '../../../../core/utils/benin_period_range.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sales_analysis_entities.dart';
@@ -22,6 +26,7 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     required GetSalesTrendAnalysis getTrends,
     required ClearSalesAnalysisRemoteCache clearRemoteCache,
     required AuthSession session,
+    SyncService? syncService,
   })  : _listProducts = listProducts,
         _listEmployees = listEmployees,
         _listCustomers = listCustomers,
@@ -35,6 +40,11 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     on<SalesAnalysisLoadRequested>(_onLoad);
     on<SalesAnalysisPeriodChanged>(_onPeriodChanged);
     on<SalesAnalysisTabChanged>(_onTabChanged);
+    on<SalesAnalysisSyncRefreshRequested>(_onSyncRefresh);
+
+    // Recalcule l'analyse à la fin de chaque cycle de sync (les nouvelles
+    // données sont déjà en base à ce moment).
+    _syncSub = syncService?.snapshots.listen(_onSyncSnapshot);
   }
 
   final ListProductSalesAnalysis _listProducts;
@@ -47,9 +57,30 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
   final ClearSalesAnalysisRemoteCache _clearRemoteCache;
   final AuthSession _session;
 
+  StreamSubscription<SyncSnapshot>? _syncSub;
+  DateTime? _lastHandledSyncAt;
+
   AuthSession get session => _session;
 
   int get shopId => _session.shop.id;
+
+  void _onSyncSnapshot(SyncSnapshot snapshot) {
+    if (snapshot.phase != SyncRunPhase.completed) return;
+    if (snapshot.shopId != null && snapshot.shopId != _session.shop.id) return;
+
+    final completedAt = snapshot.lastCompletedAt;
+    if (completedAt != null && completedAt == _lastHandledSyncAt) return;
+    _lastHandledSyncAt = completedAt;
+
+    if (isClosed) return;
+    add(const SalesAnalysisSyncRefreshRequested());
+  }
+
+  @override
+  Future<void> close() {
+    _syncSub?.cancel();
+    return super.close();
+  }
 
   Future<void> _onLoad(
     SalesAnalysisLoadRequested event,
@@ -82,6 +113,15 @@ class SalesAnalysisBloc extends Bloc<SalesAnalysisEvent, SalesAnalysisState> {
     Emitter<SalesAnalysisState> emit,
   ) {
     emit(state.copyWith(tabIndex: event.index));
+  }
+
+  Future<void> _onSyncRefresh(
+    SalesAnalysisSyncRefreshRequested event,
+    Emitter<SalesAnalysisState> emit,
+  ) async {
+    // Ne bascule pas en « chargement » : on garde l'affichage courant pendant
+    // le recalcul déclenché par la synchronisation.
+    await _fetch(emit);
   }
 
   Future<void> _fetch(Emitter<SalesAnalysisState> emit) async {

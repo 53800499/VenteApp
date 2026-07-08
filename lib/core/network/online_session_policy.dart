@@ -31,6 +31,7 @@ class OnlineSessionPolicy {
   /// Lecture : retomber sur le cache local (Drift) si le serveur est absent.
   static bool shouldFallbackToLocal(Object error) {
     return isNetworkUnavailable(error) ||
+        error is CloudReconnectRequiredFailure ||
         error is UnauthorizedFailure ||
         error is OfflineGraceExpiredFailure;
   }
@@ -47,6 +48,7 @@ class OnlineSessionPolicy {
 
   void handleFailure(Object error) {
     if (isNetworkUnavailable(error)) return;
+    if (error is CloudReconnectRequiredFailure) return;
     if (error is UnauthorizedFailure || error is OfflineGraceExpiredFailure) {
       notifyCloudSessionExpired();
     }
