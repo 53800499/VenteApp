@@ -225,7 +225,8 @@ class SyncConflictService {
     if (customer?.serverId == null) return;
 
     try {
-      final dto = await remote.getCustomer(int.parse(customer!.serverId!));
+      final detail = await remote.getCustomer(int.parse(customer!.serverId!));
+      final dto = detail.customer;
       await local.upsertFromRemote(
         shopId: shopId,
         remoteId: dto.id,

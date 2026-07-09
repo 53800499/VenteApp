@@ -41,6 +41,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
     with SingleTickerProviderStateMixin {
   Customer? _customer;
   List<CustomerSaleSummary> _sales = const [];
+  List<Debt> _debts = const [];
   bool _loading = true;
   bool _archiving = false;
   String? _error;
@@ -92,18 +93,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
       _error = null;
     });
     try {
-      final customer = await sl<GetCustomer>()(
-        session: widget.session,
-        customerId: widget.customerId,
-      );
-      final sales = await sl<ListCustomerSalesLifetime>()(
+      final detail = await sl<GetCustomer>()(
         session: widget.session,
         customerId: widget.customerId,
       );
       if (!mounted) return;
       setState(() {
-        _customer = customer;
-        _sales = sales;
+        _customer = detail.customer;
+        _sales = detail.sales;
+        _debts = detail.debts;
         _loading = false;
       });
     } on Failure catch (e) {
@@ -220,6 +218,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
                 session: widget.session,
                 customerId: widget.customerId,
                 customerName: customer.name,
+                initialDebts: _debts,
                 onUpdated: _load,
               ),
               _buildInfosTab(customer),
@@ -267,6 +266,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     customer.name,
@@ -326,6 +326,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Solde dû',
@@ -350,6 +351,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
               if (_canPayDebt)
                 FilledButton.icon(
                   onPressed: _recordPayment,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 44),
+                  ),
                   icon: const Icon(Icons.payments_outlined),
                   label: const Text('Payer'),
                 ),

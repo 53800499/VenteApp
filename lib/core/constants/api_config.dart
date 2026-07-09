@@ -30,7 +30,18 @@ abstract final class ApiConfig {
     var normalized = url;
     if (!normalized.startsWith('http://') &&
         !normalized.startsWith('https://')) {
-      normalized = 'https://$normalized';
+      final hasPort = RegExp(r':\d+').hasMatch(normalized);
+      final isLocal = normalized.contains('localhost') ||
+          normalized.contains('127.0.0.1') ||
+          normalized.contains('10.0.2.2') ||
+          normalized.startsWith('192.168.') ||
+          normalized.startsWith('10.') ||
+          normalized.startsWith('172.');
+      if (hasPort || isLocal) {
+        normalized = 'http://$normalized';
+      } else {
+        normalized = 'https://$normalized';
+      }
     }
     if (normalized.endsWith('/')) {
       normalized = normalized.substring(0, normalized.length - 1);
@@ -64,7 +75,7 @@ abstract final class ApiConfig {
   static const recentPinProofTtlMs = recentPinProofMinutes * 60 * 1000;
 
   /// Délai max pour un login serveur par PIN lors d'une réparation cloud.
-  static const recentPinRepairTimeout = Duration(seconds: 12);
+  static const recentPinRepairTimeout = Duration(seconds: 60);
 
   /// Durée de la session locale (indépendante du verrouillage PIN).
   static const localSessionMaxDays = 3650;

@@ -21,12 +21,14 @@ class CustomerDebtsTab extends StatefulWidget {
     required this.session,
     required this.customerId,
     required this.customerName,
+    this.initialDebts,
     this.onUpdated,
   });
 
   final AuthSession session;
   final int customerId;
   final String customerName;
+  final List<Debt>? initialDebts;
   final VoidCallback? onUpdated;
 
   @override
@@ -44,7 +46,23 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadOpenDebts();
+    if (widget.initialDebts != null) {
+      _openDebts = widget.initialDebts!;
+      _loadingOpen = false;
+    } else {
+      _loadOpenDebts();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomerDebtsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialDebts != oldWidget.initialDebts && widget.initialDebts != null) {
+      setState(() {
+        _openDebts = widget.initialDebts!;
+        _loadingOpen = false;
+      });
+    }
   }
 
   @override

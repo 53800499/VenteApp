@@ -29,12 +29,12 @@ class OfflineModeBanner extends StatefulWidget {
 
   /// Cache local affiché ; écritures réservées au serveur.
   static const adminCacheMessage =
-      'Hors ligne — données affichées depuis le cache. '
-      'Les modifications nécessitent le serveur.';
+      'Hors ligne — affichage des données de cet appareil. '
+      'La connexion au serveur est nécessaire pour faire des modifications.';
 
   /// Statistiques / rapports basés sur les données locales.
   static const hybridReadMessage =
-      'Hors ligne — statistiques basées sur les données locales.';
+      'Hors ligne — statistiques basées sur les données de cet appareil.';
 
   @override
   State<OfflineModeBanner> createState() => _OfflineModeBannerState();
@@ -95,13 +95,13 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
 
     return switch (status) {
       CloudLinkStatus.connected =>
-        'Synchronisé — vos données sont à jour sur le cloud.',
+        'Données synchronisées avec le serveur de vente.',
       CloudLinkStatus.disconnected =>
-        'Hors ligne — les ventes continuent, synchronisation à la reconnexion.',
+        'Hors ligne — vous pouvez continuer à vendre sans connexion.',
       CloudLinkStatus.syncing =>
-        'Synchronisation en cours — vos modifications seront envoyées.',
+        'Synchronisation en cours...',
       CloudLinkStatus.syncError =>
-        'Problème de synchronisation — vérifiez votre connexion.',
+        'Erreur de synchronisation. Vérifiez votre connexion.',
     };
   }
 

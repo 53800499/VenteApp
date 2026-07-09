@@ -35,10 +35,10 @@ Failure mapDioException(DioException error) {
         host == '127.0.0.1' ||
         host == '10.0.2.2';
     final hint = isLocalHost
-        ? ' Démarrez le backend (port 3010). Sur téléphone physique, configurez l\'adresse du serveur dans Plus → Connexion serveur.'
-        : ' Vérifiez l\'adresse dans Plus → Connexion serveur.';
+        ? ' Assurez-vous que l\'application serveur est bien lancée sur votre ordinateur. Sur téléphone physique, vérifiez l\'adresse dans Plus → Connexion serveur.'
+        : ' Vérifiez votre connexion internet ou l\'adresse du serveur dans Plus → Connexion serveur.';
     return NetworkFailure(
-      'Impossible de joindre le serveur (${error.requestOptions.baseUrl}).$hint',
+      'Impossible de se connecter au serveur de vente.$hint',
     );
   }
 
@@ -88,7 +88,7 @@ Failure mapDioException(DioException error) {
       if (statusCode == 401) {
         return UnauthorizedFailure(
           human == message
-              ? 'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).'
+              ? 'Session expirée. Saisissez votre PIN de connexion.'
               : human,
         );
       }
@@ -111,13 +111,13 @@ Failure mapDioException(DioException error) {
 String _httpStatusMessage(int? statusCode) {
   return switch (statusCode) {
     400 => 'Données invalides. Vérifiez votre saisie.',
-    401 => 'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).',
+    401 => 'Session expirée. Saisissez votre PIN de connexion.',
     403 => 'Action non autorisée.',
     404 => 'Boutique ou utilisateur introuvable.',
     409 => 'Une boutique existe déjà sur ce serveur. Utilisez « Se connecter » si vous êtes employé.',
     422 => 'Informations incorrectes. Vérifiez votre saisie.',
     429 => 'Trop de tentatives. Patientez avant de réessayer.',
-    500 => 'Erreur serveur. Réessayez plus tard.',
+    500 => 'Le serveur de vente a rencontré une erreur. Réessayez.',
     502 || 503 || 504 => 'Service temporairement indisponible.',
     _ => 'Erreur réseau. Réessayez.',
   };
@@ -163,7 +163,7 @@ Failure? _mapApiErrorPayload(Map<String, dynamic> apiError, int? statusCode) {
     if (statusCode == 401) {
       return UnauthorizedFailure(
         human == message
-            ? 'Session expirée. Reconnectez-vous avec votre PIN (serveur accessible).'
+            ? 'Session expirée. Saisissez votre PIN de connexion.'
             : human,
       );
     }

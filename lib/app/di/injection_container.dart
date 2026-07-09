@@ -781,6 +781,7 @@ Future<void> initDependencies() async {
     () => CustomerRepositoryImpl(
       local: sl(),
       remote: sl(),
+      debtsLocal: sl(),
       apiGuard: sl(),
       recorder: sl(),
       validation: sl(),

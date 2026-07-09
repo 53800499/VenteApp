@@ -551,4 +551,53 @@ class SalesLocalDatasource {
           ),
         );
   }
+
+  Future<bool> hasSaleItems(int shopId, String serverId) async {
+    final sale = await (_db.select(_db.sales)
+          ..where((s) => s.shopId.equals(shopId) & s.serverId.equals(serverId)))
+        .getSingleOrNull();
+    if (sale == null) return false;
+    final itemsList = await (_db.select(_db.saleItems)
+          ..where((i) => i.saleId.equals(sale.id)))
+        .get();
+    return itemsList.isNotEmpty;
+  }
+
+  Future<void> upsertSaleItemsFromRemote({
+    required int shopId,
+    required String serverId,
+    required List<SaleDetailItemApiDto> items,
+  }) async {
+    final sale = await (_db.select(_db.sales)
+          ..where((s) => s.shopId.equals(shopId) & s.serverId.equals(serverId)))
+        .getSingleOrNull();
+    if (sale == null) return;
+
+    await _db.transaction(() async {
+      await (_db.delete(_db.saleItems)..where((i) => i.saleId.equals(sale.id))).go();
+
+      for (final item in items) {
+        int? localProductId;
+        if (item.productId != null) {
+          final prod = await (_db.select(_db.products)
+                ..where((p) => p.shopId.equals(shopId) & p.serverId.equals('${item.productId}')))
+              .getSingleOrNull();
+          localProductId = prod?.id;
+        }
+
+        await _db.into(_db.saleItems).insert(
+              db.SaleItemsCompanion.insert(
+                saleId: sale.id,
+                shopId: shopId,
+                productId: Value(localProductId),
+                productName: item.productName,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                lineTotal: item.lineTotal,
+                createdAt: sale.createdAt,
+              ),
+            );
+      }
+    });
+  }
 }

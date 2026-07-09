@@ -10,8 +10,8 @@ import 'api_client.dart';
 import 'network_info.dart';
 
 /// Délais max pour les lectures hybrides (offline-first).
-const remoteReadEnsureReadyTimeout = Duration(seconds: 8);
-const remoteReadFetchTimeout = Duration(seconds: 10);
+const remoteReadEnsureReadyTimeout = Duration(seconds: 60);
+const remoteReadFetchTimeout = Duration(seconds: 60);
 
 /// Vérifie que les appels API protégés peuvent être effectués.
 class RemoteApiGuard {
@@ -37,7 +37,7 @@ class RemoteApiGuard {
       await _ensureReady().timeout(timeout);
     } on TimeoutException {
       throw const NetworkFailure(
-        'Serveur trop lent ou injoignable. Données locales affichées.',
+        'Le serveur ne répond pas assez vite. Affichage des données enregistrées sur cet appareil.',
       );
     }
   }

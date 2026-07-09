@@ -8,22 +8,26 @@ import '../../domain/services/customer_validation_service.dart';
 import '../datasources/local/customers_local_datasource.dart';
 import '../datasources/remote/customers_remote_datasource.dart';
 import '../models/customer_api_models.dart';
+import '../../../debts/data/datasources/local/debts_local_datasource.dart';
 
 class CustomerRepositoryImpl implements CustomerRepository {
   CustomerRepositoryImpl({
     required CustomersLocalDatasource local,
     required CustomersRemoteDatasource remote,
+    required DebtsLocalDatasource debtsLocal,
     required RemoteApiGuard apiGuard,
     LocalWriteSyncRecorder? recorder,
     CustomerValidationService? validation,
   })  : _local = local,
         _remote = remote,
+        _debtsLocal = debtsLocal,
         _apiGuard = apiGuard,
         _recorder = recorder,
         _validation = validation ?? const CustomerValidationService();
 
   final CustomersLocalDatasource _local;
   final CustomersRemoteDatasource _remote;
+  final DebtsLocalDatasource _debtsLocal;
   final RemoteApiGuard _apiGuard;
   final LocalWriteSyncRecorder? _recorder;
   final CustomerValidationService _validation;
@@ -78,7 +82,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
   }
 
   @override
-  Future<Customer> getCustomer({
+  Future<CustomerDetail> getCustomer({
     required int shopId,
     required int customerId,
   }) async {
@@ -87,33 +91,60 @@ class CustomerRepositoryImpl implements CustomerRepository {
       throw const NotFoundFailure('Client introuvable.');
     }
 
+    List<CustomerSaleSummary>? remoteSales;
+
     try {
       if (local.serverId != null) {
         await _apiGuard.ensureReady();
         final remote = await _remote.getCustomer(int.parse(local.serverId!));
-        final localShopId = remote.shopId > 0
-            ? await _local.resolveLocalShopId(remote.shopId)
+        final localShopId = remote.customer.shopId > 0
+            ? await _local.resolveLocalShopId(remote.customer.shopId)
             : shopId;
         await _local.upsertFromRemote(
           shopId: localShopId,
-          remoteId: remote.id,
-          name: remote.name,
-          phone: remote.phone,
-          address: remote.address,
-          note: remote.note,
-          isArchived: remote.isArchived,
-          isShared: remote.isShared,
-          createdAt: remote.createdAt,
-          updatedAt: remote.updatedAt,
+          remoteId: remote.customer.id,
+          name: remote.customer.name,
+          phone: remote.customer.phone,
+          address: remote.customer.address,
+          note: remote.customer.note,
+          isArchived: remote.customer.isArchived,
+          isShared: remote.customer.isShared,
+          createdAt: remote.customer.createdAt,
+          updatedAt: remote.customer.updatedAt,
         );
+
+        for (final debt in remote.debts) {
+          await _debtsLocal.upsertFromRemote(
+            shopId: localShopId,
+            localCustomerId: customerId,
+            remote: debt,
+          );
+        }
+
+        remoteSales = remote.sales.map((s) => s.toEntity()).toList();
       }
     } catch (_) {
       // Données locales utilisées.
     }
 
     final refreshed = await _local.findCustomer(shopId, customerId);
-    return refreshed!.copyWith(
-      phoneWarning: _validation.phoneWarning(refreshed.phone),
+    final sales = remoteSales ??
+        await _local.listCustomerSalesLifetime(
+          shopId: shopId,
+          customerId: customerId,
+        );
+    final debts = await _debtsLocal.listCustomerDebts(
+      shopId: shopId,
+      customerId: customerId,
+      openOnly: true,
+    );
+
+    return CustomerDetail(
+      customer: refreshed!.copyWith(
+        phoneWarning: _validation.phoneWarning(refreshed.phone),
+      ),
+      sales: sales,
+      debts: debts,
     );
   }
 
@@ -186,7 +217,8 @@ class CustomerRepositoryImpl implements CustomerRepository {
     required int customerId,
     required String shopName,
   }) async {
-    final customer = await getCustomer(shopId: shopId, customerId: customerId);
+    final detail = await getCustomer(shopId: shopId, customerId: customerId);
+    final customer = detail.customer;
 
     try {
       if (customer.serverId != null) {

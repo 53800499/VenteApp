@@ -610,7 +610,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     if (session.user.role != UserRole.owner) return false;
     try {
       final shops = await _listOwnedShops().timeout(
-        const Duration(seconds: 3),
+        const Duration(seconds: 60),
         onTimeout: () => throw const NetworkFailure('Délai dépassé'),
       );
       if (shops.activeShops.length > 1) {
@@ -651,7 +651,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       final session = event.shopId == current.shops.activeShopId
           ? current.provisionalSession
           : await _switchShop(shopId: event.shopId).timeout(
-              const Duration(seconds: 10),
+              const Duration(seconds: 60),
               onTimeout: () => throw const NetworkFailure(
                 'Le serveur met trop de temps à répondre. Réessayez.',
               ),

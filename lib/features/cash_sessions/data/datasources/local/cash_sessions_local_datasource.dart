@@ -514,7 +514,8 @@ class CashSessionsLocalDatasource {
   }
 
   Future<String> _userName(int userId) async {
-    final user = await (_db.select(_db.users)..where((u) => u.id.equals(userId)))
+    final user = await (_db.select(_db.users)
+          ..where((u) => u.id.equals(userId) | u.serverId.equals('$userId')))
         .getSingleOrNull();
     return user?.name ?? 'Utilisateur #$userId';
   }

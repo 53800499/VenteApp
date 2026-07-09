@@ -141,7 +141,7 @@ class _NewSalePageState extends State<NewSalePage>
         child: BlocBuilder<NewSaleBloc, NewSaleState>(
           builder: (context, state) {
             return Scaffold(
-              resizeToAvoidBottomInset: false,
+              resizeToAvoidBottomInset: true,
               appBar: AppBar(
                 title: Text(
                   widget.conversion != null
@@ -868,55 +868,57 @@ class _PaymentStep extends StatelessWidget {
             ),
           ),
         ],
-        if (state.needsCustomer) ...[
-          const SizedBox(height: AppSpacing.lg),
-          SizedBox(
-            width: MediaQuery.sizeOf(context).width - 2 * AppSpacing.md,
-            child: Row(
-              children: [
-                Text('Client', style: Theme.of(context).textTheme.titleMedium),
-                const Spacer(),
-                TextButton.icon(
-                  onPressed: state.creatingCustomer
-                      ? null
-                      : () => _showCreateCustomerSheet(context),
-                  icon: state.creatingCustomer
-                      ? SaleFeedback.inlineLoader(size: 16)
-                      : const Icon(Icons.person_add_outlined),
-                  label: Text(
-                    state.creatingCustomer ? 'Création…' : 'Nouveau',
+        const SizedBox(height: AppSpacing.lg),
+        SizedBox(
+          width: MediaQuery.sizeOf(context).width - 2 * AppSpacing.md,
+          child: Row(
+            children: [
+              Text('Client', style: Theme.of(context).textTheme.titleMedium),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: state.creatingCustomer
+                    ? null
+                    : () => _showCreateCustomerSheet(context),
+                icon: state.creatingCustomer
+                    ? SaleFeedback.inlineLoader(size: 16)
+                    : const Icon(Icons.person_add_outlined),
+                label: Text(
+                  state.creatingCustomer ? 'Création…' : 'Nouveau',
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (state.customers.isEmpty)
+          const Text(
+            'Aucun client disponible.',
+          )
+        else
+          DropdownButtonFormField<int?>(
+            decoration: const InputDecoration(
+              labelText: 'Sélectionner un client',
+              border: OutlineInputBorder(),
+            ),
+            initialValue: state.selectedCustomerId,
+            items: [
+              const DropdownMenuItem<int?>(
+                value: null,
+                child: Text('Aucun client (vente anonyme)'),
+              ),
+              ...state.customers.map(
+                (c) => DropdownMenuItem<int?>(
+                  value: c.id,
+                  child: Text(
+                    c.phone != null ? '${c.name} (${c.phone})' : c.name,
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (state.customers.isEmpty)
-            const Text(
-              'Aucun client. Créez-en un pour enregistrer le crédit.',
-            )
-          else
-            DropdownButtonFormField<int>(
-              decoration: const InputDecoration(
-                labelText: 'Sélectionner un client',
-                border: OutlineInputBorder(),
               ),
-              initialValue: state.selectedCustomerId,
-              items: state.customers
-                  .map(
-                    (c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Text(
-                        c.phone != null ? '${c.name} (${c.phone})' : c.name,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (id) => context.read<NewSaleBloc>().add(
-                    NewSaleCustomerSelected(id),
-                  ),
-            ),
-        ],
+            ],
+            onChanged: (id) => context.read<NewSaleBloc>().add(
+                  NewSaleCustomerSelected(id),
+                ),
+          ),
       ],
     );
   }

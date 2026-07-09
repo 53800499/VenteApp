@@ -24,7 +24,7 @@ class GetCustomer {
 
   final CustomerRepository _repository;
 
-  Future<Customer> call({
+  Future<CustomerDetail> call({
     required AuthSession session,
     required int customerId,
   }) {

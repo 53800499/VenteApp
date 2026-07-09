@@ -114,3 +114,98 @@ class SaleListItemApiDto {
     );
   }
 }
+
+class SaleDetailApiDto {
+  const SaleDetailApiDto({
+    required this.id,
+    required this.receiptNumber,
+    required this.saleType,
+    required this.subtotal,
+    required this.discountAmount,
+    required this.totalAmount,
+    required this.amountPaid,
+    required this.amountCash,
+    required this.amountMomo,
+    required this.amountCredit,
+    required this.paymentMethod,
+    required this.status,
+    this.customerId,
+    required this.userId,
+    this.note,
+    required this.createdAt,
+    required this.items,
+  });
+
+  final int id;
+  final String receiptNumber;
+  final String saleType;
+  final int subtotal;
+  final int discountAmount;
+  final int totalAmount;
+  final int amountPaid;
+  final int amountCash;
+  final int amountMomo;
+  final int amountCredit;
+  final String paymentMethod;
+  final String status;
+  final int? customerId;
+  final int userId;
+  final String? note;
+  final int createdAt;
+  final List<SaleDetailItemApiDto> items;
+
+  factory SaleDetailApiDto.fromJson(Map<String, dynamic> json) {
+    final itemsList = json['items'] as List? ?? [];
+    return SaleDetailApiDto(
+      id: json['id'] as int,
+      receiptNumber: json['receiptNumber'] as String? ?? '',
+      saleType: json['saleType'] as String? ?? 'standard',
+      subtotal: json['subtotal'] as int? ?? 0,
+      discountAmount: json['discountAmount'] as int? ?? 0,
+      totalAmount: json['totalAmount'] as int? ?? 0,
+      amountPaid: json['amountPaid'] as int? ?? 0,
+      amountCash: json['amountCash'] as int? ?? 0,
+      amountMomo: json['amountMomo'] as int? ?? 0,
+      amountCredit: json['amountCredit'] as int? ?? 0,
+      paymentMethod: json['paymentMethod'] as String? ?? 'cash',
+      status: json['status'] as String? ?? 'completed',
+      customerId: json['customerId'] as int?,
+      userId: json['userId'] as int,
+      note: json['note'] as String?,
+      createdAt: json['createdAt'] as int,
+      items: itemsList
+          .whereType<Map<String, dynamic>>()
+          .map(SaleDetailItemApiDto.fromJson)
+          .toList(),
+    );
+  }
+}
+
+class SaleDetailItemApiDto {
+  const SaleDetailItemApiDto({
+    required this.id,
+    this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.lineTotal,
+  });
+
+  final int id;
+  final int? productId;
+  final String productName;
+  final double quantity;
+  final int unitPrice;
+  final int lineTotal;
+
+  factory SaleDetailItemApiDto.fromJson(Map<String, dynamic> json) {
+    return SaleDetailItemApiDto(
+      id: json['id'] as int,
+      productId: json['productId'] as int?,
+      productName: json['productName'] as String? ?? '',
+      quantity: (json['quantity'] as num? ?? 0).toDouble(),
+      unitPrice: json['unitPrice'] as int? ?? 0,
+      lineTotal: json['lineTotal'] as int? ?? 0,
+    );
+  }
+}

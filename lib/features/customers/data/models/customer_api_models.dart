@@ -1,4 +1,35 @@
 import '../../domain/entities/customer_entities.dart';
+import '../../../debts/data/models/debt_api_models.dart';
+
+class CustomerDetailApiDto {
+  CustomerDetailApiDto({
+    required this.customer,
+    required this.sales,
+    required this.debts,
+  });
+
+  final CustomerApiDto customer;
+  final List<CustomerSaleApiDto> sales;
+  final List<DebtApiDto> debts;
+
+  factory CustomerDetailApiDto.fromJson(Map<String, dynamic> json) {
+    final customerJson = json['customer'] ?? json;
+    final salesJson = json['sales'] ?? [];
+    final debtsJson = json['debts'] ?? [];
+
+    return CustomerDetailApiDto(
+      customer: CustomerApiDto.fromJson(customerJson as Map<String, dynamic>),
+      sales: (salesJson as List)
+          .whereType<Map<String, dynamic>>()
+          .map(CustomerSaleApiDto.fromJson)
+          .toList(),
+      debts: (debtsJson as List)
+          .whereType<Map<String, dynamic>>()
+          .map(DebtApiDto.fromJson)
+          .toList(),
+    );
+  }
+}
 
 class CustomerApiDto {
   CustomerApiDto({

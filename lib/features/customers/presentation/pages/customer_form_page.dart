@@ -126,7 +126,7 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
                 segments: const [
                   ButtonSegment(
                     value: false,
-                    label: Text('Boutique locale'),
+                    label: Text('Cette boutique'),
                     icon: Icon(Icons.store_outlined),
                   ),
                   ButtonSegment(

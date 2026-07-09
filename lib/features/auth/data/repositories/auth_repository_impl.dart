@@ -101,7 +101,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   bool get _isOnlineMode => _remote != null;
 
-  static const _onlinePinRefreshTimeout = Duration(seconds: 5);
+  static const _onlinePinRefreshTimeout = Duration(seconds: 60);
   static const _onlinePinTimeoutMessage =
       'Le serveur met trop de temps à répondre. '
       'Vérifiez la connexion (Plus → Connexion serveur) ou réessayez.';

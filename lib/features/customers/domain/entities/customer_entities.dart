@@ -1,6 +1,22 @@
 import 'package:equatable/equatable.dart';
+import '../../../debts/domain/entities/debt_entities.dart';
 
 enum CustomerSort { name, debt, lastActivity }
+
+class CustomerDetail extends Equatable {
+  const CustomerDetail({
+    required this.customer,
+    required this.sales,
+    required this.debts,
+  });
+
+  final Customer customer;
+  final List<CustomerSaleSummary> sales;
+  final List<Debt> debts;
+
+  @override
+  List<Object?> get props => [customer, sales, debts];
+}
 
 class Customer extends Equatable {
   const Customer({

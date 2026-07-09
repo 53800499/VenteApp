@@ -6,7 +6,7 @@ abstract class CustomerRepository {
     CustomerListFilters filters = const CustomerListFilters(),
   });
 
-  Future<Customer> getCustomer({
+  Future<CustomerDetail> getCustomer({
     required int shopId,
     required int customerId,
   });

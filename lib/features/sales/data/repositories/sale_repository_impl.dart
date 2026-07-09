@@ -461,6 +461,23 @@ class SaleRepositoryImpl implements SaleRepository {
         userId: userId,
         remote: sale,
       );
+
+      if (sale.saleType == 'standard') {
+        final serverId = '${sale.id}';
+        final hasItems = await _local.hasSaleItems(shopId, serverId);
+        if (!hasItems) {
+          try {
+            final detail = await _remote.getSale(sale.id);
+            await _local.upsertSaleItemsFromRemote(
+              shopId: shopId,
+              serverId: serverId,
+              items: detail.items,
+            );
+          } catch (_) {
+            // Ignore single sale detail fetch error
+          }
+        }
+      }
     }
   }
 }

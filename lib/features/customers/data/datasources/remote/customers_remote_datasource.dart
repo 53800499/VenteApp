@@ -43,9 +43,9 @@ class CustomersRemoteDatasource {
     return [];
   }
 
-  Future<CustomerApiDto> getCustomer(int id) async {
+  Future<CustomerDetailApiDto> getCustomer(int id) async {
     final data = await _getData('/customers/$id');
-    return CustomerApiDto.fromJson(data);
+    return CustomerDetailApiDto.fromJson(data);
   }
 
   Future<List<CustomerSaleApiDto>> listCustomerSales(int customerId) async {

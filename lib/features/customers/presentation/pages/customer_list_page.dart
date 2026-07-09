@@ -499,8 +499,7 @@ class _CustomerListTile extends StatelessWidget {
                         Text(
                           [
                             if (customer.isShared) 'Partagé',
-                            if (customer.purchaseCount > 0)
-                              '${customer.purchaseCount} achat(s)',
+                            '${customer.purchaseCount} achat(s)',
                           ].join(' · '),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
@@ -599,8 +598,7 @@ class _CustomerListTile extends StatelessWidget {
                           if (customer.isShared) 'Partagé',
                           if (customer.phone != null && customer.phone!.isNotEmpty)
                             customer.phone!,
-                          if (customer.purchaseCount > 0)
-                            '${customer.purchaseCount} achat(s)',
+                          '${customer.purchaseCount} achat(s)',
                         ].join(' · '),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
