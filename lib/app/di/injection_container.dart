@@ -24,6 +24,7 @@ import '../../core/storage/api_settings_storage.dart';
 import '../../core/storage/auth_credentials_storage.dart';
 import '../../core/storage/auth_flow_storage.dart';
 import '../../core/storage/database_key_storage.dart';
+import '../../core/storage/device_id_storage.dart';
 import '../../core/storage/form_draft_storage.dart';
 import '../../core/storage/last_shop_storage.dart';
 import '../../core/storage/onboarding_storage.dart';

@@ -5,7 +5,9 @@ import '../../../app/theme/app_tokens.dart';
 import '../../../features/auth/domain/entities/auth_entities.dart';
 import '../../../features/help/presentation/pages/help_article_page.dart';
 import '../../../features/sync/presentation/pages/sync_conflicts_page.dart';
+import '../../../core/security/production_message_policy.dart';
 import '../app_release_tier.dart';
+import '../sync_display_message.dart';
 import '../sync_service.dart';
 import '../sync_snapshot.dart';
 
@@ -87,12 +89,12 @@ class _SyncStatusIcon extends StatelessWidget {
       SyncIndicatorState.synced => (
           Icons.cloud_done_outlined,
           colorScheme.primary,
-          'Données synchronisées avec le serveur',
+          'Données synchronisées avec le cloud',
         ),
       SyncIndicatorState.pending => (
           Icons.cloud_upload_outlined,
           colorScheme.tertiary,
-          snapshot.blockReason ??
+          SyncDisplayMessage.dedupe(snapshot.blockReason) ??
               (snapshot.pendingQueueCount > 0
                   ? '${snapshot.pendingQueueCount} opération(s) en attente d\'envoi'
                   : 'Synchronisation en cours'),
@@ -176,7 +178,7 @@ class _SyncStatusIcon extends StatelessWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
-                              snapshot.blockReason!,
+                              SyncDisplayMessage.dedupe(snapshot.blockReason)!,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: scheme.onErrorContainer,
                               ),
@@ -355,7 +357,7 @@ class _SyncStatusIcon extends StatelessWidget {
                 const Text(
                   'La synchronisation cloud n\'est pas activée sur cet appareil. '
                   'Toutes vos ventes, stocks et clients sont enregistrés sur '
-                  'le téléphone. Aucune copie n\'est envoyée au serveur tant '
+                  'le téléphone. Aucune copie n\'est envoyée au cloud tant '
                   'que le cloud n\'est pas configuré.',
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -364,11 +366,9 @@ class _SyncStatusIcon extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const _StepRow(
+                _StepRow(
                   number: 1,
-                  text:
-                      'Pour activer le cloud : Plus → Connexion serveur, puis '
-                      'connectez-vous via WhatsApp.',
+                  text: ProductionMessagePolicy.activateCloudInstruction(),
                 ),
                 const _StepRow(
                   number: 2,
@@ -536,7 +536,7 @@ class _SyncStatusCopy {
         title: 'Synchronisation en cours',
         summary:
             'VenteApp envoie vos dernières opérations (ventes, stock, clients…) '
-            'vers le serveur cloud. Vous pouvez continuer à travailler pendant '
+            'vers le cloud. Vous pouvez continuer à travailler pendant '
             'ce transfert.',
         steps: [
           'Attendez la fin du transfert (l\'icône redevient verte).',
@@ -552,10 +552,10 @@ class _SyncStatusCopy {
       return _SyncStatusCopy(
         icon: Icons.cloud_off_outlined,
         accent: _SyncAccent.error,
-        title: 'Connexion serveur interrompue',
+        title: 'Synchronisation cloud interrompue',
         summary:
             'L\'application fonctionne en local : vos ventes et stocks sont '
-            'sauvegardés sur cet appareil, mais ne sont pas envoyés au serveur '
+            'sauvegardés sur cet appareil, mais ne sont pas envoyés au cloud '
             'pour le moment.',
         steps: [
           'Vérifiez votre connexion internet (Wi‑Fi ou données mobiles).',
@@ -575,7 +575,7 @@ class _SyncStatusCopy {
           title: 'Tout est synchronisé',
           summary:
               'Les données de cette boutique sur votre téléphone correspondent '
-              'au serveur cloud. Vos collègues sur d\'autres appareils voient '
+              'au cloud. Vos collègues sur d\'autres appareils voient '
               'les mêmes chiffres après leur propre synchronisation.',
           steps: [
             'Continuez à vendre normalement — la sync se déclenche automatiquement.',
@@ -590,10 +590,10 @@ class _SyncStatusCopy {
           accent: _SyncAccent.warning,
           title: snapshot.pendingQueueCount > 0
               ? '${snapshot.pendingQueueCount} opération(s) en attente'
-              : 'Envoi au serveur en attente',
+              : 'Envoi au cloud en attente',
           summary:
               'Des modifications faites sur cet appareil n\'ont pas encore été '
-              'transmises au serveur. Elles sont en file d\'attente et seront '
+              'transmises au cloud. Elles sont en file d\'attente et seront '
               'envoyées dès que possible.',
           steps: [
             'Vérifiez que vous êtes connecté à internet.',
@@ -609,26 +609,26 @@ class _SyncStatusCopy {
           accent: _SyncAccent.error,
           title: 'Conflit à résoudre',
           summary:
-              'La même donnée a été modifiée sur cet appareil et sur le serveur '
+              'La même donnée a été modifiée sur cet appareil et dans le cloud '
               '(ou un autre téléphone) en même temps. Le patron doit choisir '
               'quelle version conserver.',
           steps: [
             'Touchez « Résoudre les conflits » (réservé au propriétaire).',
-            'Comparez la version locale et la version serveur pour chaque élément.',
+            'Comparez la version locale et la version cloud pour chaque élément.',
             'Choisissez la version correcte, puis validez.',
             'Relancez la synchronisation pour confirmer que tout est à jour.',
           ],
           tip:
               'Évitez de modifier le même produit ou la même vente sur deux appareils en même temps.',
         ),
-      SyncIndicatorState.disabled => const _SyncStatusCopy(
+      SyncIndicatorState.disabled => _SyncStatusCopy(
           icon: Icons.cloud_off_outlined,
           accent: _SyncAccent.neutral,
           title: 'Synchronisation désactivée',
           summary:
               'Le cloud n\'est pas actif. L\'application fonctionne uniquement en local.',
           steps: [
-            'Pour activer : Plus → Connexion serveur.',
+            ProductionMessagePolicy.activateCloudShortInstruction(),
             'Connectez-vous via WhatsApp pour obtenir une session cloud.',
             'Sauvegardez régulièrement vos données en local.',
           ],

@@ -1,3 +1,5 @@
+import '../security/production_message_policy.dart';
+
 /// Traduit les messages techniques API (class-validator, NestJS…) en français clair.
 String humanizeApiErrorMessage(String raw) {
   final message = raw.trim();
@@ -115,5 +117,5 @@ String humanizeApiErrorMessage(String raw) {
     return 'Données invalides. Vérifiez votre saisie.';
   }
 
-  return message;
+  return ProductionMessagePolicy.sanitize(message);
 }

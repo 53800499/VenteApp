@@ -761,10 +761,10 @@ abstract final class HelpCatalog {
       categoryId: 'admin',
       title: 'Synchronisation & hors ligne',
       summary:
-          'Mode offline, session cloud, conflits et connexion serveur.',
+          'Mode offline, session cloud, conflits et synchronisation.',
       icon: Icons.cloud_sync_outlined,
       color: Color(0xFF00695C),
-      keywords: ['sync', 'hors ligne', 'cloud', 'conflit', 'serveur'],
+      keywords: ['sync', 'hors ligne', 'cloud', 'conflit'],
       sections: [
         HelpSection(
           title: 'Comprendre l\'icône cloud',
@@ -772,9 +772,9 @@ abstract final class HelpCatalog {
               'L\'icône nuage en haut à droite indique l\'état de la synchronisation. '
               'Touchez-la à tout moment pour voir le détail et les actions possibles.',
           bullets: [
-            'Verte : données synchronisées avec le serveur.',
+            'Verte : données synchronisées avec le cloud.',
             'Orange / flèche : opérations en attente d\'envoi.',
-            'Rouge : conflit ou connexion serveur bloquée.',
+            'Rouge : conflit ou synchronisation cloud bloquée.',
             'Grisée : mode local uniquement (cloud désactivé).',
           ],
         ),
@@ -788,7 +788,7 @@ abstract final class HelpCatalog {
           ],
         ),
         HelpSection(
-          title: 'Rétablir la connexion serveur — pas à pas',
+          title: 'Rétablir la synchronisation cloud — pas à pas',
           steps: [
             'Vérifiez internet (Wi‑Fi ou données mobiles).',
             'Si bannière orange : touchez « Réessayer » ou « Code PIN ».',
@@ -801,21 +801,12 @@ abstract final class HelpCatalog {
           steps: [
             'Touchez l\'icône cloud → « Résoudre les conflits ».',
             'Ou ouvrez Plus → Conflits de synchronisation.',
-            'Pour chaque conflit, comparez version locale et version serveur.',
+            'Pour chaque conflit, comparez version locale et version cloud.',
             'Choisissez la version correcte et validez.',
             'Relancez la synchronisation pour confirmer.',
           ],
           tip:
               'Évitez de modifier le même produit sur deux appareils en même temps.',
-        ),
-        HelpSection(
-          title: 'Configurer l\'adresse du serveur — pas à pas',
-          steps: [
-            'Ouvrez Plus → Connexion serveur.',
-            'Laissez l\'URL cloud par défaut ou saisissez votre serveur local.',
-            'Touchez « Tester la connexion ».',
-            'Enregistrez puis reconnectez-vous via WhatsApp si demandé.',
-          ],
         ),
       ],
     ),
@@ -930,19 +921,19 @@ abstract final class HelpCatalog {
   }
 
   static HelpArticle? articleById(String id) {
-    for (final a in articles) {
+    for (final a in visibleArticles) {
       if (a.id == id) return a;
     }
     return null;
   }
 
   static List<HelpArticle> articlesForCategory(String categoryId) =>
-      articles.where((a) => a.categoryId == categoryId).toList();
+      visibleArticles.where((a) => a.categoryId == categoryId).toList();
 
   static List<HelpArticle> search(String query) {
     final q = query.trim().toLowerCase();
-    if (q.isEmpty) return articles;
-    return articles.where((a) {
+    if (q.isEmpty) return visibleArticles;
+    return visibleArticles.where((a) {
       if (a.title.toLowerCase().contains(q)) return true;
       if (a.summary.toLowerCase().contains(q)) return true;
       for (final k in a.keywords) {
@@ -958,4 +949,6 @@ abstract final class HelpCatalog {
       return false;
     }).toList();
   }
+
+  static List<HelpArticle> get visibleArticles => articles;
 }

@@ -1,5 +1,6 @@
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_runner.dart';
+import '../../../../core/security/production_message_policy.dart';
 import '../../domain/entities/rbac_entities.dart';
 import '../../domain/repositories/rbac_repository.dart';
 import '../datasources/remote/rbac_remote_datasource.dart';
@@ -15,8 +16,10 @@ class RbacRepositoryImpl implements RbacRepository {
   final RbacRemoteDatasource _remote;
   final RemoteApiRunner _apiRunner;
 
-  static const _offlineMessage =
-      'Connexion serveur requise pour consulter les rôles et permissions.';
+  String get _offlineMessage =>
+      ProductionMessagePolicy.onlineWriteRequiredMessage(
+        'consulter les rôles et permissions',
+      );
 
   @override
   Future<List<RoleCatalogItem>> listRoles() {
@@ -25,7 +28,7 @@ class RbacRepositoryImpl implements RbacRepository {
         final items = await _remote.listRoles();
         return items.map((dto) => dto.toEntity()).toList();
       },
-      localFallback: () => throw const NetworkFailure(_offlineMessage),
+      localFallback: () => throw NetworkFailure(_offlineMessage),
     );
   }
 
@@ -41,7 +44,7 @@ class RbacRepositoryImpl implements RbacRepository {
   Future<PermissionsCatalog> getPermissionsCatalog() {
     return _apiRunner.runOnlinePreferredRead(
       remote: () async => (await _remote.getPermissionsCatalog()).toEntity(),
-      localFallback: () => throw const NetworkFailure(_offlineMessage),
+      localFallback: () => throw NetworkFailure(_offlineMessage),
     );
   }
 
@@ -58,7 +61,7 @@ class RbacRepositoryImpl implements RbacRepository {
     return _apiRunner.runOnlinePreferredRead(
       remote: () async =>
           (await _remote.getUserPermissions(userId)).toEntity(),
-      localFallback: () => throw const NetworkFailure(_offlineMessage),
+      localFallback: () => throw NetworkFailure(_offlineMessage),
     );
   }
 
@@ -69,7 +72,7 @@ class RbacRepositoryImpl implements RbacRepository {
         final items = await _remote.listUserOverrides(userId);
         return items.map((dto) => dto.toEntity()).toList();
       },
-      localFallback: () => throw const NetworkFailure(_offlineMessage),
+      localFallback: () => throw NetworkFailure(_offlineMessage),
     );
   }
 

@@ -1,4 +1,5 @@
 import '../errors/failures.dart';
+import '../security/production_message_policy.dart';
 import 'api_module_category.dart';
 import 'network_info.dart';
 import 'online_session_policy.dart';
@@ -45,12 +46,12 @@ class RemoteApiRunner {
   /// Serveur obligatoire — écriture admin (équipe, boutiques, etc.).
   Future<T> runOnlineRequiredWrite<T>({
     required Future<T> Function() remote,
-    String offlineMessage =
-        'Connexion serveur requise pour cette action. '
-        'Vérifiez le réseau (Plus → Connexion serveur).',
+    String? offlineMessage,
   }) async {
+    final message =
+        offlineMessage ?? ProductionMessagePolicy.onlineActionRequiredMessage();
     if (!await _networkInfo.isConnected) {
-      throw NetworkFailure(offlineMessage);
+      throw NetworkFailure(message);
     }
     try {
       await _apiGuard.ensureReady();

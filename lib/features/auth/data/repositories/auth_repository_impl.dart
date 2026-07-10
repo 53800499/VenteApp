@@ -16,6 +16,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/network_info.dart';
 import '../../../../core/security/lockout_policy.dart';
 import '../../../../core/security/pin_hasher.dart';
+import '../../../../core/security/production_message_policy.dart';
 import '../../../../core/security/recovery_token_service.dart';
 import '../../../../core/storage/auth_credentials_storage.dart';
 import '../../../../core/storage/auth_flow_storage.dart';
@@ -106,9 +107,8 @@ class AuthRepositoryImpl implements AuthRepository {
   bool get _isOnlineMode => _remote != null;
 
   static const _onlinePinRefreshTimeout = Duration(seconds: 60);
-  static const _onlinePinTimeoutMessage =
-      'Le serveur met trop de temps à répondre. '
-      'Vérifiez la connexion (Plus → Connexion serveur) ou réessayez.';
+  String get _onlinePinTimeoutMessage =>
+      ProductionMessagePolicy.onlinePinTimeoutMessage();
 
   @override
   Future<bool> isSetupComplete() async {
@@ -272,7 +272,7 @@ class AuthRepositoryImpl implements AuthRepository {
       deviceLabel: device.deviceLabel,
     ).timeout(
       _onlinePinRefreshTimeout,
-      onTimeout: () => throw const NetworkFailure(_onlinePinTimeoutMessage),
+      onTimeout: () => throw NetworkFailure(_onlinePinTimeoutMessage),
     );
     return _finalizeOnlineLogin(result, pin: pin);
   }
@@ -1395,7 +1395,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
     if (rows.isEmpty) {
       throw const NetworkFailure(
-        'Aucune boutique locale. Connectez le serveur ou créez une boutique.',
+        'Aucune boutique locale. Connectez-vous au cloud ou créez une boutique.',
       );
     }
 
@@ -1624,7 +1624,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<List<DeviceSession>> listDeviceSessions({bool shopScope = false}) async {
     if (_remote == null) {
-      throw const NetworkFailure('Connexion serveur requise.');
+      throw NetworkFailure(ProductionMessagePolicy.onlineRequiredMessage());
     }
     if (!await _networkInfo.isConnected) {
       throw const NetworkFailure(
@@ -1660,7 +1660,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<void> revokeDeviceSession(String sessionId) async {
     if (_remote == null) {
-      throw const NetworkFailure('Connexion serveur requise.');
+      throw NetworkFailure(ProductionMessagePolicy.onlineRequiredMessage());
     }
     if (!await _networkInfo.isConnected) {
       throw const NetworkFailure(

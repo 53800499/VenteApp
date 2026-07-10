@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import '../auth/cloud_session_repair_service.dart';
+import '../constants/api_config.dart';
 import '../errors/exception_mapper.dart';
 import '../errors/failures.dart';
+import '../security/production_message_policy.dart';
 import '../storage/auth_credentials_storage.dart';
 import 'api_client.dart';
 import 'network_info.dart';
 
 /// Délais max pour les lectures hybrides (offline-first).
-const remoteReadEnsureReadyTimeout = Duration(seconds: 60);
+const remoteReadEnsureReadyTimeout = Duration(seconds: 75);
 const remoteReadFetchTimeout = Duration(seconds: 60);
 
 /// Vérifie que les appels API protégés peuvent être effectués.
@@ -30,23 +32,41 @@ class RemoteApiGuard {
   final ApiClient _apiClient;
   final CloudSessionRepairService? _cloudSessionRepair;
 
+  Future<void>? _readyInFlight;
+
   Future<void> ensureReady({
     Duration timeout = remoteReadEnsureReadyTimeout,
   }) async {
+    final inFlight = _readyInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _ensureReadyWithTimeout(timeout);
+    _readyInFlight = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_readyInFlight, future)) {
+        _readyInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _ensureReadyWithTimeout(Duration timeout) async {
     try {
       await _ensureReady().timeout(timeout);
     } on TimeoutException {
       throw const NetworkFailure(
-        'Le serveur ne répond pas assez vite. Affichage des données enregistrées sur cet appareil.',
+        'Le service met trop de temps à répondre. Données locales affichées — '
+        'saisissez votre PIN via la bannière cloud pour rétablir la synchronisation.',
       );
     }
   }
 
   Future<void> _ensureReady() async {
     if (!await _networkInfo.isConnected) {
-      throw const NetworkFailure(
-        'Connexion internet requise. Vérifiez le réseau et l\'adresse du serveur (Plus → Connexion serveur).',
-      );
+      throw NetworkFailure(ProductionMessagePolicy.internetRequiredMessage());
     }
     if (!await _credentials.hasCredentials()) {
       throw const CloudReconnectRequiredFailure();
@@ -79,13 +99,17 @@ class RemoteApiGuard {
     }
 
     try {
-      // Pendant la fenêtre de grâce, on continue de viser le serveur : on
-      // retente le refresh même si l'expiration locale est dépassée.
       if (hasRefresh) {
-        await _apiClient.refreshTokensIfNeeded();
+        await _apiClient
+            .refreshTokensIfNeeded()
+            .timeout(ApiConfig.cloudRefreshAttemptTimeout);
       } else {
-        await _apiClient.forceRefreshTokens();
+        await _apiClient
+            .forceRefreshTokens()
+            .timeout(ApiConfig.cloudRefreshAttemptTimeout);
       }
+    } on TimeoutException {
+      throw const CloudReconnectRequiredFailure();
     } on DioException catch (error) {
       throw await _mapRefreshFailure(error, withinWindow: withinWindow);
     }

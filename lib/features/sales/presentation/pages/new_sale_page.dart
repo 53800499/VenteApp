@@ -40,6 +40,7 @@ class _NewSalePageState extends State<NewSalePage>
   int _step = 0;
   late final TabController _tabController;
   final _searchController = TextEditingController();
+  NewSaleBloc? _saleBloc;
 
   @override
   void initState() {
@@ -55,6 +56,7 @@ class _NewSalePageState extends State<NewSalePage>
 
   @override
   void dispose() {
+    _saleBloc?.add(const NewSaleDraftAbandonRequested());
     _tabController.removeListener(_onTabIndexChanged);
     _tabController.dispose();
     _searchController.dispose();
@@ -64,7 +66,8 @@ class _NewSalePageState extends State<NewSalePage>
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => NewSaleBloc(
+      create: (_) {
+        _saleBloc = NewSaleBloc(
         listProducts: sl(),
         listCustomers: sl(),
         createStandardSale: sl(),
@@ -76,7 +79,9 @@ class _NewSalePageState extends State<NewSalePage>
         findOpenCashSession: sl(),
         formDraftStorage: sl(),
         session: widget.session,
-      )..add(const NewSaleLoadRequested()),
+      )..add(const NewSaleLoadRequested());
+        return _saleBloc!;
+      },
       child: BlocListener<NewSaleBloc, NewSaleState>(
         listenWhen: (prev, curr) =>
             prev.creatingCustomer && !curr.creatingCustomer,

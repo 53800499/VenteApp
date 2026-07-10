@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -275,7 +276,7 @@ class _WhatsappTab extends StatelessWidget {
               'Code envoyé au ${maskedPhone ?? phoneController.text.trim()}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            if (devCode != null) ...[
+            if (kDebugMode && devCode != null) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Code dev : $devCode',

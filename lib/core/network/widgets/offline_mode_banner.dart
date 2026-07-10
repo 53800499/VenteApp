@@ -13,6 +13,8 @@ import '../../auth/cloud_session_coordinator.dart';
 import '../../auth/cloud_session_status.dart';
 import '../../auth/cloud_session_repair_service.dart';
 import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
+import '../../security/production_message_policy.dart';
+import '../../sync/sync_display_message.dart';
 import '../../sync/sync_service.dart';
 import '../../sync/sync_snapshot.dart';
 import '../network_info.dart';
@@ -34,7 +36,7 @@ class OfflineModeBanner extends StatefulWidget {
   /// Cache local affiché ; écritures réservées au serveur.
   static const adminCacheMessage =
       'Hors ligne — affichage des données de cet appareil. '
-      'La connexion au serveur est nécessaire pour faire des modifications.';
+      'La connexion cloud est nécessaire pour faire des modifications.';
 
   /// Statistiques / rapports basés sur les données locales.
   static const hybridReadMessage =
@@ -99,7 +101,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
 
     return switch (status) {
       CloudLinkStatus.connected =>
-        'Données synchronisées avec le serveur de vente.',
+        'Données synchronisées avec le cloud.',
       CloudLinkStatus.disconnected =>
         'Hors ligne — vous pouvez continuer à vendre sans connexion.',
       CloudLinkStatus.syncing =>
@@ -165,7 +167,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                         if (isRepairing && sync.blockReason == null && offline != true) {
                           return _sessionBanner(
                             context,
-                            message: 'Reconnexion au serveur en cours…',
+                            message: 'Reconnexion cloud en cours…',
                             background: Theme.of(context).colorScheme.secondaryContainer,
                             foreground: Theme.of(context).colorScheme.onSecondaryContainer,
                             icon: Icons.cloud_sync_outlined,
@@ -232,7 +234,8 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                           return const SizedBox.shrink();
                         }
 
-                        final message = sync.blockReason ?? _messageForStatus(status);
+                        final message = SyncDisplayMessage.dedupe(sync.blockReason) ??
+                            _messageForStatus(status);
                         final foreground = _foregroundForStatus(context, status);
 
                         return _sessionBanner(
@@ -267,7 +270,9 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
       repair.clearAwaitingState();
       unawaited(sl<CloudSessionController>().refresh());
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connexion au serveur rétablie.')),
+        SnackBar(
+          content: Text(ProductionMessagePolicy.cloudConnectionRestoredMessage()),
+        ),
       );
       return;
     }

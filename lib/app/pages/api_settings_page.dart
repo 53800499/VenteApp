@@ -5,9 +5,10 @@ import '../../../app/theme/app_tokens.dart';
 import '../../../core/constants/api_config.dart';
 import '../../../shared/components/action_feedback.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/security/production_message_policy.dart';
 import '../../../core/storage/api_settings_storage.dart';
 
-/// Permet de configurer l'adresse du backend (téléphone physique, réseau local).
+/// Configuration avancée du service en ligne (développement uniquement).
 class ApiSettingsPage extends StatefulWidget {
   const ApiSettingsPage({super.key});
 
@@ -26,13 +27,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
     final storage = sl<ApiSettingsStorage>();
     final custom = storage.customBaseUrl;
     _useDefault = custom == null || custom.isEmpty;
-    _controller.text = custom ?? _suggestedHost();
-  }
-
-  String _suggestedHost() {
-    const fromEnv = String.fromEnvironment('API_BASE_URL');
-    if (fromEnv.isNotEmpty) return fromEnv;
-    return 'venteappbackend-1.onrender.com';
+    _controller.text = custom ?? '';
   }
 
   @override
@@ -59,36 +54,52 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
     if (!mounted) return;
     await ActionFeedback.showSuccess(
       context: context,
-      title: 'Serveur configuré',
-      message: client.baseUrl,
+      title: 'Connexion mise à jour',
+      message: 'La connexion au service en ligne a été mise à jour.',
     );
     if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!ProductionMessagePolicy.showServerConfiguration) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Connexion')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Text(
+              'La configuration manuelle du service en ligne n\'est pas '
+              'disponible dans cette version.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Connexion serveur')),
+      appBar: AppBar(title: const Text('Connexion cloud (dev)')),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
             Text(
-              'Adresse du backend',
+              'Service en ligne',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Par défaut : backend cloud Render.\n'
-              'Pour un serveur local (dev), saisissez l\'IP du PC, '
-              'ex. 192.168.1.100:3010.',
+              'Par défaut : service cloud VenteApp.\n'
+              'Pour le développement, vous pouvez saisir une adresse '
+              'personnalisée.',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: AppSpacing.lg),
             SwitchListTile(
-              title: const Text('Utiliser l\'adresse par défaut'),
-              subtitle: Text(ApiConfig.defaultBaseUrl()),
+              title: const Text('Utiliser le service cloud par défaut'),
+              subtitle: const Text('Recommandé en production'),
               value: _useDefault,
               onChanged: (value) => setState(() => _useDefault = value),
             ),
@@ -97,9 +108,9 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
               TextFormField(
                 controller: _controller,
                 decoration: const InputDecoration(
-                  labelText: 'Adresse IP ou URL',
-                  hintText: 'venteappbackend-1.onrender.com',
-                  prefixIcon: Icon(Icons.dns_outlined),
+                  labelText: 'Adresse personnalisée',
+                  hintText: 'Adresse IP ou domaine',
+                  prefixIcon: Icon(Icons.cloud_outlined),
                 ),
                 keyboardType: TextInputType.url,
                 validator: (value) {
@@ -115,11 +126,6 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
             FilledButton(
               onPressed: _save,
               child: const Text('Enregistrer'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'URL actuelle : ${sl<ApiClient>().baseUrl}',
-              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),

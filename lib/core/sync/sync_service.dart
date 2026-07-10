@@ -18,7 +18,7 @@ import '../network/active_shop_context.dart';
 
 import '../../features/settings/data/datasources/local/settings_local_datasource.dart';
 import 'remote_sync_port.dart';
-
+import 'sync_display_message.dart';
 import 'sync_policy.dart';
 
 import 'sync_queue_datasource.dart';
@@ -293,7 +293,7 @@ class SyncService {
           indicatorState: indicator,
           pendingQueueCount: pendingCount,
           shopId: shopId,
-          blockReason: apiFailure.message,
+          blockReason: SyncDisplayMessage.dedupe(apiFailure.message),
         ),
       );
       return;
@@ -308,7 +308,7 @@ class SyncService {
         shopId: shopId,
         pendingQueueCount: pendingCount,
         indicatorState: indicator,
-        blockReason: apiFailure?.message,
+        blockReason: SyncDisplayMessage.dedupe(apiFailure?.message),
         clearBlockReason: apiFailure == null,
       ),
     );
@@ -350,7 +350,7 @@ class SyncService {
     final conflictsAfter = await _queue.countConflicts(shopId: shopId);
     final hasFailures = results.any((r) => !r.success);
 
-    String? blockReason = apiFailure?.message;
+    String? blockReason = SyncDisplayMessage.dedupe(apiFailure?.message);
     if (blockReason == null &&
         (queueResult != null && queueResult.deferred > 0 || pendingCount > 0)) {
       blockReason = await _queue.describePendingBlock(shopId: shopId) ??
@@ -358,13 +358,12 @@ class SyncService {
               'élément(s) en attente (dépendances ou données serveur manquantes).';
     }
     if (blockReason == null && hasFailures) {
-      final failedModules = results
-          .where((r) => !r.success)
-          .map((r) => r.errorMessage ?? r.module)
-          .join(' · ');
-      blockReason = failedModules.isEmpty
-          ? 'Échec de synchronisation sur un ou plusieurs modules.'
-          : failedModules;
+      blockReason = SyncDisplayMessage.collapse(
+            results
+                .where((r) => !r.success)
+                .map((r) => r.errorMessage ?? r.module),
+          ) ??
+          'Échec de synchronisation sur un ou plusieurs modules.';
     }
 
     _running = false;

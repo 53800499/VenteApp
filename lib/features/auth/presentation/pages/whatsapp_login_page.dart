@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -178,7 +179,7 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
                                   child: const Text('Modifier le numéro'),
                                 ),
                               ],
-                              if (state.devCode != null) ...[
+                              if (kDebugMode && state.devCode != null) ...[
                                 const SizedBox(height: AppSpacing.md),
                                 _DevOtpCard(code: state.devCode!),
                               ] else if (state.deliveryWarning != null) ...[
@@ -283,7 +284,7 @@ class _DevOtpCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'WhatsApp n\'est pas configuré sur le serveur — saisissez ce code pour continuer.',
+            'WhatsApp n\'est pas configuré — saisissez ce code pour continuer.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],

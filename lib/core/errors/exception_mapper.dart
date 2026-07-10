@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:sqlite3/sqlite3.dart';
 
+import '../security/production_message_policy.dart';
 import 'auth_error_humanizer.dart';
 import 'api_error_humanizer.dart';
 import 'failures.dart';
@@ -10,18 +11,28 @@ import 'failures.dart';
 /// Convertit toute exception en message lisible pour l'utilisateur.
 String friendlyErrorMessage(Object error) {
   if (error is Failure) {
-    return humanizeAuthErrorMessage(error.message);
-  }
-  if (error is TimeoutException) {
-    return humanizeAuthErrorMessage(
-      'Le serveur met trop de temps à répondre. Réessayez.',
+    return ProductionMessagePolicy.sanitize(
+      humanizeAuthErrorMessage(error.message),
     );
   }
-  if (error is DioException) return mapDioException(error).message;
-  if (error is SqliteException) {
-    return humanizeAuthErrorMessage(error.message);
+  if (error is TimeoutException) {
+    return ProductionMessagePolicy.sanitize(
+      humanizeAuthErrorMessage(
+        'Le service met trop de temps à répondre. Réessayez.',
+      ),
+    );
   }
-  return humanizeAuthErrorMessage(error.toString());
+  if (error is DioException) {
+    return ProductionMessagePolicy.sanitize(mapDioException(error).message);
+  }
+  if (error is SqliteException) {
+    return ProductionMessagePolicy.sanitize(
+      humanizeAuthErrorMessage(error.message),
+    );
+  }
+  return ProductionMessagePolicy.sanitize(
+    humanizeAuthErrorMessage(error.toString()),
+  );
 }
 
 /// Convertit une [DioException] en [Failure] métier.
@@ -34,11 +45,10 @@ Failure mapDioException(DioException error) {
     final isLocalHost = host == 'localhost' ||
         host == '127.0.0.1' ||
         host == '10.0.2.2';
-    final hint = isLocalHost
-        ? ' Assurez-vous que l\'application serveur est bien lancée sur votre ordinateur. Sur téléphone physique, vérifiez l\'adresse dans Plus → Connexion serveur.'
-        : ' Vérifiez votre connexion internet ou l\'adresse du serveur dans Plus → Connexion serveur.';
     return NetworkFailure(
-      'Impossible de se connecter au serveur de vente.$hint',
+      ProductionMessagePolicy.networkUnreachableMessage(
+        localDevelopmentContext: isLocalHost,
+      ),
     );
   }
 
@@ -114,10 +124,10 @@ String _httpStatusMessage(int? statusCode) {
     401 => 'Session expirée. Saisissez votre PIN de connexion.',
     403 => 'Action non autorisée.',
     404 => 'Boutique ou utilisateur introuvable.',
-    409 => 'Une boutique existe déjà sur ce serveur. Utilisez « Se connecter » si vous êtes employé.',
+    409 => 'Une boutique existe déjà sur le cloud. Utilisez « Se connecter » si vous êtes employé.',
     422 => 'Informations incorrectes. Vérifiez votre saisie.',
     429 => 'Trop de tentatives. Patientez avant de réessayer.',
-    500 => 'Le serveur de vente a rencontré une erreur. Réessayez.',
+    500 => 'Le service en ligne a rencontré une erreur. Réessayez.',
     502 || 503 || 504 => 'Service temporairement indisponible.',
     _ => 'Erreur réseau. Réessayez.',
   };

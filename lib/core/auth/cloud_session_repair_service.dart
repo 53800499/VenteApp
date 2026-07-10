@@ -33,7 +33,7 @@ enum CloudRepairOutcome {
 
 typedef PinLoginRepairCallback = Future<bool> Function(RecentPinCredential proof);
 
-/// Répare la session cloud : refresh → login PIN (si preuve récente) → attente.
+/// Répare la session cloud : PIN récent → refresh → attente déverrouillage.
 ///
 /// WhatsApp reste le mécanisme de récupération ultime, pas le renouvellement normal.
 class CloudSessionRepairService {
@@ -89,7 +89,7 @@ class CloudSessionRepairService {
     });
   }
 
-  /// Réparation complète après déverrouillage PIN (refresh puis login PIN).
+  /// Réparation complète après déverrouillage PIN (PIN cloud puis refresh).
   Future<CloudRepairOutcome> repairAfterPinUnlock() {
     return _runSerialized(() => repair(attemptRefresh: true));
   }
@@ -104,6 +104,19 @@ class CloudSessionRepairService {
       return CloudRepairOutcome.alreadyValid;
     }
 
+    final proof = _recentPinProof.current;
+
+    // Après déverrouillage PIN : tenter le login cloud en premier pour ne pas
+    // bloquer 60 s sur un refresh JWT lent ou injoignable.
+    if (proof != null) {
+      final viaPin = await _tryPinLogin(proof);
+      if (viaPin) {
+        _clearAwaiting();
+        await onSessionRestored?.call();
+        return CloudRepairOutcome.pinLogin;
+      }
+    }
+
     if (attemptRefresh) {
       final refreshed = await _tryRefresh();
       if (refreshed) {
@@ -113,14 +126,7 @@ class CloudSessionRepairService {
       }
     }
 
-    final proof = _recentPinProof.current;
     if (proof != null) {
-      final repaired = await _tryPinLogin(proof);
-      if (repaired) {
-        _clearAwaiting();
-        await onSessionRestored?.call();
-        return CloudRepairOutcome.pinLogin;
-      }
       return CloudRepairOutcome.failed;
     }
 
@@ -140,14 +146,16 @@ class CloudSessionRepairService {
     if (!hasRefreshLocal && !withinWindow && !hasStoredRefresh) return false;
 
     try {
-      if (hasRefreshLocal) {
-        await _apiClient.refreshTokensIfNeeded();
-      } else if (hasStoredRefresh) {
-        await _apiClient.forceRefreshTokens();
-      } else {
-        return false;
-      }
+      await () async {
+        if (hasRefreshLocal) {
+          await _apiClient.refreshTokensIfNeeded();
+        } else if (hasStoredRefresh) {
+          await _apiClient.forceRefreshTokens();
+        }
+      }().timeout(ApiConfig.cloudRefreshAttemptTimeout);
       return await _credentials.hasValidAccessToken();
+    } on TimeoutException {
+      return false;
     } on DioException catch (e) {
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         return false;
@@ -156,7 +164,7 @@ class CloudSessionRepairService {
     }
   }
 
-  /// Réparation manuelle (bannière) : enregistre le PIN puis tente refresh/login.
+  /// Réparation manuelle (bannière) : enregistre le PIN puis tente login/refresh.
   Future<CloudRepairOutcome> repairWithPin({
     required String pin,
     required int serverShopId,

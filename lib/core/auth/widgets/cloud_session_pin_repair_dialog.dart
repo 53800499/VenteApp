@@ -7,6 +7,7 @@ import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
 import '../../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../../features/auth/presentation/widgets/pin_pad.dart';
+import '../../../core/security/production_message_policy.dart';
 import '../cloud_session_coordinator.dart';
 import '../cloud_session_controller.dart';
 import '../cloud_session_repair_service.dart';
@@ -43,15 +44,16 @@ Future<bool> showCloudSessionPinRepairDialog(BuildContext context) async {
     repair.clearAwaitingState();
     unawaited(sl<CloudSessionController>().refresh());
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Connexion au serveur rétablie.')),
+      SnackBar(
+        content: Text(ProductionMessagePolicy.cloudConnectionRestoredMessage()),
+      ),
     );
     return true;
   }
 
   final message = outcome == CloudRepairOutcome.offline
-      ? 'Connexion internet requise pour rétablir la session serveur.'
-      : 'Impossible de rétablir la session serveur. Vérifiez votre code PIN '
-          'Réessayez ou utilisez la bannière de synchronisation.';
+      ? ProductionMessagePolicy.cloudSessionRepairOfflineMessage()
+      : ProductionMessagePolicy.cloudSessionRepairFailedMessage();
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   return false;
 }
@@ -78,7 +80,7 @@ class _CloudSessionPinRepairDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Rétablir la connexion serveur'),
+      title: Text(ProductionMessagePolicy.cloudSessionRepairTitle()),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

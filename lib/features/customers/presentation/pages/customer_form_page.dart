@@ -40,8 +40,8 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
   bool _submitting = false;
   bool _isShared = false;
   String? _errorMessage;
-  Timer? _draftTimer;
   bool _draftRestored = false;
+  bool _submittedSuccessfully = false;
   late final String _draftKey;
 
   bool get _canShare =>
@@ -62,14 +62,27 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
     _noteController = TextEditingController(text: widget.customer?.note ?? '');
     _isShared = widget.customer?.isShared ?? false;
     unawaited(_restoreDraft());
-    for (final controller in [
-      _nameController,
-      _phoneController,
-      _addressController,
-      _noteController,
-    ]) {
-      controller.addListener(_scheduleDraftSave);
+  }
+
+  bool _hasDraftContent() {
+    return _nameController.text.trim().isNotEmpty ||
+        _phoneController.text.trim().isNotEmpty ||
+        _addressController.text.trim().isNotEmpty ||
+        _noteController.text.trim().isNotEmpty;
+  }
+
+  Future<void> _persistDraftIfNeeded() async {
+    if (!_hasDraftContent()) {
+      await sl<FormDraftStorage>().clear(_draftKey);
+      return;
     }
+    await sl<FormDraftStorage>().save(_draftKey, {
+      'name': _nameController.text,
+      'phone': _phoneController.text,
+      'address': _addressController.text,
+      'note': _noteController.text,
+      'isShared': _isShared,
+    });
   }
 
   Future<void> _restoreDraft() async {
@@ -97,25 +110,11 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
     });
   }
 
-  void _scheduleDraftSave() {
-    _draftTimer?.cancel();
-    _draftTimer = Timer(const Duration(milliseconds: 400), _saveDraft);
-  }
-
-  Future<void> _saveDraft() async {
-    await sl<FormDraftStorage>().save(_draftKey, {
-      'name': _nameController.text,
-      'phone': _phoneController.text,
-      'address': _addressController.text,
-      'note': _noteController.text,
-      'isShared': _isShared,
-    });
-  }
-
   @override
   void dispose() {
-    _draftTimer?.cancel();
-    unawaited(_saveDraft());
+    if (!_submittedSuccessfully) {
+      unawaited(_persistDraftIfNeeded());
+    }
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -285,6 +284,7 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
       }
 
       if (!mounted) return;
+      _submittedSuccessfully = true;
       await sl<FormDraftStorage>().clear(_draftKey);
       await CustomerFeedback.showSuccess(
         context: context,
@@ -304,6 +304,7 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
         _errorMessage = message;
         _submitting = false;
       });
+      await _persistDraftIfNeeded();
     } catch (_) {
       if (!mounted) return;
       const message = 'Échec de l\'enregistrement.';
@@ -316,6 +317,7 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
         _errorMessage = message;
         _submitting = false;
       });
+      await _persistDraftIfNeeded();
     }
   }
 }

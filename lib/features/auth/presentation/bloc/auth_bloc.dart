@@ -5,6 +5,7 @@ import '../../../../core/auth/app_lock_controller.dart';
 import '../../../../core/errors/auth_error_humanizer.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/security/production_message_policy.dart';
 import '../../../../core/storage/last_shop_storage.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -483,7 +484,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     try {
-      final session = await _shouldUnlockExistingSession(current)
+      final wasUnlock = await _shouldUnlockExistingSession(current);
+      final session = wasUnlock
           ? await _unlockWithPin(
               pin: event.pin,
               shopId: event.shopId,
@@ -494,7 +496,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
               shopId: event.shopId,
               userId: event.userId,
             );
-      await _completeLogin(session, emit);
+      await _completeLogin(session, emit, deferCloudSync: wasUnlock);
     } on Failure catch (failure) {
       final message = _lockScreenErrorMessage(failure, current);
       if (current is AuthLocked) {
@@ -540,7 +542,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     }
 
     try {
-      final session = await _shouldUnlockExistingSession(current)
+      final wasUnlock = await _shouldUnlockExistingSession(current);
+      final session = wasUnlock
           ? await _unlockWithBiometric(
               shopId: event.shopId,
               userId: event.userId,
@@ -549,7 +552,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
               shopId: event.shopId,
               userId: event.userId,
             );
-      await _completeLogin(session, emit);
+      await _completeLogin(session, emit, deferCloudSync: wasUnlock);
     } on Failure catch (failure) {
       if (current is AuthLocked) {
         emit(AuthLocked(
@@ -606,22 +609,22 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       return failure.message;
     }
     if (raw.contains('Session expirée')) {
-      return 'Connexion serveur expirée. Votre PIN local reste valide — '
-          'réessayez. La synchro reprendra après ouverture.';
+      return ProductionMessagePolicy.cloudSessionExpiredMessage();
     }
     return raw;
   }
 
   Future<void> _completeLogin(
     AuthSession session,
-    Emitter<AuthState> emit,
-  ) async {
+    Emitter<AuthState> emit, {
+    bool deferCloudSync = false,
+  }) async {
     _appLockController.markUnlocked();
 
     // Étape Workspace — choisir le contexte de travail (≠ authentification).
     if (await _resolveWorkspaceSelection(session, emit)) return;
 
-    await _enterWorkspace(session, emit);
+    await _enterWorkspace(session, emit, deferCloudSync: deferCloudSync);
   }
 
   /// Étape Workspace : un patron multi-boutiques choisit son contexte de
@@ -654,10 +657,13 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   /// programme la synchro et bascule sur l'application.
   Future<void> _enterWorkspace(
     AuthSession session,
-    Emitter<AuthState> emit,
-  ) async {
+    Emitter<AuthState> emit, {
+    bool deferCloudSync = false,
+  }) async {
     await _lastShopStorage.save(session.shop.id);
-    _scheduleBackgroundSync(session);
+    if (!deferCloudSync) {
+      _scheduleBackgroundSync(session);
+    }
     emit(AuthAuthenticated(session));
   }
 

@@ -8,6 +8,7 @@ import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../../core/security/production_message_policy.dart';
 import '../../../../app/pages/api_settings_page.dart';
 import '../../../reports/presentation/pages/reports_page.dart';
 import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
@@ -229,7 +230,7 @@ class MorePage extends StatelessWidget {
                 ModuleActionTile(
                   icon: Icons.sync_problem_outlined,
                   title: 'Conflits de synchronisation',
-                  subtitle: 'Résoudre les différences local / serveur',
+                  subtitle: 'Résoudre les différences local / cloud',
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) =>
@@ -260,14 +261,15 @@ class MorePage extends StatelessWidget {
                     ),
                   ),
                 ),
-              ModuleActionTile(
-                icon: Icons.dns_outlined,
-                title: 'Connexion serveur',
-                subtitle: 'Backend cloud ou adresse personnalisée',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ApiSettingsPage()),
+              if (ProductionMessagePolicy.showServerConfiguration)
+                ModuleActionTile(
+                  icon: Icons.cloud_outlined,
+                  title: 'Connexion cloud (dev)',
+                  subtitle: 'Configuration avancée du service en ligne',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ApiSettingsPage()),
+                  ),
                 ),
-              ),
               ModuleActionTile(
                 icon: Icons.lock_outline_rounded,
                 title: 'Verrouiller',

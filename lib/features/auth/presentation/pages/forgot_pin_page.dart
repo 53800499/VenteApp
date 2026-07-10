@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -291,7 +292,7 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
           'Envoyé au ${_maskedPhone ?? _phoneController.text.trim()}',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        if (_devCode != null) ...[
+        if (kDebugMode && _devCode != null) ...[
           const SizedBox(height: AppSpacing.sm),
           Text('Code dev : $_devCode', style: Theme.of(context).textTheme.bodySmall),
         ],

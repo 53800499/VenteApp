@@ -68,8 +68,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
   bool _pricingTiersEnabled = false;
   bool _calculatorsModuleEnabled = false;
   String? _errorMessage;
-  Timer? _draftTimer;
   bool _draftRestored = false;
+  bool _submittedSuccessfully = false;
   late final String _draftKey;
 
   @override
@@ -101,29 +101,50 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _loadCalculatorsModuleStatus();
     _loadCalculatorConfig();
     unawaited(_restoreDraft());
-    for (final controller in [
-      _nameController,
-      _skuController,
-      _priceSellController,
-      _priceBuyController,
-      _priceSemiWholesaleController,
-      _priceWholesaleController,
-      _quantityController,
-      _alertThresholdController,
-      _tileLengthController,
-      _tileWidthController,
-      _piecesPerBoxController,
-      _wastePercentController,
-      _coverageController,
-      _coatsController,
-      _volumeController,
-      _cementDosageController,
-      _bagWeightController,
-      _sandController,
-      _gravelController,
-    ]) {
-      controller.addListener(_scheduleDraftSave);
+  }
+
+  bool _hasDraftContent() {
+    return _nameController.text.trim().isNotEmpty ||
+        _skuController.text.trim().isNotEmpty ||
+        _priceSellController.text.trim().isNotEmpty ||
+        _priceBuyController.text.trim().isNotEmpty ||
+        _priceSemiWholesaleController.text.trim().isNotEmpty ||
+        _priceWholesaleController.text.trim().isNotEmpty ||
+        (_quantityController.text.trim().isNotEmpty &&
+            _quantityController.text.trim() != '0') ||
+        _alertThresholdController.text.trim().isNotEmpty;
+  }
+
+  Future<void> _persistDraftIfNeeded() async {
+    if (!_hasDraftContent()) {
+      await sl<FormDraftStorage>().clear(_draftKey);
+      return;
     }
+    await sl<FormDraftStorage>().save(_draftKey, {
+      'name': _nameController.text,
+      'sku': _skuController.text,
+      'priceSell': _priceSellController.text,
+      'priceBuy': _priceBuyController.text,
+      'priceSemiWholesale': _priceSemiWholesaleController.text,
+      'priceWholesale': _priceWholesaleController.text,
+      'quantity': _quantityController.text,
+      'alertThreshold': _alertThresholdController.text,
+      'categoryId': _categoryId,
+      'calculatorType': _calculatorType,
+      'calculatorMeta': {
+        'tileLength': _tileLengthController.text,
+        'tileWidth': _tileWidthController.text,
+        'piecesPerBox': _piecesPerBoxController.text,
+        'wastePercent': _wastePercentController.text,
+        'coverage': _coverageController.text,
+        'coats': _coatsController.text,
+        'volume': _volumeController.text,
+        'cementDosage': _cementDosageController.text,
+        'bagWeight': _bagWeightController.text,
+        'sand': _sandController.text,
+        'gravel': _gravelController.text,
+      },
+    });
   }
 
   Future<void> _restoreDraft() async {
@@ -176,39 +197,6 @@ class _ProductFormPageState extends State<ProductFormPage> {
     if (_nameController.text.trim().isNotEmpty && mounted) {
       setState(() => _draftRestored = true);
     }
-  }
-
-  void _scheduleDraftSave() {
-    _draftTimer?.cancel();
-    _draftTimer = Timer(const Duration(milliseconds: 400), _saveDraft);
-  }
-
-  Future<void> _saveDraft() async {
-    await sl<FormDraftStorage>().save(_draftKey, {
-      'name': _nameController.text,
-      'sku': _skuController.text,
-      'priceSell': _priceSellController.text,
-      'priceBuy': _priceBuyController.text,
-      'priceSemiWholesale': _priceSemiWholesaleController.text,
-      'priceWholesale': _priceWholesaleController.text,
-      'quantity': _quantityController.text,
-      'alertThreshold': _alertThresholdController.text,
-      'categoryId': _categoryId,
-      'calculatorType': _calculatorType,
-      'calculatorMeta': {
-        'tileLength': _tileLengthController.text,
-        'tileWidth': _tileWidthController.text,
-        'piecesPerBox': _piecesPerBoxController.text,
-        'wastePercent': _wastePercentController.text,
-        'coverage': _coverageController.text,
-        'coats': _coatsController.text,
-        'volume': _volumeController.text,
-        'cementDosage': _cementDosageController.text,
-        'bagWeight': _bagWeightController.text,
-        'sand': _sandController.text,
-        'gravel': _gravelController.text,
-      },
-    });
   }
 
   Future<void> _loadCalculatorsModuleStatus() async {
@@ -287,8 +275,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   @override
   void dispose() {
-    _draftTimer?.cancel();
-    unawaited(_saveDraft());
+    if (!_submittedSuccessfully) {
+      unawaited(_persistDraftIfNeeded());
+    }
     _nameController.dispose();
     _skuController.dispose();
     _priceSellController.dispose();
@@ -446,6 +435,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         message: '« ${_nameController.text.trim()} » a été enregistré.',
       );
       if (mounted) {
+        _submittedSuccessfully = true;
         await sl<FormDraftStorage>().clear(_draftKey);
         Navigator.of(context).pop(true);
       }
@@ -460,6 +450,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
           _errorMessage = e.message;
           _isLoading = false;
         });
+        await _persistDraftIfNeeded();
       }
     } catch (_) {
       if (mounted) {
@@ -473,6 +464,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
           _errorMessage = message;
           _isLoading = false;
         });
+        await _persistDraftIfNeeded();
       }
     }
   }

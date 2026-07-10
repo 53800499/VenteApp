@@ -1,7 +1,12 @@
+import '../security/production_message_policy.dart';
 import 'api_error_humanizer.dart';
 
 /// Messages d'erreur lisibles pour le module authentification (installation, PIN, WhatsApp).
 String humanizeAuthErrorMessage(String raw) {
+  return ProductionMessagePolicy.sanitize(_humanizeAuthErrorMessage(raw));
+}
+
+String _humanizeAuthErrorMessage(String raw) {
   final message = raw.trim();
   if (message.isEmpty) {
     return 'Une erreur est survenue. Réessayez.';
@@ -15,7 +20,7 @@ String humanizeAuthErrorMessage(String raw) {
 
   if (lower.contains('row-level security') ||
       lower.contains('violates row-level security')) {
-    return 'Création refusée par le serveur. Vérifiez que le backend est à jour, puis réessayez.';
+    return 'Création refusée par le service en ligne. Réessayez plus tard.';
   }
 
   if (lower.contains('invalid phone') ||
@@ -38,7 +43,7 @@ String humanizeAuthErrorMessage(String raw) {
   if (lower.contains('network') ||
       lower.contains('socket') ||
       lower.contains('connection refused')) {
-    return 'Impossible de joindre le serveur. Vérifiez internet et l\'adresse dans Plus → Connexion serveur.';
+    return ProductionMessagePolicy.networkUnreachableMessage();
   }
 
   return humanizeApiErrorMessage(message);
@@ -80,7 +85,7 @@ String _humanizeDuplicateKey(String lower) {
 
   if (lower.contains('settings_pkey')) {
     const message =
-        'Erreur serveur lors de l\'enregistrement des paramètres. '
+        'Erreur lors de l\'enregistrement des paramètres. '
         'Si l\'installation a déjà réussi, utilisez « Se connecter avec WhatsApp ».';
     return (summary: message, fieldErrors: fields);
   }
@@ -94,7 +99,7 @@ String _humanizeDuplicateKey(String lower) {
 
   if (lower.contains('shops') || lower.contains('server_id')) {
     const message =
-        'Cette boutique existe déjà sur le serveur. Connectez-vous avec WhatsApp.';
+        'Cette boutique existe déjà sur le cloud. Connectez-vous avec WhatsApp.';
     fields['shopName'] = message;
     return (summary: message, fieldErrors: fields);
   }

@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_runner.dart';
+import '../../../../core/security/production_message_policy.dart';
 import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -24,9 +25,8 @@ class UserRepositoryImpl implements UserRepository {
   final AppDatabase _db;
   final RemoteApiRunner _apiRunner;
 
-  static const _writeOfflineMessage =
-      'Connexion serveur requise pour gérer l\'équipe. '
-      'Vérifiez le réseau (Plus → Connexion serveur).';
+  String get _writeOfflineMessage =>
+      ProductionMessagePolicy.onlineWriteRequiredMessage('gérer l\'équipe');
 
   @override
   Future<List<ShopUser>> listShopUsers({required int localShopId}) async {
@@ -56,7 +56,7 @@ class UserRepositoryImpl implements UserRepository {
           overrides: dto.overrides.map((o) => o.toEntity()).toList(),
         );
       },
-      localFallback: () => throw const NetworkFailure(_writeOfflineMessage),
+      localFallback: () => throw NetworkFailure(_writeOfflineMessage),
     );
   }
 

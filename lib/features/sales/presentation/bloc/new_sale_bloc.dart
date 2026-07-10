@@ -62,6 +62,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     on<NewSaleCreateCustomerRequested>(_onCreateCustomer);
     on<NewSaleErrorDismissed>(_onErrorDismissed);
     on<NewSaleSubmitRequested>(_onSubmit);
+    on<NewSaleDraftAbandonRequested>(_onDraftAbandon);
   }
 
   final ListProducts _listProducts;
@@ -584,20 +585,28 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         ),
       );
     } on Failure catch (e) {
-      emit(
-        state.copyWith(
-          status: NewSaleStatus.ready,
-          errorMessage: friendlyErrorMessage(e),
-        ),
+      final next = state.copyWith(
+        status: NewSaleStatus.ready,
+        errorMessage: friendlyErrorMessage(e),
       );
+      emit(next);
+      unawaited(_persistDraft(next));
     } catch (_) {
-      emit(
-        state.copyWith(
-          status: NewSaleStatus.ready,
-          errorMessage: 'Échec de l\'enregistrement de la vente.',
-        ),
+      final next = state.copyWith(
+        status: NewSaleStatus.ready,
+        errorMessage: 'Échec de l\'enregistrement de la vente.',
       );
+      emit(next);
+      unawaited(_persistDraft(next));
     }
+  }
+
+  Future<void> _onDraftAbandon(
+    NewSaleDraftAbandonRequested event,
+    Emitter<NewSaleState> emit,
+  ) async {
+    if (isConversion || state.status == NewSaleStatus.success) return;
+    await _persistDraft(state);
   }
 
   PaymentDraft _buildPayment(int total) {
@@ -633,13 +642,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     final drafts = _formDrafts;
     if (drafts == null || isConversion) return;
 
-    final key = FormDraftStorage.saleKey(_session.shop.id);
     if (change.nextState.status == NewSaleStatus.success) {
-      unawaited(drafts.clear(key));
-      return;
-    }
-    if (change.nextState.status == NewSaleStatus.ready) {
-      unawaited(_persistDraft(change.nextState));
+      unawaited(drafts.clear(FormDraftStorage.saleKey(_session.shop.id)));
     }
   }
 

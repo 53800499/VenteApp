@@ -127,3 +127,8 @@ final class NewSaleLineUnitPriceChanged extends NewSaleEvent {
   @override
   List<Object?> get props => [productId, unitPrice];
 }
+
+/// Sauvegarde le brouillon si l'utilisateur quitte sans valider la vente.
+final class NewSaleDraftAbandonRequested extends NewSaleEvent {
+  const NewSaleDraftAbandonRequested();
+}

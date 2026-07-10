@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/network/remote_api_runner.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/security/production_message_policy.dart';
 import '../../../../core/shop/shop_hierarchy.dart';
 import '../../../../core/storage/last_shop_storage.dart';
 import '../../../../core/utils/time.dart';
@@ -27,9 +28,8 @@ class ShopRepositoryImpl implements ShopRepository {
   final RemoteApiRunner _apiRunner;
   final LastShopStorage _lastShopStorage;
 
-  static const _writeOfflineMessage =
-      'Connexion serveur requise pour gérer les boutiques. '
-      'Vérifiez le réseau (Plus → Connexion serveur).';
+  String get _writeOfflineMessage =>
+      ProductionMessagePolicy.onlineWriteRequiredMessage('gérer les boutiques');
 
   @override
   Future<ShopListResult> listShops() async {

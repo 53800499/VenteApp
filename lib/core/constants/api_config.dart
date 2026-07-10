@@ -1,13 +1,12 @@
 abstract final class ApiConfig {
   static const _prefsKey = 'api_base_url';
 
-  /// Backend cloud (Render) — défaut hors override utilisateur.
-  static const productionBaseUrl =
-      'https://venteappbackend-1.onrender.com/api';
+  /// URL cloud par défaut — non exposée dans l'interface (dart-define prioritaire).
+  static String get productionBaseUrl => _defaultCloudApiUrl();
 
   static String get prefsKey => _prefsKey;
 
-  /// URL par défaut : dart-define `API_BASE_URL` ou backend Render.
+  /// URL par défaut : dart-define `API_BASE_URL` ou backend cloud.
   static String defaultBaseUrl() {
     const fromEnv = String.fromEnvironment('API_BASE_URL');
     if (fromEnv.isNotEmpty) return fromEnv;
@@ -74,6 +73,9 @@ abstract final class ApiConfig {
   static const recentPinProofMinutes = 15;
   static const recentPinProofTtlMs = recentPinProofMinutes * 60 * 1000;
 
+  /// Délai max pour un refresh JWT lors d'une réparation cloud (échec rapide).
+  static const cloudRefreshAttemptTimeout = Duration(seconds: 15);
+
   /// Délai max pour un login serveur par PIN lors d'une réparation cloud.
   static const recentPinRepairTimeout = Duration(seconds: 60);
 
@@ -81,4 +83,10 @@ abstract final class ApiConfig {
   static const localSessionMaxDays = 3650;
   static const localSessionMaxMs =
       localSessionMaxDays * 24 * 60 * 60 * 1000;
+
+  static String _defaultCloudApiUrl() => String.fromCharCodes(const [
+    104, 116, 116, 112, 115, 58, 47, 47, 118, 101, 110, 116, 101, 97, 112, 112,
+    98, 97, 99, 107, 101, 110, 100, 45, 49, 46, 111, 110, 114, 101, 110, 100,
+    101, 114, 46, 99, 111, 109, 47, 97, 112, 105,
+  ]);
 }
