@@ -84,6 +84,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>(_onLogout);
     on<AuthEntryResetRequested>(_onEntryResetRequested);
     on<AuthLockScreenBackRequested>(_onLockScreenBackRequested);
+    on<AuthSessionRestored>(_onSessionRestored);
   }
 
   final IsSetupComplete _isSetupComplete;
@@ -495,18 +496,19 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
             );
       await _completeLogin(session, emit);
     } on Failure catch (failure) {
+      final message = _lockScreenErrorMessage(failure, current);
       if (current is AuthLocked) {
         emit(
           AuthLocked(
             current.lockScreen,
-            errorMessage: humanizeAuthErrorMessage(failure.message),
+            errorMessage: message,
             requiresEmergencyRecovery: failure is EmergencyRecoveryRequiredFailure,
             canGoBack: current.canGoBack,
             isUnlockOnly: current.isUnlockOnly,
           ),
         );
       } else {
-      emit(AuthFailure(humanizeAuthErrorMessage(failure.message)));
+      emit(AuthFailure(message));
       }
     } catch (error) {
       final message = friendlyErrorMessage(error);
@@ -583,6 +585,31 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   Future<bool> _shouldUnlockExistingSession(AuthState current) async {
     if (current is AuthLocked && current.isUnlockOnly) return true;
     return _hasRestorableSession();
+  }
+
+  String _lockScreenErrorMessage(Failure failure, AuthState current) {
+    final raw = humanizeAuthErrorMessage(failure.message);
+    if (current is! AuthLocked) return raw;
+
+    if (failure is InvalidPinFailure) {
+      final attempts = failure.remainingAttempts;
+      if (attempts > 0) {
+        return 'Code PIN incorrect. Il vous reste $attempts tentative(s).';
+      }
+      return 'Code PIN incorrect.';
+    }
+    if (failure is AccountLockedFailure) {
+      final minutes = (failure.remainingSeconds / 60).ceil();
+      return 'Compte verrouillé. Réessayez dans $minutes min ou utilisez « PIN oublié ? ».';
+    }
+    if (failure is NetworkFailure) {
+      return failure.message;
+    }
+    if (raw.contains('Session expirée')) {
+      return 'Connexion serveur expirée. Votre PIN local reste valide — '
+          'réessayez. La synchro reprendra après ouverture.';
+    }
+    return raw;
   }
 
   Future<void> _completeLogin(
@@ -784,6 +811,12 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     AuthCloudReconnectRequested event,
     Emitter<AuthState> emit,
   ) async {
+    final current = state;
+    // Déjà sur l'écran PIN ou dans l'app : la réparation JWT se fait via le PIN
+    // saisi (déverrouillage ou bannière), pas via une reconnexion WhatsApp.
+    if (current is AuthLocked || current is AuthAuthenticated) {
+      return;
+    }
     emit(const AuthWhatsappLogin());
   }
 
@@ -812,6 +845,13 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     final current = state;
     if (current is! AuthLocked || !current.canGoBack) return;
     await _emitEntryScreen(emit);
+  }
+
+  Future<void> _onSessionRestored(
+    AuthSessionRestored event,
+    Emitter<AuthState> emit,
+  ) async {
+    await _completeLogin(event.session, emit);
   }
 }
 

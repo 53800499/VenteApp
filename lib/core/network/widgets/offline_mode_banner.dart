@@ -198,12 +198,6 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                                     showCloudSessionPinRepairDialog(context),
                                 child: const Text('Code PIN'),
                               ),
-                              TextButton(
-                                onPressed: () => context.read<AuthBloc>().add(
-                                      const AuthCloudReconnectRequested(),
-                                    ),
-                                child: const Text('WhatsApp'),
-                              ),
                             ],
                           );
                         }

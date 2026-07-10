@@ -1,15 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/storage/form_draft_storage.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/customer_entities.dart';
 import '../../domain/usecases/customer_usecases.dart';
 import '../widgets/customer_feedback.dart';
+import '../../../../shared/components/feature_ui.dart';
 
 class CustomerFormPage extends StatefulWidget {
   const CustomerFormPage({
@@ -36,6 +40,9 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
   bool _submitting = false;
   bool _isShared = false;
   String? _errorMessage;
+  Timer? _draftTimer;
+  bool _draftRestored = false;
+  late final String _draftKey;
 
   bool get _canShare =>
       widget.session.user.role == UserRole.owner;
@@ -43,6 +50,10 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
   @override
   void initState() {
     super.initState();
+    _draftKey = FormDraftStorage.customerKey(
+      widget.session.shop.id,
+      customerId: widget.customer?.id,
+    );
     _nameController = TextEditingController(text: widget.customer?.name ?? '');
     _phoneController =
         TextEditingController(text: widget.customer?.phone ?? '');
@@ -50,10 +61,61 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
         TextEditingController(text: widget.customer?.address ?? '');
     _noteController = TextEditingController(text: widget.customer?.note ?? '');
     _isShared = widget.customer?.isShared ?? false;
+    unawaited(_restoreDraft());
+    for (final controller in [
+      _nameController,
+      _phoneController,
+      _addressController,
+      _noteController,
+    ]) {
+      controller.addListener(_scheduleDraftSave);
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    final draft = await sl<FormDraftStorage>().read(_draftKey);
+    if (!mounted || draft == null) return;
+    final hasContent = [
+      draft['name'],
+      draft['phone'],
+      draft['address'],
+      draft['note'],
+    ].any((v) => v is String && v.trim().isNotEmpty);
+    if (!hasContent) return;
+
+    setState(() {
+      if (widget.customer == null || draft['name'] is String) {
+        _nameController.text = '${draft['name'] ?? ''}';
+      }
+      _phoneController.text = '${draft['phone'] ?? ''}';
+      _addressController.text = '${draft['address'] ?? ''}';
+      _noteController.text = '${draft['note'] ?? ''}';
+      if (draft['isShared'] is bool && _canShare) {
+        _isShared = draft['isShared'] as bool;
+      }
+      _draftRestored = true;
+    });
+  }
+
+  void _scheduleDraftSave() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 400), _saveDraft);
+  }
+
+  Future<void> _saveDraft() async {
+    await sl<FormDraftStorage>().save(_draftKey, {
+      'name': _nameController.text,
+      'phone': _phoneController.text,
+      'address': _addressController.text,
+      'note': _noteController.text,
+      'isShared': _isShared,
+    });
   }
 
   @override
   void dispose() {
+    _draftTimer?.cancel();
+    unawaited(_saveDraft());
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -72,6 +134,12 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
+            if (_draftRestored) ...[
+              const FeatureTipBanner(
+                message: 'Brouillon restauré — vous pouvez reprendre la saisie.',
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             TextFormField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -217,6 +285,7 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
       }
 
       if (!mounted) return;
+      await sl<FormDraftStorage>().clear(_draftKey);
       await CustomerFeedback.showSuccess(
         context: context,
         title: isEdit ? 'Client mis à jour' : 'Client créé',

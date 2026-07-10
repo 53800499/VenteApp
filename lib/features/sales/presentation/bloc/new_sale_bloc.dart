@@ -8,6 +8,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/commerce_shop_scope.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../core/storage/form_draft_storage.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../customers/domain/entities/customer_entities.dart';
 import '../../../customers/domain/usecases/customer_usecases.dart';
@@ -35,6 +36,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     ConvertQuickSaleToStandard? convertQuickSale,
     QuickSaleConversion? conversion,
     FindOpenCashSession? findOpenCashSession,
+    FormDraftStorage? formDraftStorage,
   })  : _listProducts = listProducts,
         _listCustomers = listCustomers,
         _createStandardSale = createStandardSale,
@@ -44,6 +46,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         _convertQuickSale = convertQuickSale,
         _conversion = conversion,
         _findOpenCashSession = findOpenCashSession,
+        _formDrafts = formDraftStorage,
         _session = session,
         super(const NewSaleState()) {
     on<NewSaleLoadRequested>(_onLoad);
@@ -70,6 +73,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   final ConvertQuickSaleToStandard? _convertQuickSale;
   final QuickSaleConversion? _conversion;
   final FindOpenCashSession? _findOpenCashSession;
+  final FormDraftStorage? _formDrafts;
   final AuthSession _session;
 
   AuthSession get session => _session;
@@ -99,9 +103,10 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       }
 
       emit(
-        NewSaleState(
-          status: NewSaleStatus.ready,
-          products: products
+        await _mergeDraft(
+          NewSaleState(
+            status: NewSaleStatus.ready,
+            products: products
               .map(
                 (p) => SaleProductOption(
                   id: p.id,
@@ -128,6 +133,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
             Permission.salesPriceOverride,
           ),
           cashSessionOpen: cashSessionOpen,
+        ),
         ),
       );
     } on Failure catch (error) {
@@ -619,5 +625,109 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
           amountCredit: state.mixedAmountCredit,
         ),
     };
+  }
+
+  @override
+  void onChange(Change<NewSaleState> change) {
+    super.onChange(change);
+    final drafts = _formDrafts;
+    if (drafts == null || isConversion) return;
+
+    final key = FormDraftStorage.saleKey(_session.shop.id);
+    if (change.nextState.status == NewSaleStatus.success) {
+      unawaited(drafts.clear(key));
+      return;
+    }
+    if (change.nextState.status == NewSaleStatus.ready) {
+      unawaited(_persistDraft(change.nextState));
+    }
+  }
+
+  Future<NewSaleState> _mergeDraft(NewSaleState base) async {
+    final drafts = _formDrafts;
+    if (drafts == null || isConversion) return base;
+
+    final draft = await drafts.read(FormDraftStorage.saleKey(_session.shop.id));
+    if (draft == null) return base;
+
+    final rawCart = draft['cart'];
+    if (rawCart is! List || rawCart.isEmpty) return base;
+
+    final cart = <CartLine>[];
+    for (final item in rawCart) {
+      if (item is! Map) continue;
+      cart.add(
+        CartLine(
+          productId: item['productId'] as int? ?? 0,
+          productName: item['productName'] as String? ?? '',
+          catalogUnitPrice: item['catalogUnitPrice'] as int? ?? 0,
+          unitPrice: item['unitPrice'] as int? ?? 0,
+          quantity: item['quantity'] as int? ?? 1,
+          stockAvailable: item['stockAvailable'] as int? ?? 0,
+          isManualPrice: item['isManualPrice'] as bool? ?? false,
+          usedRememberedPrice: item['usedRememberedPrice'] as bool? ?? false,
+        ),
+      );
+    }
+    if (cart.isEmpty) return base;
+
+    final paymentName = draft['paymentMethod'] as String?;
+    final paymentMethod = PaymentMethod.values
+        .where((m) => m.name == paymentName)
+        .firstOrNull;
+
+    final tierName = draft['selectedPricingTier'] as String?;
+    final tier = SalePricingTier.values
+        .where((t) => t.name == tierName)
+        .firstOrNull;
+
+    return base.copyWith(
+      cart: cart,
+      paymentMethod: paymentMethod ?? base.paymentMethod,
+      selectedCustomerId: draft['selectedCustomerId'] as int?,
+      mixedAmountCash: draft['mixedAmountCash'] as int? ?? base.mixedAmountCash,
+      mixedAmountMomo: draft['mixedAmountMomo'] as int? ?? base.mixedAmountMomo,
+      mixedAmountCredit:
+          draft['mixedAmountCredit'] as int? ?? base.mixedAmountCredit,
+      searchQuery: draft['searchQuery'] as String? ?? base.searchQuery,
+      selectedPricingTier: tier ?? base.selectedPricingTier,
+    );
+  }
+
+  Future<void> _persistDraft(NewSaleState next) async {
+    final drafts = _formDrafts;
+    if (drafts == null || isConversion) return;
+
+    final key = FormDraftStorage.saleKey(_session.shop.id);
+    if (next.cart.isEmpty &&
+        next.searchQuery.isEmpty &&
+        next.selectedCustomerId == null) {
+      await drafts.clear(key);
+      return;
+    }
+
+    await drafts.save(key, {
+      'cart': next.cart
+          .map(
+            (line) => {
+              'productId': line.productId,
+              'productName': line.productName,
+              'catalogUnitPrice': line.catalogUnitPrice,
+              'unitPrice': line.unitPrice,
+              'quantity': line.quantity,
+              'stockAvailable': line.stockAvailable,
+              'isManualPrice': line.isManualPrice,
+              'usedRememberedPrice': line.usedRememberedPrice,
+            },
+          )
+          .toList(),
+      'paymentMethod': next.paymentMethod.name,
+      'selectedCustomerId': next.selectedCustomerId,
+      'mixedAmountCash': next.mixedAmountCash,
+      'mixedAmountMomo': next.mixedAmountMomo,
+      'mixedAmountCredit': next.mixedAmountCredit,
+      'searchQuery': next.searchQuery,
+      'selectedPricingTier': next.selectedPricingTier.name,
+    });
   }
 }

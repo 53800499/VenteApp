@@ -669,6 +669,100 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthSession> resetPinWithWhatsappOtp({
+    required String verificationToken,
+    required int serverShopId,
+    required int serverUserId,
+    required String newPin,
+  }) async {
+    final pinVo = Pin.create(newPin);
+    final localShopId = await _resolveLocalShopId(serverShopId);
+
+    if (_remote != null && await _networkInfo.isConnected) {
+      try {
+        await _remote!.resetPinWithWhatsappOtp(
+          verificationToken: verificationToken,
+          shopId: serverShopId,
+          userId: serverUserId,
+          newPin: newPin,
+        );
+      } on Object {
+        // Poursuivre la mise à jour locale si le serveur est indisponible.
+      }
+    }
+
+    final localUser = await (_db.select(_db.users)
+          ..where(
+            (u) =>
+                u.shopId.equals(localShopId) &
+                u.serverId.equals('$serverUserId'),
+          ))
+        .getSingleOrNull();
+
+    if (localUser == null) {
+      throw const NotFoundFailure(
+        'Utilisateur local introuvable. Reconnectez-vous avec WhatsApp.',
+      );
+    }
+
+    final timestamp = nowMs();
+    final newHash = _pinHasher.hash(pinVo.value);
+    await (_db.update(_db.users)..where((u) => u.id.equals(localUser.id))).write(
+      UsersCompanion(
+        pinHash: Value(newHash),
+        pinProvisional: const Value(false),
+        failedAttempts: const Value(0),
+        lockedUntil: Value<int?>(null),
+        lockoutCount: const Value(0),
+        updatedAt: Value(timestamp),
+        version: Value(localUser.version + 1),
+      ),
+    );
+
+    await _db.into(_db.auditLogs).insert(
+          AuditLogsCompanion.insert(
+            shopId: localShopId,
+            userId: localUser.id,
+            action: 'pin_changed',
+            module: 'auth',
+            entityId: localUser.id,
+            entityTable: 'users',
+            createdAt: timestamp,
+          ),
+        );
+
+    final updatedUser = await (_db.select(_db.users)
+          ..where((u) => u.id.equals(localUser.id)))
+        .getSingle();
+
+    final settings = await _getSettings(localShopId);
+    final permissions =
+        await _resolvePermissions(UserRole.fromCode(updatedUser.role));
+
+    final session = await _createSession(
+      user: updatedUser,
+      settings: settings,
+      shopId: localShopId,
+      permissions: permissions,
+      serverUserId: serverUserId,
+      serverShopId: serverShopId,
+    );
+
+    if (_remote != null && await _networkInfo.isConnected) {
+      unawaited(
+        _refreshOnlineCredentialsAfterLocalPin(
+          pin: newPin,
+          shopId: serverShopId,
+          localShopId: localShopId,
+          userId: localUser.id,
+        ),
+      );
+    }
+
+    return session;
+  }
+
+  @override
   Future<bool> enableBiometric({
     required int userId,
     required String sessionToken,
@@ -976,27 +1070,41 @@ class AuthRepositoryImpl implements AuthRepository {
     final serverShopId = await _resolveServerShopId(shopId);
     final localShopId = await _resolveLocalShopId(serverShopId);
 
-    if (await hasRestorableSession()) {
+    final localUsers = await (_db.select(_db.users)
+          ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
+        .get();
+
+    if (localUsers.isNotEmpty) {
       try {
         final user = await _verifyPinForUser(
           pin: pin,
           shopId: localShopId,
           userId: userId,
         );
-        final session = await restoreSession();
-        if (session != null && session.user.id == user.id) {
-          if (_remote != null && await _networkInfo.isConnected) {
-            unawaited(
-              _refreshOnlineCredentialsAfterLocalPin(
-                pin: pin,
-                shopId: serverShopId,
-                localShopId: localShopId,
-                userId: user.id,
-              ),
-            );
-          }
-          return session;
+        if (await hasRestorableSession()) {
+          return _openSessionAfterLocalUnlock(
+            user: user,
+            localShopId: localShopId,
+            serverShopId: serverShopId,
+            pin: pin,
+          );
         }
+        final session = await _loginWithPinLocal(
+          pin: pin,
+          shopId: localShopId,
+          userId: user.id,
+        );
+        if (_remote != null && await _networkInfo.isConnected) {
+          unawaited(
+            _refreshOnlineCredentialsAfterLocalPin(
+              pin: pin,
+              shopId: serverShopId,
+              localShopId: localShopId,
+              userId: user.id,
+            ),
+          );
+        }
+        return session;
       } on InvalidPinFailure {
         // Idem : bascule serveur uniquement pour un PIN provisoire.
         if (await _isPinProvisional(localShopId: localShopId, userId: userId)) {
@@ -1049,16 +1157,62 @@ class AuthRepositoryImpl implements AuthRepository {
       throw const EmergencyRecoveryRequiredFailure();
     }
 
-      final session = await restoreSession();
-      if (session != null && session.user.id == user.id) {
-        if (_remote != null && await _networkInfo.isConnected) {
-          unawaited(_ensureOnlineSessionAfterUnlock(localShopId));
-        }
-        return session;
-      }
+      final session = await _openSessionAfterLocalUnlock(
+        user: user,
+        localShopId: localShopId,
+        serverShopId: serverShopId,
+      );
+      return session;
     }
 
     return loginWithBiometric(shopId: shopId, userId: userId);
+  }
+
+  /// Rouvre la session locale après PIN/biométrie. Recrée la session SQLite si
+  /// elle a été effacée au verrouillage, sans repasser par le serveur.
+  Future<AuthSession> _openSessionAfterLocalUnlock({
+    required User user,
+    required int localShopId,
+    required int serverShopId,
+    String? pin,
+  }) async {
+    final session = await restoreSession();
+    if (session != null && session.user.id == user.id) {
+      if (pin != null && _remote != null && await _networkInfo.isConnected) {
+        unawaited(
+          _refreshOnlineCredentialsAfterLocalPin(
+            pin: pin,
+            shopId: serverShopId,
+            localShopId: localShopId,
+            userId: user.id,
+          ),
+        );
+      } else if (_remote != null && await _networkInfo.isConnected) {
+        unawaited(_ensureOnlineSessionAfterUnlock(localShopId));
+      }
+      return session;
+    }
+
+    final settings = await _getSettings(localShopId);
+    final permissions =
+        await _resolvePermissions(UserRole.fromCode(user.role));
+    final recreated = await _createSession(
+      user: user,
+      settings: settings,
+      shopId: localShopId,
+      permissions: permissions,
+    );
+    if (pin != null && _remote != null && await _networkInfo.isConnected) {
+      unawaited(
+        _refreshOnlineCredentialsAfterLocalPin(
+          pin: pin,
+          shopId: serverShopId,
+          localShopId: localShopId,
+          userId: user.id,
+        ),
+      );
+    }
+    return recreated;
   }
 
   int? _parseServerId(String? serverId) {

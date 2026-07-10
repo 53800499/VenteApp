@@ -24,7 +24,7 @@ import '../../core/storage/api_settings_storage.dart';
 import '../../core/storage/auth_credentials_storage.dart';
 import '../../core/storage/auth_flow_storage.dart';
 import '../../core/storage/database_key_storage.dart';
-import '../../core/storage/device_id_storage.dart';
+import '../../core/storage/form_draft_storage.dart';
 import '../../core/storage/last_shop_storage.dart';
 import '../../core/storage/onboarding_storage.dart';
 import '../../core/storage/session_storage.dart';
@@ -521,6 +521,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(LockoutPolicy.new);
   sl.registerLazySingleton(() => SessionStorage(sl()));
   sl.registerLazySingleton(() => AuthCredentialsStorage(sl()));
+  sl.registerLazySingleton(() => FormDraftStorage(sl()));
   sl.registerLazySingleton(() => DeviceIdStorage(sl()));
   await sl<DeviceIdStorage>().getOrCreate();
   sl.registerLazySingleton(Connectivity.new);
@@ -682,6 +683,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => CompleteWhatsappLogin(sl()));
   sl.registerLazySingleton(() => EmergencyUnlock(sl()));
   sl.registerLazySingleton(() => EmergencyUnlockWithWhatsappOtp(sl()));
+  sl.registerLazySingleton(() => ResetPinWithWhatsappOtp(sl()));
   sl.registerLazySingleton(() => EnableBiometric(sl()));
   sl.registerLazySingleton(() => DisableBiometric(sl()));
   sl.registerLazySingleton(() => ChangeUserPin(sl()));

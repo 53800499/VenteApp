@@ -38,6 +38,14 @@ abstract class AuthRepository {
     int? userId,
   });
 
+  /// Réinitialise le PIN après OTP WhatsApp et ouvre une session locale.
+  Future<AuthSession> resetPinWithWhatsappOtp({
+    required String verificationToken,
+    required int serverShopId,
+    required int serverUserId,
+    required String newPin,
+  });
+
   Future<bool> enableBiometric({
     required int userId,
     required String sessionToken,

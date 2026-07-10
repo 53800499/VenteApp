@@ -198,3 +198,13 @@ class AuthEntryResetRequested extends AuthEvent {
 class AuthLockScreenBackRequested extends AuthEvent {
   const AuthLockScreenBackRequested();
 }
+
+/// Session locale ouverte après récupération PIN (sans ressaisir le PIN).
+class AuthSessionRestored extends AuthEvent {
+  const AuthSessionRestored(this.session);
+
+  final AuthSession session;
+
+  @override
+  List<Object?> get props => [session];
+}

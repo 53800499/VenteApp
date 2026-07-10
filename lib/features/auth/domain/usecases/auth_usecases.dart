@@ -167,6 +167,25 @@ class EmergencyUnlockWithWhatsappOtp {
       );
 }
 
+class ResetPinWithWhatsappOtp {
+  const ResetPinWithWhatsappOtp(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<AuthSession> call({
+    required String verificationToken,
+    required int serverShopId,
+    required int serverUserId,
+    required String newPin,
+  }) =>
+      _repository.resetPinWithWhatsappOtp(
+        verificationToken: verificationToken,
+        serverShopId: serverShopId,
+        serverUserId: serverUserId,
+        newPin: newPin,
+      );
+}
+
 class EnableBiometric {
   const EnableBiometric(this._repository);
 

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/di/injection_container.dart';
+import '../../../../core/storage/form_draft_storage.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -65,10 +68,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
   bool _pricingTiersEnabled = false;
   bool _calculatorsModuleEnabled = false;
   String? _errorMessage;
+  Timer? _draftTimer;
+  bool _draftRestored = false;
+  late final String _draftKey;
 
   @override
   void initState() {
     super.initState();
+    _draftKey = FormDraftStorage.productKey(
+      widget.session.shop.id,
+      productId: widget.product?.id,
+    );
     final product = widget.product;
     if (product != null) {
       _nameController.text = product.name;
@@ -90,6 +100,115 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _loadPricingSettings();
     _loadCalculatorsModuleStatus();
     _loadCalculatorConfig();
+    unawaited(_restoreDraft());
+    for (final controller in [
+      _nameController,
+      _skuController,
+      _priceSellController,
+      _priceBuyController,
+      _priceSemiWholesaleController,
+      _priceWholesaleController,
+      _quantityController,
+      _alertThresholdController,
+      _tileLengthController,
+      _tileWidthController,
+      _piecesPerBoxController,
+      _wastePercentController,
+      _coverageController,
+      _coatsController,
+      _volumeController,
+      _cementDosageController,
+      _bagWeightController,
+      _sandController,
+      _gravelController,
+    ]) {
+      controller.addListener(_scheduleDraftSave);
+    }
+  }
+
+  Future<void> _restoreDraft() async {
+    final draft = await sl<FormDraftStorage>().read(_draftKey);
+    if (!mounted || draft == null) return;
+    if (_nameController.text.trim().isEmpty && draft['name'] is String) {
+      _nameController.text = draft['name'] as String;
+    }
+    if (draft['sku'] is String) _skuController.text = draft['sku'] as String;
+    if (draft['priceSell'] is String) {
+      _priceSellController.text = draft['priceSell'] as String;
+    }
+    if (draft['priceBuy'] is String) {
+      _priceBuyController.text = draft['priceBuy'] as String;
+    }
+    if (draft['priceSemiWholesale'] is String) {
+      _priceSemiWholesaleController.text = draft['priceSemiWholesale'] as String;
+    }
+    if (draft['priceWholesale'] is String) {
+      _priceWholesaleController.text = draft['priceWholesale'] as String;
+    }
+    if (draft['quantity'] is String) {
+      _quantityController.text = draft['quantity'] as String;
+    }
+    if (draft['alertThreshold'] is String) {
+      _alertThresholdController.text = draft['alertThreshold'] as String;
+    }
+    if (draft['categoryId'] is int) _categoryId = draft['categoryId'] as int;
+    if (draft['calculatorType'] is String) {
+      _calculatorType = draft['calculatorType'] as String;
+    }
+    void applyMeta(String key, TextEditingController controller) {
+      final meta = draft['calculatorMeta'];
+      if (meta is Map && meta[key] is String) {
+        controller.text = meta[key] as String;
+      }
+    }
+    applyMeta('tileLength', _tileLengthController);
+    applyMeta('tileWidth', _tileWidthController);
+    applyMeta('piecesPerBox', _piecesPerBoxController);
+    applyMeta('wastePercent', _wastePercentController);
+    applyMeta('coverage', _coverageController);
+    applyMeta('coats', _coatsController);
+    applyMeta('volume', _volumeController);
+    applyMeta('cementDosage', _cementDosageController);
+    applyMeta('bagWeight', _bagWeightController);
+    applyMeta('sand', _sandController);
+    applyMeta('gravel', _gravelController);
+
+    if (_nameController.text.trim().isNotEmpty && mounted) {
+      setState(() => _draftRestored = true);
+    }
+  }
+
+  void _scheduleDraftSave() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 400), _saveDraft);
+  }
+
+  Future<void> _saveDraft() async {
+    await sl<FormDraftStorage>().save(_draftKey, {
+      'name': _nameController.text,
+      'sku': _skuController.text,
+      'priceSell': _priceSellController.text,
+      'priceBuy': _priceBuyController.text,
+      'priceSemiWholesale': _priceSemiWholesaleController.text,
+      'priceWholesale': _priceWholesaleController.text,
+      'quantity': _quantityController.text,
+      'alertThreshold': _alertThresholdController.text,
+      'categoryId': _categoryId,
+      'calculatorType': _calculatorType,
+      'calculatorMeta': {
+        'tileLength': _tileLengthController.text,
+        'tileWidth': _tileWidthController.text,
+        'piecesPerBox': _piecesPerBoxController.text,
+        'wastePercent': _wastePercentController.text,
+        'coverage': _coverageController.text,
+        'coats': _coatsController.text,
+        'volume': _volumeController.text,
+        'cementDosage': _cementDosageController.text,
+        'bagWeight': _bagWeightController.text,
+        'sand': _sandController.text,
+        'gravel': _gravelController.text,
+      },
+    });
   }
 
   Future<void> _loadCalculatorsModuleStatus() async {
@@ -168,6 +287,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   @override
   void dispose() {
+    _draftTimer?.cancel();
+    unawaited(_saveDraft());
     _nameController.dispose();
     _skuController.dispose();
     _priceSellController.dispose();
@@ -324,7 +445,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
         title: isEdit ? 'Produit mis à jour' : 'Produit créé',
         message: '« ${_nameController.text.trim()} » a été enregistré.',
       );
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) {
+        await sl<FormDraftStorage>().clear(_draftKey);
+        Navigator.of(context).pop(true);
+      }
     } on Failure catch (e) {
       if (mounted) {
         await InventoryFeedback.showErrorDialog(

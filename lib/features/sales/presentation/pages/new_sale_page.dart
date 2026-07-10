@@ -74,6 +74,7 @@ class _NewSalePageState extends State<NewSalePage>
         convertQuickSale: sl(),
         conversion: widget.conversion,
         findOpenCashSession: sl(),
+        formDraftStorage: sl(),
         session: widget.session,
       )..add(const NewSaleLoadRequested()),
       child: BlocListener<NewSaleBloc, NewSaleState>(

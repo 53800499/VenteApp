@@ -182,6 +182,23 @@ class _LockScreenPageState extends State<LockScreenPage> {
                               child: const Text('Déblocage d\'urgence'),
                             ),
                           ],
+                          const SizedBox(height: AppSpacing.xs),
+                          TextButton(
+                            onPressed: state.isSubmitting
+                                ? null
+                                : () {
+                                    final user = selectedUser ??
+                                        lockScreen.users.firstOrNull;
+                                    Navigator.of(context).pushNamed(
+                                      AppRouter.forgotPin,
+                                      arguments: <String, int?>{
+                                        'shopId': lockScreen.shopId,
+                                        'userId': user?.id,
+                                      },
+                                    );
+                                  },
+                            child: const Text('PIN oublié ?'),
+                          ),
                         ],
                       ),
                     );

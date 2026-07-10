@@ -140,6 +140,23 @@ class AuthRemoteDatasource {
     return LoginSuccessData.fromJson(data);
   }
 
+  Future<void> resetPinWithWhatsappOtp({
+    required String verificationToken,
+    required int shopId,
+    required int userId,
+    required String newPin,
+  }) async {
+    await _postData(
+      '/auth/whatsapp/otp/reset-pin',
+      {
+        'verificationToken': verificationToken,
+        'shopId': shopId,
+        'userId': userId,
+        'newPin': newPin,
+      },
+    );
+  }
+
   Future<LoginSuccessData> emergencyUnlock({
     required String recoveryToken,
     required int shopId,
