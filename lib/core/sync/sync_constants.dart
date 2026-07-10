@@ -8,6 +8,9 @@ abstract final class SyncEntityTable {
   static const expenses = 'expenses';
   static const cashSessions = 'cash_sessions';
   static const cashMovements = 'cash_movements';
+  static const tenantModules = 'tenant_modules';
+  static const calculatorProductData = 'calculator_product_data';
+  static const calculatorHistory = 'calculator_history';
 }
 
 /// Opérations poussées vers le cloud (FIFO).

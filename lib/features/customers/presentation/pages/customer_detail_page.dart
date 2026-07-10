@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -6,6 +8,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../../core/sync/sync_snapshot.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
@@ -42,10 +46,15 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
   Customer? _customer;
   List<CustomerSaleSummary> _sales = const [];
   List<Debt> _debts = const [];
+  List<Debt> _paidDebts = const [];
+  List<ForgivenDebtEntry> _forgivenDebts = const [];
   bool _loading = true;
+  bool _refreshing = false;
   bool _archiving = false;
   String? _error;
   late final TabController _tabController;
+  StreamSubscription<SyncSnapshot>? _syncSub;
+  DateTime? _lastHandledSyncAt;
 
   bool get _canWrite => PermissionGuard.can(
         widget.session.user.permissions,
@@ -79,42 +88,67 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _load();
+    final syncService = sl<SyncService>();
+    _syncSub = syncService.snapshots.listen((snapshot) {
+      if (snapshot.phase != SyncRunPhase.completed) return;
+      if (snapshot.shopId != null &&
+          snapshot.shopId != widget.session.shop.id) {
+        return;
+      }
+      final completedAt = snapshot.lastCompletedAt;
+      if (completedAt != null && completedAt == _lastHandledSyncAt) return;
+      _lastHandledSyncAt = completedAt;
+      if (!mounted) return;
+      _load(silent: true);
+    });
   }
 
   @override
   void dispose() {
+    _syncSub?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool force = false, bool silent = false}) async {
+    final hasData = _customer != null;
     setState(() {
-      _loading = true;
+      if (!hasData) {
+        _loading = true;
+      } else if (!silent) {
+        _refreshing = force;
+      }
       _error = null;
     });
     try {
       final detail = await sl<GetCustomer>()(
         session: widget.session,
         customerId: widget.customerId,
+        force: force,
       );
       if (!mounted) return;
       setState(() {
         _customer = detail.customer;
         _sales = detail.sales;
         _debts = detail.debts;
+        _paidDebts = detail.paidDebts;
+        _forgivenDebts = detail.forgivenDebts;
         _loading = false;
+        _refreshing = false;
       });
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
         _error = friendlyErrorMessage(e);
         _loading = false;
+        _refreshing = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Impossible de charger le client.';
         _loading = false;
+        _refreshing = false;
       });
     }
   }
@@ -141,7 +175,13 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
             ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          if (_refreshing)
+            const LinearProgressIndicator(minHeight: 2),
+          Expanded(child: _buildBody()),
+        ],
+      ),
       floatingActionButton: _buildFab(),
     );
   }
@@ -219,7 +259,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
                 customerId: widget.customerId,
                 customerName: customer.name,
                 initialDebts: _debts,
-                onUpdated: _load,
+                initialPaidDebts: _paidDebts,
+                initialForgivenDebts: _forgivenDebts,
+                onUpdated: () => _load(),
               ),
               _buildInfosTab(customer),
             ],
@@ -365,9 +407,10 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
   }
 
   Widget _buildPurchasesTab() {
+    final customer = _customer;
     if (_sales.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () => _load(force: true),
         child: EmptyListPlaceholder(
           embedded: true,
           icon: Icons.receipt_long_outlined,
@@ -377,12 +420,25 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
     }
 
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => _load(force: true),
       child: ListView.builder(
         padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: _sales.length,
+        itemCount: _sales.length + 1,
         itemBuilder: (context, index) {
-          final sale = _sales[index];
+          if (index == 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text(
+                '${customer?.purchaseCount ?? _sales.length} achat(s) · '
+                '${formatFcfa(customer?.totalPurchases ?? _sales.fold<int>(0, (sum, s) => sum + s.totalAmount))}',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            );
+          }
+
+          final sale = _sales[index - 1];
           return Card(
             child: InkWell(
               onTap: _canViewSales

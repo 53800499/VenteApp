@@ -128,6 +128,8 @@ class SyncService {
 
   var _started = false;
 
+  var _paused = false;
+
 
 
   SyncSnapshot get currentSnapshot => _snapshot;
@@ -167,10 +169,26 @@ class SyncService {
   void clearShop() {
 
     _shopId = null;
+    _paused = false;
 
     _emit(const SyncSnapshot.idle());
 
   }
+
+  /// Suspend les cycles de synchronisation (changement de boutique, déconnexion…).
+  void pauseSync() {
+    _paused = true;
+    _debounce?.cancel();
+  }
+
+  /// Relance la synchronisation après une pause.
+  void resumeSync({int? shopId}) {
+    if (shopId != null) _shopId = shopId;
+    _paused = false;
+    _scheduleSync();
+  }
+
+  bool get isPaused => _paused;
 
 
 
@@ -188,6 +206,8 @@ class SyncService {
 
   void _scheduleSync() {
 
+    if (_paused) return;
+
     _debounce?.cancel();
 
     _debounce = Timer(const Duration(milliseconds: 400), () {
@@ -201,7 +221,7 @@ class SyncService {
 
 
   Future<void> _runSyncCycle() async {
-    if (_running) return;
+    if (_paused || _running) return;
 
     final shopId = _shopId;
     if (shopId == null) return;

@@ -6,16 +6,22 @@ class CustomerDetailApiDto {
     required this.customer,
     required this.sales,
     required this.debts,
+    this.paidDebts = const [],
+    this.forgivenDebts = const [],
   });
 
   final CustomerApiDto customer;
   final List<CustomerSaleApiDto> sales;
   final List<DebtApiDto> debts;
+  final List<DebtApiDto> paidDebts;
+  final List<DebtApiDto> forgivenDebts;
 
   factory CustomerDetailApiDto.fromJson(Map<String, dynamic> json) {
     final customerJson = json['customer'] ?? json;
     final salesJson = json['sales'] ?? [];
     final debtsJson = json['debts'] ?? [];
+    final paidDebtsJson = json['paidDebts'] ?? [];
+    final forgivenDebtsJson = json['forgivenDebts'] ?? [];
 
     return CustomerDetailApiDto(
       customer: CustomerApiDto.fromJson(customerJson as Map<String, dynamic>),
@@ -24,6 +30,14 @@ class CustomerDetailApiDto {
           .map(CustomerSaleApiDto.fromJson)
           .toList(),
       debts: (debtsJson as List)
+          .whereType<Map<String, dynamic>>()
+          .map(DebtApiDto.fromJson)
+          .toList(),
+      paidDebts: (paidDebtsJson as List)
+          .whereType<Map<String, dynamic>>()
+          .map(DebtApiDto.fromJson)
+          .toList(),
+      forgivenDebts: (forgivenDebtsJson as List)
           .whereType<Map<String, dynamic>>()
           .map(DebtApiDto.fromJson)
           .toList(),

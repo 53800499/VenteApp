@@ -20,6 +20,8 @@ class NetworkInfo {
         _mode = _NetworkMode.offline;
 
   final Connectivity? _connectivity;
+  // Conservé pour compatibilité DI ; la connectivité radio suffit désormais.
+  // ignore: unused_field
   final String? Function()? _hostProvider;
   final _NetworkMode _mode;
 
@@ -33,7 +35,7 @@ class NetworkInfo {
 
   Future<bool> _hasLiveConnection() async {
     final results = await _connectivity!.checkConnectivity();
-    if (results.isEmpty || results.any((r) => r == ConnectivityResult.none)) {
+    if (results.isEmpty || results.every((r) => r == ConnectivityResult.none)) {
       return false;
     }
 
@@ -41,26 +43,9 @@ class NetworkInfo {
       return true;
     }
 
-    try {
-      final host = _hostProvider?.call();
-      if (host != null && host.isNotEmpty) {
-        final lookup = await InternetAddress.lookup(host)
-            .timeout(const Duration(seconds: 2));
-        if (lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty) {
-          return true;
-        }
-      }
-    } on Object {
-      // Ignorer l'erreur et tenter le fallback Google.
-    }
-
-    try {
-      final lookup = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 2));
-      return lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty;
-    } on Object {
-      return false;
-    }
+    // Une connectivité radio/Wi‑Fi active suffit ; le DNS peut échouer
+    // transitoirement sans bloquer les appels API réels.
+    return true;
   }
 }
 

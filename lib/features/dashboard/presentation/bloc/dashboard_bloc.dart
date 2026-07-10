@@ -60,8 +60,6 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     final previous = state;
     if (previous is DashboardLoaded) {
       emit(DashboardLoaded(previous.data, isRefreshing: true));
-    } else {
-      emit(const DashboardLoading());
     }
 
     try {

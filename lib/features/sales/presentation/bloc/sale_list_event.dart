@@ -15,6 +15,14 @@ final class SaleListRefreshRequested extends SaleListEvent {
   const SaleListRefreshRequested();
 }
 
+final class SaleListLocalRefreshRequested extends SaleListEvent {
+  const SaleListLocalRefreshRequested();
+}
+
+final class SaleListSyncRefreshRequested extends SaleListEvent {
+  const SaleListSyncRefreshRequested();
+}
+
 final class SaleListSearchChanged extends SaleListEvent {
   const SaleListSearchChanged(this.query);
 

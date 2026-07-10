@@ -1,10 +1,12 @@
-import 'dart:async' show unawaited;
+import 'dart:async' show StreamSubscription, unawaited;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../../core/sync/sync_snapshot.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/cash_session_entities.dart';
 import '../../domain/usecases/cash_session_usecases.dart';
@@ -23,6 +25,7 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     required RecordCashMovement recordMovement,
     required SyncCashSessionsFromRemote syncFromRemote,
     required AuthSession session,
+    SyncService? syncService,
   })  : _findOpenSession = findOpenSession,
         _listSessions = listSessions,
         _getLiveTotals = getLiveTotals,
@@ -38,6 +41,8 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     on<CashSessionOpenRequested>(_onOpen);
     on<CashSessionCloseRequested>(_onClose);
     on<CashMovementRecordRequested>(_onMovement);
+
+    _syncSub = syncService?.snapshots.listen(_onSyncSnapshot);
   }
 
   final FindOpenCashSession _findOpenSession;
@@ -50,7 +55,28 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
   final SyncCashSessionsFromRemote _syncFromRemote;
   final AuthSession _session;
 
+  StreamSubscription<SyncSnapshot>? _syncSub;
+  DateTime? _lastHandledSyncAt;
+
   AuthSession get session => _session;
+
+  void _onSyncSnapshot(SyncSnapshot snapshot) {
+    if (snapshot.phase != SyncRunPhase.completed) return;
+    if (snapshot.shopId != null && snapshot.shopId != _session.shop.id) return;
+
+    final completedAt = snapshot.lastCompletedAt;
+    if (completedAt != null && completedAt == _lastHandledSyncAt) return;
+    _lastHandledSyncAt = completedAt;
+
+    if (isClosed) return;
+    add(const CashSessionsRefreshRequested());
+  }
+
+  @override
+  Future<void> close() {
+    _syncSub?.cancel();
+    return super.close();
+  }
 
   Future<void> _onLoad(
     CashSessionsLoadRequested event,

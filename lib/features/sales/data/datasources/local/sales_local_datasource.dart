@@ -75,7 +75,8 @@ class SalesLocalDatasource {
     ])
       ..where(
         _db.sales.id.equals(saleId) & _db.sales.shopId.equals(shopId),
-      );
+      )
+      ..limit(1);
 
     final row = await query.getSingleOrNull();
     if (row == null) return null;
@@ -149,11 +150,14 @@ class SalesLocalDatasource {
   }
 
   Future<db.Debt?> findDebtBySale(int shopId, int saleId) async {
-    return (_db.select(_db.debts)
+    final rows = await (_db.select(_db.debts)
           ..where(
             (d) => d.shopId.equals(shopId) & d.saleId.equals(saleId),
-          ))
-        .getSingleOrNull();
+          )
+          ..orderBy([(d) => OrderingTerm.desc(d.createdAt)])
+          ..limit(1))
+        .get();
+    return rows.isEmpty ? null : rows.first;
   }
 
   Future<Sale> createStandardSale({
@@ -312,8 +316,12 @@ class SalesLocalDatasource {
       final saleRow = await (_db.select(_db.sales)
             ..where(
               (s) => s.id.equals(saleId) & s.shopId.equals(shopId),
-            ))
-          .getSingle();
+            )
+            ..limit(1))
+          .getSingleOrNull();
+      if (saleRow == null) {
+        throw StateError('Vente introuvable pour conversion.');
+      }
 
       for (final snap in snapshots) {
         final product = snap.product;
@@ -496,7 +504,8 @@ class SalesLocalDatasource {
     final row = await (_db.select(_db.sales)
           ..where(
             (s) => s.id.equals(saleId) & s.shopId.equals(shopId),
-          ))
+          )
+          ..limit(1))
         .getSingleOrNull();
     return row?.serverId;
   }
@@ -509,30 +518,135 @@ class SalesLocalDatasource {
     return user?.id;
   }
 
+  Future<int?> resolveLocalCustomerId(int shopId, int? remoteCustomerId) async {
+    if (remoteCustomerId == null) return null;
+    final row = await (_db.select(_db.customers)
+          ..where(
+            (c) =>
+                c.shopId.equals(shopId) &
+                c.serverId.equals('$remoteCustomerId'),
+          ))
+        .getSingleOrNull();
+    return row?.id;
+  }
+
+  Future<bool> saleNeedsPaymentDetail(int shopId, String serverId) async {
+    final sale = await _firstSaleByServerId(shopId, serverId);
+    if (sale == null) return true;
+    if (sale.customerId == null) return true;
+    return sale.amountCash == 0 &&
+        sale.amountMomo == 0 &&
+        sale.amountCredit == 0 &&
+        sale.totalAmount > 0;
+  }
+
+  Future<void> upsertSalePaymentDetailFromRemote({
+    required int shopId,
+    required SaleDetailApiDto detail,
+  }) async {
+    final timestamp = nowMs();
+    final serverId = '${detail.id}';
+    final existingRows = await _findSalesByServerId(shopId, serverId);
+    final existing = existingRows.isEmpty ? null : existingRows.first;
+    if (existing == null) return;
+
+    final localCustomerId =
+        await resolveLocalCustomerId(shopId, detail.customerId);
+
+    await (_db.update(_db.sales)..where((s) => s.id.equals(existing.id))).write(
+      db.SalesCompanion(
+        customerId: localCustomerId != null
+            ? Value(localCustomerId)
+            : const Value.absent(),
+        amountPaid: Value(detail.amountPaid),
+        amountCash: Value(detail.amountCash),
+        amountMomo: Value(detail.amountMomo),
+        amountCredit: Value(detail.amountCredit),
+        paymentMethod: Value(detail.paymentMethod),
+        syncedAt: Value(timestamp),
+        updatedAt: Value(timestamp),
+        syncStatus: const Value('synced'),
+      ),
+    );
+    if (existingRows.length > 1) {
+      await _dedupeSales(existingRows, keepId: existing.id);
+    }
+  }
+
+  Future<db.SalesCompanion> _remoteListSaleFields({
+    required int shopId,
+    required SaleListItemApiDto remote,
+    required int timestamp,
+  }) async {
+    final localCustomerId =
+        await resolveLocalCustomerId(shopId, remote.customerId);
+    return db.SalesCompanion(
+      receiptNumber: Value(remote.receiptNumber),
+      saleType: Value(remote.saleType),
+      totalAmount: Value(remote.totalAmount),
+      status: Value(remote.status),
+      customerId: localCustomerId != null
+          ? Value(localCustomerId)
+          : const Value.absent(),
+      amountCash: Value(remote.amountCash),
+      amountMomo: Value(remote.amountMomo),
+      amountCredit: Value(remote.amountCredit),
+      paymentMethod: remote.paymentMethod != null
+          ? Value(remote.paymentMethod)
+          : const Value.absent(),
+      syncedAt: Value(timestamp),
+      updatedAt: Value(timestamp),
+      syncStatus: const Value('synced'),
+    );
+  }
+
   Future<void> upsertSaleListItemFromRemote({
     required int shopId,
     required int userId,
     required SaleListItemApiDto remote,
   }) async {
     final timestamp = nowMs();
-    final existing = await (_db.select(_db.sales)
-          ..where(
-            (s) => s.shopId.equals(shopId) & s.serverId.equals('${remote.id}'),
-          ))
-        .getSingleOrNull();
+    final serverId = '${remote.id}';
+    final existingRows = await _findSalesByServerId(shopId, serverId);
+    final existing = existingRows.isEmpty ? null : existingRows.first;
+    final fields = await _remoteListSaleFields(
+      shopId: shopId,
+      remote: remote,
+      timestamp: timestamp,
+    );
 
     if (existing != null) {
-      await (_db.update(_db.sales)..where((s) => s.id.equals(existing.id))).write(
-        db.SalesCompanion(
-          receiptNumber: Value(remote.receiptNumber),
-          saleType: Value(remote.saleType),
-          totalAmount: Value(remote.totalAmount),
-          status: Value(remote.status),
-          syncedAt: Value(timestamp),
-          updatedAt: Value(timestamp),
-        ),
-      );
+      await (_db.update(_db.sales)..where((s) => s.id.equals(existing.id)))
+          .write(fields);
+      if (existingRows.length > 1) {
+        await _dedupeSales(existingRows, keepId: existing.id);
+      }
       return;
+    }
+
+    if (remote.receiptNumber.isNotEmpty) {
+      final pendingRows = await (_db.select(_db.sales)
+            ..where(
+              (s) =>
+                  s.shopId.equals(shopId) &
+                  s.serverId.isNull() &
+                  s.receiptNumber.equals(remote.receiptNumber),
+            )
+            ..orderBy([(s) => OrderingTerm.asc(s.id)]))
+          .get();
+      if (pendingRows.isNotEmpty) {
+        final pending = pendingRows.first;
+        await (_db.update(_db.sales)..where((s) => s.id.equals(pending.id)))
+            .write(
+          fields.copyWith(
+            serverId: Value(serverId),
+          ),
+        );
+        if (pendingRows.length > 1) {
+          await _dedupeSales(pendingRows, keepId: pending.id);
+        }
+        return;
+      }
     }
 
     await _db.into(_db.sales).insert(
@@ -543,9 +657,68 @@ class SalesLocalDatasource {
             saleType: Value(remote.saleType),
             totalAmount: remote.totalAmount,
             status: Value(remote.status),
+            customerId: remote.customerId != null
+                ? Value(await resolveLocalCustomerId(shopId, remote.customerId))
+                : const Value.absent(),
+            amountCash: Value(remote.amountCash),
+            amountMomo: Value(remote.amountMomo),
+            amountCredit: Value(remote.amountCredit),
+            paymentMethod: remote.paymentMethod != null
+                ? Value(remote.paymentMethod)
+                : const Value.absent(),
             createdAt: remote.createdAt,
             updatedAt: Value(remote.createdAt),
-            serverId: Value('${remote.id}'),
+            serverId: Value(serverId),
+            syncedAt: Value(timestamp),
+            syncStatus: const Value('synced'),
+          ),
+        );
+  }
+
+  Future<void> upsertCustomerSaleFromRemote({
+    required int shopId,
+    required int userId,
+    required int localCustomerId,
+    required int remoteId,
+    required int totalAmount,
+    required String status,
+    required int createdAt,
+    String? receiptNumber,
+  }) async {
+    final timestamp = nowMs();
+    final serverId = '$remoteId';
+    final existingRows = await _findSalesByServerId(shopId, serverId);
+    final existing = existingRows.isEmpty ? null : existingRows.first;
+
+    if (existing != null) {
+      await (_db.update(_db.sales)..where((s) => s.id.equals(existing.id))).write(
+        db.SalesCompanion(
+          customerId: Value(localCustomerId),
+          receiptNumber: Value(receiptNumber),
+          totalAmount: Value(totalAmount),
+          status: Value(status),
+          syncedAt: Value(timestamp),
+          updatedAt: Value(timestamp),
+          syncStatus: const Value('synced'),
+        ),
+      );
+      if (existingRows.length > 1) {
+        await _dedupeSales(existingRows, keepId: existing.id);
+      }
+      return;
+    }
+
+    await _db.into(_db.sales).insert(
+          db.SalesCompanion.insert(
+            shopId: shopId,
+            userId: userId,
+            customerId: Value(localCustomerId),
+            receiptNumber: Value(receiptNumber),
+            totalAmount: totalAmount,
+            status: Value(status),
+            createdAt: createdAt,
+            updatedAt: Value(createdAt),
+            serverId: Value(serverId),
             syncedAt: Value(timestamp),
             syncStatus: const Value('synced'),
           ),
@@ -553,9 +726,7 @@ class SalesLocalDatasource {
   }
 
   Future<bool> hasSaleItems(int shopId, String serverId) async {
-    final sale = await (_db.select(_db.sales)
-          ..where((s) => s.shopId.equals(shopId) & s.serverId.equals(serverId)))
-        .getSingleOrNull();
+    final sale = await _firstSaleByServerId(shopId, serverId);
     if (sale == null) return false;
     final itemsList = await (_db.select(_db.saleItems)
           ..where((i) => i.saleId.equals(sale.id)))
@@ -568,10 +739,12 @@ class SalesLocalDatasource {
     required String serverId,
     required List<SaleDetailItemApiDto> items,
   }) async {
-    final sale = await (_db.select(_db.sales)
-          ..where((s) => s.shopId.equals(shopId) & s.serverId.equals(serverId)))
-        .getSingleOrNull();
+    final existingRows = await _findSalesByServerId(shopId, serverId);
+    final sale = existingRows.isEmpty ? null : existingRows.first;
     if (sale == null) return;
+    if (existingRows.length > 1) {
+      await _dedupeSales(existingRows, keepId: sale.id);
+    }
 
     await _db.transaction(() async {
       await (_db.delete(_db.saleItems)..where((i) => i.saleId.equals(sale.id))).go();
@@ -598,6 +771,35 @@ class SalesLocalDatasource {
               ),
             );
       }
+    });
+  }
+
+  Future<List<db.Sale>> _findSalesByServerId(int shopId, String serverId) async {
+    return (_db.select(_db.sales)
+          ..where(
+            (s) => s.shopId.equals(shopId) & s.serverId.equals(serverId),
+          )
+          ..orderBy([(s) => OrderingTerm.asc(s.id)]))
+        .get();
+  }
+
+  Future<db.Sale?> _firstSaleByServerId(int shopId, String serverId) async {
+    final rows = await _findSalesByServerId(shopId, serverId);
+    return rows.isEmpty ? null : rows.first;
+  }
+
+  Future<void> _dedupeSales(List<db.Sale> rows, {required int keepId}) async {
+    final duplicateIds =
+        rows.where((s) => s.id != keepId).map((s) => s.id).toList();
+    if (duplicateIds.isEmpty) return;
+
+    await _db.transaction(() async {
+      for (final dupId in duplicateIds) {
+        await (_db.delete(_db.saleItems)..where((i) => i.saleId.equals(dupId)))
+            .go();
+        await (_db.delete(_db.debts)..where((d) => d.saleId.equals(dupId))).go();
+      }
+      await (_db.delete(_db.sales)..where((s) => s.id.isIn(duplicateIds))).go();
     });
   }
 }

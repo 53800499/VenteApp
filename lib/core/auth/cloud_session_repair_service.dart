@@ -48,8 +48,8 @@ class CloudSessionRepairService {
         _recentPinProof = recentPinProof;
 
   static const awaitingPinUnlockMessage =
-      'Connexion au serveur requise. La synchronisation reprendra après une '
-      'nouvelle authentification cloud.';
+      'Votre session en ligne a expiré. Connectez-vous à Internet pour '
+      'poursuivre la synchronisation, ou saisissez votre code PIN.';
 
   final AuthCredentialsStorage _credentials;
   final ApiClient _apiClient;
@@ -77,9 +77,16 @@ class CloudSessionRepairService {
     onPinLoginRepair = callback;
   }
 
-  /// Refresh rejeté (401 sur `/auth/refresh`) — tente PIN si preuve récente.
+  /// Refresh rejeté (401 sur `/auth/refresh`) — vérifie d'abord si un refresh
+  /// concurrent a déjà rétabli l'accès, puis PIN si preuve récente.
   Future<CloudRepairOutcome> onRefreshTokenRejected() async {
-    return _runSerialized(() => repair(attemptRefresh: false));
+    return _runSerialized(() async {
+      if (await _credentials.hasValidAccessToken()) {
+        _clearAwaiting();
+        return CloudRepairOutcome.alreadyValid;
+      }
+      return repair(attemptRefresh: false);
+    });
   }
 
   /// Réparation complète après déverrouillage PIN (refresh puis login PIN).
@@ -122,15 +129,23 @@ class CloudSessionRepairService {
   }
 
   Future<bool> _tryRefresh() async {
-    final hasRefresh = await _credentials.hasValidRefreshToken();
+    if (await _credentials.hasValidAccessToken()) return true;
+
+    final hasRefreshLocal = await _credentials.hasValidRefreshToken();
     final withinWindow = await _credentials.isWithinServerAccessWindow();
-    if (!hasRefresh && !withinWindow) return false;
+    final storedRefresh = await _credentials.getRefreshToken();
+    final hasStoredRefresh =
+        storedRefresh != null && storedRefresh.isNotEmpty;
+
+    if (!hasRefreshLocal && !withinWindow && !hasStoredRefresh) return false;
 
     try {
-      if (hasRefresh) {
+      if (hasRefreshLocal) {
         await _apiClient.refreshTokensIfNeeded();
-      } else {
+      } else if (hasStoredRefresh) {
         await _apiClient.forceRefreshTokens();
+      } else {
+        return false;
       }
       return await _credentials.hasValidAccessToken();
     } on DioException catch (e) {
@@ -139,6 +154,22 @@ class CloudSessionRepairService {
       }
       rethrow;
     }
+  }
+
+  /// Réparation manuelle (bannière) : enregistre le PIN puis tente refresh/login.
+  Future<CloudRepairOutcome> repairWithPin({
+    required String pin,
+    required int serverShopId,
+    required int localShopId,
+    int? serverUserId,
+  }) {
+    _recentPinProof.record(
+      pin: pin,
+      serverShopId: serverShopId,
+      localShopId: localShopId,
+      serverUserId: serverUserId,
+    );
+    return repairAfterPinUnlock();
   }
 
   Future<bool> _tryPinLogin(RecentPinCredential proof) async {

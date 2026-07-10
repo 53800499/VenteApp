@@ -648,14 +648,19 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     ));
 
     try {
-      final session = event.shopId == current.shops.activeShopId
-          ? current.provisionalSession
-          : await _switchShop(shopId: event.shopId).timeout(
-              const Duration(seconds: 60),
-              onTimeout: () => throw const NetworkFailure(
-                'Le serveur met trop de temps à répondre. Réessayez.',
-              ),
-            );
+      AuthSession session;
+      if (event.shopId == current.shops.activeShopId) {
+        session = current.provisionalSession;
+      } else {
+        try {
+          session = await _switchShop(shopId: event.shopId).timeout(
+            const Duration(seconds: 15),
+          );
+        } on Object {
+          // Hors ligne ou serveur lent : conserver la boutique courante localement.
+          session = current.provisionalSession;
+        }
+      }
 
       await _enterWorkspace(session, emit);
     } on Failure catch (failure) {
@@ -786,9 +791,10 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    emit(const AuthLoading());
+    _syncService.pauseSync();
     await _logout();
     _syncService.clearShop();
+    await _lastShopStorage.clear();
     await _emitEntryScreen(emit);
   }
 

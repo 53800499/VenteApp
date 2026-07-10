@@ -37,8 +37,9 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     on<ProductListLowStockToggled>(_onLowStock);
     on<ProductListSortChanged>(_onSort);
     on<ProductListRefreshRequested>(_onRefresh);
+    on<ProductListLocalRefreshRequested>(_onLocalRefresh);
+    on<ProductListSyncRefreshRequested>(_onSyncRefresh);
 
-    // Recharge le stock local à la fin de chaque cycle de sync.
     _syncSub = syncService?.snapshots.listen(_onSyncSnapshot);
   }
 
@@ -60,7 +61,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     _lastHandledSyncAt = completedAt;
 
     if (isClosed) return;
-    add(const ProductListRefreshRequested());
+    add(const ProductListSyncRefreshRequested());
   }
 
   @override
@@ -73,7 +74,6 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     ProductListLoadRequested event,
     Emitter<ProductListState> emit,
   ) async {
-    emit(state.copyWith(status: ProductListStatus.loading, clearError: true));
     await _fetch(emit, syncRemote: true);
   }
 
@@ -81,8 +81,21 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     ProductListRefreshRequested event,
     Emitter<ProductListState> emit,
   ) async {
-    emit(state.copyWith(isRefreshing: true, clearError: true));
-    await _fetch(emit, syncRemote: true);
+    await _fetch(emit, syncRemote: true, forceRemote: true);
+  }
+
+  Future<void> _onLocalRefresh(
+    ProductListLocalRefreshRequested event,
+    Emitter<ProductListState> emit,
+  ) async {
+    await _fetch(emit, localOnly: true);
+  }
+
+  Future<void> _onSyncRefresh(
+    ProductListSyncRefreshRequested event,
+    Emitter<ProductListState> emit,
+  ) async {
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _onSearch(
@@ -95,10 +108,9 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
           search: event.query,
           clearSearch: event.query.isEmpty,
         ),
-        isRefreshing: state.status == ProductListStatus.loaded,
       ),
     );
-    await _fetch(emit);
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _onCategory(
@@ -111,10 +123,9 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
           categoryId: event.categoryId,
           clearCategory: event.categoryId == null,
         ),
-        isRefreshing: state.status == ProductListStatus.loaded,
       ),
     );
-    await _fetch(emit);
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _onLowStock(
@@ -124,54 +135,93 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
     emit(
       state.copyWith(
         filters: state.filters.copyWith(lowStockOnly: event.enabled),
-        isRefreshing: state.status == ProductListStatus.loaded,
       ),
     );
-    await _fetch(emit);
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _onSort(
     ProductListSortChanged event,
     Emitter<ProductListState> emit,
   ) async {
-    emit(state.copyWith(
-      filters: state.filters.copyWith(sort: event.sort),
-      isRefreshing: state.status == ProductListStatus.loaded,
-    ));
-    await _fetch(emit);
+    emit(
+      state.copyWith(
+        filters: state.filters.copyWith(sort: event.sort),
+      ),
+    );
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _fetch(
     Emitter<ProductListState> emit, {
     bool syncRemote = false,
+    bool forceRemote = false,
+    bool localOnly = false,
   }) async {
     try {
-      if (syncRemote &&
-          await _syncPolicy.shouldRunCloudSync(
-            shopId: _session.shop.id,
-          )) {
-        try {
-          await _repository.syncFromRemote(shopId: _session.shop.id);
-        } on Failure {
-          // Sync cloud optionnelle — afficher le stock local.
-        }
-      }
-
       final categories = await _listCategories(shopId: _session.shop.id);
       final products = await _listProducts(
         shopId: _session.shop.id,
         filters: state.filters,
       );
+
       emit(
         state.copyWith(
           status: ProductListStatus.loaded,
           products: products,
           categories: categories,
+          isRefreshing: syncRemote && !localOnly,
+          clearError: true,
+        ),
+      );
+
+      if (localOnly) {
+        return;
+      }
+
+      if (!syncRemote ||
+          !await _syncPolicy.shouldRunCloudSync(shopId: _session.shop.id)) {
+        emit(state.copyWith(isRefreshing: false));
+        return;
+      }
+
+      emit(state.copyWith(isRefreshing: true));
+
+      try {
+        await _repository.syncFromRemote(
+          shopId: _session.shop.id,
+          force: forceRemote,
+        );
+      } on Failure {
+        // Sync cloud optionnelle — conserver le stock local affiché.
+      }
+
+      final refreshedCategories =
+          await _listCategories(shopId: _session.shop.id);
+      final refreshedProducts = await _listProducts(
+        shopId: _session.shop.id,
+        filters: state.filters,
+      );
+
+      emit(
+        state.copyWith(
+          status: ProductListStatus.loaded,
+          products: refreshedProducts,
+          categories: refreshedCategories,
           isRefreshing: false,
           clearError: true,
         ),
       );
     } on Failure catch (e) {
+      if (state.status == ProductListStatus.loaded) {
+        emit(
+          state.copyWith(
+            isRefreshing: false,
+            errorMessage: friendlyErrorMessage(e),
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: ProductListStatus.failure,
@@ -180,6 +230,15 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
         ),
       );
     } catch (_) {
+      if (state.status == ProductListStatus.loaded) {
+        emit(
+          state.copyWith(
+            isRefreshing: false,
+            errorMessage: 'Impossible de charger les produits.',
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: ProductListStatus.failure,

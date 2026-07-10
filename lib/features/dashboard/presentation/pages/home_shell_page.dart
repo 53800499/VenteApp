@@ -21,7 +21,9 @@ import '../../../../core/notifications/notification_permission_prompter.dart';
 import '../../../sales/presentation/bloc/sale_list_bloc.dart';
 import '../../../sales/presentation/pages/new_sale_page.dart';
 import '../../../sales/presentation/pages/sale_list_page.dart';
+import '../../../inventory/presentation/bloc/product_list_bloc.dart';
 import '../../../inventory/presentation/pages/product_list_page.dart';
+import '../../../customers/presentation/bloc/customer_list_bloc.dart';
 import '../../../customers/presentation/pages/customer_list_page.dart';
 import '../../../shop/presentation/pages/more_page.dart';
 import '../bloc/dashboard_bloc.dart';
@@ -38,10 +40,6 @@ class HomeShellPage extends StatefulWidget {
 
 class _HomeShellPageState extends State<HomeShellPage> {
   int _currentIndex = 0;
-  bool _lowStockFilter = false;
-  bool _debtorsFilter = false;
-  int _stockTabKey = 0;
-  int _customersTabKey = 0;
 
   @override
   void initState() {
@@ -75,18 +73,20 @@ class _HomeShellPageState extends State<HomeShellPage> {
         builder: (_) => NewSalePage(session: widget.session),
       ),
     ).then((created) async {
-      if (mounted) {
-        setState(() => _customersTabKey++);
-      }
-      if (created == true && mounted) {
-        await sl<NotificationOrchestrator>().processPending(
-          shopId: widget.session.shop.id,
-        );
-        if (!mounted) return;
-        context.read<DashboardBloc>().add(const DashboardRefreshRequested());
-        context.read<SaleListBloc>().add(const SaleListRefreshRequested());
-        setState(() => _currentIndex = 1);
-      }
+      if (created != true || !context.mounted) return;
+      context.read<CustomerListBloc>().add(
+            const CustomerListLocalRefreshRequested(),
+          );
+      context.read<SaleListBloc>().add(const SaleListLocalRefreshRequested());
+      context.read<ProductListBloc>().add(
+            const ProductListLocalRefreshRequested(),
+          );
+      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+      await sl<NotificationOrchestrator>().processPending(
+        shopId: widget.session.shop.id,
+      );
+      if (!mounted) return;
+      setState(() => _currentIndex = 1);
     });
   }
 
@@ -94,30 +94,36 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() => _currentIndex = 1);
   }
 
-  void _openLowStockProducts() {
+  void _openLowStockProducts(BuildContext context) {
     setState(() {
       _currentIndex = 2;
-      _lowStockFilter = true;
-      _debtorsFilter = false;
-      _stockTabKey++;
     });
+    context.read<ProductListBloc>().add(const ProductListLowStockToggled(true));
   }
 
-  void _openDebtors() {
+  void _openDebtors(BuildContext context) {
     setState(() {
       _currentIndex = 3;
-      _debtorsFilter = true;
-      _lowStockFilter = false;
-      _customersTabKey++;
     });
+    context.read<ProductListBloc>().add(const ProductListLowStockToggled(false));
+    context.read<CustomerListBloc>().add(
+          const CustomerListShowDebtorsToggled(true),
+        );
   }
 
   void _onTabSelected(BuildContext context, int index) {
     setState(() {
       _currentIndex = index;
-      if (index != 2) _lowStockFilter = false;
-      if (index != 3) _debtorsFilter = false;
-      if (index == 3) _customersTabKey++;
+      if (index != 2) {
+        context.read<ProductListBloc>().add(
+              const ProductListLowStockToggled(false),
+            );
+      }
+      if (index != 3) {
+        context.read<CustomerListBloc>().add(
+              const CustomerListShowDebtorsToggled(false),
+            );
+      }
     });
     if (index == 0) {
       context.read<DashboardBloc>().add(const DashboardRefreshRequested());
@@ -151,6 +157,27 @@ class _HomeShellPageState extends State<HomeShellPage> {
             syncService: sl(),
           )..add(const SaleListLoadRequested()),
         ),
+        BlocProvider(
+          create: (_) => CustomerListBloc(
+            listCustomers: sl(),
+            listDebtors: sl(),
+            repository: sl(),
+            saleRepository: sl(),
+            syncPolicy: sl(),
+            session: widget.session,
+            syncService: sl(),
+          )..add(const CustomerListLoadRequested()),
+        ),
+        BlocProvider(
+          create: (_) => ProductListBloc(
+            listProducts: sl(),
+            listCategories: sl(),
+            repository: sl(),
+            syncPolicy: sl(),
+            session: widget.session,
+            syncService: sl(),
+          )..add(const ProductListLoadRequested()),
+        ),
       ],
       child: ResponsiveBuilder(
         builder: (context, screenType) {
@@ -158,12 +185,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
           final content = _ShellContent(
             session: widget.session,
             currentIndex: _currentIndex,
-            stockTabKey: _stockTabKey,
-            customersTabKey: _customersTabKey,
-            lowStockFilter: _lowStockFilter,
-            debtorsFilter: _debtorsFilter,
-            onLowStockTap: _openLowStockProducts,
-            onDebtorsTap: _openDebtors,
+            onLowStockTap: () => _openLowStockProducts(context),
+            onDebtorsTap: () => _openDebtors(context),
             onNewSaleTap: () => _openNewSale(context),
             onSalesHistoryTap: _openSalesTab,
           );
@@ -351,10 +374,6 @@ class _ShellContent extends StatelessWidget {
   const _ShellContent({
     required this.session,
     required this.currentIndex,
-    required this.stockTabKey,
-    required this.customersTabKey,
-    required this.lowStockFilter,
-    required this.debtorsFilter,
     required this.onLowStockTap,
     required this.onDebtorsTap,
     required this.onNewSaleTap,
@@ -363,10 +382,6 @@ class _ShellContent extends StatelessWidget {
 
   final AuthSession session;
   final int currentIndex;
-  final int stockTabKey;
-  final int customersTabKey;
-  final bool lowStockFilter;
-  final bool debtorsFilter;
   final VoidCallback onLowStockTap;
   final VoidCallback onDebtorsTap;
   final VoidCallback onNewSaleTap;
@@ -387,16 +402,8 @@ class _ShellContent extends StatelessWidget {
             onDebtorsTap: onDebtorsTap,
           ),
           SaleListPage(session: session),
-          ProductListPage(
-            key: ValueKey('stock-$stockTabKey'),
-            session: session,
-            initialLowStockOnly: lowStockFilter,
-          ),
-          CustomerListPage(
-            key: ValueKey('customers-$customersTabKey'),
-            session: session,
-            initialDebtorsOnly: debtorsFilter,
-          ),
+          ProductListPage(session: session),
+          CustomerListPage(session: session),
           MorePage(session: session),
         ],
       ),

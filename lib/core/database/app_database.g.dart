@@ -17169,6 +17169,2063 @@ class CashMovementsCompanion extends UpdateCompanion<CashMovement> {
   }
 }
 
+class $TenantModulesTable extends TenantModules
+    with TableInfo<$TenantModulesTable, TenantModule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TenantModulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _moduleCodeMeta = const VerificationMeta(
+    'moduleCode',
+  );
+  @override
+  late final GeneratedColumn<String> moduleCode = GeneratedColumn<String>(
+    'module_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    moduleCode,
+    enabled,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tenant_modules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TenantModule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('module_code')) {
+      context.handle(
+        _moduleCodeMeta,
+        moduleCode.isAcceptableOrUnknown(data['module_code']!, _moduleCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_moduleCodeMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TenantModule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TenantModule(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      moduleCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}module_code'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TenantModulesTable createAlias(String alias) {
+    return $TenantModulesTable(attachedDatabase, alias);
+  }
+}
+
+class TenantModule extends DataClass implements Insertable<TenantModule> {
+  final int id;
+  final int shopId;
+  final String moduleCode;
+  final bool enabled;
+  final int createdAt;
+  const TenantModule({
+    required this.id,
+    required this.shopId,
+    required this.moduleCode,
+    required this.enabled,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['module_code'] = Variable<String>(moduleCode);
+    map['enabled'] = Variable<bool>(enabled);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  TenantModulesCompanion toCompanion(bool nullToAbsent) {
+    return TenantModulesCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      moduleCode: Value(moduleCode),
+      enabled: Value(enabled),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TenantModule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TenantModule(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      moduleCode: serializer.fromJson<String>(json['moduleCode']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'moduleCode': serializer.toJson<String>(moduleCode),
+      'enabled': serializer.toJson<bool>(enabled),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  TenantModule copyWith({
+    int? id,
+    int? shopId,
+    String? moduleCode,
+    bool? enabled,
+    int? createdAt,
+  }) => TenantModule(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    moduleCode: moduleCode ?? this.moduleCode,
+    enabled: enabled ?? this.enabled,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TenantModule copyWithCompanion(TenantModulesCompanion data) {
+    return TenantModule(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      moduleCode: data.moduleCode.present
+          ? data.moduleCode.value
+          : this.moduleCode,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TenantModule(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('moduleCode: $moduleCode, ')
+          ..write('enabled: $enabled, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, shopId, moduleCode, enabled, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TenantModule &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.moduleCode == this.moduleCode &&
+          other.enabled == this.enabled &&
+          other.createdAt == this.createdAt);
+}
+
+class TenantModulesCompanion extends UpdateCompanion<TenantModule> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<String> moduleCode;
+  final Value<bool> enabled;
+  final Value<int> createdAt;
+  const TenantModulesCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.moduleCode = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  TenantModulesCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required String moduleCode,
+    this.enabled = const Value.absent(),
+    required int createdAt,
+  }) : shopId = Value(shopId),
+       moduleCode = Value(moduleCode),
+       createdAt = Value(createdAt);
+  static Insertable<TenantModule> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<String>? moduleCode,
+    Expression<bool>? enabled,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (moduleCode != null) 'module_code': moduleCode,
+      if (enabled != null) 'enabled': enabled,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  TenantModulesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<String>? moduleCode,
+    Value<bool>? enabled,
+    Value<int>? createdAt,
+  }) {
+    return TenantModulesCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      moduleCode: moduleCode ?? this.moduleCode,
+      enabled: enabled ?? this.enabled,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (moduleCode.present) {
+      map['module_code'] = Variable<String>(moduleCode.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TenantModulesCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('moduleCode: $moduleCode, ')
+          ..write('enabled: $enabled, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CalculatorProductDataTable extends CalculatorProductData
+    with TableInfo<$CalculatorProductDataTable, CalculatorProductDataData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CalculatorProductDataTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _productIdMeta = const VerificationMeta(
+    'productId',
+  );
+  @override
+  late final GeneratedColumn<int> productId = GeneratedColumn<int>(
+    'product_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES products (id)',
+    ),
+  );
+  static const VerificationMeta _calculatorTypeMeta = const VerificationMeta(
+    'calculatorType',
+  );
+  @override
+  late final GeneratedColumn<String> calculatorType = GeneratedColumn<String>(
+    'calculator_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _metadataMeta = const VerificationMeta(
+    'metadata',
+  );
+  @override
+  late final GeneratedColumn<String> metadata = GeneratedColumn<String>(
+    'metadata',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    productId,
+    calculatorType,
+    metadata,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'calculator_product_data';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CalculatorProductDataData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('product_id')) {
+      context.handle(
+        _productIdMeta,
+        productId.isAcceptableOrUnknown(data['product_id']!, _productIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_productIdMeta);
+    }
+    if (data.containsKey('calculator_type')) {
+      context.handle(
+        _calculatorTypeMeta,
+        calculatorType.isAcceptableOrUnknown(
+          data['calculator_type']!,
+          _calculatorTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_calculatorTypeMeta);
+    }
+    if (data.containsKey('metadata')) {
+      context.handle(
+        _metadataMeta,
+        metadata.isAcceptableOrUnknown(data['metadata']!, _metadataMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_metadataMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CalculatorProductDataData map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CalculatorProductDataData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      productId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}product_id'],
+      )!,
+      calculatorType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}calculator_type'],
+      )!,
+      metadata: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}metadata'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CalculatorProductDataTable createAlias(String alias) {
+    return $CalculatorProductDataTable(attachedDatabase, alias);
+  }
+}
+
+class CalculatorProductDataData extends DataClass
+    implements Insertable<CalculatorProductDataData> {
+  final int id;
+  final int shopId;
+  final int productId;
+  final String calculatorType;
+  final String metadata;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  final int createdAt;
+  final int updatedAt;
+  const CalculatorProductDataData({
+    required this.id,
+    required this.shopId,
+    required this.productId,
+    required this.calculatorType,
+    required this.metadata,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['product_id'] = Variable<int>(productId);
+    map['calculator_type'] = Variable<String>(calculatorType);
+    map['metadata'] = Variable<String>(metadata);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  CalculatorProductDataCompanion toCompanion(bool nullToAbsent) {
+    return CalculatorProductDataCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      productId: Value(productId),
+      calculatorType: Value(calculatorType),
+      metadata: Value(metadata),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory CalculatorProductDataData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CalculatorProductDataData(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      productId: serializer.fromJson<int>(json['productId']),
+      calculatorType: serializer.fromJson<String>(json['calculatorType']),
+      metadata: serializer.fromJson<String>(json['metadata']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'productId': serializer.toJson<int>(productId),
+      'calculatorType': serializer.toJson<String>(calculatorType),
+      'metadata': serializer.toJson<String>(metadata),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  CalculatorProductDataData copyWith({
+    int? id,
+    int? shopId,
+    int? productId,
+    String? calculatorType,
+    String? metadata,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+    int? createdAt,
+    int? updatedAt,
+  }) => CalculatorProductDataData(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    productId: productId ?? this.productId,
+    calculatorType: calculatorType ?? this.calculatorType,
+    metadata: metadata ?? this.metadata,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  CalculatorProductDataData copyWithCompanion(
+    CalculatorProductDataCompanion data,
+  ) {
+    return CalculatorProductDataData(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      productId: data.productId.present ? data.productId.value : this.productId,
+      calculatorType: data.calculatorType.present
+          ? data.calculatorType.value
+          : this.calculatorType,
+      metadata: data.metadata.present ? data.metadata.value : this.metadata,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalculatorProductDataData(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('productId: $productId, ')
+          ..write('calculatorType: $calculatorType, ')
+          ..write('metadata: $metadata, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    productId,
+    calculatorType,
+    metadata,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CalculatorProductDataData &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.productId == this.productId &&
+          other.calculatorType == this.calculatorType &&
+          other.metadata == this.metadata &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class CalculatorProductDataCompanion
+    extends UpdateCompanion<CalculatorProductDataData> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> productId;
+  final Value<String> calculatorType;
+  final Value<String> metadata;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  const CalculatorProductDataCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.productId = const Value.absent(),
+    this.calculatorType = const Value.absent(),
+    this.metadata = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  CalculatorProductDataCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int productId,
+    required String calculatorType,
+    required String metadata,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+  }) : shopId = Value(shopId),
+       productId = Value(productId),
+       calculatorType = Value(calculatorType),
+       metadata = Value(metadata),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<CalculatorProductDataData> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? productId,
+    Expression<String>? calculatorType,
+    Expression<String>? metadata,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (productId != null) 'product_id': productId,
+      if (calculatorType != null) 'calculator_type': calculatorType,
+      if (metadata != null) 'metadata': metadata,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  CalculatorProductDataCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? productId,
+    Value<String>? calculatorType,
+    Value<String>? metadata,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+  }) {
+    return CalculatorProductDataCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      productId: productId ?? this.productId,
+      calculatorType: calculatorType ?? this.calculatorType,
+      metadata: metadata ?? this.metadata,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (productId.present) {
+      map['product_id'] = Variable<int>(productId.value);
+    }
+    if (calculatorType.present) {
+      map['calculator_type'] = Variable<String>(calculatorType.value);
+    }
+    if (metadata.present) {
+      map['metadata'] = Variable<String>(metadata.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalculatorProductDataCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('productId: $productId, ')
+          ..write('calculatorType: $calculatorType, ')
+          ..write('metadata: $metadata, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CalculatorHistoryTable extends CalculatorHistory
+    with TableInfo<$CalculatorHistoryTable, CalculatorHistoryData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CalculatorHistoryTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _calculatorTypeMeta = const VerificationMeta(
+    'calculatorType',
+  );
+  @override
+  late final GeneratedColumn<String> calculatorType = GeneratedColumn<String>(
+    'calculator_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inputDataMeta = const VerificationMeta(
+    'inputData',
+  );
+  @override
+  late final GeneratedColumn<String> inputData = GeneratedColumn<String>(
+    'input_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resultDataMeta = const VerificationMeta(
+    'resultData',
+  );
+  @override
+  late final GeneratedColumn<String> resultData = GeneratedColumn<String>(
+    'result_data',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isFavoriteMeta = const VerificationMeta(
+    'isFavorite',
+  );
+  @override
+  late final GeneratedColumn<bool> isFavorite = GeneratedColumn<bool>(
+    'is_favorite',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_favorite" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    calculatorType,
+    inputData,
+    resultData,
+    isFavorite,
+    label,
+    createdAt,
+    createdBy,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'calculator_history';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CalculatorHistoryData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('calculator_type')) {
+      context.handle(
+        _calculatorTypeMeta,
+        calculatorType.isAcceptableOrUnknown(
+          data['calculator_type']!,
+          _calculatorTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_calculatorTypeMeta);
+    }
+    if (data.containsKey('input_data')) {
+      context.handle(
+        _inputDataMeta,
+        inputData.isAcceptableOrUnknown(data['input_data']!, _inputDataMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_inputDataMeta);
+    }
+    if (data.containsKey('result_data')) {
+      context.handle(
+        _resultDataMeta,
+        resultData.isAcceptableOrUnknown(data['result_data']!, _resultDataMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resultDataMeta);
+    }
+    if (data.containsKey('is_favorite')) {
+      context.handle(
+        _isFavoriteMeta,
+        isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CalculatorHistoryData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CalculatorHistoryData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      calculatorType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}calculator_type'],
+      )!,
+      inputData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}input_data'],
+      )!,
+      resultData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result_data'],
+      )!,
+      isFavorite: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_favorite'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $CalculatorHistoryTable createAlias(String alias) {
+    return $CalculatorHistoryTable(attachedDatabase, alias);
+  }
+}
+
+class CalculatorHistoryData extends DataClass
+    implements Insertable<CalculatorHistoryData> {
+  final int id;
+  final int shopId;
+  final String calculatorType;
+  final String inputData;
+  final String resultData;
+  final bool isFavorite;
+  final String? label;
+  final int createdAt;
+  final int createdBy;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const CalculatorHistoryData({
+    required this.id,
+    required this.shopId,
+    required this.calculatorType,
+    required this.inputData,
+    required this.resultData,
+    required this.isFavorite,
+    this.label,
+    required this.createdAt,
+    required this.createdBy,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['calculator_type'] = Variable<String>(calculatorType);
+    map['input_data'] = Variable<String>(inputData);
+    map['result_data'] = Variable<String>(resultData);
+    map['is_favorite'] = Variable<bool>(isFavorite);
+    if (!nullToAbsent || label != null) {
+      map['label'] = Variable<String>(label);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    map['created_by'] = Variable<int>(createdBy);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  CalculatorHistoryCompanion toCompanion(bool nullToAbsent) {
+    return CalculatorHistoryCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      calculatorType: Value(calculatorType),
+      inputData: Value(inputData),
+      resultData: Value(resultData),
+      isFavorite: Value(isFavorite),
+      label: label == null && nullToAbsent
+          ? const Value.absent()
+          : Value(label),
+      createdAt: Value(createdAt),
+      createdBy: Value(createdBy),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory CalculatorHistoryData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CalculatorHistoryData(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      calculatorType: serializer.fromJson<String>(json['calculatorType']),
+      inputData: serializer.fromJson<String>(json['inputData']),
+      resultData: serializer.fromJson<String>(json['resultData']),
+      isFavorite: serializer.fromJson<bool>(json['isFavorite']),
+      label: serializer.fromJson<String?>(json['label']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      createdBy: serializer.fromJson<int>(json['createdBy']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'calculatorType': serializer.toJson<String>(calculatorType),
+      'inputData': serializer.toJson<String>(inputData),
+      'resultData': serializer.toJson<String>(resultData),
+      'isFavorite': serializer.toJson<bool>(isFavorite),
+      'label': serializer.toJson<String?>(label),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'createdBy': serializer.toJson<int>(createdBy),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  CalculatorHistoryData copyWith({
+    int? id,
+    int? shopId,
+    String? calculatorType,
+    String? inputData,
+    String? resultData,
+    bool? isFavorite,
+    Value<String?> label = const Value.absent(),
+    int? createdAt,
+    int? createdBy,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => CalculatorHistoryData(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    calculatorType: calculatorType ?? this.calculatorType,
+    inputData: inputData ?? this.inputData,
+    resultData: resultData ?? this.resultData,
+    isFavorite: isFavorite ?? this.isFavorite,
+    label: label.present ? label.value : this.label,
+    createdAt: createdAt ?? this.createdAt,
+    createdBy: createdBy ?? this.createdBy,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  CalculatorHistoryData copyWithCompanion(CalculatorHistoryCompanion data) {
+    return CalculatorHistoryData(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      calculatorType: data.calculatorType.present
+          ? data.calculatorType.value
+          : this.calculatorType,
+      inputData: data.inputData.present ? data.inputData.value : this.inputData,
+      resultData: data.resultData.present
+          ? data.resultData.value
+          : this.resultData,
+      isFavorite: data.isFavorite.present
+          ? data.isFavorite.value
+          : this.isFavorite,
+      label: data.label.present ? data.label.value : this.label,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalculatorHistoryData(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('calculatorType: $calculatorType, ')
+          ..write('inputData: $inputData, ')
+          ..write('resultData: $resultData, ')
+          ..write('isFavorite: $isFavorite, ')
+          ..write('label: $label, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    calculatorType,
+    inputData,
+    resultData,
+    isFavorite,
+    label,
+    createdAt,
+    createdBy,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CalculatorHistoryData &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.calculatorType == this.calculatorType &&
+          other.inputData == this.inputData &&
+          other.resultData == this.resultData &&
+          other.isFavorite == this.isFavorite &&
+          other.label == this.label &&
+          other.createdAt == this.createdAt &&
+          other.createdBy == this.createdBy &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class CalculatorHistoryCompanion
+    extends UpdateCompanion<CalculatorHistoryData> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<String> calculatorType;
+  final Value<String> inputData;
+  final Value<String> resultData;
+  final Value<bool> isFavorite;
+  final Value<String?> label;
+  final Value<int> createdAt;
+  final Value<int> createdBy;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const CalculatorHistoryCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.calculatorType = const Value.absent(),
+    this.inputData = const Value.absent(),
+    this.resultData = const Value.absent(),
+    this.isFavorite = const Value.absent(),
+    this.label = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  CalculatorHistoryCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required String calculatorType,
+    required String inputData,
+    required String resultData,
+    this.isFavorite = const Value.absent(),
+    this.label = const Value.absent(),
+    required int createdAt,
+    required int createdBy,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       calculatorType = Value(calculatorType),
+       inputData = Value(inputData),
+       resultData = Value(resultData),
+       createdAt = Value(createdAt),
+       createdBy = Value(createdBy);
+  static Insertable<CalculatorHistoryData> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<String>? calculatorType,
+    Expression<String>? inputData,
+    Expression<String>? resultData,
+    Expression<bool>? isFavorite,
+    Expression<String>? label,
+    Expression<int>? createdAt,
+    Expression<int>? createdBy,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (calculatorType != null) 'calculator_type': calculatorType,
+      if (inputData != null) 'input_data': inputData,
+      if (resultData != null) 'result_data': resultData,
+      if (isFavorite != null) 'is_favorite': isFavorite,
+      if (label != null) 'label': label,
+      if (createdAt != null) 'created_at': createdAt,
+      if (createdBy != null) 'created_by': createdBy,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  CalculatorHistoryCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<String>? calculatorType,
+    Value<String>? inputData,
+    Value<String>? resultData,
+    Value<bool>? isFavorite,
+    Value<String?>? label,
+    Value<int>? createdAt,
+    Value<int>? createdBy,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return CalculatorHistoryCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      calculatorType: calculatorType ?? this.calculatorType,
+      inputData: inputData ?? this.inputData,
+      resultData: resultData ?? this.resultData,
+      isFavorite: isFavorite ?? this.isFavorite,
+      label: label ?? this.label,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: createdBy ?? this.createdBy,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (calculatorType.present) {
+      map['calculator_type'] = Variable<String>(calculatorType.value);
+    }
+    if (inputData.present) {
+      map['input_data'] = Variable<String>(inputData.value);
+    }
+    if (resultData.present) {
+      map['result_data'] = Variable<String>(resultData.value);
+    }
+    if (isFavorite.present) {
+      map['is_favorite'] = Variable<bool>(isFavorite.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CalculatorHistoryCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('calculatorType: $calculatorType, ')
+          ..write('inputData: $inputData, ')
+          ..write('resultData: $resultData, ')
+          ..write('isFavorite: $isFavorite, ')
+          ..write('label: $label, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncEntityCacheTable extends SyncEntityCache
+    with TableInfo<$SyncEntityCacheTable, SyncEntityCacheData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncEntityCacheTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _entityMeta = const VerificationMeta('entity');
+  @override
+  late final GeneratedColumn<String> entity = GeneratedColumn<String>(
+    'entity',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> lastSyncedAt = GeneratedColumn<int>(
+    'last_synced_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [shopId, entity, lastSyncedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_entity_cache';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncEntityCacheData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('entity')) {
+      context.handle(
+        _entityMeta,
+        entity.isAcceptableOrUnknown(data['entity']!, _entityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_entityMeta);
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastSyncedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {shopId, entity};
+  @override
+  SyncEntityCacheData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncEntityCacheData(
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      entity: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}entity'],
+      )!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_synced_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SyncEntityCacheTable createAlias(String alias) {
+    return $SyncEntityCacheTable(attachedDatabase, alias);
+  }
+}
+
+class SyncEntityCacheData extends DataClass
+    implements Insertable<SyncEntityCacheData> {
+  final int shopId;
+  final String entity;
+  final int lastSyncedAt;
+  const SyncEntityCacheData({
+    required this.shopId,
+    required this.entity,
+    required this.lastSyncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['shop_id'] = Variable<int>(shopId);
+    map['entity'] = Variable<String>(entity);
+    map['last_synced_at'] = Variable<int>(lastSyncedAt);
+    return map;
+  }
+
+  SyncEntityCacheCompanion toCompanion(bool nullToAbsent) {
+    return SyncEntityCacheCompanion(
+      shopId: Value(shopId),
+      entity: Value(entity),
+      lastSyncedAt: Value(lastSyncedAt),
+    );
+  }
+
+  factory SyncEntityCacheData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncEntityCacheData(
+      shopId: serializer.fromJson<int>(json['shopId']),
+      entity: serializer.fromJson<String>(json['entity']),
+      lastSyncedAt: serializer.fromJson<int>(json['lastSyncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'shopId': serializer.toJson<int>(shopId),
+      'entity': serializer.toJson<String>(entity),
+      'lastSyncedAt': serializer.toJson<int>(lastSyncedAt),
+    };
+  }
+
+  SyncEntityCacheData copyWith({
+    int? shopId,
+    String? entity,
+    int? lastSyncedAt,
+  }) => SyncEntityCacheData(
+    shopId: shopId ?? this.shopId,
+    entity: entity ?? this.entity,
+    lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+  );
+  SyncEntityCacheData copyWithCompanion(SyncEntityCacheCompanion data) {
+    return SyncEntityCacheData(
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      entity: data.entity.present ? data.entity.value : this.entity,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncEntityCacheData(')
+          ..write('shopId: $shopId, ')
+          ..write('entity: $entity, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(shopId, entity, lastSyncedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncEntityCacheData &&
+          other.shopId == this.shopId &&
+          other.entity == this.entity &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class SyncEntityCacheCompanion extends UpdateCompanion<SyncEntityCacheData> {
+  final Value<int> shopId;
+  final Value<String> entity;
+  final Value<int> lastSyncedAt;
+  final Value<int> rowid;
+  const SyncEntityCacheCompanion({
+    this.shopId = const Value.absent(),
+    this.entity = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncEntityCacheCompanion.insert({
+    required int shopId,
+    required String entity,
+    required int lastSyncedAt,
+    this.rowid = const Value.absent(),
+  }) : shopId = Value(shopId),
+       entity = Value(entity),
+       lastSyncedAt = Value(lastSyncedAt);
+  static Insertable<SyncEntityCacheData> custom({
+    Expression<int>? shopId,
+    Expression<String>? entity,
+    Expression<int>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (shopId != null) 'shop_id': shopId,
+      if (entity != null) 'entity': entity,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncEntityCacheCompanion copyWith({
+    Value<int>? shopId,
+    Value<String>? entity,
+    Value<int>? lastSyncedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncEntityCacheCompanion(
+      shopId: shopId ?? this.shopId,
+      entity: entity ?? this.entity,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (entity.present) {
+      map['entity'] = Variable<String>(entity.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncEntityCacheCompanion(')
+          ..write('shopId: $shopId, ')
+          ..write('entity: $entity, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -17201,6 +19258,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $CashSessionsTable cashSessions = $CashSessionsTable(this);
   late final $CashMovementsTable cashMovements = $CashMovementsTable(this);
+  late final $TenantModulesTable tenantModules = $TenantModulesTable(this);
+  late final $CalculatorProductDataTable calculatorProductData =
+      $CalculatorProductDataTable(this);
+  late final $CalculatorHistoryTable calculatorHistory =
+      $CalculatorHistoryTable(this);
+  late final $SyncEntityCacheTable syncEntityCache = $SyncEntityCacheTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -17228,6 +19293,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     categoryBudgets,
     cashSessions,
     cashMovements,
+    tenantModules,
+    calculatorProductData,
+    calculatorHistory,
+    syncEntityCache,
   ];
 }
 
@@ -17704,6 +19773,99 @@ final class $$ShopsTableReferences
     ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_cashMovementsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$TenantModulesTable, List<TenantModule>>
+  _tenantModulesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.tenantModules,
+    aliasName: $_aliasNameGenerator(db.shops.id, db.tenantModules.shopId),
+  );
+
+  $$TenantModulesTableProcessedTableManager get tenantModulesRefs {
+    final manager = $$TenantModulesTableTableManager(
+      $_db,
+      $_db.tenantModules,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_tenantModulesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $CalculatorProductDataTable,
+    List<CalculatorProductDataData>
+  >
+  _calculatorProductDataRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.calculatorProductData,
+        aliasName: $_aliasNameGenerator(
+          db.shops.id,
+          db.calculatorProductData.shopId,
+        ),
+      );
+
+  $$CalculatorProductDataTableProcessedTableManager
+  get calculatorProductDataRefs {
+    final manager = $$CalculatorProductDataTableTableManager(
+      $_db,
+      $_db.calculatorProductData,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _calculatorProductDataRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $CalculatorHistoryTable,
+    List<CalculatorHistoryData>
+  >
+  _calculatorHistoryRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.calculatorHistory,
+        aliasName: $_aliasNameGenerator(
+          db.shops.id,
+          db.calculatorHistory.shopId,
+        ),
+      );
+
+  $$CalculatorHistoryTableProcessedTableManager get calculatorHistoryRefs {
+    final manager = $$CalculatorHistoryTableTableManager(
+      $_db,
+      $_db.calculatorHistory,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _calculatorHistoryRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SyncEntityCacheTable, List<SyncEntityCacheData>>
+  _syncEntityCacheRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.syncEntityCache,
+    aliasName: $_aliasNameGenerator(db.shops.id, db.syncEntityCache.shopId),
+  );
+
+  $$SyncEntityCacheTableProcessedTableManager get syncEntityCacheRefs {
+    final manager = $$SyncEntityCacheTableTableManager(
+      $_db,
+      $_db.syncEntityCache,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _syncEntityCacheRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -18310,6 +20472,107 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
           }) => $$CashMovementsTableFilterComposer(
             $db: $db,
             $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> tenantModulesRefs(
+    Expression<bool> Function($$TenantModulesTableFilterComposer f) f,
+  ) {
+    final $$TenantModulesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tenantModules,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TenantModulesTableFilterComposer(
+            $db: $db,
+            $table: $db.tenantModules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> calculatorProductDataRefs(
+    Expression<bool> Function($$CalculatorProductDataTableFilterComposer f) f,
+  ) {
+    final $$CalculatorProductDataTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.calculatorProductData,
+          getReferencedColumn: (t) => t.shopId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CalculatorProductDataTableFilterComposer(
+                $db: $db,
+                $table: $db.calculatorProductData,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> calculatorHistoryRefs(
+    Expression<bool> Function($$CalculatorHistoryTableFilterComposer f) f,
+  ) {
+    final $$CalculatorHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.calculatorHistory,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CalculatorHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.calculatorHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> syncEntityCacheRefs(
+    Expression<bool> Function($$SyncEntityCacheTableFilterComposer f) f,
+  ) {
+    final $$SyncEntityCacheTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.syncEntityCache,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncEntityCacheTableFilterComposer(
+            $db: $db,
+            $table: $db.syncEntityCache,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -18997,6 +21260,108 @@ class $$ShopsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> tenantModulesRefs<T extends Object>(
+    Expression<T> Function($$TenantModulesTableAnnotationComposer a) f,
+  ) {
+    final $$TenantModulesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tenantModules,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TenantModulesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tenantModules,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> calculatorProductDataRefs<T extends Object>(
+    Expression<T> Function($$CalculatorProductDataTableAnnotationComposer a) f,
+  ) {
+    final $$CalculatorProductDataTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.calculatorProductData,
+          getReferencedColumn: (t) => t.shopId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CalculatorProductDataTableAnnotationComposer(
+                $db: $db,
+                $table: $db.calculatorProductData,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> calculatorHistoryRefs<T extends Object>(
+    Expression<T> Function($$CalculatorHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$CalculatorHistoryTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.calculatorHistory,
+          getReferencedColumn: (t) => t.shopId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CalculatorHistoryTableAnnotationComposer(
+                $db: $db,
+                $table: $db.calculatorHistory,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> syncEntityCacheRefs<T extends Object>(
+    Expression<T> Function($$SyncEntityCacheTableAnnotationComposer a) f,
+  ) {
+    final $$SyncEntityCacheTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.syncEntityCache,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncEntityCacheTableAnnotationComposer(
+            $db: $db,
+            $table: $db.syncEntityCache,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShopsTableTableManager
@@ -19035,6 +21400,10 @@ class $$ShopsTableTableManager
             bool categoryBudgetsRefs,
             bool cashSessionsRefs,
             bool cashMovementsRefs,
+            bool tenantModulesRefs,
+            bool calculatorProductDataRefs,
+            bool calculatorHistoryRefs,
+            bool syncEntityCacheRefs,
           })
         > {
   $$ShopsTableTableManager(_$AppDatabase db, $ShopsTable table)
@@ -19130,6 +21499,10 @@ class $$ShopsTableTableManager
                 categoryBudgetsRefs = false,
                 cashSessionsRefs = false,
                 cashMovementsRefs = false,
+                tenantModulesRefs = false,
+                calculatorProductDataRefs = false,
+                calculatorHistoryRefs = false,
+                syncEntityCacheRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -19155,6 +21528,10 @@ class $$ShopsTableTableManager
                     if (categoryBudgetsRefs) db.categoryBudgets,
                     if (cashSessionsRefs) db.cashSessions,
                     if (cashMovementsRefs) db.cashMovements,
+                    if (tenantModulesRefs) db.tenantModules,
+                    if (calculatorProductDataRefs) db.calculatorProductData,
+                    if (calculatorHistoryRefs) db.calculatorHistory,
+                    if (syncEntityCacheRefs) db.syncEntityCache,
                   ],
                   addJoins:
                       <
@@ -19579,6 +21956,90 @@ class $$ShopsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (tenantModulesRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          TenantModule
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._tenantModulesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).tenantModulesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (calculatorProductDataRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          CalculatorProductDataData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._calculatorProductDataRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).calculatorProductDataRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (calculatorHistoryRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          CalculatorHistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._calculatorHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).calculatorHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (syncEntityCacheRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          SyncEntityCacheData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._syncEntityCacheRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).syncEntityCacheRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -19622,6 +22083,10 @@ typedef $$ShopsTableProcessedTableManager =
         bool categoryBudgetsRefs,
         bool cashSessionsRefs,
         bool cashMovementsRefs,
+        bool tenantModulesRefs,
+        bool calculatorProductDataRefs,
+        bool calculatorHistoryRefs,
+        bool syncEntityCacheRefs,
       })
     >;
 typedef $$UsersTableCreateCompanionBuilder =
@@ -19806,6 +22271,33 @@ final class $$UsersTableReferences
     ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_cashMovementsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $CalculatorHistoryTable,
+    List<CalculatorHistoryData>
+  >
+  _calculatorHistoryRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.calculatorHistory,
+        aliasName: $_aliasNameGenerator(
+          db.users.id,
+          db.calculatorHistory.createdBy,
+        ),
+      );
+
+  $$CalculatorHistoryTableProcessedTableManager get calculatorHistoryRefs {
+    final manager = $$CalculatorHistoryTableTableManager(
+      $_db,
+      $_db.calculatorHistory,
+    ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _calculatorHistoryRefsTable($_db),
+    );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -20080,6 +22572,31 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
           }) => $$CashMovementsTableFilterComposer(
             $db: $db,
             $table: $db.cashMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> calculatorHistoryRefs(
+    Expression<bool> Function($$CalculatorHistoryTableFilterComposer f) f,
+  ) {
+    final $$CalculatorHistoryTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.calculatorHistory,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CalculatorHistoryTableFilterComposer(
+            $db: $db,
+            $table: $db.calculatorHistory,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -20475,6 +22992,32 @@ class $$UsersTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> calculatorHistoryRefs<T extends Object>(
+    Expression<T> Function($$CalculatorHistoryTableAnnotationComposer a) f,
+  ) {
+    final $$CalculatorHistoryTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.calculatorHistory,
+          getReferencedColumn: (t) => t.createdBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CalculatorHistoryTableAnnotationComposer(
+                $db: $db,
+                $table: $db.calculatorHistory,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$UsersTableTableManager
@@ -20498,6 +23041,7 @@ class $$UsersTableTableManager
             bool expensesRefs,
             bool expenseHistoryEntriesRefs,
             bool cashMovementsRefs,
+            bool calculatorHistoryRefs,
           })
         > {
   $$UsersTableTableManager(_$AppDatabase db, $UsersTable table)
@@ -20614,6 +23158,7 @@ class $$UsersTableTableManager
                 expensesRefs = false,
                 expenseHistoryEntriesRefs = false,
                 cashMovementsRefs = false,
+                calculatorHistoryRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -20624,6 +23169,7 @@ class $$UsersTableTableManager
                     if (expensesRefs) db.expenses,
                     if (expenseHistoryEntriesRefs) db.expenseHistoryEntries,
                     if (cashMovementsRefs) db.cashMovements,
+                    if (calculatorHistoryRefs) db.calculatorHistory,
                   ],
                   addJoins:
                       <
@@ -20777,6 +23323,27 @@ class $$UsersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (calculatorHistoryRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          CalculatorHistoryData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._calculatorHistoryRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).calculatorHistoryRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.createdBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -20805,6 +23372,7 @@ typedef $$UsersTableProcessedTableManager =
         bool expensesRefs,
         bool expenseHistoryEntriesRefs,
         bool cashMovementsRefs,
+        bool calculatorHistoryRefs,
       })
     >;
 typedef $$SettingsTableCreateCompanionBuilder =
@@ -23124,6 +25692,34 @@ final class $$ProductsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $CalculatorProductDataTable,
+    List<CalculatorProductDataData>
+  >
+  _calculatorProductDataRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.calculatorProductData,
+        aliasName: $_aliasNameGenerator(
+          db.products.id,
+          db.calculatorProductData.productId,
+        ),
+      );
+
+  $$CalculatorProductDataTableProcessedTableManager
+  get calculatorProductDataRefs {
+    final manager = $$CalculatorProductDataTableTableManager(
+      $_db,
+      $_db.calculatorProductData,
+    ).filter((f) => f.productId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _calculatorProductDataRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$ProductsTableFilterComposer
@@ -23323,6 +25919,32 @@ class $$ProductsTableFilterComposer
               }) => $$CustomerProductPricesTableFilterComposer(
                 $db: $db,
                 $table: $db.customerProductPrices,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> calculatorProductDataRefs(
+    Expression<bool> Function($$CalculatorProductDataTableFilterComposer f) f,
+  ) {
+    final $$CalculatorProductDataTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.calculatorProductData,
+          getReferencedColumn: (t) => t.productId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CalculatorProductDataTableFilterComposer(
+                $db: $db,
+                $table: $db.calculatorProductData,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -23649,6 +26271,32 @@ class $$ProductsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> calculatorProductDataRefs<T extends Object>(
+    Expression<T> Function($$CalculatorProductDataTableAnnotationComposer a) f,
+  ) {
+    final $$CalculatorProductDataTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.calculatorProductData,
+          getReferencedColumn: (t) => t.productId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CalculatorProductDataTableAnnotationComposer(
+                $db: $db,
+                $table: $db.calculatorProductData,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$ProductsTableTableManager
@@ -23670,6 +26318,7 @@ class $$ProductsTableTableManager
             bool saleItemsRefs,
             bool stockMovementsRefs,
             bool customerProductPricesRefs,
+            bool calculatorProductDataRefs,
           })
         > {
   $$ProductsTableTableManager(_$AppDatabase db, $ProductsTable table)
@@ -23774,6 +26423,7 @@ class $$ProductsTableTableManager
                 saleItemsRefs = false,
                 stockMovementsRefs = false,
                 customerProductPricesRefs = false,
+                calculatorProductDataRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -23781,6 +26431,7 @@ class $$ProductsTableTableManager
                     if (saleItemsRefs) db.saleItems,
                     if (stockMovementsRefs) db.stockMovements,
                     if (customerProductPricesRefs) db.customerProductPrices,
+                    if (calculatorProductDataRefs) db.calculatorProductData,
                   ],
                   addJoins:
                       <
@@ -23892,6 +26543,27 @@ class $$ProductsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (calculatorProductDataRefs)
+                        await $_getPrefetchedData<
+                          Product,
+                          $ProductsTable,
+                          CalculatorProductDataData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ProductsTableReferences
+                              ._calculatorProductDataRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ProductsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).calculatorProductDataRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.productId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -23918,6 +26590,7 @@ typedef $$ProductsTableProcessedTableManager =
         bool saleItemsRefs,
         bool stockMovementsRefs,
         bool customerProductPricesRefs,
+        bool calculatorProductDataRefs,
       })
     >;
 typedef $$CustomersTableCreateCompanionBuilder =
@@ -34171,6 +36844,1741 @@ typedef $$CashMovementsTableProcessedTableManager =
       CashMovement,
       PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
     >;
+typedef $$TenantModulesTableCreateCompanionBuilder =
+    TenantModulesCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required String moduleCode,
+      Value<bool> enabled,
+      required int createdAt,
+    });
+typedef $$TenantModulesTableUpdateCompanionBuilder =
+    TenantModulesCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<String> moduleCode,
+      Value<bool> enabled,
+      Value<int> createdAt,
+    });
+
+final class $$TenantModulesTableReferences
+    extends BaseReferences<_$AppDatabase, $TenantModulesTable, TenantModule> {
+  $$TenantModulesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.tenantModules.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TenantModulesTableFilterComposer
+    extends Composer<_$AppDatabase, $TenantModulesTable> {
+  $$TenantModulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get moduleCode => $composableBuilder(
+    column: $table.moduleCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TenantModulesTableOrderingComposer
+    extends Composer<_$AppDatabase, $TenantModulesTable> {
+  $$TenantModulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get moduleCode => $composableBuilder(
+    column: $table.moduleCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TenantModulesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TenantModulesTable> {
+  $$TenantModulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get moduleCode => $composableBuilder(
+    column: $table.moduleCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TenantModulesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TenantModulesTable,
+          TenantModule,
+          $$TenantModulesTableFilterComposer,
+          $$TenantModulesTableOrderingComposer,
+          $$TenantModulesTableAnnotationComposer,
+          $$TenantModulesTableCreateCompanionBuilder,
+          $$TenantModulesTableUpdateCompanionBuilder,
+          (TenantModule, $$TenantModulesTableReferences),
+          TenantModule,
+          PrefetchHooks Function({bool shopId})
+        > {
+  $$TenantModulesTableTableManager(_$AppDatabase db, $TenantModulesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TenantModulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TenantModulesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TenantModulesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<String> moduleCode = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => TenantModulesCompanion(
+                id: id,
+                shopId: shopId,
+                moduleCode: moduleCode,
+                enabled: enabled,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required String moduleCode,
+                Value<bool> enabled = const Value.absent(),
+                required int createdAt,
+              }) => TenantModulesCompanion.insert(
+                id: id,
+                shopId: shopId,
+                moduleCode: moduleCode,
+                enabled: enabled,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$TenantModulesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable: $$TenantModulesTableReferences
+                                    ._shopIdTable(db),
+                                referencedColumn: $$TenantModulesTableReferences
+                                    ._shopIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TenantModulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TenantModulesTable,
+      TenantModule,
+      $$TenantModulesTableFilterComposer,
+      $$TenantModulesTableOrderingComposer,
+      $$TenantModulesTableAnnotationComposer,
+      $$TenantModulesTableCreateCompanionBuilder,
+      $$TenantModulesTableUpdateCompanionBuilder,
+      (TenantModule, $$TenantModulesTableReferences),
+      TenantModule,
+      PrefetchHooks Function({bool shopId})
+    >;
+typedef $$CalculatorProductDataTableCreateCompanionBuilder =
+    CalculatorProductDataCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int productId,
+      required String calculatorType,
+      required String metadata,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+      required int createdAt,
+      required int updatedAt,
+    });
+typedef $$CalculatorProductDataTableUpdateCompanionBuilder =
+    CalculatorProductDataCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> productId,
+      Value<String> calculatorType,
+      Value<String> metadata,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+    });
+
+final class $$CalculatorProductDataTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CalculatorProductDataTable,
+          CalculatorProductDataData
+        > {
+  $$CalculatorProductDataTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.calculatorProductData.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ProductsTable _productIdTable(_$AppDatabase db) =>
+      db.products.createAlias(
+        $_aliasNameGenerator(
+          db.calculatorProductData.productId,
+          db.products.id,
+        ),
+      );
+
+  $$ProductsTableProcessedTableManager get productId {
+    final $_column = $_itemColumn<int>('product_id')!;
+
+    final manager = $$ProductsTableTableManager(
+      $_db,
+      $_db.products,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_productIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CalculatorProductDataTableFilterComposer
+    extends Composer<_$AppDatabase, $CalculatorProductDataTable> {
+  $$CalculatorProductDataTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get calculatorType => $composableBuilder(
+    column: $table.calculatorType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get metadata => $composableBuilder(
+    column: $table.metadata,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableFilterComposer get productId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.productId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableFilterComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CalculatorProductDataTableOrderingComposer
+    extends Composer<_$AppDatabase, $CalculatorProductDataTable> {
+  $$CalculatorProductDataTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get calculatorType => $composableBuilder(
+    column: $table.calculatorType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get metadata => $composableBuilder(
+    column: $table.metadata,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableOrderingComposer get productId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.productId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableOrderingComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CalculatorProductDataTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CalculatorProductDataTable> {
+  $$CalculatorProductDataTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get calculatorType => $composableBuilder(
+    column: $table.calculatorType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get metadata =>
+      $composableBuilder(column: $table.metadata, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableAnnotationComposer get productId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.productId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CalculatorProductDataTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CalculatorProductDataTable,
+          CalculatorProductDataData,
+          $$CalculatorProductDataTableFilterComposer,
+          $$CalculatorProductDataTableOrderingComposer,
+          $$CalculatorProductDataTableAnnotationComposer,
+          $$CalculatorProductDataTableCreateCompanionBuilder,
+          $$CalculatorProductDataTableUpdateCompanionBuilder,
+          (CalculatorProductDataData, $$CalculatorProductDataTableReferences),
+          CalculatorProductDataData,
+          PrefetchHooks Function({bool shopId, bool productId})
+        > {
+  $$CalculatorProductDataTableTableManager(
+    _$AppDatabase db,
+    $CalculatorProductDataTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CalculatorProductDataTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CalculatorProductDataTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CalculatorProductDataTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> productId = const Value.absent(),
+                Value<String> calculatorType = const Value.absent(),
+                Value<String> metadata = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+              }) => CalculatorProductDataCompanion(
+                id: id,
+                shopId: shopId,
+                productId: productId,
+                calculatorType: calculatorType,
+                metadata: metadata,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int productId,
+                required String calculatorType,
+                required String metadata,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+              }) => CalculatorProductDataCompanion.insert(
+                id: id,
+                shopId: shopId,
+                productId: productId,
+                calculatorType: calculatorType,
+                metadata: metadata,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CalculatorProductDataTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false, productId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable:
+                                    $$CalculatorProductDataTableReferences
+                                        ._shopIdTable(db),
+                                referencedColumn:
+                                    $$CalculatorProductDataTableReferences
+                                        ._shopIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (productId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.productId,
+                                referencedTable:
+                                    $$CalculatorProductDataTableReferences
+                                        ._productIdTable(db),
+                                referencedColumn:
+                                    $$CalculatorProductDataTableReferences
+                                        ._productIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CalculatorProductDataTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CalculatorProductDataTable,
+      CalculatorProductDataData,
+      $$CalculatorProductDataTableFilterComposer,
+      $$CalculatorProductDataTableOrderingComposer,
+      $$CalculatorProductDataTableAnnotationComposer,
+      $$CalculatorProductDataTableCreateCompanionBuilder,
+      $$CalculatorProductDataTableUpdateCompanionBuilder,
+      (CalculatorProductDataData, $$CalculatorProductDataTableReferences),
+      CalculatorProductDataData,
+      PrefetchHooks Function({bool shopId, bool productId})
+    >;
+typedef $$CalculatorHistoryTableCreateCompanionBuilder =
+    CalculatorHistoryCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required String calculatorType,
+      required String inputData,
+      required String resultData,
+      Value<bool> isFavorite,
+      Value<String?> label,
+      required int createdAt,
+      required int createdBy,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$CalculatorHistoryTableUpdateCompanionBuilder =
+    CalculatorHistoryCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<String> calculatorType,
+      Value<String> inputData,
+      Value<String> resultData,
+      Value<bool> isFavorite,
+      Value<String?> label,
+      Value<int> createdAt,
+      Value<int> createdBy,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$CalculatorHistoryTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CalculatorHistoryTable,
+          CalculatorHistoryData
+        > {
+  $$CalculatorHistoryTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.calculatorHistory.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _createdByTable(_$AppDatabase db) => db.users.createAlias(
+    $_aliasNameGenerator(db.calculatorHistory.createdBy, db.users.id),
+  );
+
+  $$UsersTableProcessedTableManager get createdBy {
+    final $_column = $_itemColumn<int>('created_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CalculatorHistoryTableFilterComposer
+    extends Composer<_$AppDatabase, $CalculatorHistoryTable> {
+  $$CalculatorHistoryTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get calculatorType => $composableBuilder(
+    column: $table.calculatorType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get inputData => $composableBuilder(
+    column: $table.inputData,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultData => $composableBuilder(
+    column: $table.resultData,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get createdBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CalculatorHistoryTableOrderingComposer
+    extends Composer<_$AppDatabase, $CalculatorHistoryTable> {
+  $$CalculatorHistoryTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get calculatorType => $composableBuilder(
+    column: $table.calculatorType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get inputData => $composableBuilder(
+    column: $table.inputData,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultData => $composableBuilder(
+    column: $table.resultData,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get createdBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CalculatorHistoryTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CalculatorHistoryTable> {
+  $$CalculatorHistoryTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get calculatorType => $composableBuilder(
+    column: $table.calculatorType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get inputData =>
+      $composableBuilder(column: $table.inputData, builder: (column) => column);
+
+  GeneratedColumn<String> get resultData => $composableBuilder(
+    column: $table.resultData,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get createdBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CalculatorHistoryTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CalculatorHistoryTable,
+          CalculatorHistoryData,
+          $$CalculatorHistoryTableFilterComposer,
+          $$CalculatorHistoryTableOrderingComposer,
+          $$CalculatorHistoryTableAnnotationComposer,
+          $$CalculatorHistoryTableCreateCompanionBuilder,
+          $$CalculatorHistoryTableUpdateCompanionBuilder,
+          (CalculatorHistoryData, $$CalculatorHistoryTableReferences),
+          CalculatorHistoryData,
+          PrefetchHooks Function({bool shopId, bool createdBy})
+        > {
+  $$CalculatorHistoryTableTableManager(
+    _$AppDatabase db,
+    $CalculatorHistoryTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CalculatorHistoryTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CalculatorHistoryTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CalculatorHistoryTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<String> calculatorType = const Value.absent(),
+                Value<String> inputData = const Value.absent(),
+                Value<String> resultData = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> createdBy = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => CalculatorHistoryCompanion(
+                id: id,
+                shopId: shopId,
+                calculatorType: calculatorType,
+                inputData: inputData,
+                resultData: resultData,
+                isFavorite: isFavorite,
+                label: label,
+                createdAt: createdAt,
+                createdBy: createdBy,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required String calculatorType,
+                required String inputData,
+                required String resultData,
+                Value<bool> isFavorite = const Value.absent(),
+                Value<String?> label = const Value.absent(),
+                required int createdAt,
+                required int createdBy,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => CalculatorHistoryCompanion.insert(
+                id: id,
+                shopId: shopId,
+                calculatorType: calculatorType,
+                inputData: inputData,
+                resultData: resultData,
+                isFavorite: isFavorite,
+                label: label,
+                createdAt: createdAt,
+                createdBy: createdBy,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CalculatorHistoryTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false, createdBy = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable:
+                                    $$CalculatorHistoryTableReferences
+                                        ._shopIdTable(db),
+                                referencedColumn:
+                                    $$CalculatorHistoryTableReferences
+                                        ._shopIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (createdBy) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.createdBy,
+                                referencedTable:
+                                    $$CalculatorHistoryTableReferences
+                                        ._createdByTable(db),
+                                referencedColumn:
+                                    $$CalculatorHistoryTableReferences
+                                        ._createdByTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CalculatorHistoryTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CalculatorHistoryTable,
+      CalculatorHistoryData,
+      $$CalculatorHistoryTableFilterComposer,
+      $$CalculatorHistoryTableOrderingComposer,
+      $$CalculatorHistoryTableAnnotationComposer,
+      $$CalculatorHistoryTableCreateCompanionBuilder,
+      $$CalculatorHistoryTableUpdateCompanionBuilder,
+      (CalculatorHistoryData, $$CalculatorHistoryTableReferences),
+      CalculatorHistoryData,
+      PrefetchHooks Function({bool shopId, bool createdBy})
+    >;
+typedef $$SyncEntityCacheTableCreateCompanionBuilder =
+    SyncEntityCacheCompanion Function({
+      required int shopId,
+      required String entity,
+      required int lastSyncedAt,
+      Value<int> rowid,
+    });
+typedef $$SyncEntityCacheTableUpdateCompanionBuilder =
+    SyncEntityCacheCompanion Function({
+      Value<int> shopId,
+      Value<String> entity,
+      Value<int> lastSyncedAt,
+      Value<int> rowid,
+    });
+
+final class $$SyncEntityCacheTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $SyncEntityCacheTable,
+          SyncEntityCacheData
+        > {
+  $$SyncEntityCacheTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.syncEntityCache.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SyncEntityCacheTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncEntityCacheTable> {
+  $$SyncEntityCacheTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get entity => $composableBuilder(
+    column: $table.entity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncEntityCacheTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncEntityCacheTable> {
+  $$SyncEntityCacheTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get entity => $composableBuilder(
+    column: $table.entity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncEntityCacheTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncEntityCacheTable> {
+  $$SyncEntityCacheTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get entity =>
+      $composableBuilder(column: $table.entity, builder: (column) => column);
+
+  GeneratedColumn<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncEntityCacheTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncEntityCacheTable,
+          SyncEntityCacheData,
+          $$SyncEntityCacheTableFilterComposer,
+          $$SyncEntityCacheTableOrderingComposer,
+          $$SyncEntityCacheTableAnnotationComposer,
+          $$SyncEntityCacheTableCreateCompanionBuilder,
+          $$SyncEntityCacheTableUpdateCompanionBuilder,
+          (SyncEntityCacheData, $$SyncEntityCacheTableReferences),
+          SyncEntityCacheData,
+          PrefetchHooks Function({bool shopId})
+        > {
+  $$SyncEntityCacheTableTableManager(
+    _$AppDatabase db,
+    $SyncEntityCacheTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncEntityCacheTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncEntityCacheTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncEntityCacheTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> shopId = const Value.absent(),
+                Value<String> entity = const Value.absent(),
+                Value<int> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncEntityCacheCompanion(
+                shopId: shopId,
+                entity: entity,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required int shopId,
+                required String entity,
+                required int lastSyncedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SyncEntityCacheCompanion.insert(
+                shopId: shopId,
+                entity: entity,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SyncEntityCacheTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable:
+                                    $$SyncEntityCacheTableReferences
+                                        ._shopIdTable(db),
+                                referencedColumn:
+                                    $$SyncEntityCacheTableReferences
+                                        ._shopIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SyncEntityCacheTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncEntityCacheTable,
+      SyncEntityCacheData,
+      $$SyncEntityCacheTableFilterComposer,
+      $$SyncEntityCacheTableOrderingComposer,
+      $$SyncEntityCacheTableAnnotationComposer,
+      $$SyncEntityCacheTableCreateCompanionBuilder,
+      $$SyncEntityCacheTableUpdateCompanionBuilder,
+      (SyncEntityCacheData, $$SyncEntityCacheTableReferences),
+      SyncEntityCacheData,
+      PrefetchHooks Function({bool shopId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -34222,4 +38630,12 @@ class $AppDatabaseManager {
       $$CashSessionsTableTableManager(_db, _db.cashSessions);
   $$CashMovementsTableTableManager get cashMovements =>
       $$CashMovementsTableTableManager(_db, _db.cashMovements);
+  $$TenantModulesTableTableManager get tenantModules =>
+      $$TenantModulesTableTableManager(_db, _db.tenantModules);
+  $$CalculatorProductDataTableTableManager get calculatorProductData =>
+      $$CalculatorProductDataTableTableManager(_db, _db.calculatorProductData);
+  $$CalculatorHistoryTableTableManager get calculatorHistory =>
+      $$CalculatorHistoryTableTableManager(_db, _db.calculatorHistory);
+  $$SyncEntityCacheTableTableManager get syncEntityCache =>
+      $$SyncEntityCacheTableTableManager(_db, _db.syncEntityCache);
 }

@@ -1,4 +1,5 @@
 import '../entities/dashboard_entities.dart';
+import '../../../../core/utils/sale_payment_resolver.dart';
 
 class DashboardAggregationService {
   DashboardSalesStats aggregateSales(List<TodaySaleRow> sales) {
@@ -19,9 +20,16 @@ class DashboardAggregationService {
 
     for (final sale in sales) {
       totalRevenue += sale.totalAmount;
-      totalCash += sale.amountCash;
-      totalMomo += sale.amountMomo;
-      totalCredit += sale.amountCredit;
+      final resolved = SalePaymentResolver.resolve(
+        totalAmount: sale.totalAmount,
+        amountCash: sale.amountCash,
+        amountMomo: sale.amountMomo,
+        amountCredit: sale.amountCredit,
+        paymentMethod: sale.paymentMethod,
+      );
+      totalCash += resolved.cash;
+      totalMomo += resolved.momo;
+      totalCredit += resolved.credit;
     }
 
     return DashboardSalesStats(
@@ -85,12 +93,19 @@ class DashboardAggregationService {
   }
 
   String resolvePaymentMode(TodaySaleRow sale) {
-    if (sale.amountCredit > 0 && sale.amountCash == 0 && sale.amountMomo == 0) {
+    final resolved = SalePaymentResolver.resolve(
+      totalAmount: sale.totalAmount,
+      amountCash: sale.amountCash,
+      amountMomo: sale.amountMomo,
+      amountCredit: sale.amountCredit,
+      paymentMethod: sale.paymentMethod,
+    );
+    if (resolved.credit > 0 && resolved.cash == 0 && resolved.momo == 0) {
       return 'credit';
     }
-    if (sale.amountCredit > 0) return 'mixed';
-    if (sale.amountMomo > 0 && sale.amountCash == 0) return 'momo';
-    if (sale.amountMomo > 0) return 'mixed';
+    if (resolved.credit > 0) return 'mixed';
+    if (resolved.momo > 0 && resolved.cash == 0) return 'momo';
+    if (resolved.momo > 0) return 'mixed';
     return 'cash';
   }
 }

@@ -154,10 +154,10 @@ class ExpensesBloc extends Bloc<ExpensesEvent, ExpensesState> {
     }
   }
 
-  Future<void> _backgroundSync() async {
+  Future<void> _backgroundSync({bool force = false}) async {
     try {
       await _generateRecurring(shopId: shopId, userId: userId);
-      await _syncFromRemote(shopId: shopId);
+      await _syncFromRemote(shopId: shopId, force: force);
     } catch (_) {
       // Offline ou cloud indisponible — données locales conservées.
     }

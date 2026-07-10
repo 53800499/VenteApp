@@ -1,6 +1,8 @@
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/sync/local_write_sync_recorder.dart';
+import '../../../../core/sync/sync_policy.dart';
+import '../../../../core/sync/sync_pull_entity.dart';
 import '../../../../core/utils/benin_period_range.dart';
 import '../../domain/entities/expense_entities.dart';
 import '../../domain/repositories/expense_repository.dart';
@@ -14,15 +16,18 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
     required ExpensesLocalDatasource local,
     required ExpensesRemoteDatasource remote,
     required RemoteApiGuard apiGuard,
+    required SyncPolicy syncPolicy,
     LocalWriteSyncRecorder? recorder,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
+        _syncPolicy = syncPolicy,
         _recorder = recorder;
 
   final ExpensesLocalDatasource _local;
   final ExpensesRemoteDatasource _remote;
   final RemoteApiGuard _apiGuard;
+  final SyncPolicy _syncPolicy;
   final LocalWriteSyncRecorder? _recorder;
   @override
   Future<List<ExpenseCategory>> listCategories({required int shopId}) {
@@ -251,7 +256,15 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   }
 
   @override
-  Future<void> syncFromRemote({required int shopId}) async {
+  Future<void> syncFromRemote({required int shopId, bool force = false}) async {
+    if (!await _syncPolicy.shouldPullEntity(
+      shopId: shopId,
+      entity: SyncPullEntity.expenses,
+      force: force,
+    )) {
+      return;
+    }
+
     await _apiGuard.ensureReady();
     final userId = await _local.resolveDefaultUserId(shopId);
     if (userId == null) return;
@@ -287,6 +300,11 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         remote: dto,
       );
     }
+
+    await _syncPolicy.markEntitySynced(
+      shopId: shopId,
+      entity: SyncPullEntity.expenses,
+    );
   }
 
   @override

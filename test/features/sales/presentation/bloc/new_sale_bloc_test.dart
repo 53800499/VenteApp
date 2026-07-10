@@ -46,6 +46,7 @@ void main() {
     database = createTestDatabase();
     inventoryRepo = InventoryRepositoryImpl(
       local: InventoryLocalDatasource(database),
+      syncPolicy: await createTestSyncPolicy(database),
     );
     final saleRepo = _FakeSaleRepository();
 

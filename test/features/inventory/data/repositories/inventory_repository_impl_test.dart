@@ -20,6 +20,7 @@ void main() {
     database = createTestDatabase();
     repository = InventoryRepositoryImpl(
       local: InventoryLocalDatasource(database),
+      syncPolicy: await createTestSyncPolicy(database),
     );
 
     final timestamp = nowMs();
@@ -164,5 +165,35 @@ void main() {
       ),
       throwsA(isA<ValidationFailure>()),
     );
+  });
+
+  test('tolère les catégories Général en doublon après sync cloud', () async {
+    final local = InventoryLocalDatasource(database);
+    final timestamp = nowMs();
+
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            shopId: shopId,
+            name: 'Général',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+    await database.into(database.categories).insert(
+          CategoriesCompanion.insert(
+            shopId: shopId,
+            name: 'Général',
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          ),
+        );
+
+    final defaultId = await local.ensureDefaultCategory(shopId);
+    final categories = await repository.listCategories(shopId: shopId);
+    final generalCategories =
+        categories.where((c) => c.name == 'Général').toList();
+
+    expect(generalCategories, hasLength(1));
+    expect(defaultId, generalCategories.single.id);
   });
 }

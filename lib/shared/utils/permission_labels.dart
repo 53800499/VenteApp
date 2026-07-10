@@ -23,6 +23,7 @@ const _moduleLabels = <String, String>{
   'audit': 'Audit',
   'reports': 'Rapports',
   'shops': 'Boutiques',
+  'calculators': 'Calculateurs',
 };
 
 const _labels = <Permission, String>{
@@ -74,6 +75,9 @@ const _labels = <Permission, String>{
   Permission.cashSessionsOpen: 'Ouvrir une caisse',
   Permission.cashSessionsClose: 'Clôturer une caisse',
   Permission.cashSessionsAdjust: 'Retraits et entrées de caisse',
+  Permission.calculatorsUse: 'Utiliser les calculateurs',
+  Permission.calculatorsExport: 'Exporter les calculs',
+  Permission.calculatorsHistory: 'Consulter l\'historique',
 };
 
 String permissionModuleCode(Permission permission) {

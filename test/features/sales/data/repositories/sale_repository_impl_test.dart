@@ -32,6 +32,7 @@ void main() {
         credentials: AuthCredentialsStorage.inMemory(),
         apiClient: apiClient,
       ),
+      syncPolicy: await createTestSyncPolicy(database),
       cashSessionsLocal: CashSessionsLocalDatasource(database),
     );
 

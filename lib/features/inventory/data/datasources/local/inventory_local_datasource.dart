@@ -13,25 +13,24 @@ class InventoryLocalDatasource {
   final AppDatabase _db;
 
   Future<int> getDefaultAlertThreshold(int shopId) async {
-    final settings = await (_db.select(_db.settings)
-          ..where((s) => s.shopId.equals(shopId)))
-        .getSingleOrNull();
-    return settings?.defaultAlertThreshold ?? AppConstants.defaultAlertThreshold;
+    final rows = await (_db.select(_db.settings)
+          ..where((s) => s.shopId.equals(shopId))
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.defaultAlertThreshold ??
+        AppConstants.defaultAlertThreshold;
   }
 
   Future<int> ensureDefaultCategory(int shopId) async {
-    final existing = await (_db.select(_db.categories)
-          ..where(
-            (c) => c.shopId.equals(shopId) & c.name.equals('Général'),
-          ))
-        .getSingleOrNull();
+    const defaultName = 'Général';
+    final existing = await _firstCategoryByName(shopId, defaultName);
     if (existing != null) return existing.id;
 
     final timestamp = nowMs();
     return _db.into(_db.categories).insert(
           CategoriesCompanion.insert(
             shopId: shopId,
-            name: 'Général',
+            name: defaultName,
             createdAt: timestamp,
             updatedAt: timestamp,
           ),
@@ -59,11 +58,13 @@ class InventoryLocalDatasource {
   }
 
   Future<Category?> findCategory(int shopId, int categoryId) async {
-    return (_db.select(_db.categories)
+    final rows = await (_db.select(_db.categories)
           ..where(
             (c) => c.id.equals(categoryId) & c.shopId.equals(shopId),
-          ))
-        .getSingleOrNull();
+          )
+          ..limit(1))
+        .get();
+    return rows.firstOrNull;
   }
 
   Future<bool> existsCategoryByName(
@@ -71,17 +72,9 @@ class InventoryLocalDatasource {
     String name, {
     int? excludeId,
   }) async {
-    final row = await (_db.select(_db.categories)
-          ..where((c) {
-            var expr =
-                c.shopId.equals(shopId) & c.name.equals(name.trim());
-            if (excludeId != null) {
-              expr = expr & c.id.equals(excludeId).not();
-            }
-            return expr;
-          }))
-        .getSingleOrNull();
-    return row != null;
+    final rows = await _findCategoriesByName(shopId, name);
+    if (excludeId == null) return rows.isNotEmpty;
+    return rows.any((c) => c.id != excludeId);
   }
 
   Future<int> countProductsByCategory(int shopId, int categoryId) async {
@@ -132,14 +125,16 @@ class InventoryLocalDatasource {
   }
 
   Future<Category?> findActiveCategory(int shopId, int categoryId) async {
-    return (_db.select(_db.categories)
+    final rows = await (_db.select(_db.categories)
           ..where(
             (c) =>
                 c.id.equals(categoryId) &
                 c.shopId.equals(shopId) &
                 c.isActive.equals(true),
-          ))
-        .getSingleOrNull();
+          )
+          ..limit(1))
+        .get();
+    return rows.firstOrNull;
   }
 
   Future<List<({Product product, String? categoryName})>> listProductRows({
@@ -195,18 +190,21 @@ class InventoryLocalDatasource {
   }
 
   Future<Product?> findProduct(int shopId, int productId) async {
-    return (_db.select(_db.products)
+    final rows = await (_db.select(_db.products)
           ..where(
             (p) => p.id.equals(productId) & p.shopId.equals(shopId),
-          ))
-        .getSingleOrNull();
+          )
+          ..limit(1))
+        .get();
+    return rows.firstOrNull;
   }
 
   Future<String?> findCategoryName(int categoryId) async {
-    final row = await (_db.select(_db.categories)
-          ..where((c) => c.id.equals(categoryId)))
-        .getSingleOrNull();
-    return row?.name;
+    final rows = await (_db.select(_db.categories)
+          ..where((c) => c.id.equals(categoryId))
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.name;
   }
 
   Future<int> countSaleItems(int shopId, int productId) async {
@@ -299,13 +297,8 @@ class InventoryLocalDatasource {
         .write(patch);
   }
 
-  Future<Category?> findCategoryByName(int shopId, String name) async {
-    return (_db.select(_db.categories)
-          ..where(
-            (c) => c.shopId.equals(shopId) & c.name.equals(name.trim()),
-          ))
-        .getSingleOrNull();
-  }
+  Future<Category?> findCategoryByName(int shopId, String name) =>
+      _firstCategoryByName(shopId, name);
 
   Future<int> upsertCategoryFromRemote({
     required int shopId,
@@ -318,7 +311,8 @@ class InventoryLocalDatasource {
   }) async {
     final timestamp = nowMs();
     final trimmedDescription = description?.trim();
-    final existing = await findCategoryByName(shopId, name);
+    final trimmedName = name.trim();
+    final existing = await _firstCategoryByName(shopId, trimmedName);
     if (existing != null) {
       await updateCategoryRow(
         existing.id,
@@ -337,7 +331,7 @@ class InventoryLocalDatasource {
     return _db.into(_db.categories).insert(
           CategoriesCompanion.insert(
             shopId: shopId,
-            name: name.trim(),
+            name: trimmedName,
             description: trimmedDescription == null || trimmedDescription.isEmpty
                 ? const Value.absent()
                 : Value(trimmedDescription),
@@ -366,12 +360,22 @@ class InventoryLocalDatasource {
     int? updatedAt,
   }) async {
     final timestamp = nowMs();
-    final existingRows = await (_db.select(_db.products)
-          ..where(
-            (p) => p.shopId.equals(shopId) & p.serverId.equals(serverId),
-          ))
-        .get();
-    final existing = existingRows.isEmpty ? null : existingRows.first;
+    final existingRows = await _findProductsByServerId(shopId, serverId);
+    var existing = existingRows.isEmpty ? null : existingRows.first;
+
+    if (existing == null) {
+      final pendingRows = await _findPendingLocalProduct(
+        shopId: shopId,
+        name: name,
+        sku: sku,
+      );
+      if (pendingRows.isNotEmpty) {
+        existing = pendingRows.first;
+        if (pendingRows.length > 1) {
+          await _dedupeProducts(pendingRows, keepId: existing.id);
+        }
+      }
+    }
 
     if (existing != null) {
       await updateProductRow(
@@ -388,12 +392,12 @@ class InventoryLocalDatasource {
           priceWholesale: Value(priceWholesale),
           isArchived: Value(isArchived),
           updatedAt: Value(updatedAt ?? timestamp),
+          serverId: Value(serverId),
           syncedAt: Value(timestamp),
         ),
       );
       if (existingRows.length > 1) {
-        final duplicateIds = existingRows.skip(1).map((p) => p.id).toList();
-        await (_db.delete(_db.products)..where((p) => p.id.isIn(duplicateIds))).go();
+        await _dedupeProducts(existingRows, keepId: existing.id);
       }
       return;
     }
@@ -431,5 +435,98 @@ class InventoryLocalDatasource {
         updatedAt: Value(timestamp),
       ),
     );
+  }
+
+  Future<List<Category>> _findCategoriesByName(int shopId, String name) {
+    final trimmed = name.trim();
+    return (_db.select(_db.categories)
+          ..where((c) => c.shopId.equals(shopId) & c.name.equals(trimmed))
+          ..orderBy([(c) => OrderingTerm.asc(c.id)]))
+        .get();
+  }
+
+  Future<Category?> _firstCategoryByName(int shopId, String name) async {
+    final rows = await _findCategoriesByName(shopId, name);
+    if (rows.isEmpty) return null;
+    if (rows.length > 1) {
+      await _dedupeCategories(rows, keepId: rows.first.id, shopId: shopId);
+    }
+    return rows.first;
+  }
+
+  Future<void> _dedupeCategories(
+    List<Category> rows, {
+    required int keepId,
+    required int shopId,
+  }) async {
+    final duplicateIds =
+        rows.where((c) => c.id != keepId).map((c) => c.id).toList();
+    if (duplicateIds.isEmpty) return;
+
+    await _db.transaction(() async {
+      for (final dupId in duplicateIds) {
+        await (_db.update(_db.products)
+              ..where(
+                (p) => p.shopId.equals(shopId) & p.categoryId.equals(dupId),
+              ))
+            .write(ProductsCompanion(categoryId: Value(keepId)));
+      }
+      await (_db.delete(_db.categories)
+            ..where((c) => c.id.isIn(duplicateIds)))
+          .go();
+    });
+  }
+
+  Future<List<Product>> _findProductsByServerId(int shopId, String serverId) {
+    return (_db.select(_db.products)
+          ..where(
+            (p) => p.shopId.equals(shopId) & p.serverId.equals(serverId),
+          )
+          ..orderBy([(p) => OrderingTerm.asc(p.id)]))
+        .get();
+  }
+
+  Future<List<Product>> _findPendingLocalProduct({
+    required int shopId,
+    required String name,
+    String? sku,
+  }) {
+    return (_db.select(_db.products)
+          ..where((p) {
+            var expr = p.shopId.equals(shopId) &
+                p.serverId.isNull() &
+                p.name.equals(name);
+            final trimmedSku = sku?.trim();
+            if (trimmedSku == null || trimmedSku.isEmpty) {
+              expr = expr & p.sku.isNull();
+            } else {
+              expr = expr & p.sku.equals(trimmedSku);
+            }
+            return expr;
+          })
+          ..orderBy([(p) => OrderingTerm.asc(p.id)]))
+        .get();
+  }
+
+  Future<void> _dedupeProducts(List<Product> rows, {required int keepId}) async {
+    final duplicateIds =
+        rows.where((p) => p.id != keepId).map((p) => p.id).toList();
+    if (duplicateIds.isEmpty) return;
+
+    await _db.transaction(() async {
+      for (final dupId in duplicateIds) {
+        await (_db.update(_db.saleItems)
+              ..where((i) => i.productId.equals(dupId)))
+            .write(SaleItemsCompanion(productId: Value(keepId)));
+        await (_db.update(_db.stockMovements)
+              ..where((m) => m.productId.equals(dupId)))
+            .write(StockMovementsCompanion(productId: Value(keepId)));
+        await (_db.update(_db.customerProductPrices)
+              ..where((cpp) => cpp.productId.equals(dupId)))
+            .write(CustomerProductPricesCompanion(productId: Value(keepId)));
+      }
+      await (_db.delete(_db.products)..where((p) => p.id.isIn(duplicateIds)))
+          .go();
+    });
   }
 }

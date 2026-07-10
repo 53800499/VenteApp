@@ -4,6 +4,8 @@ import '../../../../core/database/app_database.dart' as db;
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/sync/local_write_sync_recorder.dart';
+import '../../../../core/sync/sync_policy.dart';
+import '../../../../core/sync/sync_pull_entity.dart';
 import '../../../cash_sessions/data/datasources/local/cash_sessions_local_datasource.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/repositories/sale_repository.dart';
@@ -17,12 +19,14 @@ class SaleRepositoryImpl implements SaleRepository {
     required SalesLocalDatasource local,
     required SalesRemoteDatasource remote,
     required RemoteApiGuard apiGuard,
+    required SyncPolicy syncPolicy,
     CashSessionsLocalDatasource? cashSessionsLocal,
     SaleValidationService? validation,
     LocalWriteSyncRecorder? recorder,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
+        _syncPolicy = syncPolicy,
         _cashSessionsLocal = cashSessionsLocal,
         _validation = validation ?? const SaleValidationService(),
         _recorder = recorder;
@@ -30,6 +34,7 @@ class SaleRepositoryImpl implements SaleRepository {
   final SalesLocalDatasource _local;
   final SalesRemoteDatasource _remote;
   final RemoteApiGuard _apiGuard;
+  final SyncPolicy _syncPolicy;
   final CashSessionsLocalDatasource? _cashSessionsLocal;
   final SaleValidationService _validation;
   final LocalWriteSyncRecorder? _recorder;
@@ -449,7 +454,15 @@ class SaleRepositoryImpl implements SaleRepository {
   }
 
   @override
-  Future<void> syncFromRemote({required int shopId}) async {
+  Future<void> syncFromRemote({required int shopId, bool force = false}) async {
+    if (!await _syncPolicy.shouldPullEntity(
+      shopId: shopId,
+      entity: SyncPullEntity.sales,
+      force: force,
+    )) {
+      return;
+    }
+
     await _apiGuard.ensureReady();
     final userId = await _local.resolveDefaultUserId(shopId);
     if (userId == null) return;
@@ -464,20 +477,35 @@ class SaleRepositoryImpl implements SaleRepository {
 
       if (sale.saleType == 'standard') {
         final serverId = '${sale.id}';
-        final hasItems = await _local.hasSaleItems(shopId, serverId);
-        if (!hasItems) {
+        final needsItems = !await _local.hasSaleItems(shopId, serverId);
+        final needsPayment =
+            await _local.saleNeedsPaymentDetail(shopId, serverId);
+        if (needsItems || needsPayment) {
           try {
             final detail = await _remote.getSale(sale.id);
-            await _local.upsertSaleItemsFromRemote(
-              shopId: shopId,
-              serverId: serverId,
-              items: detail.items,
-            );
+            if (needsItems) {
+              await _local.upsertSaleItemsFromRemote(
+                shopId: shopId,
+                serverId: serverId,
+                items: detail.items,
+              );
+            }
+            if (needsPayment) {
+              await _local.upsertSalePaymentDetailFromRemote(
+                shopId: shopId,
+                detail: detail,
+              );
+            }
           } catch (_) {
             // Ignore single sale detail fetch error
           }
         }
       }
     }
+
+    await _syncPolicy.markEntitySynced(
+      shopId: shopId,
+      entity: SyncPullEntity.sales,
+    );
   }
 }

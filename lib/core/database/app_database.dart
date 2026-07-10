@@ -1,17 +1,15 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
+import '../storage/database_key_storage.dart';
 import '../utils/time.dart';
+import 'encrypted_database_opener.dart';
 import 'tables/auth_tables.dart';
 import 'tables/commerce_tables.dart';
 import 'tables/cash_session_tables.dart';
 import 'tables/expense_tables.dart';
 import 'tables/notification_tables.dart';
 import 'tables/sync_tables.dart';
+import 'tables/calculator_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -38,14 +36,19 @@ part 'app_database.g.dart';
   CategoryBudgets,
   CashSessions,
   CashMovements,
+  TenantModules,
+  CalculatorProductData,
+  CalculatorHistory,
+  SyncEntityCache,
 ])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase() : super(_openConnection());
+  AppDatabase({required DatabaseKeyStorage keyStorage})
+      : super(openEncryptedConnection(keyStorage));
 
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -154,6 +157,14 @@ class AppDatabase extends _$AppDatabase {
           if (from < 18) {
             await _addColumnIfMissing(m, users, users.pinProvisional);
           }
+          if (from < 19) {
+            await m.createTable(tenantModules);
+            await m.createTable(calculatorProductData);
+            await m.createTable(calculatorHistory);
+          }
+          if (from < 20) {
+            await m.createTable(syncEntityCache);
+          }
         },
       );
 
@@ -182,13 +193,6 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  static QueryExecutor _openConnection() {
-    return LazyDatabase(() async {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dir.path, 'venteapp.sqlite'));
-      return NativeDatabase.createInBackground(file);
-    });
-  }
 }
 
 Future<void> _seedDefaultCategories(AppDatabase db) async {

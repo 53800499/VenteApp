@@ -35,11 +35,16 @@ class ForgivenDebtsList extends StatefulWidget {
     required this.session,
     this.customerId,
     this.customerName,
+    this.initialEntries,
+    this.localOnly = false,
   });
 
   final AuthSession session;
   final int? customerId;
   final String? customerName;
+  final List<ForgivenDebtEntry>? initialEntries;
+  /// Si vrai, ne recharge que depuis la base locale (pas d'appel serveur).
+  final bool localOnly;
 
   @override
   State<ForgivenDebtsList> createState() => _ForgivenDebtsListState();
@@ -53,10 +58,37 @@ class _ForgivenDebtsListState extends State<ForgivenDebtsList> {
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.initialEntries != null) {
+      _entries = widget.initialEntries!;
+      _loading = false;
+    } else {
+      _load();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ForgivenDebtsList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialEntries != oldWidget.initialEntries &&
+        widget.initialEntries != null) {
+      setState(() {
+        _entries = widget.initialEntries!;
+        _loading = false;
+        _error = null;
+      });
+    }
   }
 
   Future<void> _load() async {
+    if (widget.localOnly && widget.initialEntries != null) {
+      setState(() {
+        _entries = widget.initialEntries!;
+        _loading = false;
+        _error = null;
+      });
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;

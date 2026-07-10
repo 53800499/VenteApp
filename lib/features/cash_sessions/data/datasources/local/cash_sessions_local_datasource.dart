@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../../../../../core/database/app_database.dart' as db;
 import '../../../../../core/errors/failures.dart';
+import '../../../../../core/utils/sale_payment_resolver.dart';
 import '../../../../../core/utils/time.dart';
 import '../../../domain/entities/cash_session_entities.dart';
 
@@ -84,8 +85,15 @@ class CashSessionsLocalDatasource {
     var salesCash = 0;
     var salesMomo = 0;
     for (final sale in sales) {
-      salesCash += sale.amountCash;
-      salesMomo += sale.amountMomo;
+      final resolved = SalePaymentResolver.resolve(
+        totalAmount: sale.totalAmount,
+        amountCash: sale.amountCash,
+        amountMomo: sale.amountMomo,
+        amountCredit: sale.amountCredit,
+        paymentMethod: sale.paymentMethod,
+      );
+      salesCash += resolved.cash;
+      salesMomo += resolved.momo;
     }
 
     const cashMethods = ['cash'];

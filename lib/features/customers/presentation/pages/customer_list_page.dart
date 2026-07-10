@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
@@ -12,7 +11,6 @@ import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/customer_entities.dart';
-import '../../domain/repositories/customer_repository.dart';
 import '../bloc/customer_list_bloc.dart';
 import 'customer_detail_page.dart';
 import 'customer_form_page.dart';
@@ -21,11 +19,9 @@ class CustomerListPage extends StatefulWidget {
   const CustomerListPage({
     super.key,
     required this.session,
-    this.initialDebtorsOnly = false,
   });
 
   final AuthSession session;
-  final bool initialDebtorsOnly;
 
   @override
   State<CustomerListPage> createState() => _CustomerListPageState();
@@ -47,28 +43,10 @@ class _CustomerListPageState extends State<CustomerListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => CustomerListBloc(
-        listCustomers: sl(),
-        listDebtors: sl(),
-        repository: sl<CustomerRepository>(),
-        syncPolicy: sl(),
-        session: widget.session,
-        initialFilters: CustomerListFilters(
-          hasDebtOnly: widget.initialDebtorsOnly,
-        ),
-        syncService: sl(),
-      )..add(
-          widget.initialDebtorsOnly
-              ? const CustomerListShowDebtorsToggled(true)
-              : const CustomerListLoadRequested(),
-        ),
-      child: Builder(
-        builder: (context) {
-          return Scaffold(
-            body: Column(
-              children: [
-                BlocBuilder<CustomerListBloc, CustomerListState>(
+    return Scaffold(
+      body: Column(
+        children: [
+          BlocBuilder<CustomerListBloc, CustomerListState>(
                   buildWhen: (prev, curr) =>
                       prev.isRefreshing != curr.isRefreshing,
                   builder: (context, state) {
@@ -129,53 +107,50 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 Expanded(
                   child: BlocBuilder<CustomerListBloc, CustomerListState>(
                     builder: (context, state) {
-                      return switch (state.status) {
-                        CustomerListStatus.initial ||
-                        CustomerListStatus.loading =>
-                          const Center(child: CircularProgressIndicator()),
-                        CustomerListStatus.failure => Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(AppSpacing.lg),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    state.errorMessage ??
-                                        'Erreur de chargement',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: AppSpacing.md),
-                                  FilledButton(
-                                    onPressed: () => context
-                                        .read<CustomerListBloc>()
-                                        .add(const CustomerListLoadRequested()),
-                                    child: const Text('Réessayer'),
-                                  ),
-                                ],
-                              ),
+                      if (state.status == CustomerListStatus.failure) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  state.errorMessage ??
+                                      'Erreur de chargement',
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                FilledButton(
+                                  onPressed: () => context
+                                      .read<CustomerListBloc>()
+                                      .add(const CustomerListLoadRequested()),
+                                  child: const Text('Réessayer'),
+                                ),
+                              ],
                             ),
                           ),
-                        CustomerListStatus.ready =>
-                          RefreshIndicator(
-                            onRefresh: () async {
-                              context.read<CustomerListBloc>().add(
-                                    const CustomerListRefreshRequested(),
-                                  );
-                              await context
-                                  .read<CustomerListBloc>()
-                                  .stream
-                                  .firstWhere(
-                                    (s) =>
-                                        s.status == CustomerListStatus.ready &&
-                                        !s.isRefreshing,
-                                  );
-                            },
-                            child: _CustomerListBody(
-                              state: state,
-                              onCustomerTap: (id) => _openDetail(context, id),
-                            ),
-                          ),
-                      };
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          context.read<CustomerListBloc>().add(
+                                const CustomerListRefreshRequested(),
+                              );
+                          await context
+                              .read<CustomerListBloc>()
+                              .stream
+                              .firstWhere(
+                                (s) =>
+                                    s.status == CustomerListStatus.ready &&
+                                    !s.isRefreshing,
+                              );
+                        },
+                        child: _CustomerListBody(
+                          state: state,
+                          onCustomerTap: (id) => _openDetail(context, id),
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -190,9 +165,6 @@ class _CustomerListPageState extends State<CustomerListPage> {
                   )
                 : null,
           );
-        },
-      ),
-    );
   }
 
   Future<void> _openCreate(BuildContext context) async {
@@ -202,7 +174,7 @@ class _CustomerListPageState extends State<CustomerListPage> {
       ),
     );
     if (created == true && context.mounted) {
-      context.read<CustomerListBloc>().add(const CustomerListRefreshRequested());
+      context.read<CustomerListBloc>().add(const CustomerListLocalRefreshRequested());
     }
   }
 
@@ -216,7 +188,7 @@ class _CustomerListPageState extends State<CustomerListPage> {
       ),
     );
     if (updated == true && context.mounted) {
-      context.read<CustomerListBloc>().add(const CustomerListRefreshRequested());
+      context.read<CustomerListBloc>().add(const CustomerListLocalRefreshRequested());
     }
   }
 }

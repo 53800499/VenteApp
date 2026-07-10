@@ -21,6 +21,8 @@ import '../errors/failures.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
 import 'sync_queue_datasource.dart';
+import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
+import '../../features/calculators/data/datasources/remote/calculators_remote_datasource.dart';
 
 /// Pousse les éléments `sync_queue` vers l'API (couche 2 → 3).
 class SyncQueueProcessor {
@@ -39,6 +41,8 @@ class SyncQueueProcessor {
     required ExpensesRemoteDatasource expensesRemote,
     required CashSessionsLocalDatasource cashSessionsLocal,
     required CashSessionsRemoteDatasource cashSessionsRemote,
+    required CalculatorsLocalDatasource calculatorsLocal,
+    required CalculatorsRemoteDatasource calculatorsRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -52,7 +56,9 @@ class SyncQueueProcessor {
         _expensesLocal = expensesLocal,
         _expensesRemote = expensesRemote,
         _cashSessionsLocal = cashSessionsLocal,
-        _cashSessionsRemote = cashSessionsRemote;
+        _cashSessionsRemote = cashSessionsRemote,
+        _calculatorsLocal = calculatorsLocal,
+        _calculatorsRemote = calculatorsRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -68,6 +74,8 @@ class SyncQueueProcessor {
   final ExpensesRemoteDatasource _expensesRemote;
   final CashSessionsLocalDatasource _cashSessionsLocal;
   final CashSessionsRemoteDatasource _cashSessionsRemote;
+  final CalculatorsLocalDatasource _calculatorsLocal;
+  final CalculatorsRemoteDatasource _calculatorsRemote;
 
   Future<SyncQueueProcessResult> process({required int shopId}) async {
     await _apiGuard.ensureReady();
@@ -126,6 +134,9 @@ class SyncQueueProcessor {
         SyncEntityTable.expenses => 5,
         SyncEntityTable.cashSessions => 6,
         SyncEntityTable.cashMovements => 7,
+        SyncEntityTable.tenantModules => 8,
+        SyncEntityTable.calculatorProductData => 9,
+        SyncEntityTable.calculatorHistory => 10,
         _ => 99,
       };
 
@@ -152,6 +163,12 @@ class SyncQueueProcessor {
         return _processCashSession(shopId, item, payload);
       case SyncEntityTable.cashMovements:
         return _processCashMovement(shopId, item, payload);
+      case SyncEntityTable.tenantModules:
+        return _processTenantModule(shopId, item, payload);
+      case SyncEntityTable.calculatorProductData:
+        return _processCalculatorProductData(shopId, item, payload);
+      case SyncEntityTable.calculatorHistory:
+        return _processCalculatorHistory(shopId, item, payload);
       default:
         await _queue.markFailed(item.id, 'Table inconnue : ${item.entityTable}');
         return true;
@@ -781,6 +798,64 @@ class SyncQueueProcessor {
       ),
       note: sale.note,
     );
+  }
+
+  Future<bool> _processTenantModule(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final enabled = payload['enabled'] as bool? ?? false;
+    await _calculatorsRemote.toggleModule(enabled);
+    return true;
+  }
+
+  Future<bool> _processCalculatorProductData(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final local = await _calculatorsLocal.getProductConfig(shopId, payload['productId'] as int);
+    if (local == null) return true;
+
+    final remote = await _calculatorsRemote.saveProductConfig(
+      productId: payload['productId'] as int,
+      calculatorType: payload['calculatorType'] as String,
+      metadata: payload['metadata'] as Map<String, dynamic>,
+    );
+
+    if (remote.containsKey('serverId')) {
+      await _calculatorsLocal.updateServerSyncProductConfig(local.id, '${remote['serverId']}');
+    } else if (remote.containsKey('id')) {
+      await _calculatorsLocal.updateServerSyncProductConfig(local.id, '${remote['id']}');
+    }
+    return true;
+  }
+
+  Future<bool> _processCalculatorHistory(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    // If it's already synced, ignore
+    final historyRows = await _calculatorsLocal.getHistory(shopId);
+    final local = historyRows.where((r) => r.id == item.recordId).firstOrNull;
+    if (local == null || local.serverId != null) return true;
+
+    final remote = await _calculatorsRemote.createHistoryEntry(
+      calculatorType: payload['calculatorType'] as String,
+      input: payload['input'] as Map<String, dynamic>,
+      result: payload['result'] as Map<String, dynamic>,
+      isFavorite: payload['isFavorite'] as bool?,
+      label: payload['label'] as String?,
+    );
+
+    if (remote.containsKey('serverId')) {
+      await _calculatorsLocal.updateServerSyncHistory(local.id, '${remote['serverId']}');
+    } else if (remote.containsKey('id')) {
+      await _calculatorsLocal.updateServerSyncHistory(local.id, '${remote['id']}');
+    }
+    return true;
   }
 }
 

@@ -68,5 +68,5 @@ abstract class InventoryRepository {
     required int defaultAlertThreshold,
   });
 
-  Future<void> syncFromRemote({required int shopId});
+  Future<void> syncFromRemote({required int shopId, bool force = false});
 }

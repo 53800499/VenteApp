@@ -27,10 +27,12 @@ class GetCustomer {
   Future<CustomerDetail> call({
     required AuthSession session,
     required int customerId,
+    bool force = false,
   }) {
     return _repository.getCustomer(
       shopId: session.shop.id,
       customerId: customerId,
+      force: force,
     );
   }
 }

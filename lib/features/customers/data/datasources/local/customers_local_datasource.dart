@@ -160,18 +160,13 @@ class CustomersLocalDatasource {
   Future<List<CustomerSaleSummary>> listCustomerSales({
     required int shopId,
     required int customerId,
-    int limit = 50,
+    int? limit,
   }) async {
-    final rows = await (_db.select(_db.sales)
-          ..where(
-            (s) =>
-                s.shopId.equals(shopId) &
-                s.customerId.equals(customerId) &
-                s.status.equals('completed'),
-          )
-          ..orderBy([(s) => OrderingTerm.desc(s.createdAt)])
-          ..limit(limit))
-        .get();
+    final rows = await _fetchCompletedSalesForShop(
+      shopId: shopId,
+      customerId: customerId,
+      limit: limit,
+    );
     return rows.map((r) => CustomerMapper.saleFromRow(r)).toList();
   }
 
@@ -438,14 +433,10 @@ class CustomersLocalDatasource {
         ? null
         : openDebts.map((d) => d.createdAt).reduce((a, b) => a < b ? a : b);
 
-    final sales = await (_db.select(_db.sales)
-          ..where(
-            (s) =>
-                s.shopId.equals(shopId) &
-                s.customerId.equals(customerId) &
-                s.status.equals('completed'),
-          ))
-        .get();
+    final sales = await _fetchCompletedSalesForShop(
+      shopId: shopId,
+      customerId: customerId,
+    );
 
     final purchaseCount = sales.length;
     final totalPurchases =
@@ -509,19 +500,56 @@ class CustomersLocalDatasource {
                 s.status.equals('completed'),
           ))
         .get();
+    final uniqueSales = _dedupeSalesForStats(sales);
 
-    final purchaseCount = sales.length;
+    final purchaseCount = uniqueSales.length;
     final totalPurchases =
-        sales.fold<int>(0, (sum, s) => sum + s.totalAmount);
-    final lastActivityAt = sales.isEmpty
+        uniqueSales.fold<int>(0, (sum, s) => sum + s.totalAmount);
+    final lastActivityAt = uniqueSales.isEmpty
         ? null
-        : sales.map((s) => s.createdAt).reduce((a, b) => a > b ? a : b);
+        : uniqueSales.map((s) => s.createdAt).reduce((a, b) => a > b ? a : b);
 
     return _CustomerStats(
       purchaseCount: purchaseCount,
       totalPurchases: totalPurchases,
       lastActivityAt: lastActivityAt,
     );
+  }
+
+  Future<List<db.Sale>> _fetchCompletedSalesForShop({
+    required int shopId,
+    required int customerId,
+    int? limit,
+  }) async {
+    final query = _db.select(_db.sales)
+      ..where(
+        (s) =>
+            s.shopId.equals(shopId) &
+            s.customerId.equals(customerId) &
+            s.status.equals('completed'),
+      )
+      ..orderBy([(s) => OrderingTerm.desc(s.createdAt)]);
+    if (limit != null) {
+      query.limit(limit);
+    }
+
+    final rows = await query.get();
+    return _dedupeSalesForStats(rows);
+  }
+
+  /// Évite de compter deux fois une vente locale + copie cloud (même serverId).
+  List<db.Sale> _dedupeSalesForStats(List<db.Sale> rows) {
+    final byKey = <String, db.Sale>{};
+    for (final row in rows) {
+      final serverId = row.serverId?.trim();
+      final key = serverId != null && serverId.isNotEmpty
+          ? 'server:$serverId'
+          : 'local:${row.id}';
+      byKey.putIfAbsent(key, () => row);
+    }
+    final unique = byKey.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return unique;
   }
 
   Future<int> resolveLocalShopId(int serverShopId) async {

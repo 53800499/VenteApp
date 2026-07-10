@@ -13,6 +13,11 @@ abstract class DebtRepository {
     int? customerId,
   });
 
+  Future<List<Debt>> listPaidDebts({
+    required int shopId,
+    int? customerId,
+  });
+
   Future<DebtForgivenessInfo?> getDebtForgivenessInfo({
     required int shopId,
     required int debtId,

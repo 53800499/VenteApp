@@ -14,6 +14,7 @@ class DashboardSaleMapper {
       createdAt: sale.createdAt,
       customerId: sale.customerId,
       customerName: customerName,
+      paymentMethod: sale.paymentMethod,
     );
   }
 }

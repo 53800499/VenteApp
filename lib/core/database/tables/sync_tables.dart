@@ -17,3 +17,13 @@ class SyncQueue extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get processedAt => integer().nullable()();
 }
+
+/// Horodatage du dernier pull cloud par entité (stale time navigation).
+class SyncEntityCache extends Table {
+  IntColumn get shopId => integer().references(Shops, #id)();
+  TextColumn get entity => text()();
+  IntColumn get lastSyncedAt => integer()();
+
+  @override
+  Set<Column> get primaryKey => {shopId, entity};
+}

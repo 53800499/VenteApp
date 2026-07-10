@@ -81,6 +81,7 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
           outcome == CloudRepairOutcome.refreshed ||
           outcome == CloudRepairOutcome.pinLogin) {
         cloudCoordinator.markCloudSessionValid();
+        cloudRepair.clearAwaitingState();
       } else if (outcome == CloudRepairOutcome.failed) {
         await cloudCoordinator.handleInvalidRefreshToken(
           offerWhatsAppReconnect: true,
@@ -91,6 +92,7 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
     apiClient.onRefreshTokenRestored = () async {
       cloudCoordinator.markCloudSessionValid();
+      cloudRepair.clearAwaitingState();
       unawaited(_cloudSession.refresh());
     };
 

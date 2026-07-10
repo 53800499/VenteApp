@@ -16,7 +16,7 @@ abstract final class HelpCatalog {
     HelpCategory(
       id: 'commerce',
       title: 'Commerce',
-      subtitle: 'Ventes, stock, clients et crédit',
+      subtitle: 'Ventes, stock, clients, crédit et calculateurs',
       icon: Icons.storefront_outlined,
       color: Color(0xFF1565C0),
     ),
@@ -52,9 +52,8 @@ abstract final class HelpCatalog {
           title: 'Vue d\'ensemble',
           body:
               'VenteApp est organisé autour de cinq onglets en bas de l\'écran '
-              '(ou d\'une barre latérale sur tablette) : Accueil, Ventes, Stock, '
-              'Clients et Plus. Chaque onglet regroupe les actions les plus '
-              'fréquentes de votre journée commerciale.',
+              '(ou d\'une barre latérale sur tablette). Chaque onglet regroupe '
+              'les actions les plus fréquentes de votre journée commerciale.',
           bullets: [
             'Accueil : tableau de bord avec indicateurs clés du jour.',
             'Ventes : historique et création de nouvelles ventes.',
@@ -64,23 +63,43 @@ abstract final class HelpCatalog {
           ],
         ),
         HelpSection(
-          title: 'Comment naviguer',
-          body:
-              'Sur téléphone, utilisez la barre de navigation inférieure. '
-              'Sur tablette, un rail latéral affiche les mêmes destinations '
-              'avec plus d\'espace pour le contenu. Le bouton flottant « Nouvelle vente » '
-              'apparaît sur l\'accueil pour accéder rapidement à la caisse.',
+          title: 'Première connexion — pas à pas',
+          body: 'Pour ouvrir l\'application la première fois :',
+          steps: [
+            'Installez VenteApp et ouvrez-la.',
+            'Connectez-vous via WhatsApp (code OTP reçu sur votre numéro).',
+            'Créez votre boutique : nom, adresse, devise.',
+            'Définissez un code PIN à 4 ou 6 chiffres pour verrouiller l\'app.',
+            'Ajoutez vos premiers produits dans l\'onglet Stock.',
+            'Lancez votre première vente depuis l\'accueil ou l\'onglet Ventes.',
+          ],
+        ),
+        HelpSection(
+          title: 'Naviguer dans l\'app — pas à pas',
+          body: 'Pour vous déplacer entre les modules :',
+          steps: [
+            'Touchez un onglet en bas (Accueil, Ventes, Stock, Clients, Plus).',
+            'Sur tablette, utilisez le rail latéral à gauche.',
+            'Pour changer de boutique : touchez le nom en haut de l\'écran.',
+            'Pour l\'aide détaillée : Plus → Aide & guides.',
+            'Pour l\'état cloud : touchez l\'icône nuage en haut à droite.',
+          ],
           tip:
-              'Touchez le nom de la boutique en haut pour changer de boutique '
-              'si vous en gérez plusieurs.',
+              'Le bouton flottant « Nouvelle vente » sur l\'accueil est le raccourci le plus rapide vers la caisse.',
         ),
         HelpSection(
           title: 'Travail hors ligne',
           body:
-              'VenteApp fonctionne sans internet. Une bannière discrète indique '
-              'quand vous êtes hors ligne ou quand la session cloud est en pause. '
-              'Vos ventes et mouvements de stock sont enregistrés localement puis '
-              'synchronisés dès que la connexion revient.',
+              'VenteApp fonctionne sans internet. Une bannière indique quand vous '
+              'êtes hors ligne ou quand la session cloud est en pause. Vos ventes '
+              'et mouvements de stock sont enregistrés localement puis synchronisés '
+              'dès que la connexion revient.',
+          steps: [
+            'Continuez à vendre normalement sans réseau.',
+            'Vérifiez l\'icône cloud : orange = en attente, verte = synchronisé.',
+            'Au retour du réseau, la sync se lance automatiquement.',
+            'Si la sync reste bloquée : touchez l\'icône cloud → Relancer.',
+          ],
         ),
       ],
     ),
@@ -95,26 +114,22 @@ abstract final class HelpCatalog {
       keywords: ['accueil', 'kpi', 'indicateurs', 'tableau de bord'],
       sections: [
         HelpSection(
-          title: 'Ce que vous voyez',
-          body:
-              'L\'écran d\'accueil résume l\'activité de la boutique active : '
-              'chiffre d\'affaires du jour, nombre de ventes, panier moyen, '
-              'alertes stock et rappels importants.',
-          bullets: [
-            'Cartes KPI avec icônes colorées pour une lecture rapide.',
-            'Liste des ventes récentes avec accès au détail en un toucher.',
-            'Indicateurs financiers réservés aux profils autorisés.',
+          title: 'Lire le tableau de bord — pas à pas',
+          steps: [
+            'Ouvrez l\'onglet Accueil (premier onglet).',
+            'Consultez les cartes KPI : CA du jour, ventes, panier moyen.',
+            'Descendez pour voir les ventes récentes et les alertes stock.',
+            'Touchez une vente récente pour ouvrir son détail.',
           ],
         ),
         HelpSection(
-          title: 'Actions rapides',
-          body:
-              'Depuis l\'accueil, lancez une nouvelle vente via le bouton flottant '
-              'ou consultez une vente récente. Les données se mettent à jour '
-              'automatiquement à chaque retour sur cet écran.',
+          title: 'Lancer une vente depuis l\'accueil — pas à pas',
+          steps: [
+            'Sur l\'écran Accueil, touchez le bouton flottant « Nouvelle vente ».',
+            'Vous arrivez directement à l\'écran de caisse.',
+          ],
           tip:
-              'Consultez l\'accueil en début et fin de journée pour suivre '
-              'votre performance en temps réel.',
+              'Consultez l\'accueil en début et fin de journée pour suivre votre performance.',
         ),
       ],
     ),
@@ -131,33 +146,53 @@ abstract final class HelpCatalog {
       keywords: ['vente', 'caisse', 'encaissement', 'reçu', 'panier'],
       sections: [
         HelpSection(
-          title: 'Créer une vente',
-          body:
-              'Depuis l\'onglet Ventes ou le bouton « Nouvelle vente », vous accédez '
-              'à l\'écran de caisse. Recherchez un produit par nom, touchez pour '
-              'l\'ajouter au panier, ajustez les quantités puis validez.',
-          bullets: [
-            'Recherche instantanée dans le catalogue.',
-            'Modification des quantités et suppression de lignes.',
-            'Application d\'une remise si votre rôle le permet.',
-            'Choix du mode de paiement : espèces, mobile money, crédit…',
+          title: 'Créer une vente classique — pas à pas',
+          body: 'Pour enregistrer une vente avec détail produit et impact stock :',
+          steps: [
+            'Ouvrez l\'onglet Ventes ou touchez « Nouvelle vente » sur l\'accueil.',
+            'Recherchez un produit par nom dans la barre de recherche.',
+            'Touchez le produit pour l\'ajouter au panier.',
+            'Ajustez la quantité avec + / − ou supprimez une ligne si besoin.',
+            'Ajoutez d\'autres produits si nécessaire.',
+            'Touchez « Valider » ou l\'équivalent pour passer au paiement.',
+            'Choisissez le mode de paiement (espèces, mobile money, crédit…).',
+            'Confirmez : la vente est enregistrée et le stock est mis à jour.',
           ],
         ),
         HelpSection(
-          title: 'Vente à crédit',
-          body:
-              'Pour vendre à crédit, sélectionnez un client existant ou créez-en un '
-              'à la volée. Le montant impayé est enregistré comme dette et visible '
-              'dans la fiche client.',
+          title: 'Vendre à crédit — pas à pas',
+          body: 'Pour accorder du crédit à un client :',
+          steps: [
+            'Créez la vente comme d\'habitude (produits + quantités).',
+            'À l\'étape paiement, sélectionnez le mode « Crédit » ou « À crédit ».',
+            'Choisissez un client existant ou créez-en un nouveau (nom + téléphone).',
+            'Validez la vente : une dette est créée automatiquement.',
+            'Consultez la dette dans Clients → fiche client → onglet Dettes.',
+          ],
           tip:
               'Vérifiez toujours l\'identité du client avant d\'accorder du crédit.',
         ),
         HelpSection(
-          title: 'Historique & annulation',
+          title: 'Consulter ou annuler une vente — pas à pas',
+          body: 'Pour retrouver une vente passée :',
+          steps: [
+            'Ouvrez l\'onglet Ventes.',
+            'Utilisez la recherche ou les filtres (date, vendeur…).',
+            'Touchez une vente pour voir le détail (produits, montants, paiement).',
+            'Pour le reçu : touchez « Reçu » ou l\'icône partage / PDF.',
+            'Pour annuler (si autorisé) : touchez « Annuler » et confirmez.',
+          ],
+        ),
+        HelpSection(
+          title: 'Appliquer une remise',
           body:
-              'La liste des ventes permet de filtrer, rechercher et ouvrir le détail '
-              'd\'une transaction. Selon vos droits, vous pouvez annuler une vente '
-              'ou consulter le reçu PDF pour l\'imprimer ou le partager.',
+              'Si votre rôle le permet, vous pouvez réduire le total avant validation. '
+              'La remise est tracée dans le détail de la vente et visible dans les rapports.',
+          steps: [
+            'Dans l\'écran de caisse, touchez « Remise » ou le champ dédié.',
+            'Saisissez le montant ou le pourcentage.',
+            'Vérifiez le nouveau total avant de valider le paiement.',
+          ],
         ),
       ],
     ),
@@ -172,18 +207,29 @@ abstract final class HelpCatalog {
       keywords: ['vente rapide', 'express', 'encaissement'],
       sections: [
         HelpSection(
-          title: 'Quand l\'utiliser',
+          title: 'Quand utiliser la vente rapide',
           body:
-              'La vente rapide sert à enregistrer un montant encaissé sans passer '
-              'par le catalogue : idéal pour un service, un forfait ou une vente '
-              'occasionnelle non référencée en stock.',
+              'La vente rapide enregistre un montant encaissé sans passer par le '
+              'catalogue : idéal pour un service, un forfait ou une vente occasionnelle '
+              'non référencée en stock.',
+        ),
+        HelpSection(
+          title: 'Faire une vente rapide — pas à pas',
+          body: 'Procédure complète :',
+          steps: [
+            'Ouvrez l\'onglet Ventes.',
+            'Touchez « Vente rapide » (ou l\'icône éclair).',
+            'Saisissez le montant encaissé.',
+            'Ajoutez une note optionnelle (ex. « Réparation téléphone »).',
+            'Choisissez le mode de paiement.',
+            'Validez : le montant est comptabilisé au CA sans détail produit.',
+          ],
         ),
         HelpSection(
           title: 'Limites importantes',
           body:
               'Cette opération n\'impacte pas les quantités en stock et ne génère '
-              'pas de détail produit dans les rapports par article. Utilisez-la '
-              'avec parcimonie pour ne pas fausser vos statistiques.',
+              'pas de détail produit dans les rapports par article.',
           tip:
               'Préférez une vente classique dès qu\'un produit existe dans votre catalogue.',
         ),
@@ -200,25 +246,56 @@ abstract final class HelpCatalog {
       keywords: ['produit', 'stock', 'inventaire', 'catégorie', 'alerte'],
       sections: [
         HelpSection(
-          title: 'Gérer le catalogue',
-          body:
-              'L\'onglet Stock liste tous vos produits avec photo, prix, quantité '
-              'et catégorie. Créez un produit via le bouton +, renseignez le nom, '
-              'le prix de vente, le coût d\'achat (pour les marges) et le seuil d\'alerte.',
-          bullets: [
-            'Catégories : organisez votre rayon (boissons, épicerie…).',
-            'Filtre « stock bas » : produits sous le seuil d\'alerte.',
-            'Archivage : masquez un produit sans supprimer l\'historique.',
+          title: 'Ajouter un produit — pas à pas',
+          body: 'Pour créer un article dans votre catalogue :',
+          steps: [
+            'Ouvrez l\'onglet Stock.',
+            'Touchez le bouton + (Nouveau produit).',
+            'Saisissez le nom, le prix de vente et le coût d\'achat (pour les marges).',
+            'Choisissez ou créez une catégorie (ex. Boissons, Épicerie).',
+            'Indiquez la quantité en stock et le seuil d\'alerte.',
+            'Ajoutez une photo optionnelle.',
+            'Enregistrez : le produit apparaît dans la liste et la caisse.',
           ],
         ),
         HelpSection(
-          title: 'Mouvements de stock',
-          body:
-              'Chaque vente décrémente automatiquement le stock. Pour un inventaire '
-              'physique, un casse ou un réapprovisionnement, utilisez l\'ajustement '
-              'manuel depuis la fiche produit.',
+          title: 'Créer une catégorie — pas à pas',
+          steps: [
+            'Stock → touchez « Catégories » ou le filtre catégorie.',
+            'Touchez + pour ajouter une catégorie.',
+            'Saisissez le nom et validez.',
+            'Réassignez vos produits à cette catégorie depuis leur fiche.',
+          ],
+        ),
+        HelpSection(
+          title: 'Ajuster le stock manuellement — pas à pas',
+          body: 'Pour un inventaire physique, casse ou réapprovisionnement :',
+          steps: [
+            'Stock → touchez le produit concerné.',
+            'Ouvrez « Ajuster le stock » ou « Mouvement ».',
+            'Choisissez le type : entrée (+) ou sortie (−).',
+            'Saisissez la quantité et un motif (inventaire, casse, livraison…).',
+            'Validez : le stock et l\'historique sont mis à jour.',
+          ],
           tip:
-              'Définissez un seuil d\'alerte réaliste pour être prévenu avant la rupture.',
+              'Chaque vente décrémente automatiquement le stock — l\'ajustement manuel sert aux cas exceptionnels.',
+        ),
+        HelpSection(
+          title: 'Voir les produits en rupture — pas à pas',
+          steps: [
+            'Ouvrez l\'onglet Stock.',
+            'Activez le filtre « Stock bas » ou l\'icône alerte.',
+            'Les produits sous leur seuil d\'alerte s\'affichent en premier.',
+            'Touchez un produit pour le réapprovisionner via un ajustement.',
+          ],
+        ),
+        HelpSection(
+          title: 'Archiver un produit — pas à pas',
+          steps: [
+            'Ouvrez la fiche du produit dans Stock.',
+            'Touchez « Archiver » (ou désactiver).',
+            'Le produit disparaît de la caisse mais l\'historique des ventes est conservé.',
+          ],
         ),
         HelpSection(
           title: 'Permissions',
@@ -240,24 +317,53 @@ abstract final class HelpCatalog {
       keywords: ['client', 'fichier', 'contact', 'whatsapp'],
       sections: [
         HelpSection(
-          title: 'Créer et retrouver un client',
-          body:
-              'L\'onglet Clients affiche votre fichier trié par nom. Créez un client '
-              'avec nom, téléphone (WhatsApp), adresse et notes. La recherche filtre '
-              'en temps réel.',
+          title: 'Ajouter un client — pas à pas',
+          body: 'Pour créer une fiche client :',
+          steps: [
+            'Ouvrez l\'onglet Clients.',
+            'Touchez le bouton + (Nouveau client).',
+            'Renseignez le nom (obligatoire) et le téléphone WhatsApp.',
+            'Ajoutez l\'adresse et des notes si besoin.',
+            'Enregistrez : le client est disponible à la caisse et au crédit.',
+          ],
         ),
         HelpSection(
-          title: 'Fiche client détaillée',
-          body:
-              'Ouvrez une fiche pour voir l\'historique des ventes, les dettes ouvertes, '
-              'les dettes pardonnées et les actions rapides (appel, WhatsApp, paiement).',
-          bullets: [
+          title: 'Retrouver un client — pas à pas',
+          steps: [
+            'Onglet Clients → tapez le nom ou le numéro dans la recherche.',
+            'La liste se filtre en temps réel.',
+            'Touchez le client pour ouvrir sa fiche détaillée.',
+          ],
+        ),
+        HelpSection(
+          title: 'Consulter la fiche client — pas à pas',
+          body: 'La fiche regroupe tout l\'historique du client :',
+          steps: [
+            'Ouvrez la fiche depuis l\'onglet Clients.',
             'Onglet Achats : toutes les ventes liées au client.',
-            'Onglet Dettes : crédit en cours et remboursements.',
-            'Enregistrer un paiement partiel ou total sur une dette.',
+            'Onglet Dettes : crédit en cours, partiellement payé ou soldé.',
+            'Onglet Remboursées : dettes entièrement payées.',
+            'Onglet Pardonnées : dettes annulées par le patron.',
+            'Tirez vers le bas pour actualiser les données depuis le serveur.',
+          ],
+        ),
+        HelpSection(
+          title: 'Contacter un client — pas à pas',
+          steps: [
+            'Ouvrez la fiche client.',
+            'Touchez l\'icône appel pour composer le numéro.',
+            'Touchez l\'icône WhatsApp pour ouvrir une conversation.',
           ],
           tip:
               'Un numéro WhatsApp correct facilite les relances de crédit.',
+        ),
+        HelpSection(
+          title: 'Modifier un client — pas à pas',
+          steps: [
+            'Ouvrez la fiche client.',
+            'Touchez « Modifier » ou l\'icône crayon.',
+            'Mettez à jour les informations et enregistrez.',
+          ],
         ),
       ],
     ),
@@ -272,20 +378,44 @@ abstract final class HelpCatalog {
       keywords: ['dette', 'crédit', 'impayé', 'remboursement', 'pardon'],
       sections: [
         HelpSection(
-          title: 'Comprendre le cycle',
+          title: 'Comprendre le cycle de crédit',
           body:
               'Une vente à crédit crée automatiquement une dette. Le client peut '
               'rembourser en plusieurs fois. Chaque paiement est tracé avec la date, '
               'le montant et le mode de règlement.',
         ),
         HelpSection(
-          title: 'Pardonner une dette',
-          body:
-              'Le patron peut annuler définitivement une dette (cadeau, perte, geste '
-              'commercial). Le motif est obligatoire et visible dans l\'historique '
-              'des dettes pardonnées.',
+          title: 'Enregistrer un remboursement — pas à pas',
+          body: 'Pour encaisser tout ou partie d\'une dette :',
+          steps: [
+            'Clients → ouvrez la fiche du client.',
+            'Onglet Dettes → touchez la dette concernée.',
+            'Touchez « Enregistrer un paiement ».',
+            'Saisissez le montant (partiel ou total).',
+            'Choisissez le mode de règlement (espèces, mobile money…).',
+            'Validez : le solde de la dette est mis à jour.',
+          ],
+        ),
+        HelpSection(
+          title: 'Pardonner une dette — pas à pas',
+          body: 'Réservé au patron — pour annuler définitivement une dette :',
+          steps: [
+            'Ouvrez la fiche client → onglet Dettes.',
+            'Touchez la dette à pardonner.',
+            'Touchez « Pardonner la dette ».',
+            'Saisissez le motif obligatoire (cadeau, perte, geste commercial…).',
+            'Confirmez : la dette passe dans l\'onglet Pardonnées.',
+          ],
           tip:
-              'Consultez régulièrement le rapport de recouvrement dans Statistiques.',
+              'Consultez Plus → Dettes pardonnées pour l\'historique global.',
+        ),
+        HelpSection(
+          title: 'Consulter toutes les dettes pardonnées — pas à pas',
+          steps: [
+            'Ouvrez Plus → Dettes pardonnées.',
+            'Consultez la liste : client, montant, motif, date, auteur.',
+            'Touchez une ligne pour le détail complet.',
+          ],
         ),
       ],
     ),
@@ -309,13 +439,34 @@ abstract final class HelpCatalog {
               'chiffre d\'affaires brut.',
         ),
         HelpSection(
-          title: 'Saisie et catégories',
-          body:
-              'Depuis Plus → Dépenses, ajoutez une charge avec montant, date, '
-              'catégorie et note. Personnalisez les catégories (loyer, transport, '
-              'salaires…) pour des rapports plus lisibles.',
+          title: 'Enregistrer une dépense — pas à pas',
+          steps: [
+            'Ouvrez Plus → Dépenses.',
+            'Touchez + (Nouvelle dépense).',
+            'Saisissez le montant et la date.',
+            'Choisissez une catégorie (loyer, transport, salaires…).',
+            'Ajoutez une note descriptive si besoin.',
+            'Validez : la charge est comptabilisée dans vos rapports.',
+          ],
           tip:
               'Saisissez les dépenses le jour même pour ne rien oublier.',
+        ),
+        HelpSection(
+          title: 'Gérer les catégories de dépenses — pas à pas',
+          steps: [
+            'Plus → Dépenses → Catégories.',
+            'Touchez + pour créer une catégorie.',
+            'Nommez-la clairement (ex. « Électricité », « Transport »).',
+            'Utilisez-la lors de chaque nouvelle saisie.',
+          ],
+        ),
+        HelpSection(
+          title: 'Modifier ou supprimer une dépense — pas à pas',
+          steps: [
+            'Plus → Dépenses → touchez la dépense dans la liste.',
+            'Touchez « Modifier » pour corriger le montant ou la catégorie.',
+            'Ou touchez « Supprimer » si la saisie est erronée.',
+          ],
         ),
       ],
     ),
@@ -330,24 +481,38 @@ abstract final class HelpCatalog {
       keywords: ['caisse', 'ouverture', 'clôture', 'fond de caisse'],
       sections: [
         HelpSection(
-          title: 'Session de caisse',
-          body:
-              'Une session de caisse encadre une journée (ou un créneau) de travail. '
-              'À l\'ouverture, saisissez le fond de caisse initial. Pendant la session, '
-              'toutes les ventes et mouvements sont rattachés.',
-          bullets: [
-            'Ouverture : fond initial + responsable.',
-            'Mouvements : entrées/sorties exceptionnelles.',
-            'Clôture : comptage réel vs théorique, écart expliqué.',
+          title: 'Ouvrir une session de caisse — pas à pas',
+          steps: [
+            'Ouvrez Plus → Gestion de caisse.',
+            'Touchez « Ouvrir la caisse ».',
+            'Saisissez le fond de caisse initial (monnaie en caisse au démarrage).',
+            'Confirmez : la session est active pour la journée.',
           ],
         ),
         HelpSection(
-          title: 'Bonnes pratiques',
-          body:
-              'Une seule session ouverte à la fois par boutique. Clôturez en fin de '
-              'journée pour détecter les écarts et sécuriser vos encaissements.',
+          title: 'Enregistrer un mouvement de caisse — pas à pas',
+          body: 'Pour une entrée ou sortie exceptionnelle (hors vente) :',
+          steps: [
+            'Plus → Gestion de caisse → session ouverte.',
+            'Touchez « Nouveau mouvement ».',
+            'Choisissez Entrée (+) ou Sortie (−).',
+            'Saisissez le montant et le motif.',
+            'Validez : le solde théorique est recalculé.',
+          ],
+        ),
+        HelpSection(
+          title: 'Clôturer la caisse — pas à pas',
+          steps: [
+            'En fin de journée, ouvrez Plus → Gestion de caisse.',
+            'Touchez « Clôturer la caisse ».',
+            'Comptez l\'argent réellement présent en caisse.',
+            'Saisissez le montant compté.',
+            'L\'application affiche l\'écart (théorique vs réel).',
+            'Ajoutez un commentaire si l\'écart est significatif.',
+            'Confirmez la clôture.',
+          ],
           tip:
-              'Notez chaque sortie de caisse (achat urgent, monnaie…) dans les mouvements.',
+              'Une seule session ouverte à la fois. Notez chaque sortie de caisse dans les mouvements.',
         ),
       ],
     ),
@@ -362,25 +527,40 @@ abstract final class HelpCatalog {
       keywords: ['rapport', 'statistique', 'ca', 'bénéfice', 'pdf'],
       sections: [
         HelpSection(
-          title: 'Périodes et filtres',
-          body:
-              'Choisissez une période prédéfinie (aujourd\'hui, semaine, mois) ou '
-              'une plage personnalisée. Les KPI s\'adaptent : CA brut, encaissé, '
-              'crédit accordé, panier moyen, nombre de ventes.',
+          title: 'Consulter les statistiques — pas à pas',
+          steps: [
+            'Ouvrez Plus → Statistiques.',
+            'Choisissez une période : Aujourd\'hui, Semaine, Mois ou Personnalisée.',
+            'Pour une plage personnalisée : touchez les dates début et fin.',
+            'Consultez les KPI : CA, encaissé, crédit, panier moyen, nombre de ventes.',
+          ],
         ),
         HelpSection(
-          title: 'Top produits & recouvrement',
-          body:
-              'Classez les produits par quantité vendue ou par chiffre d\'affaires. '
-              'La section recouvrement résume les dettes ouvertes et les paiements reçus.',
+          title: 'Voir le top produits — pas à pas',
+          steps: [
+            'Dans Statistiques, descendez à la section « Top produits ».',
+            'Triez par quantité vendue ou par chiffre d\'affaires.',
+            'Touchez un produit pour voir le détail des ventes.',
+          ],
+        ),
+        HelpSection(
+          title: 'Exporter en PDF — pas à pas',
+          steps: [
+            'Ouvrez Plus → Statistiques avec la période souhaitée.',
+            'Touchez l\'icône partage ou « Exporter PDF ».',
+            'Choisissez l\'application (WhatsApp, Drive, imprimante…).',
+          ],
           tip:
-              'Exportez en PDF pour partager avec votre comptable ou associé.',
+              'Idéal pour partager avec votre comptable ou associé.',
         ),
         HelpSection(
-          title: 'Vue consolidée',
-          body:
-              'Le propriétaire multi-boutiques peut activer la vue consolidée pour '
-              'agréger les chiffres de la boutique racine et de ses sous-boutiques.',
+          title: 'Vue consolidée multi-boutiques — pas à pas',
+          steps: [
+            'Connectez-vous en tant que propriétaire.',
+            'Plus → Statistiques.',
+            'Activez « Vue consolidée » si disponible.',
+            'Les chiffres de la boutique racine et des sous-boutiques sont agrégés.',
+          ],
         ),
       ],
     ),
@@ -395,25 +575,33 @@ abstract final class HelpCatalog {
       keywords: ['analyse', 'marge', 'prix', 'tendance', 'employé'],
       sections: [
         HelpSection(
-          title: 'Les 7 onglets d\'analyse',
-          body:
-              'L\'analyse des ventes propose une exploration approfondie par période :',
-          bullets: [
-            'Produits : quantités et CA par article.',
-            'Employés : ventes et écarts de prix par vendeur.',
-            'Clients : meilleurs acheteurs de la période.',
-            'Catégories : performance par rayon.',
-            'Marges : CA vs coût d\'achat.',
-            'Prix : écarts par rapport au catalogue.',
-            'Tendances : évolution jour par jour.',
+          title: 'Accéder à l\'analyse — pas à pas',
+          steps: [
+            'Ouvrez Plus → Analyse des ventes.',
+            'Choisissez la période en haut de l\'écran.',
+            'Naviguez entre les 7 onglets d\'analyse.',
           ],
         ),
         HelpSection(
-          title: 'Exploiter les données',
-          body:
-              'Identifiez les produits stars, détectez les remises abusives et '
-              'comparez les performances entre périodes. Touchez un produit pour '
-              'voir le détail ligne par ligne.',
+          title: 'Les 7 onglets — que regarder',
+          body: 'Chaque onglet répond à une question précise :',
+          bullets: [
+            'Produits : quels articles se vendent le plus ?',
+            'Employés : quel vendeur réalise le plus de CA ?',
+            'Clients : qui sont vos meilleurs acheteurs ?',
+            'Catégories : quel rayon performe le mieux ?',
+            'Marges : quel est votre bénéfice par produit ?',
+            'Prix : y a-t-il des écarts par rapport au catalogue ?',
+            'Tendances : comment évolue le CA jour par jour ?',
+          ],
+        ),
+        HelpSection(
+          title: 'Analyser un produit en détail — pas à pas',
+          steps: [
+            'Onglet Produits → touchez un article.',
+            'Consultez quantités, CA, marge et ventes ligne par ligne.',
+            'Comparez avec une autre période en changeant les dates.',
+          ],
           tip:
               'Croisez l\'analyse des marges avec les alertes stock pour optimiser vos achats.',
         ),
@@ -432,20 +620,31 @@ abstract final class HelpCatalog {
       keywords: ['boutique', 'multi', 'sous-boutique', 'changer'],
       sections: [
         HelpSection(
-          title: 'Hiérarchie des boutiques',
-          body:
-              'Un compte propriétaire peut gérer une boutique racine et des '
-              'sous-boutiques (succursales, dépôts). Seules la racine et ses '
-              'enfants directs apparaissent dans vos listes — pas les boutiques '
-              'd\'un autre propriétaire partageant le même numéro.',
+          title: 'Créer une boutique — pas à pas',
+          steps: [
+            'Ouvrez Plus → Mes boutiques.',
+            'Touchez + (Nouvelle boutique).',
+            'Saisissez le nom, l\'adresse et les informations de base.',
+            'Validez : la boutique est créée et disponible au changement.',
+          ],
         ),
         HelpSection(
-          title: 'Changer de boutique active',
-          body:
-              'Touchez le nom en haut de l\'écran ou allez dans Plus → Mes boutiques. '
-              'La bascule recharge les données locales de la boutique sélectionnée.',
+          title: 'Changer de boutique active — pas à pas',
+          steps: [
+            'Touchez le nom de la boutique en haut de l\'écran,',
+            'Ou ouvrez Plus → Mes boutiques.',
+            'Sélectionnez la boutique souhaitée dans la liste.',
+            'L\'application recharge les données locales de cette boutique.',
+          ],
           tip:
-              'Chaque boutique a son propre stock et ses propres ventes.',
+              'Chaque boutique a son propre stock, ses ventes et ses clients.',
+        ),
+        HelpSection(
+          title: 'Comprendre la hiérarchie',
+          body:
+              'Un compte propriétaire peut gérer une boutique racine et des '
+              'sous-boutiques (succursales). Seules la racine et ses enfants '
+              'directs apparaissent dans vos listes.',
         ),
       ],
     ),
@@ -460,23 +659,43 @@ abstract final class HelpCatalog {
       keywords: ['équipe', 'rôle', 'permission', 'vendeur', 'patron'],
       sections: [
         HelpSection(
+          title: 'Ajouter un membre à l\'équipe — pas à pas',
+          steps: [
+            'Ouvrez Plus → Équipe.',
+            'Touchez + (Nouvel utilisateur).',
+            'Saisissez le nom et le numéro WhatsApp.',
+            'Attribuez un rôle (Vendeur, Lecteur ou personnalisé).',
+            'Définissez un code PIN pour cet utilisateur.',
+            'Validez : l\'utilisateur peut se connecter sur son appareil.',
+          ],
+        ),
+        HelpSection(
+          title: 'Modifier les droits d\'un utilisateur — pas à pas',
+          steps: [
+            'Plus → Équipe → touchez l\'utilisateur.',
+            'Changez son rôle ou ajoutez des exceptions de permissions.',
+            'Enregistrez les modifications.',
+          ],
+        ),
+        HelpSection(
           title: 'Rôles prédéfinis',
-          body:
-              'Trois profils de base couvrent la majorité des besoins :',
+          body: 'Trois profils couvrent la majorité des besoins :',
           bullets: [
             'Propriétaire : accès complet, y compris audit et sync.',
             'Vendeur : ventes, clients, lecture stock.',
             'Lecteur : consultation seule, sans modification.',
           ],
-        ),
-        HelpSection(
-          title: 'Permissions fines',
-          body:
-              'Le catalogue des rôles détaille chaque droit (ventes, inventaire, '
-              'rapports financiers…). Vous pouvez créer des rôles personnalisés et '
-              'accorder des exceptions à un utilisateur précis.',
           tip:
               'Principe du moindre privilège : donnez uniquement les droits nécessaires.',
+        ),
+        HelpSection(
+          title: 'Créer un rôle personnalisé — pas à pas',
+          steps: [
+            'Plus → Rôles & permissions.',
+            'Touchez + (Nouveau rôle).',
+            'Nommez le rôle et cochez les permissions souhaitées.',
+            'Enregistrez puis assignez ce rôle à un utilisateur dans Équipe.',
+          ],
         ),
       ],
     ),
@@ -491,24 +710,49 @@ abstract final class HelpCatalog {
       keywords: ['pin', 'sécurité', 'sauvegarde', 'biométrie', 'paramètres'],
       sections: [
         HelpSection(
-          title: 'Sécurité de l\'appareil',
-          body:
-              'Le code PIN verrouille l\'application sans détruire la session. '
-              'Activez la biométrie pour un déverrouillage rapide. En cas d\'oubli, '
-              'le propriétaire peut utiliser un jeton de récupération ou WhatsApp.',
-          bullets: [
-            'Verrouiller : depuis Plus, session conservée.',
-            'Déconnexion : ferme le compte, reconnexion WhatsApp requise.',
-            'Politique PIN au démarrage : configurable dans Paramètres.',
+          title: 'Modifier le code PIN — pas à pas',
+          steps: [
+            'Plus → Paramètres → Sécurité.',
+            'Touchez « Modifier le code PIN ».',
+            'Saisissez l\'ancien PIN puis le nouveau (4 à 6 chiffres).',
+            'Confirmez le nouveau PIN.',
           ],
         ),
         HelpSection(
-          title: 'Sauvegarde & restauration',
-          body:
-              'Exportez une sauvegarde chiffrée de votre boutique vers le stockage '
-              'local ou Google Drive. Indispensable avant de changer de téléphone.',
+          title: 'Activer la biométrie — pas à pas',
+          steps: [
+            'Plus → Paramètres → Sécurité.',
+            'Activez « Déverrouillage biométrique ».',
+            'Suivez les instructions de l\'appareil (empreinte ou visage).',
+          ],
+        ),
+        HelpSection(
+          title: 'Sauvegarder vos données — pas à pas',
+          steps: [
+            'Plus → Paramètres → Sauvegarde.',
+            'Touchez « Exporter une sauvegarde ».',
+            'Choisissez la destination (fichier local ou Google Drive).',
+            'Conservez le fichier en lieu sûr avant de changer de téléphone.',
+          ],
           tip:
-              'Programmez une sauvegarde hebdomadaire si vous n\'activez pas le cloud.',
+              'Programmez une sauvegarde hebdomadaire si le cloud n\'est pas actif.',
+        ),
+        HelpSection(
+          title: 'Restaurer une sauvegarde — pas à pas',
+          steps: [
+            'Plus → Paramètres → Sauvegarde.',
+            'Touchez « Restaurer ».',
+            'Sélectionnez le fichier de sauvegarde.',
+            'Confirmez : les données locales sont remplacées.',
+          ],
+        ),
+        HelpSection(
+          title: 'Verrouiller vs Déconnexion',
+          body: 'Deux actions différentes :',
+          bullets: [
+            'Verrouiller (Plus) : retour à l\'écran PIN, session conservée.',
+            'Déconnexion (Plus) : ferme le compte, reconnexion WhatsApp requise.',
+          ],
         ),
       ],
     ),
@@ -523,27 +767,55 @@ abstract final class HelpCatalog {
       keywords: ['sync', 'hors ligne', 'cloud', 'conflit', 'serveur'],
       sections: [
         HelpSection(
-          title: 'Fonctionnement offline-first',
+          title: 'Comprendre l\'icône cloud',
           body:
-              'Toutes les opérations courantes (ventes, stock, clients) fonctionnent '
-              'sans réseau. Les données sont stockées sur l\'appareil puis envoyées '
-              'au serveur cloud quand la connexion est disponible.',
+              'L\'icône nuage en haut à droite indique l\'état de la synchronisation. '
+              'Touchez-la à tout moment pour voir le détail et les actions possibles.',
+          bullets: [
+            'Verte : données synchronisées avec le serveur.',
+            'Orange / flèche : opérations en attente d\'envoi.',
+            'Rouge : conflit ou connexion serveur bloquée.',
+            'Grisée : mode local uniquement (cloud désactivé).',
+          ],
         ),
         HelpSection(
-          title: 'Session cloud & grâce',
-          body:
-              'Si le jeton cloud expire, l\'application continue en local pendant '
-              'environ 25 minutes avant de vous proposer une reconnexion. Vous ne '
-              'perdez aucune vente enregistrée pendant cette période.',
+          title: 'Travailler hors ligne — pas à pas',
+          steps: [
+            'Continuez à vendre, gérer le stock et les clients normalement.',
+            'Vérifiez la bannière en haut : « Hors ligne » est normal sans réseau.',
+            'Au retour du réseau, la sync démarre automatiquement.',
+            'Touchez l\'icône cloud pour vérifier que tout est passé au vert.',
+          ],
         ),
         HelpSection(
-          title: 'Résolution des conflits',
-          body:
-              'En cas de modification simultanée sur deux appareils, le propriétaire '
-              'voit les conflits dans Plus → Conflits de synchronisation et choisit '
-              'la version à conserver.',
+          title: 'Rétablir la connexion serveur — pas à pas',
+          steps: [
+            'Vérifiez internet (Wi‑Fi ou données mobiles).',
+            'Si bannière orange : touchez « Réessayer » ou « Code PIN ».',
+            'Touchez l\'icône cloud → « Relancer la synchronisation ».',
+            'En dernier recours : Plus → Déconnexion puis reconnexion WhatsApp.',
+          ],
+        ),
+        HelpSection(
+          title: 'Résoudre un conflit — pas à pas',
+          steps: [
+            'Touchez l\'icône cloud → « Résoudre les conflits ».',
+            'Ou ouvrez Plus → Conflits de synchronisation.',
+            'Pour chaque conflit, comparez version locale et version serveur.',
+            'Choisissez la version correcte et validez.',
+            'Relancez la synchronisation pour confirmer.',
+          ],
           tip:
-              'Configurez l\'URL du serveur dans Plus → Connexion serveur si besoin.',
+              'Évitez de modifier le même produit sur deux appareils en même temps.',
+        ),
+        HelpSection(
+          title: 'Configurer l\'adresse du serveur — pas à pas',
+          steps: [
+            'Ouvrez Plus → Connexion serveur.',
+            'Laissez l\'URL cloud par défaut ou saisissez votre serveur local.',
+            'Touchez « Tester la connexion ».',
+            'Enregistrez puis reconnectez-vous via WhatsApp si demandé.',
+          ],
         ),
       ],
     ),
@@ -558,18 +830,30 @@ abstract final class HelpCatalog {
       keywords: ['audit', 'journal', 'traçabilité', 'historique'],
       sections: [
         HelpSection(
-          title: 'À quoi ça sert',
-          body:
-              'Le journal d\'audit enregistre qui a fait quoi et quand : annulation '
-              'de vente, ajustement de stock, pardon de dette, changement de rôle… '
-              'Réservé au patron pour la transparence et la sécurité.',
+          title: 'Consulter le journal — pas à pas',
+          steps: [
+            'Ouvrez Plus → Journal d\'audit (patron uniquement).',
+            'Parcourez la liste chronologique des actions sensibles.',
+            'Touchez une ligne pour voir le détail (qui, quoi, quand).',
+          ],
         ),
         HelpSection(
-          title: 'Filtres et export',
-          body:
-              'Filtrez par module, action et période. Exportez en PDF pour archivage '
-              'ou contrôle interne. Depuis une fiche (dette, produit…), accédez à '
-              'l\'historique complet de l\'entité.',
+          title: 'Filtrer le journal — pas à pas',
+          steps: [
+            'Dans le journal, touchez l\'icône filtre.',
+            'Choisissez un module (ventes, stock, dettes, utilisateurs…).',
+            'Choisissez une action (création, modification, annulation…).',
+            'Définissez une période si besoin.',
+            'Validez : la liste affiche uniquement les entrées correspondantes.',
+          ],
+        ),
+        HelpSection(
+          title: 'Exporter le journal en PDF — pas à pas',
+          steps: [
+            'Appliquez les filtres souhaités.',
+            'Touchez l\'icône export / partage.',
+            'Choisissez PDF et la destination (WhatsApp, Drive…).',
+          ],
         ),
       ],
     ),
@@ -584,23 +868,55 @@ abstract final class HelpCatalog {
       keywords: ['notification', 'alerte', 'stock', 'rappel'],
       sections: [
         HelpSection(
-          title: 'Types d\'alertes',
-          body:
-              'Configurez les notifications push et locales selon vos besoins :',
-          bullets: [
-            'Stock bas : produit sous le seuil d\'alerte.',
-            'Dettes : échéances et relances.',
-            'Résumé du jour : CA et ventes en fin de journée.',
-            'Sauvegarde : rappel si aucune sauvegarde récente.',
+          title: 'Configurer les alertes — pas à pas',
+          steps: [
+            'Ouvrez Plus → Alertes (ou Paramètres → Notifications).',
+            'Activez ou désactivez chaque type d\'alerte.',
+            'Accordez la permission système si l\'appareil le demande.',
+            'Pour le résumé du jour : choisissez l\'heure d\'envoi.',
           ],
         ),
         HelpSection(
-          title: 'Configuration',
-          body:
-              'Depuis Plus → Alertes ou Paramètres → Notifications, activez '
-              'chaque type et accordez la permission système si demandée.',
+          title: 'Types d\'alertes disponibles',
+          body: 'Chaque alerte répond à un besoin précis :',
+          bullets: [
+            'Stock bas : produit sous le seuil d\'alerte.',
+            'Dettes : échéances et relances clients.',
+            'Résumé du jour : CA et ventes en fin de journée.',
+            'Sauvegarde : rappel si aucune sauvegarde récente.',
+          ],
           tip:
               'Les alertes stock évitent les ruptures sur vos produits les plus vendus.',
+        ),
+      ],
+    ),
+    HelpArticle(
+      id: 'calculators',
+      categoryId: 'finance',
+      title: 'Calculateurs métiers',
+      summary:
+          'Carrelage, peinture, béton et autres calculs pour vos devis chantier.',
+      icon: Icons.calculate_outlined,
+      color: Color(0xFF5D4037),
+      keywords: ['calculateur', 'carrelage', 'peinture', 'béton', 'devis'],
+      sections: [
+        HelpSection(
+          title: 'Utiliser un calculateur — pas à pas',
+          steps: [
+            'Ouvrez Plus → Calculateurs métiers.',
+            'Choisissez le type de calcul (carrelage, peinture, béton…).',
+            'Saisissez les dimensions ou quantités demandées.',
+            'L\'application calcule automatiquement le résultat.',
+            'Exportez en PDF si besoin pour un devis client.',
+          ],
+        ),
+        HelpSection(
+          title: 'À quoi ça sert',
+          body:
+              'Les calculateurs aident à estimer les quantités de matériaux '
+              'pour vos chantiers ou devis, sans quitter VenteApp.',
+          tip:
+              'Ces calculs n\'impactent pas votre stock — utilisez une vente classique pour facturer.',
         ),
       ],
     ),
@@ -635,6 +951,9 @@ abstract final class HelpCatalog {
       for (final s in a.sections) {
         if (s.title.toLowerCase().contains(q)) return true;
         if (s.body.toLowerCase().contains(q)) return true;
+        for (final step in s.steps) {
+          if (step.toLowerCase().contains(q)) return true;
+        }
       }
       return false;
     }).toList();

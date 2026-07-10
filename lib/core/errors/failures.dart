@@ -87,9 +87,11 @@ class OfflineGraceExpiredFailure extends Failure {
         );
 }
 
-/// Session cloud expirée sans PIN récent — pas de dialogue WhatsApp immédiat.
+/// Session cloud expirée sans preuve PIN récente en mémoire.
 class CloudReconnectRequiredFailure extends Failure {
   const CloudReconnectRequiredFailure([
-    super.message = 'Connexion au serveur requise. Veuillez vous reconnecter via WhatsApp pour synchroniser vos données.',
+    super.message =
+        'Connexion au serveur requise. Saisissez votre PIN via la bannière '
+        'pour rétablir la synchronisation.',
   ]);
 }

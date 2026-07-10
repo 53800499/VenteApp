@@ -47,8 +47,16 @@ class _ProductListPageState extends State<ProductListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final scaffold = _buildScaffold(context);
+
+    final hasBloc =
+        context.findAncestorWidgetOfExactType<BlocProvider<ProductListBloc>>() !=
+            null;
+    if (hasBloc) {
+      return scaffold;
+    }
+
     return BlocProvider(
-      key: ValueKey('product-list-${widget.session.shop.id}'),
       create: (_) => ProductListBloc(
         listProducts: sl(),
         listCategories: sl(),
@@ -60,9 +68,12 @@ class _ProductListPageState extends State<ProductListPage> {
         ),
         syncService: sl(),
       )..add(const ProductListLoadRequested()),
-      child: Builder(
-        builder: (context) {
-          return Scaffold(
+      child: scaffold,
+    );
+  }
+
+  Widget _buildScaffold(BuildContext context) {
+    return Scaffold(
             body: Column(
               children: [
                 BlocBuilder<ProductListBloc, ProductListState>(
@@ -129,7 +140,7 @@ class _ProductListPageState extends State<ProductListPage> {
                                 );
                                 if (context.mounted) {
                                   context.read<ProductListBloc>().add(
-                                        const ProductListRefreshRequested(),
+                                        const ProductListLocalRefreshRequested(),
                                       );
                                 }
                               },
@@ -163,16 +174,13 @@ class _ProductListPageState extends State<ProductListPage> {
                       if (created == true && context.mounted) {
                         context
                             .read<ProductListBloc>()
-                            .add(const ProductListRefreshRequested());
+                            .add(const ProductListLocalRefreshRequested());
                       }
                     },
                     icon: const Icon(Icons.add),
                     label: const Text('Produit'),
                   )
                 : null,
-          );
-        },
-      ),
     );
   }
 }
@@ -268,16 +276,10 @@ class _ProductListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ProductListBloc, ProductListState>(
       builder: (context, state) {
-        if (state.status == ProductListStatus.loading && !state.isRefreshing) {
+        if (state.status == ProductListStatus.initial &&
+            state.products.isEmpty) {
           return const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: AppSpacing.md),
-                Text('Chargement des produits…'),
-              ],
-            ),
+            child: CircularProgressIndicator(),
           );
         }
 
@@ -400,7 +402,7 @@ class _ProductListView extends StatelessWidget {
         if (changed == true && context.mounted) {
           context
               .read<ProductListBloc>()
-              .add(const ProductListRefreshRequested());
+              .add(const ProductListLocalRefreshRequested());
         }
       },
     );

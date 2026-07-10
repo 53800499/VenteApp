@@ -9,6 +9,7 @@ abstract class CustomerRepository {
   Future<CustomerDetail> getCustomer({
     required int shopId,
     required int customerId,
+    bool force = false,
   });
 
   Future<List<CustomerSaleSummary>> listCustomerSales({
@@ -46,5 +47,5 @@ abstract class CustomerRepository {
     required int customerId,
   });
 
-  Future<void> syncFromRemote({required int shopId});
+  Future<void> syncFromRemote({required int shopId, bool force = false});
 }

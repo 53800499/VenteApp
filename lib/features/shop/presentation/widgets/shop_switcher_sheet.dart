@@ -41,48 +41,64 @@ Future<bool> performShopSwitch(
   }
   if (!context.mounted) return false;
 
-  // Flush « best effort » des écritures en attente de la boutique courante
-  // afin qu'elles ne restent pas bloquées jusqu'au prochain retour dessus.
-  final currentLocalShopId = state.session.shop.id;
-  final flush = await ShopFeedback.runWithBlockingLoader<ShopFlushOutcome>(
-    context: context,
-    message: 'Envoi des données en attente…',
-    action: () => sl<SyncService>()
-        .flushPendingBeforeSwitch(shopId: currentLocalShopId),
-  );
-  if (!context.mounted) return false;
+  final syncService = sl<SyncService>();
+  syncService.pauseSync();
 
-  if (flush != null && flush.hadPending && !flush.fullyFlushed) {
-    final remaining = flush.pendingAfter;
-    final proceed = await ShopFeedback.confirm(
-      context: context,
-      title: 'Données non synchronisées',
-      message: flush.wasOffline
-          ? '$remaining élément(s) de cette boutique ne sont pas encore '
-              'envoyés (hors ligne). Ils seront synchronisés automatiquement '
-              'plus tard. Changer de boutique quand même ?'
-          : '$remaining élément(s) de cette boutique ne sont pas encore '
-              'envoyés. Ils seront synchronisés automatiquement plus tard. '
-              'Changer de boutique quand même ?',
-      confirmLabel: 'Changer quand même',
-      cancelLabel: 'Rester',
-    );
-    if (proceed != true || !context.mounted) return false;
-  }
-
-  final session = await sl<SwitchShop>()(shopId: serverShopId);
-  if (!context.mounted) return false;
-  AuthSession refreshed = session;
   try {
-    final updated = await sl<RefreshSessionPermissions>()();
-    if (updated != null) refreshed = updated;
-  } catch (_) {
-    // Droits du switchShop conservés si /rbac/me échoue.
+    // Flush « best effort » des écritures en attente de la boutique courante
+    // afin qu'elles ne restent pas bloquées jusqu'au prochain retour dessus.
+    final currentLocalShopId = state.session.shop.id;
+    final flush = await ShopFeedback.runWithBlockingLoader<ShopFlushOutcome>(
+      context: context,
+      message: 'Envoi des données en attente…',
+      action: () => syncService.flushPendingBeforeSwitch(
+        shopId: currentLocalShopId,
+      ),
+    );
+    if (!context.mounted) return false;
+
+    if (flush != null && flush.hadPending && !flush.fullyFlushed) {
+      final remaining = flush.pendingAfter;
+      final proceed = await ShopFeedback.confirm(
+        context: context,
+        title: 'Données non synchronisées',
+        message: flush.wasOffline
+            ? '$remaining élément(s) de cette boutique ne sont pas encore '
+                'envoyés (hors ligne). Ils seront synchronisés automatiquement '
+                'plus tard. Changer de boutique quand même ?'
+            : '$remaining élément(s) de cette boutique ne sont pas encore '
+                'envoyés. Ils seront synchronisés automatiquement plus tard. '
+                'Changer de boutique quand même ?',
+        confirmLabel: 'Changer quand même',
+        cancelLabel: 'Rester',
+      );
+      if (proceed != true || !context.mounted) return false;
+    }
+
+    final session = await sl<SwitchShop>()(shopId: serverShopId);
+    if (!context.mounted) return false;
+    AuthSession refreshed = session;
+    try {
+      final updated = await sl<RefreshSessionPermissions>()();
+      if (updated != null) refreshed = updated;
+    } catch (_) {
+      // Droits du switchShop conservés si /rbac/me échoue.
+    }
+    if (!context.mounted) return false;
+    authBloc.add(AuthSessionRefreshed(refreshed));
+    await sl<LastShopStorage>().save(refreshed.shop.id);
+    syncService.resumeSync(shopId: refreshed.shop.id);
+    return true;
+  } finally {
+    if (syncService.isPaused) {
+      final current = authBloc.state;
+      if (current is AuthAuthenticated) {
+        syncService.resumeSync(shopId: current.session.shop.id);
+      } else {
+        syncService.resumeSync();
+      }
+    }
   }
-  if (!context.mounted) return false;
-  authBloc.add(AuthSessionRefreshed(refreshed));
-  await sl<LastShopStorage>().save(refreshed.shop.id);
-  return true;
 }
 
 /// Feuille modale : liste des boutiques du patron pour changer de contexte.

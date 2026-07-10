@@ -166,6 +166,6 @@ class SyncExpensesFromRemote {
   const SyncExpensesFromRemote(this._repository);
   final ExpenseRepository _repository;
 
-  Future<void> call({required int shopId}) =>
-      _repository.syncFromRemote(shopId: shopId);
+  Future<void> call({required int shopId, bool force = false}) =>
+      _repository.syncFromRemote(shopId: shopId, force: force);
 }

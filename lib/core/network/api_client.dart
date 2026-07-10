@@ -160,10 +160,18 @@ class ApiClient {
   Future<void> _attachBearer(RequestOptions options) async {
     final credentials = _credentials;
     if (credentials != null && !_isPublicAuthRequest(options)) {
-      if (!await credentials.hasValidAccessToken() &&
-          await credentials.hasValidRefreshToken()) {
+      if (!await credentials.hasValidAccessToken()) {
         try {
-          await _refreshTokens();
+          if (await credentials.hasValidRefreshToken()) {
+            await _refreshTokens();
+          } else {
+            final refresh = await credentials.getRefreshToken();
+            if (refresh != null &&
+                refresh.isNotEmpty &&
+                await credentials.isWithinServerAccessWindow()) {
+              await forceRefreshTokens();
+            }
+          }
         } on Object {
           // La requête partira sans jeton valide ; l'intercepteur 401 retentera.
         }
@@ -239,7 +247,9 @@ class ApiClient {
 
     final statusCode = response.statusCode;
     if (statusCode == 401 || statusCode == 403) {
-      unawaited(onRefreshTokenInvalid?.call());
+      if (!await credentials.hasValidAccessToken()) {
+        unawaited(onRefreshTokenInvalid?.call());
+      }
       throw DioException(
         requestOptions: RequestOptions(path: '/auth/refresh'),
         response: response,

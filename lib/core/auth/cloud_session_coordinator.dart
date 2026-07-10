@@ -84,6 +84,5 @@ class CloudSessionCoordinator {
     }
 
     await _credentials.clear();
-    markCloudSessionValid();
   }
 }

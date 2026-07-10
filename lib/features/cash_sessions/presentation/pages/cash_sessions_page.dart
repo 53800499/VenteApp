@@ -37,6 +37,7 @@ class CashSessionsPage extends StatelessWidget {
         recordMovement: sl<RecordCashMovement>(),
         syncFromRemote: sl<SyncCashSessionsFromRemote>(),
         session: session,
+        syncService: sl(),
       )..add(const CashSessionsLoadRequested()),
       child: const _CashSessionsView(),
     );

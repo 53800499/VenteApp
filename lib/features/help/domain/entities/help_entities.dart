@@ -21,14 +21,18 @@ class HelpCategory {
 class HelpSection {
   const HelpSection({
     required this.title,
-    required this.body,
+    this.body = '',
     this.bullets = const [],
+    this.steps = const [],
     this.tip,
   });
 
   final String title;
   final String body;
   final List<String> bullets;
+
+  /// Étapes numérotées pour les procédures pas à pas (A → Z).
+  final List<String> steps;
   final String? tip;
 }
 

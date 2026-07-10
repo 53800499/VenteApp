@@ -11,6 +11,10 @@ import '../../domain/entities/inventory_entities.dart';
 import '../../domain/usecases/inventory_usecases.dart';
 import '../../../settings/data/datasources/local/settings_local_datasource.dart';
 import '../widgets/inventory_feedback.dart';
+import '../../../calculators/domain/entities/calculator_entities.dart';
+import '../../../calculators/domain/repositories/calculators_repository.dart';
+import '../../../calculators/presentation/utils/calculator_form_validators.dart';
+import '../../../../app/theme/app_colors.dart';
 
 class ProductFormPage extends StatefulWidget {
   const ProductFormPage({
@@ -39,10 +43,27 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final _quantityController = TextEditingController(text: '0');
   final _alertThresholdController = TextEditingController();
 
+  // Calculators configuration inputs
+  String? _calculatorType;
+  final _tileLengthController = TextEditingController(text: '60');
+  final _tileWidthController = TextEditingController(text: '60');
+  final _piecesPerBoxController = TextEditingController(text: '1');
+  final _wastePercentController = TextEditingController(text: '10');
+
+  final _coverageController = TextEditingController(text: '10');
+  final _coatsController = TextEditingController(text: '2');
+  final _volumeController = TextEditingController(text: '15');
+
+  final _cementDosageController = TextEditingController(text: '350');
+  final _bagWeightController = TextEditingController(text: '50');
+  final _sandController = TextEditingController(text: '400');
+  final _gravelController = TextEditingController(text: '800');
+
   List<ProductCategory> _categories = [];
   int? _categoryId;
   bool _isLoading = false;
   bool _pricingTiersEnabled = false;
+  bool _calculatorsModuleEnabled = false;
   String? _errorMessage;
 
   @override
@@ -67,6 +88,29 @@ class _ProductFormPageState extends State<ProductFormPage> {
     }
     _loadCategories();
     _loadPricingSettings();
+    _loadCalculatorsModuleStatus();
+    _loadCalculatorConfig();
+  }
+
+  Future<void> _loadCalculatorsModuleStatus() async {
+    try {
+      final enabled = await sl<CalculatorsRepository>().isModuleEnabled(
+        shopId: widget.session.shop.id,
+      );
+      if (mounted) {
+        setState(() {
+          _calculatorsModuleEnabled = enabled;
+          if (!enabled) _calculatorType = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _calculatorsModuleEnabled = false;
+          _calculatorType = null;
+        });
+      }
+    }
   }
 
   Future<void> _loadPricingSettings() async {
@@ -75,6 +119,42 @@ class _ProductFormPageState extends State<ProductFormPage> {
     if (mounted) {
       setState(() => _pricingTiersEnabled = config.commerce.pricingTiersEnabled);
     }
+  }
+
+  Future<void> _loadCalculatorConfig() async {
+    final prod = widget.product;
+    if (prod == null) return;
+
+    try {
+      final repo = sl<CalculatorsRepository>();
+      final config = await repo.getProductConfig(
+        shopId: widget.session.shop.id,
+        productId: prod.id,
+      );
+      if (config != null && mounted) {
+        setState(() {
+          _calculatorType = config.calculatorType;
+          final meta = config.metadata;
+          if (config.calculatorType == 'tile') {
+            _tileLengthController.text = '${meta['tileLengthCm'] ?? '60'}';
+            _tileWidthController.text = '${meta['tileWidthCm'] ?? '60'}';
+            _piecesPerBoxController.text = '${meta['piecesPerBox'] ?? '1'}';
+            _wastePercentController.text = '${meta['wastePercent'] ?? '10'}';
+          } else if (config.calculatorType == 'paint') {
+            _coverageController.text = '${meta['coveragePerLiter'] ?? '10'}';
+            _coatsController.text = '${meta['coatsCount'] ?? '2'}';
+            _volumeController.text = '${meta['bucketVolume'] ?? '15'}';
+            _wastePercentController.text = '${meta['wastePercent'] ?? '5'}';
+          } else if (config.calculatorType == 'concrete') {
+            _cementDosageController.text = '${meta['cementDosage'] ?? '350'}';
+            _bagWeightController.text = '${meta['bagWeight'] ?? '50'}';
+            _sandController.text = '${meta['sandProportion'] ?? '400'}';
+            _gravelController.text = '${meta['gravelProportion'] ?? '800'}';
+            _wastePercentController.text = '${meta['wastePercent'] ?? '5'}';
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadCategories() async {
@@ -96,6 +176,21 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _priceBuyController.dispose();
     _quantityController.dispose();
     _alertThresholdController.dispose();
+
+    _tileLengthController.dispose();
+    _tileWidthController.dispose();
+    _piecesPerBoxController.dispose();
+    _wastePercentController.dispose();
+
+    _coverageController.dispose();
+    _coatsController.dispose();
+    _volumeController.dispose();
+
+    _cementDosageController.dispose();
+    _bagWeightController.dispose();
+    _sandController.dispose();
+    _gravelController.dispose();
+
     super.dispose();
   }
 
@@ -124,8 +219,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
     });
 
     try {
+      int productId;
       if (isEdit) {
-        await sl<UpdateProduct>()(
+        final prod = await sl<UpdateProduct>()(
           shopId: widget.session.shop.id,
           productId: widget.product!.id,
           input: UpdateProductInput(
@@ -150,8 +246,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 : _parseInt(_alertThresholdController.text),
           ),
         );
+        productId = prod.id;
       } else {
-        await sl<CreateProduct>()(
+        final prod = await sl<CreateProduct>()(
           shopId: widget.session.shop.id,
           userId: widget.session.user.id,
           input: CreateProductInput(
@@ -176,6 +273,47 @@ class _ProductFormPageState extends State<ProductFormPage> {
             alertThreshold: _alertThresholdController.text.trim().isEmpty
                 ? null
                 : _parseInt(_alertThresholdController.text),
+          ),
+        );
+        productId = prod.id;
+      }
+
+      // Save business calculator link if module actif et type sélectionné
+      if (_calculatorsModuleEnabled && _calculatorType != null) {
+        Map<String, dynamic> metadata = {};
+        if (_calculatorType == 'tile') {
+          metadata = {
+            'tileLengthCm': double.tryParse(_tileLengthController.text) ?? 60.0,
+            'tileWidthCm': double.tryParse(_tileWidthController.text) ?? 60.0,
+            'piecesPerBox': int.tryParse(_piecesPerBoxController.text) ?? 1,
+            'wastePercent': double.tryParse(_wastePercentController.text) ?? 10.0,
+          };
+        } else if (_calculatorType == 'paint') {
+          metadata = {
+            'coveragePerLiter': double.tryParse(_coverageController.text) ?? 10.0,
+            'coatsCount': int.tryParse(_coatsController.text) ?? 2,
+            'bucketVolume': double.tryParse(_volumeController.text) ?? 15.0,
+            'wastePercent': double.tryParse(_wastePercentController.text) ?? 5.0,
+          };
+        } else if (_calculatorType == 'concrete') {
+          metadata = {
+            'cementDosage': double.tryParse(_cementDosageController.text) ?? 350.0,
+            'bagWeight': double.tryParse(_bagWeightController.text) ?? 50.0,
+            'sandProportion': double.tryParse(_sandController.text) ?? 400.0,
+            'gravelProportion': double.tryParse(_gravelController.text) ?? 800.0,
+            'wastePercent': double.tryParse(_wastePercentController.text) ?? 5.0,
+          };
+        }
+
+        await sl<CalculatorsRepository>().saveProductConfig(
+          config: CalculatorProductData(
+            id: 0,
+            shopId: widget.session.shop.id,
+            productId: productId,
+            calculatorType: _calculatorType!,
+            metadata: metadata,
+            createdAt: 0,
+            updatedAt: 0,
           ),
         );
       }
@@ -240,7 +378,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<int>(
-                  initialValue: _categoryId,
+                  value: _categoryId,
                   decoration: const InputDecoration(
                     labelText: 'Catégorie',
                     prefixIcon: Icon(Icons.category_outlined),
@@ -340,6 +478,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
+                const SizedBox(height: AppSpacing.lg),
+                if (_calculatorsModuleEnabled) _buildCalculatorSettingsSection(),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: AppSpacing.md),
                   ErrorBanner(message: _errorMessage!),
@@ -357,6 +497,234 @@ class _ProductFormPageState extends State<ProductFormPage> {
         ),
       ),
     ),
+    );
+  }
+
+  Widget _buildCalculatorSettingsSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Calculateur métier lié',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: AppColors.seed,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              value: _calculatorType,
+              decoration: const InputDecoration(
+                labelText: 'Type de calculateur',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Aucun')),
+                DropdownMenuItem(value: 'tile', child: Text('Carrelage — dimensions et cartons')),
+                DropdownMenuItem(value: 'paint', child: Text('Peinture — rendement et fûts')),
+                DropdownMenuItem(value: 'concrete', child: Text('Béton & mortier — dosage ciment')),
+              ],
+              selectedItemBuilder: (context) => [
+                const Text('Aucun', overflow: TextOverflow.ellipsis),
+                Text(
+                  CalculatorTypeLabels.shortLabel('tile'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  CalculatorTypeLabels.shortLabel('paint'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  CalculatorTypeLabels.shortLabel('concrete'),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  _calculatorType = val;
+                });
+              },
+            ),
+            if (_calculatorType != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              if (_calculatorType == 'tile') _buildTileSettingsFields(),
+              if (_calculatorType == 'paint') _buildPaintSettingsFields(),
+              if (_calculatorType == 'concrete') _buildConcreteSettingsFields(),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTileSettingsFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Paramètres par défaut pour carrelage',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurfaceMuted),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _tileLengthController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Longueur (cm)'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _tileWidthController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Largeur (cm)'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _piecesPerBoxController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Pièces / Carton'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _wastePercentController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Marge perte (%)'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaintSettingsFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Paramètres par défaut pour peinture',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurfaceMuted),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _coverageController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Rendement (m²/L)'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _coatsController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Couches par défaut'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _volumeController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Volume pot (L)'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _wastePercentController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Marge perte (%)'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildConcreteSettingsFields() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Paramètres par défaut pour béton',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.onSurfaceMuted),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _cementDosageController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Dosage ciment (kg/m³)'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _bagWeightController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Poids sac (kg)'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _sandController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Sable (L/m³)'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                controller: _gravelController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Gravier (L/m³)'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          controller: _wastePercentController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Marge perte (%)'),
+        ),
+      ],
     );
   }
 }

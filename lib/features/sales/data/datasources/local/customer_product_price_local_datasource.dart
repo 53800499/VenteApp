@@ -40,14 +40,16 @@ class CustomerProductPriceLocalDatasource {
       for (final line in lines) {
         if (line.unitPrice <= 0) continue;
 
-        final existing = await (_database.select(_database.customerProductPrices)
+        final existingRows = await (_database.select(_database.customerProductPrices)
               ..where(
                 (row) =>
                     row.shopId.equals(shopId) &
                     row.customerId.equals(customerId) &
                     row.productId.equals(line.productId),
-              ))
-            .getSingleOrNull();
+              )
+              ..orderBy([(row) => OrderingTerm.asc(row.id)]))
+            .get();
+        final existing = existingRows.isEmpty ? null : existingRows.first;
 
         if (existing != null) {
           await (_database.update(_database.customerProductPrices)
@@ -58,6 +60,13 @@ class CustomerProductPriceLocalDatasource {
               updatedAt: Value(timestamp),
             ),
           );
+          if (existingRows.length > 1) {
+            final duplicateIds =
+                existingRows.skip(1).map((row) => row.id).toList();
+            await (_database.delete(_database.customerProductPrices)
+                  ..where((row) => row.id.isIn(duplicateIds)))
+                .go();
+          }
         } else {
           await _database.into(_database.customerProductPrices).insert(
                 db.CustomerProductPricesCompanion.insert(

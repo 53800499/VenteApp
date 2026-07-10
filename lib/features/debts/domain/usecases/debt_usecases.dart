@@ -46,6 +46,27 @@ class ListForgivenDebts {
   }
 }
 
+class ListPaidDebts {
+  ListPaidDebts(this._repository);
+
+  final DebtRepository _repository;
+
+  Future<List<Debt>> call({
+    required AuthSession session,
+    int? customerId,
+  }) {
+    if (!PermissionGuard.can(session.user.permissions, Permission.debtsRead)) {
+      throw const UnauthorizedFailure(
+        'Vous n\'avez pas la permission de consulter les dettes.',
+      );
+    }
+    return _repository.listPaidDebts(
+      shopId: session.shop.id,
+      customerId: customerId,
+    );
+  }
+}
+
 class GetDebt {
   GetDebt(this._repository);
 

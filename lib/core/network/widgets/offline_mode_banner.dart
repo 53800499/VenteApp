@@ -2,13 +2,17 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
+import '../../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../auth/cloud_link_status.dart';
 import '../../auth/cloud_session_controller.dart';
+import '../../auth/cloud_session_coordinator.dart';
 import '../../auth/cloud_session_status.dart';
 import '../../auth/cloud_session_repair_service.dart';
+import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
 import '../../sync/sync_service.dart';
 import '../../sync/sync_snapshot.dart';
 import '../network_info.dart';
@@ -157,7 +161,6 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                           .repairInProgressNotifier,
                       builder: (context, isRepairing, _) {
                         final sync = syncSnapshot.data ?? const SyncSnapshot.idle();
-                        final repair = sl<CloudSessionRepairService>();
 
                         if (isRepairing && sync.blockReason == null && offline != true) {
                           return _sessionBanner(
@@ -185,6 +188,23 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             foreground: Theme.of(context).colorScheme.onTertiaryContainer,
                             icon: Icons.cloud_off_outlined,
                             emoji: '🟠',
+                            actions: [
+                              TextButton(
+                                onPressed: () => _retryCloudRepair(context),
+                                child: const Text('Réessayer'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    showCloudSessionPinRepairDialog(context),
+                                child: const Text('Code PIN'),
+                              ),
+                              TextButton(
+                                onPressed: () => context.read<AuthBloc>().add(
+                                      const AuthCloudReconnectRequested(),
+                                    ),
+                                child: const Text('WhatsApp'),
+                              ),
+                            ],
                           );
                         }
 
@@ -241,6 +261,32 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     );
   }
 
+  Future<void> _retryCloudRepair(BuildContext context) async {
+    final repair = sl<CloudSessionRepairService>();
+    final outcome = await repair.repair(attemptRefresh: true);
+    if (!context.mounted) return;
+
+    if (outcome == CloudRepairOutcome.alreadyValid ||
+        outcome == CloudRepairOutcome.refreshed ||
+        outcome == CloudRepairOutcome.pinLogin) {
+      sl<CloudSessionCoordinator>().markCloudSessionValid();
+      repair.clearAwaitingState();
+      unawaited(sl<CloudSessionController>().refresh());
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connexion au serveur rétablie.')),
+      );
+      return;
+    }
+
+    if (outcome == CloudRepairOutcome.offline) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connexion internet requise pour rétablir la session.'),
+        ),
+      );
+    }
+  }
+
   Widget _sessionBanner(
     BuildContext context, {
     required String message,
@@ -248,6 +294,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     required Color foreground,
     required IconData icon,
     required String emoji,
+    List<Widget>? actions,
   }) {
     return Material(
       color: background,
@@ -256,18 +303,31 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.sm,
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(icon, size: 18, color: foreground),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                '$emoji $message',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: foreground,
-                    ),
-              ),
+            Row(
+              children: [
+                Icon(icon, size: 18, color: foreground),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    '$emoji $message',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: foreground,
+                        ),
+                  ),
+                ),
+              ],
             ),
+            if (actions != null && actions.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: AppSpacing.xs,
+                children: actions,
+              ),
+            ],
           ],
         ),
       ),

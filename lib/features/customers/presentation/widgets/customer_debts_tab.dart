@@ -13,6 +13,7 @@ import '../../../debts/domain/entities/debt_entities.dart';
 import '../../../debts/domain/usecases/debt_usecases.dart';
 import '../../../debts/presentation/pages/debt_detail_page.dart';
 import '../../../debts/presentation/pages/forgiven_debts_page.dart';
+import '../../../debts/presentation/pages/paid_debts_page.dart';
 
 /// Onglet Dettes de la fiche client (ECR-08).
 class CustomerDebtsTab extends StatefulWidget {
@@ -22,6 +23,8 @@ class CustomerDebtsTab extends StatefulWidget {
     required this.customerId,
     required this.customerName,
     this.initialDebts,
+    this.initialPaidDebts,
+    this.initialForgivenDebts,
     this.onUpdated,
   });
 
@@ -29,7 +32,9 @@ class CustomerDebtsTab extends StatefulWidget {
   final int customerId;
   final String customerName;
   final List<Debt>? initialDebts;
-  final VoidCallback? onUpdated;
+  final List<Debt>? initialPaidDebts;
+  final List<ForgivenDebtEntry>? initialForgivenDebts;
+  final Future<void> Function()? onUpdated;
 
   @override
   State<CustomerDebtsTab> createState() => _CustomerDebtsTabState();
@@ -41,16 +46,17 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
   List<Debt> _openDebts = const [];
   bool _loadingOpen = true;
   String? _openError;
+  int _debtsRefreshToken = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     if (widget.initialDebts != null) {
       _openDebts = widget.initialDebts!;
       _loadingOpen = false;
     } else {
-      _loadOpenDebts();
+      _loadOpenDebtsLocal();
     }
   }
 
@@ -71,7 +77,15 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
     super.dispose();
   }
 
-  Future<void> _loadOpenDebts() async {
+  Future<void> _reloadOpenDebts() async {
+    if (widget.onUpdated != null) {
+      await widget.onUpdated!();
+      return;
+    }
+    await _loadOpenDebtsLocal();
+  }
+
+  Future<void> _loadOpenDebtsLocal() async {
     setState(() {
       _loadingOpen = true;
       _openError = null;
@@ -110,6 +124,7 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
           controller: _tabController,
           tabs: const [
             Tab(text: 'Ouvertes'),
+            Tab(text: 'Remboursées'),
             Tab(text: 'Pardonnées'),
           ],
         ),
@@ -118,10 +133,20 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
             controller: _tabController,
             children: [
               _buildOpenDebtsTab(),
+              PaidDebtsList(
+                session: widget.session,
+                customerId: widget.customerId,
+                customerName: widget.customerName,
+                initialDebts: widget.initialPaidDebts,
+                refreshToken: _debtsRefreshToken,
+                localOnly: true,
+              ),
               ForgivenDebtsList(
                 session: widget.session,
                 customerId: widget.customerId,
                 customerName: widget.customerName,
+                initialEntries: widget.initialForgivenDebts,
+                localOnly: true,
               ),
             ],
           ),
@@ -142,7 +167,7 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
             Text(_openError!),
             const SizedBox(height: AppSpacing.md),
             FilledButton(
-              onPressed: _loadOpenDebts,
+              onPressed: _reloadOpenDebts,
               child: const Text('Réessayer'),
             ),
           ],
@@ -151,7 +176,7 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
     }
     if (_openDebts.isEmpty) {
       return RefreshIndicator(
-        onRefresh: _loadOpenDebts,
+        onRefresh: _reloadOpenDebts,
         child: EmptyListPlaceholder(
           embedded: true,
           icon: Icons.account_balance_wallet_outlined,
@@ -161,7 +186,7 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
     }
 
     return RefreshIndicator(
-      onRefresh: _loadOpenDebts,
+      onRefresh: _reloadOpenDebts,
       child: ListView.builder(
         padding: const EdgeInsets.all(AppSpacing.md),
         itemCount: _openDebts.length,
@@ -262,8 +287,8 @@ class _CustomerDebtsTabState extends State<CustomerDebtsTab>
       ),
     );
     if (updated == true && mounted) {
-      await _loadOpenDebts();
-      widget.onUpdated?.call();
+      await widget.onUpdated?.call();
+      setState(() => _debtsRefreshToken++);
     }
   }
 }

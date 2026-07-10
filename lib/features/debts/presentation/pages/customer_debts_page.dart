@@ -13,6 +13,7 @@ import '../../domain/entities/debt_entities.dart';
 import '../../domain/usecases/debt_usecases.dart';
 import 'debt_detail_page.dart';
 import 'forgiven_debts_page.dart';
+import 'paid_debts_page.dart';
 
 class CustomerDebtsPage extends StatefulWidget {
   const CustomerDebtsPage({
@@ -36,11 +37,12 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
   List<Debt> _openDebts = const [];
   bool _loadingOpen = true;
   String? _openError;
+  int _debtsRefreshToken = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadOpenDebts();
   }
 
@@ -90,6 +92,7 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
           controller: _tabController,
           tabs: const [
             Tab(text: 'Ouvertes'),
+            Tab(text: 'Remboursées'),
             Tab(text: 'Pardonnées'),
           ],
         ),
@@ -98,6 +101,12 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
         controller: _tabController,
         children: [
           _buildOpenDebtsTab(),
+          PaidDebtsList(
+            session: widget.session,
+            customerId: widget.customerId,
+            customerName: widget.customerName,
+            refreshToken: _debtsRefreshToken,
+          ),
           ForgivenDebtsList(
             session: widget.session,
             customerId: widget.customerId,
@@ -200,6 +209,7 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
     );
     if (updated == true && mounted) {
       await _loadOpenDebts();
+      setState(() => _debtsRefreshToken++);
       if (mounted) Navigator.of(context).pop(true);
     }
   }

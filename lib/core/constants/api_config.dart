@@ -71,7 +71,7 @@ abstract final class ApiConfig {
 
   /// Durée pendant laquelle un PIN validé peut servir à réparer la session cloud
   /// (mémoire vive uniquement — jamais persisté).
-  static const recentPinProofMinutes = 3;
+  static const recentPinProofMinutes = 15;
   static const recentPinProofTtlMs = recentPinProofMinutes * 60 * 1000;
 
   /// Délai max pour un login serveur par PIN lors d'une réparation cloud.

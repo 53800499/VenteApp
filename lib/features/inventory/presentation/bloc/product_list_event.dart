@@ -15,6 +15,14 @@ class ProductListRefreshRequested extends ProductListEvent {
   const ProductListRefreshRequested();
 }
 
+class ProductListLocalRefreshRequested extends ProductListEvent {
+  const ProductListLocalRefreshRequested();
+}
+
+class ProductListSyncRefreshRequested extends ProductListEvent {
+  const ProductListSyncRefreshRequested();
+}
+
 class ProductListSearchChanged extends ProductListEvent {
   const ProductListSearchChanged(this.query);
 

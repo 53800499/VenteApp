@@ -25,13 +25,59 @@ class HelpSectionBlock extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            section.body,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              height: AppSizes.lineHeightBody,
-              color: AppColors.onSurfaceMuted,
+          if (section.body.isNotEmpty)
+            Text(
+              section.body,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                height: AppSizes.lineHeightBody,
+                color: AppColors.onSurfaceMuted,
+              ),
             ),
-          ),
+          if (section.body.isNotEmpty &&
+              (section.steps.isNotEmpty || section.bullets.isNotEmpty))
+            const SizedBox(height: AppSpacing.sm),
+          if (section.steps.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ...List.generate(section.steps.length, (index) {
+              final step = section.steps[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${index + 1}',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(
+                          step,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            height: AppSizes.lineHeightBody,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
           if (section.bullets.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             ...section.bullets.map(

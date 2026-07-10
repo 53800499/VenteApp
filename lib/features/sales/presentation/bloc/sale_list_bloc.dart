@@ -30,10 +30,10 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         super(const SaleListState()) {
     on<SaleListLoadRequested>(_onLoad);
     on<SaleListRefreshRequested>(_onRefresh);
+    on<SaleListLocalRefreshRequested>(_onLocalRefresh);
+    on<SaleListSyncRefreshRequested>(_onSyncRefresh);
     on<SaleListSearchChanged>(_onSearch);
 
-    // Recharge la liste locale à la fin de chaque cycle de sync (le pull cloud
-    // a déjà écrit les nouvelles ventes en base à ce moment).
     _syncSub = syncService?.snapshots.listen(_onSyncSnapshot);
   }
 
@@ -54,7 +54,7 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
     _lastHandledSyncAt = completedAt;
 
     if (isClosed) return;
-    add(const SaleListRefreshRequested());
+    add(const SaleListSyncRefreshRequested());
   }
 
   @override
@@ -67,21 +67,28 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
     SaleListLoadRequested event,
     Emitter<SaleListState> emit,
   ) async {
-    final keepStale = state.sales.isNotEmpty;
-    if (keepStale) {
-      emit(state.copyWith(isRefreshing: true, clearError: true));
-    } else {
-      emit(state.copyWith(status: SaleListStatus.loading, clearError: true));
-    }
-    await _fetch(emit, keepStale: keepStale, syncRemote: true);
+    await _fetch(emit, syncRemote: true);
   }
 
   Future<void> _onRefresh(
     SaleListRefreshRequested event,
     Emitter<SaleListState> emit,
   ) async {
-    emit(state.copyWith(isRefreshing: true, clearError: true));
-    await _fetch(emit, keepStale: state.sales.isNotEmpty, syncRemote: true);
+    await _fetch(emit, syncRemote: true, forceRemote: true);
+  }
+
+  Future<void> _onLocalRefresh(
+    SaleListLocalRefreshRequested event,
+    Emitter<SaleListState> emit,
+  ) async {
+    await _fetch(emit, localOnly: true);
+  }
+
+  Future<void> _onSyncRefresh(
+    SaleListSyncRefreshRequested event,
+    Emitter<SaleListState> emit,
+  ) async {
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _onSearch(
@@ -94,46 +101,70 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
           search: event.query,
           clearSearch: event.query.isEmpty,
         ),
-        isRefreshing: state.status == SaleListStatus.loaded,
       ),
     );
-    await _fetch(emit, keepStale: state.status == SaleListStatus.loaded);
+    await _fetch(emit, localOnly: true);
   }
 
   Future<void> _fetch(
     Emitter<SaleListState> emit, {
-    required bool keepStale,
     bool syncRemote = false,
+    bool forceRemote = false,
+    bool localOnly = false,
   }) async {
     try {
-      if (syncRemote &&
-          await _syncPolicy.shouldRunCloudSync(
-            shopId: _session.shop.id,
-          )) {
-        try {
-          await _repository.syncFromRemote(shopId: _session.shop.id);
-        } on Failure {
-          // Sync cloud optionnelle — afficher les ventes locales.
-        }
-      }
-
       final sales = await _listSales(
         session: _session,
         filters: state.filters,
       );
+
       emit(
         state.copyWith(
           status: SaleListStatus.loaded,
           sales: sales,
+          isRefreshing: syncRemote && !localOnly,
+          clearError: true,
+        ),
+      );
+
+      if (localOnly) {
+        return;
+      }
+
+      if (!syncRemote ||
+          !await _syncPolicy.shouldRunCloudSync(shopId: _session.shop.id)) {
+        emit(state.copyWith(isRefreshing: false));
+        return;
+      }
+
+      emit(state.copyWith(isRefreshing: true));
+
+      try {
+        await _repository.syncFromRemote(
+          shopId: _session.shop.id,
+          force: forceRemote,
+        );
+      } on Failure {
+        // Sync cloud optionnelle — conserver les ventes locales affichées.
+      }
+
+      final refreshedSales = await _listSales(
+        session: _session,
+        filters: state.filters,
+      );
+
+      emit(
+        state.copyWith(
+          status: SaleListStatus.loaded,
+          sales: refreshedSales,
           isRefreshing: false,
           clearError: true,
         ),
       );
     } on Failure catch (e) {
-      if (keepStale) {
+      if (state.status == SaleListStatus.loaded) {
         emit(
           state.copyWith(
-            status: SaleListStatus.loaded,
             isRefreshing: false,
             errorMessage: friendlyErrorMessage(e),
           ),
@@ -148,10 +179,9 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         ),
       );
     } catch (_) {
-      if (keepStale) {
+      if (state.status == SaleListStatus.loaded) {
         emit(
           state.copyWith(
-            status: SaleListStatus.loaded,
             isRefreshing: false,
             errorMessage: 'Impossible de charger les ventes.',
           ),

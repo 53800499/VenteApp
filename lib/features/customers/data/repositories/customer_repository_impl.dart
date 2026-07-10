@@ -1,6 +1,10 @@
+import 'dart:async' show unawaited;
+
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/sync/local_write_sync_recorder.dart';
+import '../../../../core/sync/sync_policy.dart';
+import '../../../../core/sync/sync_pull_entity.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../domain/entities/customer_entities.dart';
 import '../../domain/repositories/customer_repository.dart';
@@ -9,31 +13,46 @@ import '../datasources/local/customers_local_datasource.dart';
 import '../datasources/remote/customers_remote_datasource.dart';
 import '../models/customer_api_models.dart';
 import '../../../debts/data/datasources/local/debts_local_datasource.dart';
+import '../../../sales/data/datasources/local/sales_local_datasource.dart';
 
 class CustomerRepositoryImpl implements CustomerRepository {
   CustomerRepositoryImpl({
     required CustomersLocalDatasource local,
     required CustomersRemoteDatasource remote,
     required DebtsLocalDatasource debtsLocal,
+    required SalesLocalDatasource salesLocal,
     required RemoteApiGuard apiGuard,
+    required SyncPolicy syncPolicy,
     LocalWriteSyncRecorder? recorder,
     CustomerValidationService? validation,
   })  : _local = local,
         _remote = remote,
         _debtsLocal = debtsLocal,
+        _salesLocal = salesLocal,
         _apiGuard = apiGuard,
+        _syncPolicy = syncPolicy,
         _recorder = recorder,
         _validation = validation ?? const CustomerValidationService();
 
   final CustomersLocalDatasource _local;
   final CustomersRemoteDatasource _remote;
   final DebtsLocalDatasource _debtsLocal;
+  final SalesLocalDatasource _salesLocal;
   final RemoteApiGuard _apiGuard;
+  final SyncPolicy _syncPolicy;
   final LocalWriteSyncRecorder? _recorder;
   final CustomerValidationService _validation;
 
   @override
-  Future<void> syncFromRemote({required int shopId}) async {
+  Future<void> syncFromRemote({required int shopId, bool force = false}) async {
+    if (!await _syncPolicy.shouldPullEntity(
+      shopId: shopId,
+      entity: SyncPullEntity.customers,
+      force: force,
+    )) {
+      return;
+    }
+
     try {
       await _apiGuard.ensureReady();
       final remoteCustomers = await _fetchAllRemoteCustomers();
@@ -54,6 +73,10 @@ class CustomerRepositoryImpl implements CustomerRepository {
           updatedAt: remote.updatedAt,
         );
       }
+      await _syncPolicy.markEntitySynced(
+        shopId: shopId,
+        entity: SyncPullEntity.customers,
+      );
     } catch (_) {
       // Pull optionnel — la liste locale reste utilisable (offline-first).
     }
@@ -85,67 +108,157 @@ class CustomerRepositoryImpl implements CustomerRepository {
   Future<CustomerDetail> getCustomer({
     required int shopId,
     required int customerId,
+    bool force = false,
   }) async {
     final local = await _local.findCustomer(shopId, customerId);
     if (local == null) {
       throw const NotFoundFailure('Client introuvable.');
     }
 
-    List<CustomerSaleSummary>? remoteSales;
+    final detailEntity = SyncPullEntity.customerDetail(customerId);
+    final shouldPull = await _syncPolicy.shouldPullEntity(
+      shopId: shopId,
+      entity: detailEntity,
+      force: force,
+    );
 
-    try {
-      if (local.serverId != null) {
-        await _apiGuard.ensureReady();
-        final remote = await _remote.getCustomer(int.parse(local.serverId!));
-        final localShopId = remote.customer.shopId > 0
-            ? await _local.resolveLocalShopId(remote.customer.shopId)
-            : shopId;
-        await _local.upsertFromRemote(
-          shopId: localShopId,
-          remoteId: remote.customer.id,
-          name: remote.customer.name,
-          phone: remote.customer.phone,
-          address: remote.customer.address,
-          note: remote.customer.note,
-          isArchived: remote.customer.isArchived,
-          isShared: remote.customer.isShared,
-          createdAt: remote.customer.createdAt,
-          updatedAt: remote.customer.updatedAt,
-        );
-
-        for (final debt in remote.debts) {
-          await _debtsLocal.upsertFromRemote(
-            shopId: localShopId,
-            localCustomerId: customerId,
-            remote: debt,
-          );
-        }
-
-        remoteSales = remote.sales.map((s) => s.toEntity()).toList();
+    if (shouldPull && local.serverId != null) {
+      final pull = _pullCustomerDetailFromRemote(
+        shopId: shopId,
+        customerId: customerId,
+        localServerId: local.serverId!,
+        detailEntity: detailEntity,
+      );
+      if (force) {
+        await pull;
+      } else {
+        unawaited(pull);
       }
-    } catch (_) {
-      // Données locales utilisées.
     }
 
+    return _buildDetailFromLocal(shopId: shopId, customerId: customerId);
+  }
+
+  Future<CustomerDetail> _buildDetailFromLocal({
+    required int shopId,
+    required int customerId,
+  }) async {
     final refreshed = await _local.findCustomer(shopId, customerId);
-    final sales = remoteSales ??
-        await _local.listCustomerSalesLifetime(
-          shopId: shopId,
-          customerId: customerId,
-        );
+    if (refreshed == null) {
+      throw const NotFoundFailure('Client introuvable.');
+    }
+
+    final sales = await _local.listCustomerSales(
+      shopId: shopId,
+      customerId: customerId,
+    );
     final debts = await _debtsLocal.listCustomerDebts(
       shopId: shopId,
       customerId: customerId,
       openOnly: true,
     );
+    final paidDebts = await _debtsLocal.listPaidDebts(
+      shopId: shopId,
+      customerId: customerId,
+    );
+    final forgivenDebts = await _debtsLocal.listForgivenDebts(
+      shopId: shopId,
+      customerId: customerId,
+    );
 
     return CustomerDetail(
-      customer: refreshed!.copyWith(
+      customer: refreshed.copyWith(
         phoneWarning: _validation.phoneWarning(refreshed.phone),
       ),
       sales: sales,
       debts: debts,
+      paidDebts: paidDebts,
+      forgivenDebts: forgivenDebts,
     );
+  }
+
+  Future<void> _pullCustomerDetailFromRemote({
+    required int shopId,
+    required int customerId,
+    required String localServerId,
+    required String detailEntity,
+  }) async {
+    try {
+      await _apiGuard.ensureReady();
+      final remote = await _remote.getCustomer(int.parse(localServerId));
+      final localShopId = remote.customer.shopId > 0
+          ? await _local.resolveLocalShopId(remote.customer.shopId)
+          : shopId;
+      await _local.upsertFromRemote(
+        shopId: localShopId,
+        remoteId: remote.customer.id,
+        name: remote.customer.name,
+        phone: remote.customer.phone,
+        address: remote.customer.address,
+        note: remote.customer.note,
+        isArchived: remote.customer.isArchived,
+        isShared: remote.customer.isShared,
+        createdAt: remote.customer.createdAt,
+        updatedAt: remote.customer.updatedAt,
+      );
+
+      await _syncCustomerDetailBundleFromRemote(
+        shopId: localShopId,
+        customerId: customerId,
+        remote: remote,
+      );
+
+      await _syncPolicy.markEntitySynced(
+        shopId: shopId,
+        entity: detailEntity,
+      );
+    } catch (_) {
+      // Données locales conservées.
+    }
+  }
+
+  Future<void> _syncCustomerDetailBundleFromRemote({
+    required int shopId,
+    required int customerId,
+    required CustomerDetailApiDto remote,
+  }) async {
+    final userId = await _salesLocal.resolveDefaultUserId(shopId);
+    if (userId != null) {
+      for (final sale in remote.sales) {
+        await _salesLocal.upsertCustomerSaleFromRemote(
+          shopId: shopId,
+          userId: userId,
+          localCustomerId: customerId,
+          remoteId: sale.id,
+          totalAmount: sale.totalAmount,
+          status: sale.status,
+          createdAt: sale.createdAt,
+          receiptNumber: sale.receiptNumber,
+        );
+      }
+    }
+
+    for (final debt in remote.debts) {
+      await _debtsLocal.upsertFromRemote(
+        shopId: shopId,
+        localCustomerId: customerId,
+        remote: debt,
+      );
+    }
+    for (final debt in remote.paidDebts) {
+      await _debtsLocal.upsertFromRemote(
+        shopId: shopId,
+        localCustomerId: customerId,
+        remote: debt,
+      );
+    }
+    for (final debt in remote.forgivenDebts) {
+      await _debtsLocal.upsertFromRemote(
+        shopId: shopId,
+        localCustomerId: customerId,
+        remote: debt,
+      );
+    }
   }
 
   @override
@@ -156,17 +269,6 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final customer = await _local.findCustomer(shopId, customerId);
     if (customer == null) {
       throw const NotFoundFailure('Client introuvable.');
-    }
-
-    try {
-      if (customer.serverId != null) {
-        await _apiGuard.ensureReady();
-        return (await _remote.listCustomerSales(int.parse(customer.serverId!)))
-            .map((s) => s.toEntity())
-            .toList();
-      }
-    } catch (_) {
-      // Fallback local.
     }
 
     return _local.listCustomerSales(shopId: shopId, customerId: customerId);
@@ -182,19 +284,6 @@ class CustomerRepositoryImpl implements CustomerRepository {
       throw const NotFoundFailure('Client introuvable.');
     }
 
-    try {
-      if (customer.serverId != null) {
-        await _apiGuard.ensureReady();
-        final remote =
-            await _remote.listCustomerSales(int.parse(customer.serverId!));
-        if (remote.isNotEmpty) {
-          return remote.map((s) => s.toEntity()).toList();
-        }
-      }
-    } catch (_) {
-      // Fallback agrégation locale multi-boutiques.
-    }
-
     return _local.listCustomerSalesLifetime(
       shopId: shopId,
       customerId: customerId,
@@ -203,12 +292,7 @@ class CustomerRepositoryImpl implements CustomerRepository {
 
   @override
   Future<DebtorsOverview> listDebtors({required int shopId}) async {
-    try {
-      await _apiGuard.ensureReady();
-      return (await _remote.listDebtors()).toEntity();
-    } catch (_) {
-      return _local.listDebtors(shopId: shopId);
-    }
+    return _local.listDebtors(shopId: shopId);
   }
 
   @override
@@ -217,17 +301,21 @@ class CustomerRepositoryImpl implements CustomerRepository {
     required int customerId,
     required String shopName,
   }) async {
-    final detail = await getCustomer(shopId: shopId, customerId: customerId);
-    final customer = detail.customer;
+    final customer = await _local.findCustomer(shopId, customerId);
+    if (customer == null) {
+      throw const NotFoundFailure('Client introuvable.');
+    }
 
     try {
       if (customer.serverId != null) {
-        await _apiGuard.ensureReady();
-        return (await _remote.getDebtReminder(int.parse(customer.serverId!)))
-            .toEntity();
+        unawaited(_apiGuard.ensureReady().then((_) async {
+          try {
+            await _remote.getDebtReminder(int.parse(customer.serverId!));
+          } catch (_) {}
+        }));
       }
     } catch (_) {
-      // Fallback local.
+      // Message local utilisé.
     }
 
     if (customer.phone == null || customer.phone!.trim().length < 8) {
@@ -260,47 +348,30 @@ class CustomerRepositoryImpl implements CustomerRepository {
     final phone = input.phone?.trim();
     final note = input.note?.trim();
 
-    try {
-      await _apiGuard.ensureReady();
-      final remote = await _remote.createCustomer(
-        name: name,
-        phone: phone,
-        address: input.address?.trim(),
-        note: note,
-        isShared: input.isShared,
-      );
-      return _local.insertCustomer(
-        shopId: shopId,
-        name: remote.name,
-        phone: remote.phone,
-        address: remote.address,
-        note: remote.note,
-        isShared: remote.isShared,
-        serverId: '${remote.id}',
-        syncedAt: DateTime.now().millisecondsSinceEpoch,
-      );
-    } catch (_) {
-      final customer = await _local.insertCustomer(
-        shopId: shopId,
-        name: name,
-        phone: phone?.isEmpty == true ? null : phone,
-        address: input.address?.trim().isEmpty == true
-            ? null
-            : input.address?.trim(),
-        note: note?.isEmpty == true ? null : note,
-        isShared: input.isShared,
-      );
-      await _recorder?.recordCustomerCreate(
-        shopId: shopId,
-        customerId: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        address: customer.address,
-        note: customer.note,
-        isShared: customer.isShared,
-      );
-      return customer;
-    }
+    final customer = await _local.insertCustomer(
+      shopId: shopId,
+      name: name,
+      phone: phone?.isEmpty == true ? null : phone,
+      address: input.address?.trim().isEmpty == true
+          ? null
+          : input.address?.trim(),
+      note: note?.isEmpty == true ? null : note,
+      isShared: input.isShared,
+    );
+
+    await _recorder?.recordCustomerCreate(
+      shopId: shopId,
+      customerId: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      address: customer.address,
+      note: customer.note,
+      isShared: customer.isShared,
+    );
+
+    return customer.copyWith(
+      phoneWarning: _validation.phoneWarning(customer.phone),
+    );
   }
 
   @override
@@ -321,22 +392,6 @@ class CustomerRepositoryImpl implements CustomerRepository {
     _validation.assertNotArchived(existing.isArchived);
 
     if (input.name != null) _validation.assertName(input.name!);
-
-    try {
-      if (existing.serverId != null) {
-        await _apiGuard.ensureReady();
-        await _remote.updateCustomer(
-          int.parse(existing.serverId!),
-          name: input.name?.trim(),
-          phone: input.phone?.trim(),
-          address: input.address?.trim(),
-          note: input.note?.trim(),
-          isShared: input.isShared,
-        );
-      }
-    } catch (_) {
-      // Mise à jour locale maintenue.
-    }
 
     final updated = await _local.updateCustomer(
       shopId: shopId,
@@ -361,7 +416,9 @@ class CustomerRepositoryImpl implements CustomerRepository {
       version: 1,
     );
 
-    return updated;
+    return updated.copyWith(
+      phoneWarning: _validation.phoneWarning(updated.phone),
+    );
   }
 
   @override
@@ -380,15 +437,6 @@ class CustomerRepositoryImpl implements CustomerRepository {
     }
     _validation.assertNotArchived(existing.isArchived);
     _validation.assertCanArchive(existing.openDebtsCount);
-
-    try {
-      if (existing.serverId != null) {
-        await _apiGuard.ensureReady();
-        await _remote.archiveCustomer(int.parse(existing.serverId!));
-      }
-    } catch (_) {
-      // Archivage local si hors ligne.
-    }
 
     await _local.archiveCustomer(shopId: shopId, customerId: customerId);
     await _recorder?.recordCustomerArchive(

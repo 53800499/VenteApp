@@ -94,6 +94,11 @@ class SaleListItemApiDto {
     required this.totalAmount,
     required this.status,
     required this.createdAt,
+    this.customerId,
+    this.amountCash = 0,
+    this.amountMomo = 0,
+    this.amountCredit = 0,
+    this.paymentMethod,
   });
 
   final int id;
@@ -102,6 +107,11 @@ class SaleListItemApiDto {
   final int totalAmount;
   final String status;
   final int createdAt;
+  final int? customerId;
+  final int amountCash;
+  final int amountMomo;
+  final int amountCredit;
+  final String? paymentMethod;
 
   factory SaleListItemApiDto.fromJson(Map<String, dynamic> json) {
     return SaleListItemApiDto(
@@ -111,6 +121,11 @@ class SaleListItemApiDto {
       totalAmount: json['totalAmount'] as int? ?? 0,
       status: json['status'] as String? ?? 'completed',
       createdAt: json['createdAt'] as int,
+      customerId: json['customerId'] as int?,
+      amountCash: json['amountCash'] as int? ?? 0,
+      amountMomo: json['amountMomo'] as int? ?? 0,
+      amountCredit: json['amountCredit'] as int? ?? 0,
+      paymentMethod: json['paymentMethod'] as String?,
     );
   }
 }

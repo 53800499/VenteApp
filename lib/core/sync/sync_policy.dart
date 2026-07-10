@@ -1,6 +1,9 @@
+import 'package:drift/drift.dart';
+
 import '../database/app_database.dart';
 import 'app_release_tier.dart';
 import 'cloud_sync_enabler.dart';
+import 'sync_pull_entity.dart';
 
 /// Résout le comportement de sync selon V1 / V2 / V3 (SFD §13, BDD §3).
 class SyncPolicy {
@@ -41,6 +44,61 @@ class SyncPolicy {
   Future<bool> shouldRunCloudSync({required int shopId}) async {
     final context = await resolve(shopId: shopId);
     return context.shouldRunCloudPull;
+  }
+
+  /// Indique si un pull navigation doit être lancé (stale time ou [force]).
+  Future<bool> shouldPullEntity({
+    required int shopId,
+    required String entity,
+    bool force = false,
+  }) async {
+    if (force) return true;
+
+    final context = await resolve(shopId: shopId);
+    if (!context.shouldRunCloudPull) return false;
+
+    final row = await (_db.select(_db.syncEntityCache)
+          ..where(
+            (c) => c.shopId.equals(shopId) & c.entity.equals(entity),
+          ))
+        .getSingleOrNull();
+    if (row == null) return true;
+
+    final stale = SyncPullEntity.staleTimeFor(entity);
+    final lastSynced = DateTime.fromMillisecondsSinceEpoch(row.lastSyncedAt);
+    return DateTime.now().difference(lastSynced) >= stale;
+  }
+
+  Future<void> markEntitySynced({
+    required int shopId,
+    required String entity,
+  }) async {
+    await _db.into(_db.syncEntityCache).insertOnConflictUpdate(
+          SyncEntityCacheCompanion.insert(
+            shopId: shopId,
+            entity: entity,
+            lastSyncedAt: DateTime.now().millisecondsSinceEpoch,
+          ),
+        );
+  }
+
+  /// Invalide le cache pull après une écriture locale (file sync_queue).
+  Future<void> invalidateEntitiesForWrite({
+    required int shopId,
+    required String entityTable,
+    int? recordId,
+  }) async {
+    final entities = SyncPullEntity.invalidatedByWrite(
+      entityTable,
+      recordId: recordId,
+    );
+    if (entities.isEmpty) return;
+
+    await (_db.delete(_db.syncEntityCache)
+          ..where(
+            (c) => c.shopId.equals(shopId) & c.entity.isIn(entities),
+          ))
+        .go();
   }
 }
 

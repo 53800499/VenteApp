@@ -14,6 +14,7 @@ import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
 import '../../../expenses/presentation/pages/expenses_page.dart';
 import '../../../cash_sessions/presentation/pages/cash_sessions_page.dart';
 import '../../../audit/presentation/pages/audit_journal_page.dart';
+import '../../../calculators/presentation/pages/calculators_page.dart';
 import '../../../debts/presentation/pages/forgiven_debts_page.dart';
 import '../../../notifications/presentation/pages/notification_settings_page.dart';
 import '../../../sync/presentation/pages/sync_conflicts_page.dart';
@@ -81,6 +82,11 @@ class MorePage extends StatelessWidget {
 
   bool get _canManageSync => session.user.role == UserRole.owner;
 
+  bool get _canUseCalculators => PermissionGuard.can(
+        session.user.permissions,
+        Permission.calculatorsUse,
+      );
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
@@ -99,7 +105,7 @@ class MorePage extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
                 title: 'Aide & guides',
                 subtitle:
-                    'Documentation détaillée de tous les modules VenteApp',
+                    'Guides pas à pas pour chaque action de chaque module',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const HelpHubPage()),
                 ),
@@ -181,6 +187,18 @@ class MorePage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) =>
                           CashSessionsPage(session: activeSession),
+                    ),
+                  ),
+                ),
+              if (_canUseCalculators)
+                ModuleActionTile(
+                  icon: Icons.calculate_outlined,
+                  title: 'Calculateurs métiers',
+                  subtitle: 'Calculateur de carrelage, peinture, béton, etc.',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CalculatorsPage(session: activeSession),
                     ),
                   ),
                 ),

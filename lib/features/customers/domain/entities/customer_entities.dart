@@ -8,14 +8,21 @@ class CustomerDetail extends Equatable {
     required this.customer,
     required this.sales,
     required this.debts,
+    this.paidDebts = const [],
+    this.forgivenDebts = const [],
   });
 
   final Customer customer;
   final List<CustomerSaleSummary> sales;
+  /// Dettes ouvertes ou partielles.
   final List<Debt> debts;
+  /// Dettes entièrement remboursées (statut `paid`).
+  final List<Debt> paidDebts;
+  /// Dettes pardonnées (statut `forgiven`).
+  final List<ForgivenDebtEntry> forgivenDebts;
 
   @override
-  List<Object?> get props => [customer, sales, debts];
+  List<Object?> get props => [customer, sales, debts, paidDebts, forgivenDebts];
 }
 
 class Customer extends Equatable {

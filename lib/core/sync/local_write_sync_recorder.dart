@@ -40,6 +40,11 @@ class LocalWriteSyncRecorder {
       localVersion: localVersion,
       context: context,
     );
+    await _policy.invalidateEntitiesForWrite(
+      shopId: shopId,
+      entityTable: entityTable,
+      recordId: recordId,
+    );
     _onEnqueued?.call(shopId);
   }
 

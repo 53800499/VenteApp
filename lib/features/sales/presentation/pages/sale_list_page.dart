@@ -204,7 +204,7 @@ class _SaleListPageState extends State<SaleListPage> {
       ),
     );
     if (created == true && context.mounted) {
-      context.read<SaleListBloc>().add(const SaleListRefreshRequested());
+      context.read<SaleListBloc>().add(const SaleListLocalRefreshRequested());
       context.read<DashboardBloc>().add(const DashboardRefreshRequested());
     }
   }
@@ -216,7 +216,7 @@ class _SaleListPageState extends State<SaleListPage> {
       ),
     );
     if (created == true && context.mounted) {
-      context.read<SaleListBloc>().add(const SaleListRefreshRequested());
+      context.read<SaleListBloc>().add(const SaleListLocalRefreshRequested());
       context.read<DashboardBloc>().add(const DashboardRefreshRequested());
     }
   }

@@ -13,4 +13,8 @@ class LastShopStorage {
   Future<void> save(int shopId) async {
     await _prefs.setInt(_lastShopIdKey, shopId);
   }
+
+  Future<void> clear() async {
+    await _prefs.remove(_lastShopIdKey);
+  }
 }

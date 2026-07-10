@@ -8,6 +8,7 @@ class TodaySaleRow {
     required this.createdAt,
     this.customerId,
     this.customerName,
+    this.paymentMethod,
   });
 
   final int id;
@@ -18,6 +19,7 @@ class TodaySaleRow {
   final int createdAt;
   final int? customerId;
   final String? customerName;
+  final String? paymentMethod;
 }
 
 class SaleProfitRow {

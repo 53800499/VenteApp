@@ -23,6 +23,7 @@ import '../../core/security/recovery_token_service.dart';
 import '../../core/storage/api_settings_storage.dart';
 import '../../core/storage/auth_credentials_storage.dart';
 import '../../core/storage/auth_flow_storage.dart';
+import '../../core/storage/database_key_storage.dart';
 import '../../core/storage/device_id_storage.dart';
 import '../../core/storage/last_shop_storage.dart';
 import '../../core/storage/onboarding_storage.dart';
@@ -42,6 +43,11 @@ import '../../core/sync/sync_conflict_service.dart';
 import '../../core/sync/sync_queue_datasource.dart';
 import '../../core/sync/sync_queue_processor.dart';
 import '../../core/sync/sync_service.dart';
+import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
+import '../../features/calculators/data/datasources/remote/calculators_remote_datasource.dart';
+import '../../features/calculators/data/repositories/calculators_repository_impl.dart';
+import '../../features/calculators/domain/repositories/calculators_repository.dart';
+import '../../features/calculators/presentation/bloc/calculators_bloc.dart';
 import '../../features/dashboard/data/datasources/local/dashboard_local_datasource.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository_impl.dart';
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -264,6 +270,7 @@ void ensureExpensesDependencies() {
         local: sl(),
         remote: sl(),
         apiGuard: sl(),
+        syncPolicy: sl(),
         recorder: sl(),
       ),
     );
@@ -506,11 +513,12 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LastShopStorage(sl()));
   sl.registerLazySingleton(() => ApiSettingsStorage(sl()));
 
-  sl.registerLazySingleton(AppDatabase.new);
+  sl.registerLazySingleton(() => const FlutterSecureStorage());
+  sl.registerLazySingleton(() => DatabaseKeyStorage(sl()));
+  sl.registerLazySingleton(() => AppDatabase(keyStorage: sl()));
   sl.registerLazySingleton(PinHasher.new);
   sl.registerLazySingleton(() => RecoveryTokenService(sl()));
   sl.registerLazySingleton(LockoutPolicy.new);
-  sl.registerLazySingleton(() => const FlutterSecureStorage());
   sl.registerLazySingleton(() => SessionStorage(sl()));
   sl.registerLazySingleton(() => AuthCredentialsStorage(sl()));
   sl.registerLazySingleton(() => DeviceIdStorage(sl()));
@@ -563,7 +571,11 @@ Future<void> initDependencies() async {
     ),
   );
   sl.registerLazySingleton(
-    () => CloudSessionController(credentials: sl<AuthCredentialsStorage>()),
+    () => CloudSessionController(
+      credentials: sl<AuthCredentialsStorage>(),
+      apiClient: sl<ApiClient>(),
+      networkInfo: sl<NetworkInfo>(),
+    ),
   );
   sl.registerLazySingleton(
     () => RemoteApiRunner(
@@ -619,6 +631,12 @@ Future<void> initDependencies() async {
         repair.clearAwaitingState();
         if (sl.isRegistered<CloudSessionController>()) {
           sl<CloudSessionController>().refresh();
+        }
+      },
+      onSessionEnded: () async {
+        repair.clearAwaitingState();
+        if (sl.isRegistered<CloudSessionController>()) {
+          await sl<CloudSessionController>().refresh();
         }
       },
     );
@@ -752,6 +770,7 @@ Future<void> initDependencies() async {
       local: sl(),
       remote: sl(),
       apiGuard: sl(),
+      syncPolicy: sl(),
       validation: sl(),
       categoryValidation: sl(),
       recorder: sl(),
@@ -782,7 +801,9 @@ Future<void> initDependencies() async {
       local: sl(),
       remote: sl(),
       debtsLocal: sl(),
+      salesLocal: sl(),
       apiGuard: sl(),
+      syncPolicy: sl(),
       recorder: sl(),
       validation: sl(),
     ),
@@ -813,6 +834,7 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton(() => ListCustomerDebts(sl()));
   sl.registerLazySingleton(() => ListForgivenDebts(sl()));
+  sl.registerLazySingleton(() => ListPaidDebts(sl()));
   sl.registerLazySingleton(() => GetDebt(sl()));
   sl.registerLazySingleton(() => GetDebtDetail(sl()));
   sl.registerLazySingleton(() => GetDebtDetailReminder(sl()));
@@ -824,6 +846,7 @@ Future<void> initDependencies() async {
       local: sl(),
       remote: sl(),
       apiGuard: sl(),
+      syncPolicy: sl(),
       cashSessionsLocal: sl(),
       validation: sl(),
       recorder: sl(),
@@ -879,6 +902,8 @@ Future<void> initDependencies() async {
       expensesRemote: sl(),
       cashSessionsLocal: sl(),
       cashSessionsRemote: sl(),
+      calculatorsLocal: sl(),
+      calculatorsRemote: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -896,12 +921,26 @@ Future<void> initDependencies() async {
         sl<DebtsRemoteSyncAdapter>(),
         sl<ExpensesRemoteSyncAdapter>(),
         sl<CashSessionsRemoteSyncAdapter>(),
+        sl<CalculatorsRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
       activeShop: sl(),
       onServerContact: () => sl<CloudSessionController>().recordContact(),
     ),
   );
+
+  sl.registerLazySingleton(() => CalculatorsLocalDatasource(sl()));
+  sl.registerLazySingleton(() => CalculatorsRemoteDatasource(sl()));
+  sl.registerLazySingleton<CalculatorsRepository>(
+    () => CalculatorsRepositoryImpl(
+      local: sl(),
+      remote: sl(),
+      apiGuard: sl(),
+      recorder: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => CalculatorsRemoteSyncAdapter(sl<CalculatorsRepository>()));
+  sl.registerFactory(() => CalculatorsBloc(repository: sl()));
 
   sl.registerLazySingleton(LocalNotificationService.new);
   sl.registerLazySingleton(NotificationDeepLinkHandler.new);

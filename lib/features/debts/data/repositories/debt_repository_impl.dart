@@ -41,8 +41,7 @@ class DebtRepositoryImpl implements DebtRepository {
     required int shopId,
     required int customerId,
     bool openOnly = true,
-  }) async {
-    await _trySyncCustomerDebts(shopId: shopId, customerId: customerId);
+  }) {
     return _local.listCustomerDebts(
       shopId: shopId,
       customerId: customerId,
@@ -56,6 +55,17 @@ class DebtRepositoryImpl implements DebtRepository {
     int? customerId,
   }) {
     return _local.listForgivenDebts(
+      shopId: shopId,
+      customerId: customerId,
+    );
+  }
+
+  @override
+  Future<List<Debt>> listPaidDebts({
+    required int shopId,
+    int? customerId,
+  }) {
+    return _local.listPaidDebts(
       shopId: shopId,
       customerId: customerId,
     );
@@ -357,31 +367,6 @@ class DebtRepositoryImpl implements DebtRepository {
         localCustomerId: customer.id,
         remote: remote,
       );
-    }
-  }
-
-  Future<void> _trySyncCustomerDebts({
-    required int shopId,
-    required int customerId,
-  }) async {
-    try {
-      final customer = await _customersLocal.findCustomer(shopId, customerId);
-      if (customer?.serverId == null) return;
-
-      await _apiGuard.ensureReady();
-      final remoteDebts = await _remote.listDebts(
-        customerId: int.parse(customer!.serverId!),
-      );
-
-      for (final remote in remoteDebts) {
-        await _local.upsertFromRemote(
-          shopId: shopId,
-          localCustomerId: customerId,
-          remote: remote,
-        );
-      }
-    } on Failure {
-      // Données locales conservées.
     }
   }
 }

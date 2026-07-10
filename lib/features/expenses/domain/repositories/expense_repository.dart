@@ -66,7 +66,7 @@ abstract class ExpenseRepository {
     required int expenseId,
   });
 
-  Future<void> syncFromRemote({required int shopId});
+  Future<void> syncFromRemote({required int shopId, bool force = false});
 
   Future<List<Expense>> listRecurringTemplates({required int shopId});
 

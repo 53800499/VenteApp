@@ -17,6 +17,10 @@ class DebtApiDto {
     this.daysWithoutPayment = 0,
     this.lastPaymentAt,
     this.payments = const [],
+    this.forgivenAt,
+    this.forgivenReason,
+    this.forgivenByUserId,
+    this.forgivenAmount,
   });
 
   factory DebtApiDto.fromJson(Map<String, dynamic> json) {
@@ -36,6 +40,10 @@ class DebtApiDto {
       isCritical: json['isCritical'] as bool? ?? false,
       daysWithoutPayment: json['daysWithoutPayment'] as int? ?? 0,
       lastPaymentAt: json['lastPaymentAt'] as int?,
+      forgivenAt: json['forgivenAt'] as int?,
+      forgivenReason: json['forgivenReason'] as String?,
+      forgivenByUserId: json['forgivenByUserId'] as int?,
+      forgivenAmount: json['forgivenAmount'] as int?,
       payments: paymentsJson is List
           ? paymentsJson
               .whereType<Map<String, dynamic>>()
@@ -60,6 +68,10 @@ class DebtApiDto {
   final int daysWithoutPayment;
   final int? lastPaymentAt;
   final List<DebtPaymentApiDto> payments;
+  final int? forgivenAt;
+  final String? forgivenReason;
+  final int? forgivenByUserId;
+  final int? forgivenAmount;
 }
 
 class DebtPaymentApiDto {

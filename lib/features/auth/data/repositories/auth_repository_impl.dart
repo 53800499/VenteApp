@@ -37,6 +37,7 @@ import '../models/auth_api_models.dart';
 
 typedef OnlineSessionReadyCallback = void Function(int shopId);
 typedef CloudSessionRestoredCallback = void Function();
+typedef SessionEndedCallback = Future<void> Function();
 
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl({
@@ -57,6 +58,7 @@ class AuthRepositoryImpl implements AuthRepository {
     RecentPinProof? recentPinProof,
     OnlineSessionReadyCallback? onOnlineSessionReady,
     CloudSessionRestoredCallback? onCloudSessionRestored,
+    SessionEndedCallback? onSessionEnded,
     Uuid? uuid,
     SetupValidationService? setupValidation,
   })  : _db = database,
@@ -76,6 +78,7 @@ class AuthRepositoryImpl implements AuthRepository {
         _recentPinProof = recentPinProof ?? RecentPinProof(),
         _onOnlineSessionReady = onOnlineSessionReady,
         _onCloudSessionRestored = onCloudSessionRestored,
+        _onSessionEnded = onSessionEnded,
         _uuid = uuid ?? const Uuid(),
         _setupValidation = setupValidation ?? const SetupValidationService();
 
@@ -96,6 +99,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final RecentPinProof _recentPinProof;
   final OnlineSessionReadyCallback? _onOnlineSessionReady;
   final CloudSessionRestoredCallback? _onCloudSessionRestored;
+  final SessionEndedCallback? _onSessionEnded;
   final Uuid _uuid;
   final SetupValidationService _setupValidation;
 
@@ -139,28 +143,35 @@ class AuthRepositoryImpl implements AuthRepository {
       return local;
     }
 
-    if (_remote != null && await _networkInfo.isConnected) {
-      try {
-        final remote = await _remote!
-            .getLockScreen(serverShopId)
-            .timeout(
-              _onlinePinRefreshTimeout,
-              onTimeout: () =>
-                  throw const NetworkFailure(_onlinePinTimeoutMessage),
-            );
-        await _syncLockScreenFromApi(remote);
-        return _mapLockScreenDto(remote, localShopId: localShopId);
-      } on NetworkFailure {
-        rethrow;
-      } on Object {
-        throw const NetworkFailure(
-          'Impossible de charger l\'écran PIN depuis le serveur.',
-        );
+    // Pas d'utilisateurs locaux : ne jamais bloquer l'ouverture sur le réseau.
+    final fromStored = await _lockScreenFromStoredProfile(localShopId);
+    if (fromStored != null) {
+      if (_remote != null && await _networkInfo.isConnected) {
+        unawaited(_syncLockScreenFromApiInBackground(serverShopId));
       }
+      return fromStored;
     }
 
+    if (_remote != null && await _networkInfo.isConnected) {
+      unawaited(_syncLockScreenFromApiInBackground(serverShopId));
+    }
+
+    final shop = await (_db.select(_db.shops)..where((s) => s.id.equals(localShopId)))
+        .getSingleOrNull();
+    if (shop == null) {
       throw const NotFoundFailure('Boutique introuvable.');
     }
+    final settings = await (_db.select(_db.settings)
+          ..where((s) => s.shopId.equals(localShopId)))
+        .getSingleOrNull();
+
+    return LockScreenData(
+      shopId: localShopId,
+      shopName: settings?.shopName ?? shop.name,
+      shopLogoPath: settings?.shopLogoPath,
+      users: const [],
+    );
+  }
 
   Future<void> _syncLockScreenFromApiInBackground(int serverShopId) async {
     try {
@@ -1040,6 +1051,9 @@ class AuthRepositoryImpl implements AuthRepository {
 
       final session = await restoreSession();
       if (session != null && session.user.id == user.id) {
+        if (_remote != null && await _networkInfo.isConnected) {
+          unawaited(_ensureOnlineSessionAfterUnlock(localShopId));
+        }
         return session;
       }
     }
@@ -1179,7 +1193,10 @@ class AuthRepositoryImpl implements AuthRepository {
     await lockActiveSession();
     await _credentials.clear();
     _activeShop.clear();
+    _recentPinProof.clear();
+    _cloudSessionRepair?.clearAwaitingState();
     await _authFlow?.markLoggedOut();
+    await _onSessionEnded?.call();
   }
 
   @override
@@ -1589,6 +1606,8 @@ class AuthRepositoryImpl implements AuthRepository {
     LoginSuccessData result, {
     String? pin,
   }) async {
+    await _ensureCleanSlateForUserChange(result.user.id);
+
     final localUser = await _persistOnlineLoginResult(result, pin: pin);
 
     final localShopId = await _resolveLocalShopId(
@@ -2061,18 +2080,101 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<void> _clearOrphanLocalAuthData() async {
     await _sessionStorage.clear();
     await _db.transaction(() async {
+      await _db.delete(_db.syncQueue).go();
+      await _db.delete(_db.syncEntityCache).go();
       await _db.delete(_db.saleItems).go();
       await _db.delete(_db.sales).go();
       await _db.delete(_db.debts).go();
       await _db.delete(_db.stockMovements).go();
+      await _db.delete(_db.customerProductPrices).go();
       await _db.delete(_db.products).go();
       await _db.delete(_db.categories).go();
       await _db.delete(_db.customers).go();
+      await _db.delete(_db.expenseAttachments).go();
+      await _db.delete(_db.expenseHistoryEntries).go();
+      await _db.delete(_db.expenses).go();
+      await _db.delete(_db.expenseCategories).go();
+      await _db.delete(_db.categoryBudgets).go();
+      await _db.delete(_db.cashMovements).go();
+      await _db.delete(_db.cashSessions).go();
+      await _db.delete(_db.calculatorHistory).go();
+      await _db.delete(_db.calculatorProductData).go();
+      await _db.delete(_db.tenantModules).go();
+      await _db.delete(_db.auditLogs).go();
       await _db.delete(_db.authSessions).go();
       await _db.delete(_db.users).go();
       await _db.delete(_db.settings).go();
       await _db.delete(_db.shops).go();
     });
+  }
+
+  /// Changement d'utilisateur sur l'appareil : efface les données locales de
+  /// l'ancien compte avant d'importer le nouveau (flow §9).
+  Future<void> _ensureCleanSlateForUserChange(int newServerUserId) async {
+    final profile = await _credentials.getProfile();
+    if (profile != null) {
+      final previousId = profile['id'];
+      if (previousId is int && previousId != newServerUserId) {
+        await _wipeLocalDataForUserChange();
+        return;
+      }
+    }
+
+    final localUsers = await _db.select(_db.users).get();
+    if (localUsers.isEmpty) return;
+
+    final matchesNewUser = localUsers.any(
+      (user) => user.serverId == '$newServerUserId',
+    );
+    if (!matchesNewUser) {
+      await _wipeLocalDataForUserChange();
+    }
+  }
+
+  Future<void> _wipeLocalDataForUserChange() async {
+    await lockActiveSession();
+    await _credentials.clear();
+    _activeShop.clear();
+    _recentPinProof.clear();
+    await _clearOrphanLocalAuthData();
+  }
+
+  Future<LockScreenData?> _lockScreenFromStoredProfile(int localShopId) async {
+    final sessionUser = await _sessionStorage.getUser();
+    final profile = await _credentials.getProfile();
+    final userData = sessionUser ?? profile;
+    if (userData == null) return null;
+
+    final shop = await (_db.select(_db.shops)..where((s) => s.id.equals(localShopId)))
+        .getSingleOrNull();
+    if (shop == null) return null;
+
+    final settings = await (_db.select(_db.settings)
+          ..where((s) => s.shopId.equals(localShopId)))
+        .getSingleOrNull();
+
+    final localUsers = await _activeUsersForShop(localShopId);
+    if (localUsers.isNotEmpty) {
+      return _lockScreenFromLocal(localShopId);
+    }
+
+    final name = userData['name'] as String? ?? 'Utilisateur';
+    final roleCode = userData['role'] as String? ?? UserRole.owner.code;
+    final biometric = userData['biometricEnabled'] as bool? ?? false;
+
+    return LockScreenData(
+      shopId: localShopId,
+      shopName: settings?.shopName ?? shop.name,
+      shopLogoPath: settings?.shopLogoPath,
+      users: [
+        LockScreenUser(
+          id: userData['localUserId'] as int? ?? 1,
+          name: name,
+          role: UserRole.fromCode(roleCode),
+          biometricEnabled: biometric,
+        ),
+      ],
+    );
   }
 
   Future<int> _resolveServerShopId(int shopId) async {

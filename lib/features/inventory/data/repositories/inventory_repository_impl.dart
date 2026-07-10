@@ -4,6 +4,8 @@ import '../../../../core/database/app_database.dart' hide Product;
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/sync/local_write_sync_recorder.dart';
+import '../../../../core/sync/sync_policy.dart';
+import '../../../../core/sync/sync_pull_entity.dart';
 import '../../../../core/utils/time.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/repositories/inventory_repository.dart';
@@ -18,12 +20,14 @@ class InventoryRepositoryImpl implements InventoryRepository {
     required InventoryLocalDatasource local,
     InventoryRemoteDatasource? remote,
     RemoteApiGuard? apiGuard,
+    required SyncPolicy syncPolicy,
     ProductValidationService? validation,
     CategoryValidationService? categoryValidation,
     LocalWriteSyncRecorder? recorder,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
+        _syncPolicy = syncPolicy,
         _validation = validation ?? const ProductValidationService(),
         _categoryValidation = categoryValidation ?? const CategoryValidationService(),
         _recorder = recorder;
@@ -31,6 +35,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
   final InventoryLocalDatasource _local;
   final InventoryRemoteDatasource? _remote;
   final RemoteApiGuard? _apiGuard;
+  final SyncPolicy _syncPolicy;
   final ProductValidationService _validation;
   final CategoryValidationService _categoryValidation;
   final LocalWriteSyncRecorder? _recorder;
@@ -528,7 +533,15 @@ class InventoryRepositoryImpl implements InventoryRepository {
   }
 
   @override
-  Future<void> syncFromRemote({required int shopId}) async {
+  Future<void> syncFromRemote({required int shopId, bool force = false}) async {
+    if (!await _syncPolicy.shouldPullEntity(
+      shopId: shopId,
+      entity: SyncPullEntity.products,
+      force: force,
+    )) {
+      return;
+    }
+
     final remote = _remote;
     final apiGuard = _apiGuard;
     if (remote == null || apiGuard == null) {
@@ -573,5 +586,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
         updatedAt: product.updatedAt,
       );
     }
+
+    await _syncPolicy.markEntitySynced(
+      shopId: shopId,
+      entity: SyncPullEntity.products,
+    );
   }
 }

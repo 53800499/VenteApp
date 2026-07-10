@@ -317,7 +317,7 @@ class DebtsLocalDatasource {
     );
   }
 
-  Future<void> upsertFromRemote({
+  Future<int> upsertFromRemote({
     required int shopId,
     required int localCustomerId,
     required DebtApiDto remote,
@@ -333,7 +333,9 @@ class DebtsLocalDatasource {
     final existing = existingRows.isEmpty ? null : existingRows.first;
 
     final timestamp = nowMs();
+    late final int localDebtId;
     if (existing != null) {
+      localDebtId = existing.id;
       await (_db.update(_db.debts)..where((d) => d.id.equals(existing.id)))
           .write(
         db.DebtsCompanion(
@@ -349,23 +351,85 @@ class DebtsLocalDatasource {
         final duplicateIds = existingRows.skip(1).map((d) => d.id).toList();
         await (_db.delete(_db.debts)..where((d) => d.id.isIn(duplicateIds))).go();
       }
-      return;
+    } else {
+      localDebtId = await _db.into(_db.debts).insert(
+            db.DebtsCompanion.insert(
+              shopId: shopId,
+              customerId: localCustomerId,
+              saleId: Value(localSaleId),
+              originalAmount: remote.originalAmount,
+              amountPaid: Value(remote.amountPaid),
+              amountRemaining: remote.amountRemaining,
+              status: Value(remote.status),
+              createdAt: remote.createdAt,
+              dueAt: Value(remote.dueAt),
+              serverId: Value('${remote.id}'),
+              syncedAt: Value(timestamp),
+              updatedAt: Value(remote.updatedAt ?? timestamp),
+            ),
+          );
     }
 
-    await _db.into(_db.debts).insert(
-          db.DebtsCompanion.insert(
+    if (remote.status == 'forgiven') {
+      await _ensureForgivenessAuditFromRemote(
+        shopId: shopId,
+        debtId: localDebtId,
+        remote: remote,
+      );
+    }
+
+    return localDebtId;
+  }
+
+  Future<void> _ensureForgivenessAuditFromRemote({
+    required int shopId,
+    required int debtId,
+    required DebtApiDto remote,
+  }) async {
+    final existingAudit = await (_db.select(_db.auditLogs)
+          ..where(
+            (a) =>
+                a.shopId.equals(shopId) &
+                a.entityTable.equals('debts') &
+                a.entityId.equals(debtId) &
+                a.action.equals('debt_forgiven'),
+          )
+          ..limit(1))
+        .get();
+    if (existingAudit.isNotEmpty) return;
+
+    final forgivenAt = remote.forgivenAt ?? remote.updatedAt ?? nowMs();
+    final forgivenAmount = remote.forgivenAmount ??
+        (remote.originalAmount - remote.amountPaid).clamp(0, remote.originalAmount);
+    final reason = remote.forgivenReason?.trim().isNotEmpty == true
+        ? remote.forgivenReason!.trim()
+        : 'Pardon enregistré (sync cloud)';
+
+    final userId = await (_db.select(_db.users)
+          ..where((u) => u.shopId.equals(shopId))
+          ..limit(1))
+        .get()
+        .then((rows) => rows.firstOrNull?.id ?? 1);
+
+    await _db.into(_db.auditLogs).insert(
+          db.AuditLogsCompanion.insert(
             shopId: shopId,
-            customerId: localCustomerId,
-            saleId: Value(localSaleId),
-            originalAmount: remote.originalAmount,
-            amountPaid: Value(remote.amountPaid),
-            amountRemaining: remote.amountRemaining,
-            status: Value(remote.status),
-            createdAt: remote.createdAt,
-            dueAt: Value(remote.dueAt),
-            serverId: Value('${remote.id}'),
-            syncedAt: Value(timestamp),
-            updatedAt: Value(remote.updatedAt ?? timestamp),
+            userId: userId,
+            action: 'debt_forgiven',
+            module: 'debts',
+            entityId: debtId,
+            entityTable: 'debts',
+            oldValue: Value(
+              jsonEncode({
+                'status': 'open',
+                'amountRemaining': forgivenAmount,
+              }),
+            ),
+            newValue: const Value(
+              '{"status":"forgiven","amountRemaining":0}',
+            ),
+            reason: Value(reason),
+            createdAt: forgivenAt,
           ),
         );
   }
@@ -395,8 +459,10 @@ class DebtsLocalDatasource {
       final customer = await (_db.select(_db.customers)
             ..where(
               (c) => c.id.equals(row.customerId) & c.shopId.equals(shopId),
-            ))
-          .getSingleOrNull();
+            )
+            ..limit(1))
+          .get()
+          .then((rows) => rows.firstOrNull);
 
       entries.add(
         ForgivenDebtEntry(
@@ -411,6 +477,46 @@ class DebtsLocalDatasource {
       );
     }
     return entries;
+  }
+
+  Future<List<Debt>> listPaidDebts({
+    required int shopId,
+    int? customerId,
+  }) async {
+    final rows = await (_db.select(_db.debts)
+          ..where((d) {
+            var expr = d.shopId.equals(shopId) & d.status.equals('paid');
+            if (customerId != null) {
+              expr = expr & d.customerId.equals(customerId);
+            }
+            return expr;
+          })
+          ..orderBy([(d) => OrderingTerm.desc(d.updatedAt)]))
+        .get();
+
+    final debts = <Debt>[];
+    for (final row in rows) {
+      final receipt = await _receiptForSale(shopId, row.saleId);
+      final customer = customerId == null
+          ? await (_db.select(_db.customers)
+                ..where(
+                  (c) => c.id.equals(row.customerId) & c.shopId.equals(shopId),
+                )
+                ..limit(1))
+              .get()
+              .then((rows) => rows.firstOrNull)
+          : null;
+
+      debts.add(
+        DebtMapper.fromRow(
+          row,
+          receiptNumber: receipt,
+          customerName: customer?.name,
+          isCritical: false,
+        ),
+      );
+    }
+    return debts;
   }
 
   Future<DebtForgivenessInfo?> getDebtForgivenessInfo({
