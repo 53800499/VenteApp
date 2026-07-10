@@ -149,13 +149,22 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   /// Étape Installation : renvoie l'écran d'entrée si l'app n'est pas prête à
   /// déverrouiller une session, sinon `null` pour poursuivre le bootstrap.
   Future<AuthState?> _resolveInstallationStep() async {
-    if (!await _isSetupComplete()) {
+    final results = await Future.wait([
+      _isSetupComplete(),
+      _wasLoggedOut(),
+      _hasRestorableSession(),
+    ]);
+    final setupComplete = results[0];
+    final loggedOut = results[1];
+    final restorable = results[2];
+
+    if (!setupComplete) {
       return const AuthNeedsSetup();
     }
-    if (await _wasLoggedOut()) {
+    if (loggedOut) {
       return const AuthNeedsSetup(localSetupAvailable: true);
     }
-    if (!await _hasRestorableSession()) {
+    if (!restorable) {
       return const AuthNeedsSetup(localSetupAvailable: true);
     }
     return null;
@@ -622,7 +631,13 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     _appLockController.markUnlocked();
 
     // Étape Workspace — choisir le contexte de travail (≠ authentification).
-    if (await _resolveWorkspaceSelection(session, emit)) return;
+    if (await _resolveWorkspaceSelection(
+      session,
+      emit,
+      localOnly: deferCloudSync,
+    )) {
+      return;
+    }
 
     await _enterWorkspace(session, emit, deferCloudSync: deferCloudSync);
   }
@@ -635,12 +650,15 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   /// `WorkspaceBloc` dédié sans toucher à l'authentification.
   Future<bool> _resolveWorkspaceSelection(
     AuthSession session,
-    Emitter<AuthState> emit,
-  ) async {
+    Emitter<AuthState> emit, {
+    bool localOnly = false,
+  }) async {
     if (session.user.role != UserRole.owner) return false;
+    // Déverrouillage local : entrer tout de suite avec la boutique courante.
+    if (localOnly) return false;
     try {
       final shops = await _listOwnedShops().timeout(
-        const Duration(seconds: 60),
+        const Duration(seconds: 3),
         onTimeout: () => throw const NetworkFailure('Délai dépassé'),
       );
       if (shops.activeShops.length > 1) {

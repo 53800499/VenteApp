@@ -982,7 +982,10 @@ Future<void> initDependencies() async {
       appLockController: sl(),
     ),
   );
+}
 
+/// Services non critiques pour l'affichage initial (notifications, sync).
+Future<void> initDeferredServices() async {
   await sl<NotificationOrchestrator>().initialize();
   sl<SyncService>().start();
 }

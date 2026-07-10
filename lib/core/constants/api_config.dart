@@ -74,10 +74,13 @@ abstract final class ApiConfig {
   static const recentPinProofTtlMs = recentPinProofMinutes * 60 * 1000;
 
   /// Délai max pour un refresh JWT lors d'une réparation cloud (échec rapide).
-  static const cloudRefreshAttemptTimeout = Duration(seconds: 15);
+  static const cloudRefreshAttemptTimeout = Duration(seconds: 8);
 
   /// Délai max pour un login serveur par PIN lors d'une réparation cloud.
-  static const recentPinRepairTimeout = Duration(seconds: 60);
+  static const recentPinRepairTimeout = Duration(seconds: 10);
+
+  /// Délai max pour lister les boutiques depuis le cloud (hors chemin critique).
+  static const ownedShopsRemoteTimeout = Duration(seconds: 5);
 
   /// Durée de la session locale (indépendante du verrouillage PIN).
   static const localSessionMaxDays = 3650;

@@ -98,6 +98,10 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
     _authBloc.add(const AuthBootstrapRequested());
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(initDeferredServices());
+    });
+
   }
 
 

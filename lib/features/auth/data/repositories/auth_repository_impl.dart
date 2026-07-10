@@ -106,7 +106,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
   bool get _isOnlineMode => _remote != null;
 
-  static const _onlinePinRefreshTimeout = Duration(seconds: 60);
+  static const _onlinePinRefreshTimeout = Duration(seconds: 10);
   String get _onlinePinTimeoutMessage =>
       ProductionMessagePolicy.onlinePinTimeoutMessage();
 
@@ -1363,7 +1363,9 @@ class AuthRepositoryImpl implements AuthRepository {
         return _listOwnedShopsLocally();
       }
 
-      final dto = await _remote!.listOwnedShops();
+      final dto = await _remote!.listOwnedShops().timeout(
+        ApiConfig.ownedShopsRemoteTimeout,
+      );
       await _syncOwnedShopsFromApi(dto.shops);
       return OwnedShopList(
         activeShopId: dto.activeShopId,

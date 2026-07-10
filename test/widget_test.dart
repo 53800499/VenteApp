@@ -14,13 +14,14 @@ void main() {
   testWidgets('VenteApp démarre avec le splash', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     await initDependencies();
+    await initDeferredServices();
     await tester.pumpWidget(const VenteApp());
     await tester.pump();
 
     expect(find.byType(VenteApp), findsOneWidget);
     expect(find.byType(SplashPage), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 1900));
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();
     
     // Dispose the widget tree to cancel repeating background animations
