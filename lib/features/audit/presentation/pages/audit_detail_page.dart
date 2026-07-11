@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -10,6 +11,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/audit_entities.dart';
 import '../../domain/usecases/audit_usecases.dart';
 import '../services/audit_pdf_exporter.dart';
+import '../services/audit_value_presenter.dart';
 import 'audit_entity_history_page.dart';
 
 class AuditDetailPage extends StatefulWidget {
@@ -28,6 +30,8 @@ class AuditDetailPage extends StatefulWidget {
 
 class _AuditDetailPageState extends State<AuditDetailPage> {
   late Future<AuditLogDetail> _future;
+  static const _presenter = AuditValuePresenter();
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -39,10 +43,56 @@ class _AuditDetailPageState extends State<AuditDetailPage> {
     );
   }
 
+  Future<void> _exportEntry(AuditLogDetail detail) async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      await const AuditPdfExporter().sharePdf(
+        shopName: widget.session.shop.name,
+        export: AuditExportResult(
+          entries: [detail],
+          total: 1,
+          shopId: widget.session.shop.id,
+          exportedAt: DateTime.now().millisecondsSinceEpoch,
+          pdfHint: '',
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(friendlyErrorMessage(error))),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Détail audit')),
+      appBar: AppBar(
+        title: const Text('Détail audit'),
+        actions: [
+          FutureBuilder<AuditLogDetail>(
+            future: _future,
+            builder: (context, snapshot) {
+              final detail = snapshot.data;
+              if (detail == null) return const SizedBox.shrink();
+              return IconButton(
+                tooltip: 'Exporter en PDF',
+                onPressed: _exporting ? null : () => _exportEntry(detail),
+                icon: _exporting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf_outlined),
+              );
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<AuditLogDetail>(
         future: _future,
         builder: (context, snapshot) {
@@ -76,29 +126,74 @@ class _AuditDetailPageState extends State<AuditDetailPage> {
           }
 
           final detail = snapshot.data!;
+          final diffs = _presenter.diff(
+            before: detail.oldValue,
+            after: detail.newValue,
+          );
+          final hasOnlyAfter =
+              detail.oldValue == null && detail.newValue != null;
+          final hasOnlyBefore =
+              detail.oldValue != null && detail.newValue == null;
+
           return ResponsivePage(
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.md),
               children: [
-                _HeaderCard(detail: detail),
+                _HeaderCard(detail: detail, presenter: _presenter),
                 const SizedBox(height: AppSpacing.md),
                 if (detail.reason != null && detail.reason!.isNotEmpty)
                   _Section(
                     title: 'Motif',
                     child: Text(detail.reason!),
                   ),
-                if (detail.oldValue != null) ...[
+                if (diffs.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.md),
                   _Section(
-                    title: 'Valeur avant',
-                    child: _JsonView(data: detail.oldValue!),
+                    title: 'Modifications',
+                    child: _DiffList(diffs: diffs),
+                  ),
+                ] else if (hasOnlyAfter) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _Section(
+                    title: 'Données enregistrées',
+                    child: _KeyValueList(
+                      rows: _presenter.rowsFrom(detail.newValue!),
+                    ),
+                  ),
+                ] else if (hasOnlyBefore) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _Section(
+                    title: 'Données précédentes',
+                    child: _KeyValueList(
+                      rows: _presenter.rowsFrom(detail.oldValue!),
+                    ),
                   ),
                 ],
-                if (detail.newValue != null) ...[
+                if (detail.oldValue != null || detail.newValue != null) ...[
                   const SizedBox(height: AppSpacing.md),
-                  _Section(
-                    title: 'Valeur après',
-                    child: _JsonView(data: detail.newValue!),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text(
+                      'Données techniques',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    subtitle: const Text('Réservé au diagnostic'),
+                    children: [
+                      if (detail.oldValue != null)
+                        _Section(
+                          title: 'Avant (brut)',
+                          child: _JsonView(data: detail.oldValue!),
+                        ),
+                      if (detail.newValue != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        _Section(
+                          title: 'Après (brut)',
+                          child: _JsonView(data: detail.newValue!),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
@@ -114,7 +209,8 @@ class _AuditDetailPageState extends State<AuditDetailPage> {
                   ),
                   icon: const Icon(Icons.timeline_outlined),
                   label: Text(
-                    'Historique ${detail.entityTable} #${detail.entityId}',
+                    'Historique ${_presenter.entityLabel(detail.entityTable)} '
+                    '#${detail.entityId}',
                   ),
                 ),
               ],
@@ -127,9 +223,10 @@ class _AuditDetailPageState extends State<AuditDetailPage> {
 }
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.detail});
+  const _HeaderCard({required this.detail, required this.presenter});
 
   final AuditLogDetail detail;
+  final AuditValuePresenter presenter;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +257,8 @@ class _HeaderCard extends StatelessWidget {
             ),
             _MetaRow(
               icon: Icons.link,
-              label: '${detail.entityTable} #${detail.entityId}',
+              label:
+                  '${presenter.entityLabel(detail.entityTable)} #${detail.entityId}',
             ),
           ],
         ),
@@ -212,6 +310,141 @@ class _Section extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KeyValueList extends StatelessWidget {
+  const _KeyValueList({required this.rows});
+
+  final List<({String label, String value})> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return Text(
+        'Aucune donnée à afficher.',
+        style: Theme.of(context).textTheme.bodyMedium,
+      );
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const Divider(height: AppSpacing.md),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(
+                  rows[i].label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                flex: 3,
+                child: Text(
+                  rows[i].value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _DiffList extends StatelessWidget {
+  const _DiffList({required this.diffs});
+
+  final List<AuditFieldDiff> diffs;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        for (var i = 0; i < diffs.length; i++) ...[
+          if (i > 0) const Divider(height: AppSpacing.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              diffs[i].label,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          if (diffs[i].before != null)
+            _ChangeRow(
+              label: 'Avant',
+              value: diffs[i].before!,
+              color: AppColors.surface,
+              borderColor: AppColors.onSurfaceMuted.withValues(alpha: 0.25),
+            ),
+          if (diffs[i].after != null) ...[
+            const SizedBox(height: 4),
+            _ChangeRow(
+              label: 'Après',
+              value: diffs[i].after!,
+              color: AppColors.lockGradientTop,
+              borderColor: AppColors.seed.withValues(alpha: 0.25),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _ChangeRow extends StatelessWidget {
+  const _ChangeRow({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.borderColor,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: borderColor ?? AppColors.onSurfaceMuted.withValues(alpha: 0.2),
+        ),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium,
+          children: [
+            TextSpan(
+              text: '$label : ',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            TextSpan(text: value),
           ],
         ),
       ),

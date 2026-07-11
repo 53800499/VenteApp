@@ -6,9 +6,11 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../sales/presentation/pages/new_sale_page.dart';
 import '../bloc/calculators_bloc.dart';
 import '../../domain/entities/calculator_entities.dart';
 import '../../domain/calculator_registry.dart';
+import '../models/calculation_intent.dart';
 import 'tile_calculator_page.dart';
 import 'paint_calculator_page.dart';
 import 'concrete_calculator_page.dart';
@@ -339,41 +341,61 @@ class _CalculatorsView extends StatelessWidget {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  void _navigateToCalculator(BuildContext context, String type) {
-    Widget page;
-    switch (type) {
-      case 'tile':
-        page = TileCalculatorPage(session: session);
-        break;
-      case 'paint':
-        page = PaintCalculatorPage(session: session);
-        break;
-      case 'concrete':
-        page = ConcreteCalculatorPage(session: session);
-        break;
-      default:
-        return;
-    }
+  Future<void> _navigateToCalculator(BuildContext context, String type) async {
+    final bloc = context.read<CalculatorsBloc>();
+    final Widget? child = switch (type) {
+      'tile' => TileCalculatorPage(session: session),
+      'paint' => PaintCalculatorPage(session: session),
+      'concrete' => ConcreteCalculatorPage(session: session),
+      _ => null,
+    };
+    if (child == null) return;
 
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    final intent = await Navigator.of(context).push<CalculationIntent>(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(value: bloc, child: child),
+      ),
+    );
+    if (!context.mounted || intent == null) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NewSalePage(
+          session: session,
+          calculationIntent: intent,
+        ),
+      ),
+    );
   }
 
-  void _loadHistoryEntry(BuildContext context, CalculatorHistoryEntry entry) {
-    Widget page;
-    switch (entry.calculatorType) {
-      case 'tile':
-        page = TileCalculatorPage(session: session, initialHistory: entry);
-        break;
-      case 'paint':
-        page = PaintCalculatorPage(session: session, initialHistory: entry);
-        break;
-      case 'concrete':
-        page = ConcreteCalculatorPage(session: session, initialHistory: entry);
-        break;
-      default:
-        return;
-    }
+  Future<void> _loadHistoryEntry(
+    BuildContext context,
+    CalculatorHistoryEntry entry,
+  ) async {
+    final bloc = context.read<CalculatorsBloc>();
+    final Widget? child = switch (entry.calculatorType) {
+      'tile' => TileCalculatorPage(session: session, initialHistory: entry),
+      'paint' => PaintCalculatorPage(session: session, initialHistory: entry),
+      'concrete' =>
+        ConcreteCalculatorPage(session: session, initialHistory: entry),
+      _ => null,
+    };
+    if (child == null) return;
 
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+    final intent = await Navigator.of(context).push<CalculationIntent>(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(value: bloc, child: child),
+      ),
+    );
+    if (!context.mounted || intent == null) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NewSalePage(
+          session: session,
+          calculationIntent: intent,
+        ),
+      ),
+    );
   }
 }

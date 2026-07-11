@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
@@ -34,7 +34,7 @@ class AuthEntryPage extends StatelessWidget {
                 const Center(child: AppLogo(size: 88)),
                 const SizedBox(height: AppSpacing.md),
                 const PageHeader(
-                  title: 'Comment utilisez-vous VenteApp ?',
+                  title: 'Comment utilisez-vous ARIKE ?',
                   subtitle:
                       'Créez une boutique ou connectez-vous avec votre numéro WhatsApp.',
                 ),

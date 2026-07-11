@@ -1,15 +1,17 @@
-import 'dart:convert';
-
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../core/documents/pdf_theme.dart';
 import '../../../../core/utils/benin_day_range.dart';
 import '../../domain/entities/audit_entities.dart';
+import 'audit_value_presenter.dart';
 
 class AuditPdfExporter {
   const AuditPdfExporter();
+
+  static const _presenter = AuditValuePresenter();
 
   Future<void> sharePdf({
     required String shopName,
@@ -43,26 +45,52 @@ class AuditPdfExporter {
     required AuditExportResult export,
   }) {
     final doc = pw.Document();
+    final single = export.entries.length == 1;
+
     doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
         build: (context) => [
-          pw.Header(
-            level: 0,
-            child: pw.Text(
-              'Journal d\'audit — $shopName',
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-          ),
-          pw.Text(
-            'Exporté le ${_formatDateTime(export.exportedAt)} — '
-            '${export.total} entrée(s)',
-            style: const pw.TextStyle(fontSize: 10),
+          PdfTheme.headerBanner(
+            title: shopName,
+            subtitle: single
+                ? 'Détail d\'audit'
+                : 'Journal d\'audit',
+            badge: '${export.total} entrée(s)',
           ),
           pw.SizedBox(height: 12),
+          pw.Text(
+            'Exporté le ${_formatDateTime(export.exportedAt)}',
+            style: PdfTheme.subtitleStyle,
+          ),
+          pw.SizedBox(height: 16),
+          if (!single) ...[
+            PdfTheme.sectionTitle('Synthèse'),
+            PdfTheme.dataTable(
+              headers: const [
+                'Date',
+                'Action',
+                'Module',
+                'Utilisateur',
+                'Entité',
+              ],
+              columnWidths: const [1.4, 1.6, 1.1, 1.3, 1.2],
+              rows: export.entries
+                  .map(
+                    (e) => [
+                      _formatDateTime(e.createdAt),
+                      e.actionLabel,
+                      e.moduleLabel,
+                      e.userName ?? '#${e.userId}',
+                      '${_presenter.entityLabel(e.entityTable)} #${e.entityId}',
+                    ],
+                  )
+                  .toList(),
+            ),
+            pw.SizedBox(height: 20),
+            PdfTheme.sectionTitle('Détail des modifications'),
+          ],
           ...export.entries.map(_entryBlock),
           if (export.pdfHint.isNotEmpty) ...[
             pw.SizedBox(height: 16),
@@ -70,6 +98,7 @@ class AuditPdfExporter {
               export.pdfHint,
               style: pw.TextStyle(
                 fontSize: 9,
+                color: PdfTheme.textMuted,
                 fontStyle: pw.FontStyle.italic,
               ),
             ),
@@ -81,41 +110,74 @@ class AuditPdfExporter {
   }
 
   pw.Widget _entryBlock(AuditLogDetail entry) {
+    final diffs = _presenter.diff(
+      before: entry.oldValue,
+      after: entry.newValue,
+    );
+    final rows = diffs.isEmpty && entry.newValue != null
+        ? _presenter.rowsFrom(entry.newValue!)
+        : const <({String label, String value})>[];
+
     return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 10),
-      padding: const pw.EdgeInsets.all(8),
+      margin: const pw.EdgeInsets.only(bottom: 14),
+      padding: const pw.EdgeInsets.all(12),
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: PdfColors.grey300),
-        borderRadius: pw.BorderRadius.circular(4),
+        border: pw.Border.all(color: PdfTheme.border),
+        borderRadius: pw.BorderRadius.circular(8),
+        color: PdfColors.white,
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            '${entry.actionLabel} — ${entry.moduleLabel}',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            entry.actionLabel,
+            style: pw.TextStyle(
+              fontSize: 12,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfTheme.primaryDark,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            '${entry.moduleLabel} · ${_formatDateTime(entry.createdAt)}',
+            style: PdfTheme.labelStyle,
           ),
           pw.Text(
-            '${_formatDateTime(entry.createdAt)} · '
-            '${entry.userName ?? 'Utilisateur #${entry.userId}'}',
-            style: const pw.TextStyle(fontSize: 9),
+            'Par ${entry.userName ?? 'Utilisateur #${entry.userId}'} · '
+            '${_presenter.entityLabel(entry.entityTable)} #${entry.entityId}',
+            style: PdfTheme.labelStyle,
           ),
-          if (entry.reason != null && entry.reason!.isNotEmpty)
-            pw.Text('Motif : ${entry.reason}', style: const pw.TextStyle(fontSize: 9)),
-          pw.Text(
-            'Entité : ${entry.entityTable} #${entry.entityId}',
-            style: const pw.TextStyle(fontSize: 9),
-          ),
-          if (entry.oldValue != null)
-            pw.Text(
-              'Avant : ${_compactJson(entry.oldValue!)}',
-              style: const pw.TextStyle(fontSize: 8),
+          if (entry.reason != null && entry.reason!.isNotEmpty) ...[
+            pw.SizedBox(height: 6),
+            pw.Text('Motif : ${entry.reason}', style: PdfTheme.bodyStyle),
+          ],
+          if (diffs.isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            pw.Text('Modifications', style: PdfTheme.sectionTitleStyle),
+            pw.SizedBox(height: 6),
+            PdfTheme.dataTable(
+              headers: const ['Champ', 'Avant', 'Après'],
+              columnWidths: const [1.2, 1.4, 1.4],
+              rows: diffs
+                  .map(
+                    (d) => [
+                      d.label,
+                      d.before ?? '—',
+                      d.after ?? '—',
+                    ],
+                  )
+                  .toList(),
             ),
-          if (entry.newValue != null)
-            pw.Text(
-              'Après : ${_compactJson(entry.newValue!)}',
-              style: const pw.TextStyle(fontSize: 8),
+          ] else if (rows.isNotEmpty) ...[
+            pw.SizedBox(height: 10),
+            pw.Text('Données', style: PdfTheme.sectionTitleStyle),
+            pw.SizedBox(height: 6),
+            PdfTheme.dataTable(
+              headers: const ['Champ', 'Valeur'],
+              columnWidths: const [1.2, 2.8],
+              rows: rows.map((r) => [r.label, r.value]).toList(),
             ),
+          ],
         ],
       ),
     );
@@ -131,16 +193,7 @@ class AuditPdfExporter {
     final m = local.month.toString().padLeft(2, '0');
     final h = local.hour.toString().padLeft(2, '0');
     final min = local.minute.toString().padLeft(2, '0');
-    return '${local.year}-$m-$d $h:$min';
-  }
-
-  String _compactJson(Map<String, dynamic> map) {
-    try {
-      final encoded = jsonEncode(map);
-      return encoded.length > 120 ? '${encoded.substring(0, 117)}…' : encoded;
-    } catch (_) {
-      return map.toString();
-    }
+    return '$d/$m/${local.year} $h:$min';
   }
 }
 
@@ -151,5 +204,5 @@ String formatAuditDateTime(int ms) {
   final m = local.month.toString().padLeft(2, '0');
   final h = local.hour.toString().padLeft(2, '0');
   final min = local.minute.toString().padLeft(2, '0');
-  return '${local.year}-$m-$d à $h:$min';
+  return '$d/$m/${local.year} à $h:$min';
 }

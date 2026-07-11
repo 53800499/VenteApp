@@ -71,13 +71,14 @@ class CalculatorsState extends Equatable {
     List<CalculatorProductData>? configs,
     List<CalculatorHistoryEntry>? history,
     String? errorMessage,
+    bool clearError = false,
   }) {
     return CalculatorsState(
       status: status ?? this.status,
       isEnabled: isEnabled ?? this.isEnabled,
       configs: configs ?? this.configs,
       history: history ?? this.history,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );
   }
 
@@ -176,9 +177,18 @@ class CalculatorsBloc extends Bloc<CalculatorsEvent, CalculatorsState> {
     try {
       await _repo.saveCalculation(entry: event.entry);
       final history = await _repo.getHistory(shopId: event.entry.shopId);
-      emit(state.copyWith(history: history));
-    } catch (_) {
-      // Offline: sync will pick it up
+      emit(state.copyWith(
+        history: history,
+        status: 'saved',
+        clearError: true,
+      ));
+    } on Failure catch (e) {
+      emit(state.copyWith(status: 'failure', errorMessage: e.message));
+    } catch (e) {
+      emit(state.copyWith(
+        status: 'failure',
+        errorMessage: friendlyErrorMessage(e),
+      ));
     }
   }
 }

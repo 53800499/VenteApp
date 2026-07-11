@@ -7,7 +7,7 @@
 		<key>CFBundleDevelopmentRegion</key>
 		<string>fr</string>
 		<key>CFBundleDisplayName</key>
-		<string>VenteApp</string>
+		<string>ARIKE</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>VenteApp</string>
+		<string>ARIKE</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -67,7 +67,7 @@
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
 		<key>NSUserNotificationsUsageDescription</key>
-		<string>VenteApp vous envoie des alertes de stock, des rappels de dettes et des résumés quotidiens.</string>
+		<string>ARIKE vous envoie des alertes de stock, des rappels de dettes et des résumés quotidiens.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

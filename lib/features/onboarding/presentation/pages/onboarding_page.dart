@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -6,7 +6,7 @@ import '../../../../shared/components/ui_primitives.dart';
 import '../../data/onboarding_slides.dart';
 import '../widgets/onboarding_animated_slide.dart';
 
-/// Présentation immersive des modules VenteApp (première installation).
+/// Présentation immersive des modules ARIKE (première installation).
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({
     super.key,

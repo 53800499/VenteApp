@@ -58,9 +58,9 @@ class CalculatorProductPickerButton extends StatelessWidget {
               ),
               TextButton(
                 onPressed: onClear,
-                child: const Text(
+                child: Text(
                   'Détacher',
-                  style: TextStyle(color: AppColors.danger),
+                  style: TextStyle(color: AppColors.onSurfaceMuted),
                 ),
               ),
             ],

@@ -1,4 +1,4 @@
-import 'package:pdf/pdf.dart';
+﻿import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../../../core/documents/pdf_theme.dart';
@@ -141,7 +141,7 @@ class ReceiptFormatterService {
             ),
             pw.SizedBox(height: 8),
             pw.Text(
-              'VenteApp',
+              'ARIKE',
               textAlign: pw.TextAlign.center,
               style: PdfTheme.labelStyle,
             ),

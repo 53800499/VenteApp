@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -17,21 +17,14 @@ import '../features/auth/presentation/bloc/auth_bloc.dart';
 import 'di/injection_container.dart';
 
 
-class VenteApp extends StatefulWidget {
-
-  const VenteApp({super.key});
-
-
+class ArikeApp extends StatefulWidget {
+  const ArikeApp({super.key});
 
   @override
-
-  State<VenteApp> createState() => _VenteAppState();
-
+  State<ArikeApp> createState() => _ArikeAppState();
 }
 
-
-
-class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
+class _ArikeAppState extends State<ArikeApp> with WidgetsBindingObserver {
 
   late final AppSessionBloc _authBloc;
   late final CloudSessionController _cloudSession;
@@ -161,7 +154,7 @@ class _VenteAppState extends State<VenteApp> with WidgetsBindingObserver {
 
         navigatorKey: _navigatorKey,
 
-        title: 'VenteApp Bénin',
+        title: 'ARIKE',
 
         debugShowCheckedModeBanner: false,
 

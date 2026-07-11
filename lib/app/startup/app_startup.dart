@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../di/injection_container.dart';
@@ -11,5 +11,5 @@ class AppStartup {
     await initDependencies();
   }
 
-  static Widget createApp() => const VenteApp();
+  static Widget createApp() => const ArikeApp();
 }

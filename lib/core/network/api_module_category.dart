@@ -1,4 +1,4 @@
-/// Catégories de connectivité par module (règle produit VenteApp).
+﻿/// Catégories de connectivité par module (règle produit ARIKE).
 ///
 /// | Catégorie | Modules | Lecture offline | Écriture offline |
 /// |-----------|---------|-----------------|------------------|

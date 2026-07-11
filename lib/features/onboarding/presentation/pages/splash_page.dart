@@ -1,4 +1,4 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -98,7 +98,7 @@ class _SplashPageState extends State<SplashPage>
                         const AppLogo.onDark(size: 108),
                         const SizedBox(height: 28),
                         Text(
-                          'VenteApp',
+                          'ARIKE',
                           style:
                               Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     color: Colors.white,

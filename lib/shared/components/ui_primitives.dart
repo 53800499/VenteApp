@@ -37,12 +37,10 @@ class GradientBackground extends StatelessWidget {
   }
 }
 
-/// Logo de l'application : le badge circulaire avec l'icône « storefront »
-/// utilisé sur l'écran de démarrage (splash). Réutilisé partout où l'identité
-/// visuelle de l'app doit apparaître (accueil de connexion, etc.).
+/// Logo ARIKE (monogramme AK).
 ///
-/// - Variante par défaut : dégradé vert de marque + icône blanche (fond clair).
-/// - [AppLogo.onDark] : verre dépoli translucide (fond sombre, comme le splash).
+/// - Variante par défaut : logo charbon sur fond clair.
+/// - [AppLogo.onDark] : logo crème (fond sombre / splash).
 class AppLogo extends StatelessWidget {
   const AppLogo({super.key, this.size = 96}) : _onDark = false;
 
@@ -52,40 +50,44 @@ class AppLogo extends StatelessWidget {
   final double size;
   final bool _onDark;
 
+  static const _darkAsset = 'assets/images/arike_logo_dark.png';
+  static const _lightAsset = 'assets/images/arike_logo_light.png';
+
   @override
   Widget build(BuildContext context) {
-    final iconSize = size * 0.52;
+    final asset = _onDark ? _lightAsset : _darkAsset;
 
     if (_onDark) {
       return Container(
         width: size,
         height: size,
+        padding: EdgeInsets.all(size * 0.16),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white.withValues(alpha: 0.25),
-              Colors.white.withValues(alpha: 0.08),
+              Colors.white.withValues(alpha: 0.18),
+              Colors.white.withValues(alpha: 0.06),
             ],
           ),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.3),
+            color: Colors.white.withValues(alpha: 0.28),
             width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
+              color: Colors.black.withValues(alpha: 0.25),
               blurRadius: 32,
               offset: const Offset(0, 12),
             ),
           ],
         ),
-        child: Icon(
-          Icons.storefront_rounded,
-          size: iconSize,
-          color: Colors.white,
+        child: Image.asset(
+          asset,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
         ),
       );
     }
@@ -93,25 +95,26 @@ class AppLogo extends StatelessWidget {
     return Container(
       width: size,
       height: size,
+      padding: EdgeInsets.all(size * 0.14),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.heroGradientStart, AppColors.heroGradientEnd],
+        color: AppColors.surfaceCard,
+        border: Border.all(
+          color: AppColors.seed.withValues(alpha: 0.12),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.heroGradientStart.withValues(alpha: 0.3),
+            color: AppColors.seed.withValues(alpha: 0.18),
             blurRadius: 24,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Icon(
-        Icons.storefront_rounded,
-        size: iconSize,
-        color: Colors.white,
+      child: Image.asset(
+        asset,
+        fit: BoxFit.contain,
+        filterQuality: FilterQuality.high,
       ),
     );
   }
@@ -183,7 +186,11 @@ class ErrorBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: AppSizes.iconSm),
+          Icon(
+            Icons.error_outline,
+            color: colorScheme.onErrorContainer,
+            size: AppSizes.iconSm,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
@@ -215,7 +222,8 @@ class ShopAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final initial = label.isNotEmpty ? label.characters.first.toUpperCase() : '?';
+    final initial =
+        label.isNotEmpty ? label.characters.first.toUpperCase() : '?';
 
     return Container(
       padding: const EdgeInsets.all(3),

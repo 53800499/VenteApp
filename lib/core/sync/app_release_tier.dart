@@ -1,4 +1,4 @@
-/// Niveau fonctionnel VenteApp (SFD / BDD).
+﻿/// Niveau fonctionnel ARIKE (SFD / BDD).
 ///
 /// - [v1] : 100 % local, `cloudSyncEnabled = false`, une boutique
 /// - [v2] : sync cloud activée, file `sync_queue`, une boutique

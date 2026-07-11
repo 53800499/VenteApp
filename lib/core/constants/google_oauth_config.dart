@@ -1,4 +1,4 @@
-/// Configuration OAuth Google (Drive).
+﻿/// Configuration OAuth Google (Drive).
 ///
 /// Android exige un **client OAuth Web** via [serverClientId] (erreur ApiException:10
 /// sinon). Créez-le dans Google Cloud Console → Identifiants → OAuth 2.0 (Web),
@@ -9,7 +9,7 @@
 ///
 /// Important : le flag doit être `NOM=VALEUR`, pas seulement l'ID client.
 abstract final class GoogleOAuthConfig {
-  /// Client OAuth Web VenteApp (public — identique à la console Google).
+  /// Client OAuth Web ARIKE (public — identique à la console Google).
   static const defaultWebClientId =
       '102635823631-ng5d3or7895o66l3bc1qh8k8jvheic8d.apps.googleusercontent.com';
 

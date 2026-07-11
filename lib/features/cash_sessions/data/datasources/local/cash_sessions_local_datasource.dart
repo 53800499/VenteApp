@@ -474,6 +474,23 @@ class CashSessionsLocalDatasource {
     );
 
     if (existing == null) {
+      final status = json['status'] as String? ?? 'closed';
+      if (status == 'open') {
+        final pendingOpen = await (_db.select(_db.cashSessions)
+              ..where(
+                (s) =>
+                    s.shopId.equals(shopId) &
+                    s.status.equals('open') &
+                    s.serverId.isNull(),
+              ))
+            .getSingleOrNull();
+        if (pendingOpen != null) {
+          await (_db.update(_db.cashSessions)
+                ..where((s) => s.id.equals(pendingOpen.id)))
+              .write(companion);
+          return;
+        }
+      }
       await _db.into(_db.cashSessions).insert(companion);
     } else {
       await (_db.update(_db.cashSessions)

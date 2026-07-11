@@ -6,6 +6,7 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../calculators/presentation/models/calculation_intent.dart';
 import '../../../sales_analysis/domain/usecases/sales_analysis_usecases.dart';
 import '../../../sales_analysis/presentation/utils/sales_analysis_formatters.dart';
 import '../../domain/entities/sale_entities.dart';
@@ -26,10 +27,12 @@ class NewSalePage extends StatefulWidget {
     super.key,
     required this.session,
     this.conversion,
+    this.calculationIntent,
   });
 
   final AuthSession session;
   final QuickSaleConversion? conversion;
+  final CalculationIntent? calculationIntent;
 
   @override
   State<NewSalePage> createState() => _NewSalePageState();
@@ -76,6 +79,7 @@ class _NewSalePageState extends State<NewSalePage>
         customerPrices: sl(),
         convertQuickSale: sl(),
         conversion: widget.conversion,
+        calculationIntent: widget.calculationIntent,
         findOpenCashSession: sl(),
         formDraftStorage: sl(),
         session: widget.session,
@@ -144,20 +148,34 @@ class _NewSalePageState extends State<NewSalePage>
             }
           }
         },
-        child: BlocBuilder<NewSaleBloc, NewSaleState>(
-          builder: (context, state) {
-            return Scaffold(
-              resizeToAvoidBottomInset: true,
-              appBar: AppBar(
-                title: Text(
-                  widget.conversion != null
-                      ? 'Convertir en vente standard'
-                      : (_step == 0 ? 'Nouvelle vente' : 'Paiement'),
-                ),
-              ),
-              body: _buildBody(context, state),
-            );
+        child: BlocListener<NewSaleBloc, NewSaleState>(
+          listenWhen: (prev, curr) =>
+              widget.calculationIntent != null &&
+              prev.status != NewSaleStatus.ready &&
+              curr.status == NewSaleStatus.ready &&
+              curr.cart.isNotEmpty,
+          listener: (context, state) {
+            if (_tabController.index != 1) {
+              _tabController.animateTo(1);
+            }
           },
+          child: BlocBuilder<NewSaleBloc, NewSaleState>(
+            builder: (context, state) {
+              return Scaffold(
+                resizeToAvoidBottomInset: true,
+                appBar: AppBar(
+                  title: Text(
+                    widget.conversion != null
+                        ? 'Convertir en vente standard'
+                        : widget.calculationIntent != null
+                            ? 'Vente depuis calculateur'
+                            : (_step == 0 ? 'Nouvelle vente' : 'Paiement'),
+                  ),
+                ),
+                body: _buildBody(context, state),
+              );
+            },
+          ),
         ),
       ),
       ),
@@ -270,6 +288,19 @@ class _NewSalePageState extends State<NewSalePage>
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        if (widget.calculationIntent != null && widget.conversion == null)
+          Material(
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Text(
+                'Estimation : ${widget.calculationIntent!.productName} × '
+                '${widget.calculationIntent!.saleQuantity} '
+                '(prérempli dans le panier)',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
           ),

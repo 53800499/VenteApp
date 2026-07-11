@@ -6,7 +6,7 @@ class AppConstants {
   static const recentSalesLimit = 5;
   static const currencyLabel = 'FCFA';
   static const defaultLanguage = 'fr';
-  static const deviceLabel = 'VenteApp Mobile';
+  static const deviceLabel = 'ARIKE Mobile';
 
   /// Limite max des listes API (pagination serveur).
   static const apiListLimitMax = 50;

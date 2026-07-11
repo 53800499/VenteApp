@@ -20,6 +20,7 @@ import '../../domain/entities/sale_entities.dart';
 import '../../domain/entities/sale_pricing_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
 import '../../../cash_sessions/domain/usecases/cash_session_usecases.dart';
+import '../../../calculators/presentation/models/calculation_intent.dart';
 
 part 'new_sale_event.dart';
 part 'new_sale_state.dart';
@@ -35,6 +36,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     required CustomerProductPriceLocalDatasource customerPrices,
     ConvertQuickSaleToStandard? convertQuickSale,
     QuickSaleConversion? conversion,
+    CalculationIntent? calculationIntent,
     FindOpenCashSession? findOpenCashSession,
     FormDraftStorage? formDraftStorage,
   })  : _listProducts = listProducts,
@@ -45,6 +47,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         _customerPrices = customerPrices,
         _convertQuickSale = convertQuickSale,
         _conversion = conversion,
+        _calculationIntent = calculationIntent,
         _findOpenCashSession = findOpenCashSession,
         _formDrafts = formDraftStorage,
         _session = session,
@@ -73,6 +76,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
   final CustomerProductPriceLocalDatasource _customerPrices;
   final ConvertQuickSaleToStandard? _convertQuickSale;
   final QuickSaleConversion? _conversion;
+  CalculationIntent? _calculationIntent;
   final FindOpenCashSession? _findOpenCashSession;
   final FormDraftStorage? _formDrafts;
   final AuthSession _session;
@@ -137,6 +141,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         ),
         ),
       );
+      _applyCalculationIntent(emit);
     } on Failure catch (error) {
       emit(
         state.copyWith(
@@ -280,6 +285,49 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
         cart: [
           ...state.cart,
           _buildCartLine(product: event.product, quantity: addQty),
+        ],
+        clearError: true,
+      ),
+    );
+  }
+
+  void _applyCalculationIntent(Emitter<NewSaleState> emit) {
+    final intent = _calculationIntent;
+    if (intent == null) return;
+    _calculationIntent = null;
+
+    SaleProductOption? product;
+    for (final p in state.products) {
+      if (p.id == intent.productId) {
+        product = p;
+        break;
+      }
+    }
+    if (product == null) {
+      emit(
+        state.copyWith(
+          errorMessage:
+              'Produit « ${intent.productName} » introuvable dans le catalogue.',
+        ),
+      );
+      return;
+    }
+    if (product.quantityInStock <= 0) {
+      emit(
+        state.copyWith(
+          errorMessage:
+              'Stock insuffisant pour « ${product.name} ». Réapprovisionnez avant de vendre.',
+        ),
+      );
+      return;
+    }
+
+    final qty = intent.saleQuantity.clamp(1, product.quantityInStock);
+    emit(
+      state.copyWith(
+        cart: [
+          ...state.cart.where((l) => l.productId != product!.id),
+          _buildCartLine(product: product, quantity: qty),
         ],
         clearError: true,
       ),

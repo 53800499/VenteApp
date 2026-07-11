@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
@@ -27,7 +27,7 @@ const onboardingSlides = <OnboardingSlideData>[
   OnboardingSlideData(
     icon: Icons.storefront_rounded,
     accentColor: AppColors.secondary,
-    title: 'VenteApp',
+    title: 'ARIKE',
     headline: 'Votre cockpit commercial',
     description:
         'Conçu pour les boutiques au Bénin : simple, rapide et prêt pour le terrain.',

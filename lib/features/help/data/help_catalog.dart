@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../domain/entities/help_entities.dart';
 
-/// Catalogue complet du centre d'aide VenteApp.
+/// Catalogue complet du centre d'aide ARIKE.
 abstract final class HelpCatalog {
   static const categories = <HelpCategory>[
     HelpCategory(
@@ -41,7 +41,7 @@ abstract final class HelpCatalog {
     HelpArticle(
       id: 'getting_started',
       categoryId: 'start',
-      title: 'Premiers pas dans VenteApp',
+      title: 'Premiers pas dans ARIKE',
       summary:
           'Comprendre l\'interface, les 5 onglets principaux et le menu Plus.',
       icon: Icons.explore_outlined,
@@ -51,7 +51,7 @@ abstract final class HelpCatalog {
         HelpSection(
           title: 'Vue d\'ensemble',
           body:
-              'VenteApp est organisé autour de cinq onglets en bas de l\'écran '
+              'ARIKE est organisé autour de cinq onglets en bas de l\'écran '
               '(ou d\'une barre latérale sur tablette). Chaque onglet regroupe '
               'les actions les plus fréquentes de votre journée commerciale.',
           bullets: [
@@ -66,7 +66,7 @@ abstract final class HelpCatalog {
           title: 'Première connexion — pas à pas',
           body: 'Pour ouvrir l\'application la première fois :',
           steps: [
-            'Installez VenteApp et ouvrez-la.',
+            'Installez ARIKE et ouvrez-la.',
             'Connectez-vous via WhatsApp (code OTP reçu sur votre numéro).',
             'Créez votre boutique : nom, adresse, devise.',
             'Définissez un code PIN à 4 ou 6 chiffres pour verrouiller l\'app.',
@@ -90,7 +90,7 @@ abstract final class HelpCatalog {
         HelpSection(
           title: 'Travail hors ligne',
           body:
-              'VenteApp fonctionne sans internet. Une bannière indique quand vous '
+              'ARIKE fonctionne sans internet. Une bannière indique quand vous '
               'êtes hors ligne ou quand la session cloud est en pause. Vos ventes '
               'et mouvements de stock sont enregistrés localement puis synchronisés '
               'dès que la connexion revient.',
@@ -401,8 +401,7 @@ abstract final class HelpCatalog {
           body: 'Réservé au patron — pour annuler définitivement une dette :',
           steps: [
             'Ouvrez la fiche client → onglet Dettes.',
-            'Touchez la dette à pardonner.',
-            'Touchez « Pardonner la dette ».',
+            'Touchez les trois points (…) en haut de la liste de dettes et sélectionnez "Pardonner la dette".',
             'Saisissez le motif obligatoire (cadeau, perte, geste commercial…).',
             'Confirmez : la dette passe dans l\'onglet Pardonnées.',
           ],
@@ -905,7 +904,7 @@ abstract final class HelpCatalog {
           title: 'À quoi ça sert',
           body:
               'Les calculateurs aident à estimer les quantités de matériaux '
-              'pour vos chantiers ou devis, sans quitter VenteApp.',
+              'pour vos chantiers ou devis, sans quitter ARIKE.',
           tip:
               'Ces calculs n\'impactent pas votre stock — utilisez une vente classique pour facturer.',
         ),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
@@ -91,7 +91,7 @@ class _ApiSettingsPageState extends State<ApiSettingsPage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Par défaut : service cloud VenteApp.\n'
+              'Par défaut : service cloud ARIKE.\n'
               'Pour le développement, vous pouvez saisir une adresse '
               'personnalisée.',
               style: Theme.of(context).textTheme.bodySmall,

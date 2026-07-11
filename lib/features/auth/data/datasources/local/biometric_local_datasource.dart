@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart';
+﻿import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth_android/local_auth_android.dart';
 import 'package:local_auth_darwin/local_auth_darwin.dart';
@@ -32,10 +32,10 @@ class BiometricLocalDatasource {
       }
 
       return await _localAuth.authenticate(
-        localizedReason: 'Déverrouillez VenteApp avec votre empreinte',
+        localizedReason: 'Déverrouillez ARIKE avec votre empreinte',
         authMessages: const <AuthMessages>[
           AndroidAuthMessages(
-            signInTitle: 'VenteApp',
+            signInTitle: 'ARIKE',
             biometricHint: 'Posez votre doigt sur le capteur',
             biometricNotRecognized: 'Empreinte non reconnue',
             biometricRequiredTitle: 'Empreinte requise',

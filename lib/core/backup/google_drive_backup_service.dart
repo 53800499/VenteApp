@@ -1,4 +1,4 @@
-import 'package:connectivity_plus/connectivity_plus.dart';
+﻿import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
@@ -25,7 +25,7 @@ class GoogleDriveBackupService {
   static const _autoBackupKey = 'drive_auto_backup_enabled';
   static const _pendingUploadKey = 'drive_pending_upload';
   static const _folderIdKey = 'drive_folder_id';
-  static const _folderName = 'VenteApp Sauvegardes';
+  static const _folderName = 'ARIKE Sauvegardes';
 
   final List<String> _scopes;
   final GoogleSignIn _googleSignIn;
@@ -67,7 +67,7 @@ class GoogleDriveBackupService {
         if (granted != true) {
           throw StateError(
             'Autorisation Google Drive refusée. '
-            'Acceptez l\'accès aux fichiers créés par VenteApp.',
+            'Acceptez l\'accès aux fichiers créés par ARIKE.',
           );
         }
       }

@@ -35,7 +35,7 @@ class NotificationPermissionPrompter {
       builder: (ctx) => AlertDialog(
         title: const Text('Autoriser les notifications'),
         content: const Text(
-          'VenteApp peut vous alerter pour le stock faible, les rappels '
+          'ARIKE peut vous alerter pour le stock faible, les rappels '
           'de dettes et le résumé du jour — même sans connexion internet.',
         ),
         actions: [

@@ -85,7 +85,6 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
       shopId: shopId,
       sessionId: session.id,
     );
-    _pushOpenInBackground(shopId, session, input);
     return session;
   }
 
@@ -158,7 +157,6 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
         saleCount: totals.saleCount,
       ).toJson(),
     );
-    _pushCloseInBackground(shopId, closed, totals, input);
     return closed;
   }
 
@@ -188,7 +186,6 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
         note: input.note,
       ).toJson(),
     );
-    _pushMovementInBackground(shopId, sessionId, movement, input);
     return movement;
   }
 
@@ -229,108 +226,5 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
     } on Failure {
       // Offline-first
     } catch (_) {}
-  }
-
-  void _pushOpenInBackground(
-    int shopId,
-    CashSession session,
-    OpenCashSessionInput input,
-  ) {
-    final remote = _remote;
-    final guard = _apiGuard;
-    if (remote == null || guard == null) return;
-    Future(() async {
-      try {
-        await guard.ensureReady();
-        final result = await remote.openSession(
-          OpenCashSessionApiRequest(
-            openingCash: input.openingCash,
-            openingMomo: input.openingMomo,
-          ),
-        );
-        await _local.updateSessionServerSync(
-          sessionId: session.id,
-          serverId: '${result.id}',
-        );
-      } on Object {
-        // File sync_queue
-      }
-    });
-  }
-
-  void _pushCloseInBackground(
-    int shopId,
-    CashSession session,
-    CashSessionLiveTotals totals,
-    CloseCashSessionInput input,
-  ) {
-    final remote = _remote;
-    final guard = _apiGuard;
-    if (remote == null || guard == null) return;
-    Future(() async {
-      try {
-        await guard.ensureReady();
-        final serverId = await _local.findSessionServerId(shopId, session.id);
-        if (serverId == null) return;
-        await remote.closeSession(
-          int.parse(serverId),
-          CloseCashSessionApiRequest(
-            countedCash: input.countedCash,
-            countedMomo: input.countedMomo,
-            closingNote: input.closingNote,
-            ownerPin: input.ownerPin,
-            salesCash: totals.salesCash,
-            salesMomo: totals.salesMomo,
-            expensesCash: totals.expensesCash,
-            expensesMomo: totals.expensesMomo,
-            depositsCash: totals.depositsCash,
-            depositsMomo: totals.depositsMomo,
-            withdrawalsCash: totals.withdrawalsCash,
-            withdrawalsMomo: totals.withdrawalsMomo,
-            saleCount: totals.saleCount,
-          ),
-        );
-        await _local.updateSessionServerSync(
-          sessionId: session.id,
-          serverId: serverId,
-        );
-      } on Object {
-        // File sync_queue
-      }
-    });
-  }
-
-  void _pushMovementInBackground(
-    int shopId,
-    int sessionId,
-    CashMovement movement,
-    RecordCashMovementInput input,
-  ) {
-    final remote = _remote;
-    final guard = _apiGuard;
-    if (remote == null || guard == null) return;
-    Future(() async {
-      try {
-        await guard.ensureReady();
-        var serverSessionId =
-            await _local.findSessionServerId(shopId, sessionId);
-        if (serverSessionId == null) return;
-        final created = await remote.createMovement(
-          int.parse(serverSessionId),
-          CreateCashMovementApiRequest(
-            movementType: input.movementType.code,
-            registerType: input.registerType.code,
-            amount: input.amount,
-            note: input.note,
-          ),
-        );
-        await _local.updateMovementServerSync(
-          movementId: movement.id,
-          serverId: '${created.id}',
-        );
-      } on Object {
-        // File sync_queue
-      }
-    });
   }
 }

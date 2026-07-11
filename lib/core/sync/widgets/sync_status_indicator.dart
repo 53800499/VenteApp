@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
@@ -535,7 +535,7 @@ class _SyncStatusCopy {
         accent: _SyncAccent.warning,
         title: 'Synchronisation en cours',
         summary:
-            'VenteApp envoie vos dernières opérations (ventes, stock, clients…) '
+            'ARIKE envoie vos dernières opérations (ventes, stock, clients…) '
             'vers le cloud. Vous pouvez continuer à travailler pendant '
             'ce transfert.',
         steps: [

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -117,7 +117,7 @@ class _SetupPageState extends State<SetupPage> {
                         ),
                         child: const PageHeader(
                           icon: Icons.storefront_outlined,
-                          title: 'Bienvenue sur VenteApp',
+                          title: 'Bienvenue sur ARIKE',
                           subtitle:
                               'Connexion internet requise. Configurez votre boutique en quelques étapes pour commencer à vendre.',
                         ),

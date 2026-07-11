@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -963,7 +963,7 @@ class _SettingsViewState extends State<_SettingsView> {
           await SettingsFeedback.showSuccess(
             context: context,
             title: 'Sauvegarde sur Drive',
-            message: message ?? 'Fichier uploadé dans le dossier VenteApp.',
+            message: message ?? 'Fichier uploadé dans le dossier ARIKE.',
           );
           return;
         } catch (e) {
@@ -987,9 +987,9 @@ class _SettingsViewState extends State<_SettingsView> {
 
       await BackupFileSharer.share(
         file,
-        subject: 'Sauvegarde VenteApp — $shopName',
+        subject: 'Sauvegarde ARIKE — $shopName',
         text:
-            'Sauvegarde chiffrée VenteApp. Enregistrez ce fichier sur Google Drive.',
+            'Sauvegarde chiffrée ARIKE. Enregistrez ce fichier sur Google Drive.',
       );
 
       if (!context.mounted) return;

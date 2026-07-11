@@ -562,73 +562,99 @@ class SyncQueueProcessor {
         await _cashSessionsLocal.findSessionForSync(shopId, item.recordId);
     if (session == null) return true;
 
-    final serverId =
+    var serverId =
         await _cashSessionsLocal.findSessionServerId(shopId, item.recordId);
 
     switch (item.operation) {
       case SyncOperation.cashSessionOpen:
         if (serverId != null) return true;
-        final opened = await _cashSessionsRemote.openSession(
-          OpenCashSessionApiRequest(
-            openingCash: session.openingCash,
-            openingMomo: session.openingMomo,
-          ),
-        );
-        await _cashSessionsLocal.updateSessionServerSync(
-          sessionId: session.id,
-          serverId: '${opened.id}',
-        );
-        return true;
-
-      case SyncOperation.cashSessionClose:
-        var remoteId = serverId;
-        if (remoteId == null) {
+        try {
           final opened = await _cashSessionsRemote.openSession(
             OpenCashSessionApiRequest(
               openingCash: session.openingCash,
               openingMomo: session.openingMomo,
             ),
           );
-          remoteId = '${opened.id}';
           await _cashSessionsLocal.updateSessionServerSync(
             sessionId: session.id,
-            serverId: remoteId,
+            serverId: '${opened.id}',
+          );
+          return true;
+        } on ConflictFailure catch (error) {
+          if (!_isCashSessionAlreadyOpen(error)) rethrow;
+          serverId = await _linkOpenServerSession(
+            shopId: shopId,
+            localSessionId: session.id,
+          );
+          return serverId != null;
+        }
+
+      case SyncOperation.cashSessionClose:
+        serverId ??= await _linkOpenServerSession(
+          shopId: shopId,
+          localSessionId: session.id,
+        );
+        if (serverId == null) {
+          try {
+            final opened = await _cashSessionsRemote.openSession(
+              OpenCashSessionApiRequest(
+                openingCash: session.openingCash,
+                openingMomo: session.openingMomo,
+              ),
+            );
+            serverId = '${opened.id}';
+          } on ConflictFailure catch (error) {
+            if (!_isCashSessionAlreadyOpen(error)) rethrow;
+            serverId = await _linkOpenServerSession(
+              shopId: shopId,
+              localSessionId: session.id,
+            );
+            if (serverId == null) return false;
+          }
+          await _cashSessionsLocal.updateSessionServerSync(
+            sessionId: session.id,
+            serverId: serverId,
           );
         }
-        await _cashSessionsRemote.closeSession(
-          int.parse(remoteId),
-          CloseCashSessionApiRequest(
-            countedCash: (payload['countedCash'] as num?)?.toInt() ??
-                session.countedCash ??
-                0,
-            countedMomo: (payload['countedMomo'] as num?)?.toInt() ??
-                session.countedMomo ??
-                0,
-            closingNote: payload['closingNote'] as String? ?? session.closingNote,
-            ownerPin: payload['ownerPin'] as String?,
-            salesCash: (payload['salesCash'] as num?)?.toInt() ??
-                session.salesCash,
-            salesMomo: (payload['salesMomo'] as num?)?.toInt() ??
-                session.salesMomo,
-            expensesCash: (payload['expensesCash'] as num?)?.toInt() ??
-                session.expensesCash,
-            expensesMomo: (payload['expensesMomo'] as num?)?.toInt() ??
-                session.expensesMomo,
-            depositsCash: (payload['depositsCash'] as num?)?.toInt() ??
-                session.depositsCash,
-            depositsMomo: (payload['depositsMomo'] as num?)?.toInt() ??
-                session.depositsMomo,
-            withdrawalsCash: (payload['withdrawalsCash'] as num?)?.toInt() ??
-                session.withdrawalsCash,
-            withdrawalsMomo: (payload['withdrawalsMomo'] as num?)?.toInt() ??
-                session.withdrawalsMomo,
-            saleCount: (payload['saleCount'] as num?)?.toInt() ??
-                session.saleCount,
-          ),
-        );
+        try {
+          await _cashSessionsRemote.closeSession(
+            int.parse(serverId),
+            CloseCashSessionApiRequest(
+              countedCash: (payload['countedCash'] as num?)?.toInt() ??
+                  session.countedCash ??
+                  0,
+              countedMomo: (payload['countedMomo'] as num?)?.toInt() ??
+                  session.countedMomo ??
+                  0,
+              closingNote:
+                  payload['closingNote'] as String? ?? session.closingNote,
+              ownerPin: payload['ownerPin'] as String?,
+              salesCash: (payload['salesCash'] as num?)?.toInt() ??
+                  session.salesCash,
+              salesMomo: (payload['salesMomo'] as num?)?.toInt() ??
+                  session.salesMomo,
+              expensesCash: (payload['expensesCash'] as num?)?.toInt() ??
+                  session.expensesCash,
+              expensesMomo: (payload['expensesMomo'] as num?)?.toInt() ??
+                  session.expensesMomo,
+              depositsCash: (payload['depositsCash'] as num?)?.toInt() ??
+                  session.depositsCash,
+              depositsMomo: (payload['depositsMomo'] as num?)?.toInt() ??
+                  session.depositsMomo,
+              withdrawalsCash: (payload['withdrawalsCash'] as num?)?.toInt() ??
+                  session.withdrawalsCash,
+              withdrawalsMomo: (payload['withdrawalsMomo'] as num?)?.toInt() ??
+                  session.withdrawalsMomo,
+              saleCount: (payload['saleCount'] as num?)?.toInt() ??
+                  session.saleCount,
+            ),
+          );
+        } on ConflictFailure catch (error) {
+          if (!_isCashSessionAlreadyClosed(error)) rethrow;
+        }
         await _cashSessionsLocal.updateSessionServerSync(
           sessionId: session.id,
-          serverId: remoteId,
+          serverId: serverId,
         );
         return true;
 
@@ -637,6 +663,43 @@ class SyncQueueProcessor {
           'Opération caisse inconnue : ${item.operation}',
         );
     }
+  }
+
+  bool _isCashSessionAlreadyOpen(ConflictFailure error) {
+    final message = error.message.toLowerCase();
+    return message.contains('déjà ouverte') ||
+        message.contains('deja ouverte') ||
+        message.contains('already open');
+  }
+
+  bool _isCashSessionAlreadyClosed(ConflictFailure error) {
+    final message = error.message.toLowerCase();
+    return message.contains('déjà clôturée') ||
+        message.contains('deja cloturee') ||
+        message.contains('déjà cloturée') ||
+        message.contains('already closed');
+  }
+
+  Future<String?> _linkOpenServerSession({
+    required int shopId,
+    required int localSessionId,
+  }) async {
+    final remoteSessions = await _cashSessionsRemote.fetchSessions(limit: 20);
+    CashSessionApiDto? open;
+    for (final remote in remoteSessions) {
+      if (remote.status == 'open') {
+        open = remote;
+        break;
+      }
+    }
+    if (open == null) return null;
+
+    final serverId = '${open.id}';
+    await _cashSessionsLocal.updateSessionServerSync(
+      sessionId: localSessionId,
+      serverId: serverId,
+    );
+    return serverId;
   }
 
   Future<bool> _processCashMovement(

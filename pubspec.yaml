@@ -1,5 +1,5 @@
-name: venteapp
-description: "VenteApp Bénin — application de gestion commerciale offline-first."
+﻿name: venteapp
+description: "ARIKE — application de gestion commerciale offline-first."
 publish_to: 'none'
 
 version: 1.0.0+1

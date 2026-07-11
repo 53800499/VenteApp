@@ -6,6 +6,7 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/database/app_database.dart' as db;
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/action_feedback.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../bloc/calculators_bloc.dart';
 import '../../domain/entities/calculator_entities.dart';
@@ -14,7 +15,7 @@ import '../../domain/business_calculator.dart';
 import '../services/calculator_pdf_exporter.dart';
 import '../utils/calculator_form_validators.dart';
 import '../widgets/calculator_product_picker_button.dart';
-import 'tile_calculator_page.dart'; // For CalculationIntent
+import '../models/calculation_intent.dart';
 
 class ConcreteCalculatorPage extends StatefulWidget {
   const ConcreteCalculatorPage({
@@ -57,14 +58,35 @@ class _ConcreteCalculatorPageState extends State<ConcreteCalculatorPage> {
       _gravelController.text = '${inputs['gravelProportion'] ?? '800'}';
       _wasteController.text = '${inputs['wastePercent'] ?? '5'}';
       _labelController.text = widget.initialHistory!.label ?? '';
-      _calculate();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _recalculateFromInputs(validateForm: false);
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: sl<CalculatorsBloc>(),
+    return BlocListener<CalculatorsBloc, CalculatorsState>(
+      listenWhen: (prev, curr) =>
+          prev.status != curr.status ||
+          prev.errorMessage != curr.errorMessage ||
+          prev.history.length != curr.history.length,
+      listener: (context, state) {
+        if (state.status == 'saved') {
+          ActionFeedback.showSuccess(
+            context: context,
+            title: 'Estimation enregistrée',
+            message: 'L\'estimation a été sauvegardée dans l\'historique.',
+          );
+        } else if (state.status == 'failure' && state.errorMessage != null) {
+          ActionFeedback.showErrorDialog(
+            context,
+            title: 'Enregistrement impossible',
+            message: state.errorMessage!,
+          );
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.initialHistory != null
@@ -314,7 +336,7 @@ class _ConcreteCalculatorPageState extends State<ConcreteCalculatorPage> {
               ElevatedButton.icon(
                 onPressed: _injectToSale,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.secondary,
+                  backgroundColor: AppColors.seed,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(48),
                 ),
@@ -328,12 +350,15 @@ class _ConcreteCalculatorPageState extends State<ConcreteCalculatorPage> {
     );
   }
 
-  void _calculate() {
-    if (!_formKey.currentState!.validate()) {
-      setState(() {
-        _result = null;
-      });
-      return;
+  void _calculate() => _recalculateFromInputs(validateForm: true);
+
+  void _recalculateFromInputs({required bool validateForm}) {
+    if (validateForm) {
+      final form = _formKey.currentState;
+      if (form == null || !form.validate()) {
+        setState(() => _result = null);
+        return;
+      }
     }
 
     final volume = CalculatorFormValidators.parsePositiveDouble(
@@ -360,9 +385,7 @@ class _ConcreteCalculatorPageState extends State<ConcreteCalculatorPage> {
         sandProportion == null ||
         gravelProportion == null ||
         wastePercent == null) {
-      setState(() {
-        _result = null;
-      });
+      setState(() => _result = null);
       return;
     }
 
@@ -379,9 +402,7 @@ class _ConcreteCalculatorPageState extends State<ConcreteCalculatorPage> {
       unitPrice: _selectedProduct?.priceSell.toDouble(),
     );
 
-    setState(() {
-      _result = result;
-    });
+    setState(() => _result = result);
   }
 
   Future<void> _showProductSearchDialog() async {
@@ -587,8 +608,5 @@ class _ConcreteCalculatorPageState extends State<ConcreteCalculatorPage> {
     );
 
     context.read<CalculatorsBloc>().add(LogCalculationRequested(entry: entry));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Estimation enregistrée avec succès.')),
-    );
   }
 }

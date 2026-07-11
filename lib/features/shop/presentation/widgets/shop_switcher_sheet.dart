@@ -3,9 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/cloud_session_coordinator.dart';
+import '../../../../core/auth/cloud_session_repair_service.dart';
 import '../../../../core/auth/widgets/cloud_session_guard.dart';
+import '../../../../core/auth/widgets/cloud_session_pin_repair_dialog.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/storage/last_shop_storage.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -37,6 +41,13 @@ Future<bool> performShopSwitch(
     context,
     actionLabel: 'Changer de boutique',
   )) {
+    return false;
+  }
+  if (!context.mounted) return false;
+
+  // S'assurer que la session cloud est utilisable avant flush + switch.
+  // Sinon l'utilisateur voit « session en ligne expirée » sans comprendre pourquoi.
+  if (!await _ensureCloudReadyForShopSwitch(context)) {
     return false;
   }
   if (!context.mounted) return false;
@@ -98,6 +109,48 @@ Future<bool> performShopSwitch(
         syncService.resumeSync();
       }
     }
+  }
+}
+
+/// Répare / rafraîchit la session cloud avant un switch boutique.
+Future<bool> _ensureCloudReadyForShopSwitch(BuildContext context) async {
+  final repair = sl<CloudSessionRepairService>();
+  try {
+    await sl<RemoteApiGuard>().ensureReady(
+      timeout: const Duration(seconds: 20),
+    );
+    repair.clearAwaitingState();
+    sl<CloudSessionCoordinator>().markCloudSessionValid();
+    return true;
+  } on CloudReconnectRequiredFailure {
+    if (!context.mounted) return false;
+    final restored = await showCloudSessionPinRepairDialog(context);
+    if (restored) return true;
+    if (!context.mounted) return false;
+    await ShopFeedback.showErrorDialog(
+      context,
+      title: 'Session cloud requise',
+      message:
+          'Pour changer de boutique, saisissez votre PIN afin de rétablir '
+          'la session en ligne, puis réessayez.',
+    );
+    return false;
+  } on Failure catch (e) {
+    if (!context.mounted) return false;
+    await ShopFeedback.showErrorDialog(
+      context,
+      title: 'Changement impossible',
+      message: friendlyErrorMessage(e),
+    );
+    return false;
+  } catch (error) {
+    if (!context.mounted) return false;
+    await ShopFeedback.showErrorDialog(
+      context,
+      title: 'Changement impossible',
+      message: friendlyErrorMessage(error),
+    );
+    return false;
   }
 }
 
