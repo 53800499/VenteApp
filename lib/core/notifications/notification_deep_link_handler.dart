@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/procurement/presentation/utils/procurement_navigation.dart';
 import '../../features/auth/domain/entities/auth_entities.dart';
 import '../../features/customers/presentation/pages/customer_detail_page.dart';
 import '../../features/inventory/presentation/pages/product_list_page.dart';
@@ -41,6 +42,24 @@ class NotificationDeepLinkHandler {
           ),
         );
       }
+      return;
+    }
+
+    if (deepLink.startsWith('/procurement/invoices/')) {
+      final id = int.tryParse(deepLink.split('/').last);
+      if (id != null) {
+        openInvoiceDetailPage(context, session, invoiceId: id);
+      }
+      return;
+    }
+
+    if (deepLink.startsWith('/procurement/invoices')) {
+      openProcurementPage(context, session, initialTab: 3);
+      return;
+    }
+
+    if (deepLink.startsWith('/procurement')) {
+      openProcurementPage(context, session);
       return;
     }
 

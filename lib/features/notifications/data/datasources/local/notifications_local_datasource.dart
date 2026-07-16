@@ -383,4 +383,96 @@ class NotificationsLocalDatasource {
 
     return SyncConflictSummary(count: entities.length, entities: entities);
   }
+
+  Future<List<ProcurementOverdueOrder>> loadOverduePurchaseOrders(int shopId) async {
+    final now = nowMs();
+    final rows = await _database.customSelect(
+      '''
+      SELECT po.id, po.number, COALESCE(s.name, 'Fournisseur') AS supplier_name
+      FROM purchase_orders po
+      LEFT JOIN suppliers s ON s.id = po.supplier_id
+      WHERE po.shop_id = ?
+        AND po.status IN ('validated', 'sent', 'partially_received')
+        AND po.expected_at IS NOT NULL
+        AND po.expected_at < ?
+      ORDER BY po.expected_at ASC
+      LIMIT 10
+      ''',
+      variables: [Variable.withInt(shopId), Variable.withInt(now)],
+      readsFrom: {_database.purchaseOrders, _database.suppliers},
+    ).get();
+
+    return rows
+        .map(
+          (row) => ProcurementOverdueOrder(
+            poId: row.read<int>('id'),
+            number: row.read<String>('number'),
+            supplierName: row.read<String>('supplier_name'),
+          ),
+        )
+        .toList();
+  }
+
+  Future<List<ProcurementOverdueInvoice>> loadOverdueSupplierInvoices(
+    int shopId,
+  ) async {
+    final now = nowMs();
+    final rows = await _database.customSelect(
+      '''
+      SELECT i.id, i.invoice_number, i.total,
+        COALESCE((
+          SELECT SUM(p.amount) FROM supplier_payments p
+          WHERE p.invoice_id = i.id AND p.shop_id = i.shop_id
+        ), 0) AS paid
+      FROM supplier_invoices i
+      WHERE i.shop_id = ?
+        AND i.status != 'paid'
+        AND i.due_date IS NOT NULL
+        AND i.due_date < ?
+      ORDER BY i.due_date ASC
+      LIMIT 10
+      ''',
+      variables: [Variable.withInt(shopId), Variable.withInt(now)],
+      readsFrom: {_database.supplierInvoices, _database.supplierPayments},
+    ).get();
+
+    return rows
+        .map((row) {
+          final total = row.read<int>('total');
+          final paid = row.read<int>('paid');
+          final due = total - paid;
+          if (due <= 0) return null;
+          return ProcurementOverdueInvoice(
+            invoiceId: row.read<int>('id'),
+            invoiceNumber: row.read<String>('invoice_number'),
+            amountDue: due,
+          );
+        })
+        .whereType<ProcurementOverdueInvoice>()
+        .toList();
+  }
+}
+
+class ProcurementOverdueOrder {
+  const ProcurementOverdueOrder({
+    required this.poId,
+    required this.number,
+    required this.supplierName,
+  });
+
+  final int poId;
+  final String number;
+  final String supplierName;
+}
+
+class ProcurementOverdueInvoice {
+  const ProcurementOverdueInvoice({
+    required this.invoiceId,
+    required this.invoiceNumber,
+    required this.amountDue,
+  });
+
+  final int invoiceId;
+  final String invoiceNumber;
+  final int amountDue;
 }

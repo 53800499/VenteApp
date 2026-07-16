@@ -23,6 +23,7 @@ import '../../../users/presentation/pages/user_list_page.dart';
 import '../../../rbac/presentation/pages/roles_catalog_page.dart';
 import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
+import '../../../procurement/presentation/pages/procurement_page.dart';
 import 'shop_list_page.dart';
 
 class MorePage extends StatelessWidget {
@@ -74,6 +75,11 @@ class MorePage extends StatelessWidget {
   bool get _canViewExpenses => PermissionGuard.can(
         session.user.permissions,
         Permission.expensesRead,
+      );
+
+  bool get _canViewProcurement => PermissionGuard.can(
+        session.user.permissions,
+        Permission.procurementRead,
       );
 
   bool get _canViewCashSessions => PermissionGuard.can(
@@ -176,6 +182,17 @@ class MorePage extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ExpensesPage(session: activeSession),
+                    ),
+                  ),
+                ),
+              if (_canViewProcurement)
+                ModuleActionTile(
+                  icon: Icons.local_shipping_outlined,
+                  title: 'Approvisionnement',
+                  subtitle: 'Commandes fournisseurs, réceptions et stocks',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProcurementPage(session: activeSession),
                     ),
                   ),
                 ),

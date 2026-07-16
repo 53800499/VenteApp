@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 
 import '../storage/database_key_storage.dart';
 import '../utils/time.dart';
+import '../../features/inventory/data/datasources/local/inventory_lot_local_datasource.dart';
 import 'encrypted_database_opener.dart';
 import 'tables/auth_tables.dart';
 import 'tables/commerce_tables.dart';
@@ -10,6 +11,9 @@ import 'tables/expense_tables.dart';
 import 'tables/notification_tables.dart';
 import 'tables/sync_tables.dart';
 import 'tables/calculator_tables.dart';
+import 'tables/purchase_tables.dart';
+import 'tables/inventory_lot_tables.dart';
+import 'tables/product_pricing_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -40,6 +44,17 @@ part 'app_database.g.dart';
   CalculatorProductData,
   CalculatorHistory,
   SyncEntityCache,
+  Suppliers,
+  PurchaseOrders,
+  PurchaseOrderItems,
+  PurchaseReceipts,
+  PurchaseReceiptItems,
+  SupplierInvoices,
+  SupplierPayments,
+  PurchaseOrderHistoryEntries,
+  InventoryLots,
+  SaleItemLotAllocations,
+  ProductPriceHistory,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase({required DatabaseKeyStorage keyStorage})
@@ -48,7 +63,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 20;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -165,6 +180,30 @@ class AppDatabase extends _$AppDatabase {
           if (from < 20) {
             await m.createTable(syncEntityCache);
           }
+          if (from < 21) {
+            await m.createTable(suppliers);
+            await m.createTable(purchaseOrders);
+            await m.createTable(purchaseOrderItems);
+            await m.createTable(purchaseReceipts);
+            await m.createTable(purchaseReceiptItems);
+            await m.createTable(supplierInvoices);
+            await m.createTable(supplierPayments);
+            await m.createTable(purchaseOrderHistoryEntries);
+          }
+          if (from < 22) {
+            await m.createTable(inventoryLots);
+            await m.createTable(saleItemLotAllocations);
+            await _backfillInventoryLots(this);
+          }
+          if (from < 23) {
+            await _migrateDirectProcurementReceipts(this);
+          }
+          if (from < 24) {
+            await _addColumnIfMissing(m, products, products.pricingMode);
+            await _addColumnIfMissing(m, products, products.marginValue);
+            await m.createTable(productPriceHistory);
+            await _backfillProductPriceHistory(this);
+          }
         },
       );
 
@@ -193,6 +232,119 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+}
+
+Future<void> _backfillProductPriceHistory(AppDatabase db) async {
+  final products = await db.select(db.products).get();
+  final timestamp = nowMs();
+  for (final product in products) {
+    if (product.priceSell <= 0) continue;
+    await db.into(db.productPriceHistory).insert(
+          ProductPriceHistoryCompanion.insert(
+            shopId: product.shopId,
+            productId: product.id,
+            unitCost: Value(product.priceBuy),
+            priceSell: product.priceSell,
+            reason: 'migration',
+            createdAt: product.updatedAt > 0 ? product.updatedAt : timestamp,
+          ),
+        );
+  }
+}
+
+Future<void> _backfillInventoryLots(AppDatabase db) async {
+  final shops = await db.select(db.shops).get();
+  final lotDs = InventoryLotLocalDatasource(db);
+  for (final shop in shops) {
+    await lotDs.backfillInitialLotsForShop(shop.id);
+  }
+}
+
+Future<void> _migrateDirectProcurementReceipts(AppDatabase db) async {
+  await db.customStatement('''
+    CREATE TABLE IF NOT EXISTS purchase_receipts_new (
+      id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL REFERENCES shops(id),
+      purchase_order_id INTEGER REFERENCES purchase_orders(id),
+      supplier_id INTEGER NOT NULL REFERENCES suppliers(id),
+      receipt_type TEXT NOT NULL DEFAULT 'from_order',
+      receipt_number TEXT NOT NULL,
+      received_at INTEGER NOT NULL,
+      received_by INTEGER NOT NULL REFERENCES users(id),
+      notes TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      server_id TEXT,
+      synced_at INTEGER,
+      sync_status TEXT
+    )
+  ''');
+
+  await db.customStatement('''
+    INSERT INTO purchase_receipts_new (
+      id, shop_id, purchase_order_id, supplier_id, receipt_type,
+      receipt_number, received_at, received_by, notes, version,
+      server_id, synced_at, sync_status
+    )
+    SELECT
+      r.id,
+      r.shop_id,
+      r.purchase_order_id,
+      COALESCE(
+        (SELECT po.supplier_id FROM purchase_orders po WHERE po.id = r.purchase_order_id),
+        (SELECT s.id FROM suppliers s WHERE s.shop_id = r.shop_id LIMIT 1)
+      ),
+      'from_order',
+      r.receipt_number,
+      r.received_at,
+      r.received_by,
+      r.notes,
+      r.version,
+      r.server_id,
+      r.synced_at,
+      r.sync_status
+    FROM purchase_receipts r
+  ''');
+
+  await db.customStatement('DROP TABLE purchase_receipts');
+  await db.customStatement(
+    'ALTER TABLE purchase_receipts_new RENAME TO purchase_receipts',
+  );
+
+  await db.customStatement('''
+    CREATE TABLE IF NOT EXISTS purchase_receipt_items_new (
+      id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      shop_id INTEGER NOT NULL REFERENCES shops(id),
+      purchase_receipt_id INTEGER NOT NULL REFERENCES purchase_receipts(id),
+      purchase_order_item_id INTEGER REFERENCES purchase_order_items(id),
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      quantity_received INTEGER NOT NULL,
+      unit_cost INTEGER NOT NULL,
+      batch_number TEXT,
+      expiry_date INTEGER,
+      version INTEGER NOT NULL DEFAULT 1,
+      server_id TEXT,
+      synced_at INTEGER,
+      sync_status TEXT
+    )
+  ''');
+
+  await db.customStatement('''
+    INSERT INTO purchase_receipt_items_new (
+      id, shop_id, purchase_receipt_id, purchase_order_item_id, product_id,
+      quantity_received, unit_cost, batch_number, expiry_date, version,
+      server_id, synced_at, sync_status
+    )
+    SELECT
+      id, shop_id, purchase_receipt_id, purchase_order_item_id, product_id,
+      quantity_received, unit_cost, batch_number, expiry_date, version,
+      server_id, synced_at, sync_status
+    FROM purchase_receipt_items
+  ''');
+
+  await db.customStatement('DROP TABLE purchase_receipt_items');
+  await db.customStatement(
+    'ALTER TABLE purchase_receipt_items_new RENAME TO purchase_receipt_items',
+  );
 }
 
 Future<void> _seedDefaultCategories(AppDatabase db) async {

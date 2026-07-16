@@ -10,10 +10,12 @@ class ProductCard extends StatelessWidget {
     super.key,
     required this.product,
     this.onTap,
+    this.trailing,
   });
 
   final Product product;
   final VoidCallback? onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +74,7 @@ class ProductCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  if (trailing != null) trailing!,
                   Text(
                     formatFcfa(product.priceSell),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(

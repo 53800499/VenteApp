@@ -5,12 +5,15 @@ import '../../../../../core/database/app_database.dart';
 import '../../../../../core/utils/time.dart';
 import '../../../domain/entities/inventory_entities.dart'
     show ProductCategory, ProductListFilters, ProductSort;
+import '../../../domain/entities/product_pricing_entities.dart';
 import '../../mappers/product_mapper.dart';
 
 class InventoryLocalDatasource {
   InventoryLocalDatasource(this._db);
 
   final AppDatabase _db;
+
+  AppDatabase get database => _db;
 
   Future<int> getDefaultAlertThreshold(int shopId) async {
     final rows = await (_db.select(_db.settings)
@@ -244,6 +247,8 @@ class InventoryLocalDatasource {
     required int priceSell,
     int? priceSemiWholesale,
     int? priceWholesale,
+    ProductPricingMode pricingMode = ProductPricingMode.manual,
+    int? marginValue,
   }) async {
     final timestamp = nowMs();
     return _db.into(_db.products).insert(
@@ -258,6 +263,8 @@ class InventoryLocalDatasource {
             priceSell: priceSell,
             priceSemiWholesale: Value(priceSemiWholesale),
             priceWholesale: Value(priceWholesale),
+            pricingMode: Value(pricingMode.toDb()),
+            marginValue: Value(marginValue),
             createdAt: timestamp,
             updatedAt: timestamp,
           ),
@@ -484,6 +491,20 @@ class InventoryLocalDatasource {
           )
           ..orderBy([(p) => OrderingTerm.asc(p.id)]))
         .get();
+  }
+
+  Future<int?> findLocalProductIdByServerId(int shopId, String serverId) async {
+    final rows = await _findProductsByServerId(shopId, serverId);
+    return rows.firstOrNull?.id;
+  }
+
+  Future<int?> findLocalReceiptItemIdByServerId(int shopId, String serverId) async {
+    final row = await (_db.select(_db.purchaseReceiptItems)
+          ..where(
+            (r) => r.shopId.equals(shopId) & r.serverId.equals(serverId),
+          ))
+        .getSingleOrNull();
+    return row?.id;
   }
 
   Future<List<Product>> _findPendingLocalProduct({

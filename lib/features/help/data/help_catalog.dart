@@ -251,7 +251,7 @@ abstract final class HelpCatalog {
           steps: [
             'Ouvrez l\'onglet Stock.',
             'Touchez le bouton + (Nouveau produit).',
-            'Saisissez le nom, le prix de vente et le coût d\'achat (pour les marges).',
+            'Saisissez le nom, le prix de vente et le prix d\'achat (pour les marges).',
             'Choisissez ou créez une catégorie (ex. Boissons, Épicerie).',
             'Indiquez la quantité en stock et le seuil d\'alerte.',
             'Ajoutez une photo optionnelle.',

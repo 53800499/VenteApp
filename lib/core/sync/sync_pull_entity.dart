@@ -7,6 +7,8 @@ abstract final class SyncPullEntity {
   static const expenses = 'expenses';
   static const cashSessions = 'cash_sessions';
   static const calculators = 'calculators';
+  static const procurement = 'procurement';
+  static const inventoryLots = 'inventory_lots';
 
   /// Détail d'un client (pull ciblé GET /customers/:id).
   static String customerDetail(int customerId) => 'customer_detail:$customerId';
@@ -20,6 +22,7 @@ abstract final class SyncPullEntity {
       sales => const Duration(minutes: 2),
       debts => const Duration(minutes: 2),
       cashSessions => const Duration(minutes: 1),
+      procurement => const Duration(minutes: 5),
       _ => const Duration(minutes: 5),
     };
   }
@@ -35,7 +38,7 @@ abstract final class SyncPullEntity {
         return entities;
       case 'categories':
       case 'products':
-        return [products];
+        return [products, inventoryLots];
       case 'sales':
         return [sales, customers, debts];
       case 'debts':
@@ -53,6 +56,12 @@ abstract final class SyncPullEntity {
       case 'calculator_product_data':
       case 'calculator_history':
         return [calculators];
+      case 'suppliers':
+      case 'purchase_orders':
+      case 'purchase_receipts':
+      case 'supplier_invoices':
+      case 'supplier_payments':
+        return [procurement, inventoryLots, products];
       default:
         return const [];
     }

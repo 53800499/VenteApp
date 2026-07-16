@@ -11,6 +11,7 @@ import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
+import '../../domain/entities/product_pricing_entities.dart';
 import '../../domain/usecases/inventory_usecases.dart';
 import '../../../settings/data/datasources/local/settings_local_datasource.dart';
 import '../widgets/inventory_feedback.dart';
@@ -70,6 +71,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
   String? _errorMessage;
   bool _draftRestored = false;
   bool _submittedSuccessfully = false;
+  ProductPricingMode _pricingMode = ProductPricingMode.manual;
+  final _marginValueController = TextEditingController();
   late final String _draftKey;
 
   @override
@@ -92,6 +95,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
       }
       if (product.priceBuy != null) {
         _priceBuyController.text = '${product.priceBuy}';
+      }
+      _pricingMode = product.pricingMode;
+      if (product.marginValue != null) {
+        _marginValueController.text = product.pricingMode ==
+                ProductPricingMode.percentageMargin
+            ? '${product.marginValue! ~/ 100}'
+            : '${product.marginValue}';
       }
       _alertThresholdController.text = '${product.alertThreshold}';
       _categoryId = product.categoryId;
@@ -284,6 +294,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     _priceSemiWholesaleController.dispose();
     _priceWholesaleController.dispose();
     _priceBuyController.dispose();
+    _marginValueController.dispose();
     _quantityController.dispose();
     _alertThresholdController.dispose();
 
@@ -305,6 +316,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
   }
 
   int? _parseInt(String value) => int.tryParse(value.trim());
+
+  int? _parseMarginValue() {
+    if (_pricingMode == ProductPricingMode.manual) return null;
+    final raw = _parseInt(_marginValueController.text);
+    if (raw == null) return null;
+    if (_pricingMode == ProductPricingMode.percentageMargin) {
+      return raw * 100;
+    }
+    return raw;
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -354,6 +375,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
             alertThreshold: _alertThresholdController.text.trim().isEmpty
                 ? null
                 : _parseInt(_alertThresholdController.text),
+            pricingMode: _pricingMode,
+            marginValue: _parseMarginValue(),
           ),
         );
         productId = prod.id;
@@ -383,6 +406,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
             alertThreshold: _alertThresholdController.text.trim().isEmpty
                 ? null
                 : _parseInt(_alertThresholdController.text),
+            pricingMode: _pricingMode,
+            marginValue: _parseMarginValue(),
           ),
         );
         productId = prod.id;
@@ -524,7 +549,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 TextFormField(
                   controller: _priceSellController,
                   decoration: const InputDecoration(
-                    labelText: 'Prix catalogue — détail (FCFA)',
+                    labelText: 'Prix de vente — détail (FCFA)',
                     prefixIcon: Icon(Icons.sell_outlined),
                   ),
                   keyboardType: TextInputType.number,
@@ -560,13 +585,64 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
                   controller: _priceBuyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Prix d\'achat (optionnel)',
-                    prefixIcon: Icon(Icons.shopping_cart_outlined),
+                  decoration: InputDecoration(
+                    labelText: widget.isEditing
+                        ? 'Dernier prix d\'achat connu (indicatif)'
+                        : 'Prix d\'achat (optionnel)',
+                    prefixIcon: const Icon(Icons.shopping_cart_outlined),
+                    helperText: widget.isEditing
+                        ? 'Le prix d\'achat réel est suivi par lot (FIFO).'
+                        : '',
                   ),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Gestion du prix de vente',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                DropdownButtonFormField<ProductPricingMode>(
+                  value: _pricingMode,
+                  decoration: const InputDecoration(
+                    labelText: 'Règle de marge',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: ProductPricingMode.values
+                      .map(
+                        (mode) => DropdownMenuItem(
+                          value: mode,
+                          child: Text(mode.label),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _isLoading
+                      ? null
+                      : (value) {
+                          if (value == null) return;
+                          setState(() => _pricingMode = value);
+                        },
+                ),
+                if (_pricingMode != ProductPricingMode.manual) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  TextFormField(
+                    controller: _marginValueController,
+                    decoration: InputDecoration(
+                      labelText: _pricingMode == ProductPricingMode.fixedMargin
+                          ? 'Marge fixe (FCFA)'
+                          : 'Marge souhaitée (%)',
+                      border: const OutlineInputBorder(),
+                      helperText: _pricingMode == ProductPricingMode.fixedMargin
+                          ? 'Ex. +500 FCFA sur le prix d\'achat'
+                          : 'Ex. 20 pour une marge de 20 %',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                ],
                 if (!widget.isEditing) ...[
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(

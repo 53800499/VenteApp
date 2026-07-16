@@ -909,7 +909,7 @@ class _MarginsTab extends StatelessWidget {
                       value: formatFcfa(margins.totalRevenue),
                     ),
                     _KpiRow(
-                      label: 'Coût estimé',
+                      label: 'Prix d\'achat estimé',
                       value: margins.hasCostData
                           ? formatFcfa(margins.totalCost)
                           : '—',
@@ -930,8 +930,8 @@ class _MarginsTab extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.sm),
                         child: Text(
-                          'Renseignez le prix d\'achat ou le coût unitaire '
-                          'sur les lignes pour estimer les marges.',
+                          'Renseignez le prix d\'achat sur les produits '
+                          'pour estimer les marges.',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -940,7 +940,7 @@ class _MarginsTab extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.xs),
                         child: Text(
-                          'Coût connu sur ${margins.linesWithCost} / '
+                          'Prix d\'achat connu sur ${margins.linesWithCost} / '
                           '${margins.totalLines} lignes.',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
@@ -1051,7 +1051,7 @@ class _PricesTab extends StatelessWidget {
             final line = deviations[index];
             final delta = line.priceDelta;
             final deltaLabel = delta == null
-                ? 'Prix catalogue inconnu'
+                ? 'Prix de vente inconnu'
                 : delta == 0
                     ? 'Remise appliquée'
                     : delta < 0

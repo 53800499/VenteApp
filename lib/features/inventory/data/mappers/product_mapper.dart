@@ -1,5 +1,6 @@
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/inventory_entities.dart' as inv;
+import '../../domain/entities/product_pricing_entities.dart';
 
 class ProductMapper {
   const ProductMapper._();
@@ -21,6 +22,8 @@ class ProductMapper {
       priceSell: row.priceSell,
       priceSemiWholesale: row.priceSemiWholesale,
       priceWholesale: row.priceWholesale,
+      pricingMode: ProductPricingMode.fromDb(row.pricingMode),
+      marginValue: row.marginValue,
       isArchived: row.isArchived,
       isLowStock: !row.isArchived && row.quantityInStock <= effectiveThreshold,
       categoryName: categoryName,

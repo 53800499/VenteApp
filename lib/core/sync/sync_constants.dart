@@ -11,6 +11,11 @@ abstract final class SyncEntityTable {
   static const tenantModules = 'tenant_modules';
   static const calculatorProductData = 'calculator_product_data';
   static const calculatorHistory = 'calculator_history';
+  static const suppliers = 'suppliers';
+  static const purchaseOrders = 'purchase_orders';
+  static const purchaseReceipts = 'purchase_receipts';
+  static const supplierInvoices = 'supplier_invoices';
+  static const supplierPayments = 'supplier_payments';
 }
 
 /// Opérations poussées vers le cloud (FIFO).
@@ -26,4 +31,7 @@ abstract final class SyncOperation {
   static const cashSessionOpen = 'cash_session_open';
   static const cashSessionClose = 'cash_session_close';
   static const cashMovementCreate = 'cash_movement_create';
+  static const validate = 'validate';
+  static const send = 'send';
+  static const receive = 'receive';
 }

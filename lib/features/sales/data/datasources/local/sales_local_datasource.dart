@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../../../../core/database/app_database.dart' as db;
 import '../../../../../core/utils/benin_day_range.dart';
 import '../../../../../core/utils/time.dart';
+import '../../../../inventory/data/datasources/local/inventory_lot_local_datasource.dart';
 import '../../../domain/entities/sale_entities.dart';
 import '../../../domain/services/receipt_number_service.dart';
 import '../../../domain/services/sale_validation_service.dart';
@@ -178,6 +179,7 @@ class SalesLocalDatasource {
     final ts = timestamp > 0 ? timestamp : nowMs();
 
     return _db.transaction(() async {
+      final lotDs = InventoryLotLocalDatasource(_db);
       final saleId = await _db.into(_db.sales).insert(
             db.SalesCompanion.insert(
               shopId: shopId,
@@ -201,49 +203,16 @@ class SalesLocalDatasource {
           );
 
       for (final snap in snapshots) {
-        final product = snap.product;
-        final line = snap.line;
-        await _db.into(_db.saleItems).insert(
-              db.SaleItemsCompanion.insert(
-                saleId: saleId,
-                shopId: shopId,
-                productId: Value(product.id),
-                productName: product.name,
-                quantity: line.quantity.toDouble(),
-                unitPrice: line.unitPrice,
-                unitCost: Value(product.priceBuy),
-                discountAmount: Value(line.lineDiscountAmount),
-                lineTotal: snap.lineTotal,
-                createdAt: ts,
-              ),
-            );
-
-        final qty = line.quantity;
-        final quantityBefore = product.quantityInStock;
-        final quantityAfter = quantityBefore - qty;
-        await (_db.update(_db.products)..where((p) => p.id.equals(product.id)))
-            .write(
-          db.ProductsCompanion(
-            quantityInStock: Value(quantityAfter),
-            updatedAt: Value(ts),
-            version: Value(product.version + 1),
-          ),
+        await _applyFifoSaleLine(
+          lotDs: lotDs,
+          shopId: shopId,
+          userId: userId,
+          saleId: saleId,
+          product: snap.product,
+          line: snap.line,
+          lineTotal: snap.lineTotal,
+          ts: ts,
         );
-
-        await _db.into(_db.stockMovements).insert(
-              db.StockMovementsCompanion.insert(
-                shopId: shopId,
-                productId: product.id,
-                userId: userId,
-                type: 'sale',
-                quantityChange: -qty,
-                quantityBefore: quantityBefore,
-                quantityAfter: quantityAfter,
-                saleId: Value(saleId),
-                unitCost: Value(product.priceBuy),
-                createdAt: ts,
-              ),
-            );
       }
 
       if (totals.amountCredit > 0 && customerId != null) {
@@ -313,6 +282,7 @@ class SalesLocalDatasource {
     final ts = timestamp > 0 ? timestamp : nowMs();
 
     return _db.transaction(() async {
+      final lotDs = InventoryLotLocalDatasource(_db);
       final saleRow = await (_db.select(_db.sales)
             ..where(
               (s) => s.id.equals(saleId) & s.shopId.equals(shopId),
@@ -324,49 +294,16 @@ class SalesLocalDatasource {
       }
 
       for (final snap in snapshots) {
-        final product = snap.product;
-        final line = snap.line;
-        await _db.into(_db.saleItems).insert(
-              db.SaleItemsCompanion.insert(
-                saleId: saleId,
-                shopId: shopId,
-                productId: Value(product.id),
-                productName: product.name,
-                quantity: line.quantity.toDouble(),
-                unitPrice: line.unitPrice,
-                unitCost: Value(product.priceBuy),
-                discountAmount: Value(line.lineDiscountAmount),
-                lineTotal: snap.lineTotal,
-                createdAt: ts,
-              ),
-            );
-
-        final qty = line.quantity;
-        final quantityBefore = product.quantityInStock;
-        final quantityAfter = quantityBefore - qty;
-        await (_db.update(_db.products)..where((p) => p.id.equals(product.id)))
-            .write(
-          db.ProductsCompanion(
-            quantityInStock: Value(quantityAfter),
-            updatedAt: Value(ts),
-            version: Value(product.version + 1),
-          ),
+        await _applyFifoSaleLine(
+          lotDs: lotDs,
+          shopId: shopId,
+          userId: userId,
+          saleId: saleId,
+          product: snap.product,
+          line: snap.line,
+          lineTotal: snap.lineTotal,
+          ts: ts,
         );
-
-        await _db.into(_db.stockMovements).insert(
-              db.StockMovementsCompanion.insert(
-                shopId: shopId,
-                productId: product.id,
-                userId: userId,
-                type: 'sale',
-                quantityChange: -qty,
-                quantityBefore: quantityBefore,
-                quantityAfter: quantityAfter,
-                saleId: Value(saleId),
-                unitCost: Value(product.priceBuy),
-                createdAt: ts,
-              ),
-            );
       }
 
       await (_db.update(_db.sales)..where((s) => s.id.equals(saleId))).write(
@@ -405,6 +342,19 @@ class SalesLocalDatasource {
               ..where((i) => i.saleId.equals(saleId)))
             .get();
 
+        final stockBeforeRestore = <int, int>{};
+        for (final item in items) {
+          final productId = item.productId;
+          if (productId == null) continue;
+          final product = await findProduct(shopId, productId);
+          if (product != null) {
+            stockBeforeRestore[productId] = product.quantityInStock;
+          }
+        }
+
+        final lotDs = InventoryLotLocalDatasource(_db);
+        await lotDs.restoreLotsForSale(shopId: shopId, saleId: saleId);
+
         for (final item in items) {
           final productId = item.productId;
           if (productId == null) continue;
@@ -413,14 +363,15 @@ class SalesLocalDatasource {
           if (product == null) continue;
 
           final qty = item.quantity.round();
-          final quantityBefore = product.quantityInStock;
-          final quantityAfter = quantityBefore + qty;
+          final quantityBefore =
+              stockBeforeRestore[productId] ?? product.quantityInStock;
+          final quantityAfter = product.quantityInStock;
+
           await (_db.update(_db.products)..where((p) => p.id.equals(product.id)))
               .write(
             db.ProductsCompanion(
-              quantityInStock: Value(quantityAfter),
-              updatedAt: Value(timestamp),
               version: Value(product.version + 1),
+              updatedAt: Value(timestamp),
             ),
           );
 
@@ -435,6 +386,7 @@ class SalesLocalDatasource {
                   quantityAfter: quantityAfter,
                   saleId: Value(saleId),
                   reason: Value(reason),
+                  unitCost: Value(item.unitCost),
                   createdAt: timestamp,
                 ),
               );
@@ -801,5 +753,76 @@ class SalesLocalDatasource {
       }
       await (_db.delete(_db.sales)..where((s) => s.id.isIn(duplicateIds))).go();
     });
+  }
+
+  Future<void> _applyFifoSaleLine({
+    required InventoryLotLocalDatasource lotDs,
+    required int shopId,
+    required int userId,
+    required int saleId,
+    required db.Product product,
+    required SaleLineDraft line,
+    required int lineTotal,
+    required int ts,
+  }) async {
+    final qty = line.quantity;
+    final quantityBefore = product.quantityInStock;
+
+    final slices = await lotDs.allocateFifo(
+      shopId: shopId,
+      productId: product.id,
+      quantity: qty,
+    );
+    final unitCost = InventoryLotLocalDatasource.weightedUnitCost(slices);
+
+    final saleItemId = await _db.into(_db.saleItems).insert(
+          db.SaleItemsCompanion.insert(
+            saleId: saleId,
+            shopId: shopId,
+            productId: Value(product.id),
+            productName: product.name,
+            quantity: line.quantity.toDouble(),
+            unitPrice: line.unitPrice,
+            unitCost: Value(unitCost),
+            discountAmount: Value(line.lineDiscountAmount),
+            lineTotal: lineTotal,
+            createdAt: ts,
+          ),
+        );
+
+    await lotDs.recordSaleItemAllocations(
+      shopId: shopId,
+      saleItemId: saleItemId,
+      slices: slices,
+    );
+
+    final productAfter = await findProduct(shopId, product.id);
+    final quantityAfter =
+        productAfter?.quantityInStock ?? (quantityBefore - qty);
+
+    if (productAfter != null) {
+      await (_db.update(_db.products)..where((p) => p.id.equals(product.id)))
+          .write(
+        db.ProductsCompanion(
+          version: Value(productAfter.version + 1),
+          updatedAt: Value(ts),
+        ),
+      );
+    }
+
+    await _db.into(_db.stockMovements).insert(
+          db.StockMovementsCompanion.insert(
+            shopId: shopId,
+            productId: product.id,
+            userId: userId,
+            type: 'sale',
+            quantityChange: -qty,
+            quantityBefore: quantityBefore,
+            quantityAfter: quantityAfter,
+            saleId: Value(saleId),
+            unitCost: Value(unitCost),
+            createdAt: ts,
+          ),
+        );
   }
 }

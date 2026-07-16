@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
 import '../../features/customers/data/datasources/local/customers_local_datasource.dart';
 import '../../features/customers/data/datasources/remote/customers_remote_datasource.dart';
 import '../../features/debts/data/datasources/local/debts_local_datasource.dart';
@@ -16,13 +17,17 @@ import '../../features/sales/data/datasources/local/sales_local_datasource.dart'
 import '../../features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import '../../features/sales/data/models/sale_api_models.dart';
 import '../../features/sales/domain/entities/sale_entities.dart';
-import '../database/app_database.dart' hide Sale, Expense;
+import '../database/app_database.dart' hide Sale, Expense, Supplier, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, SupplierInvoice, SupplierPayment;
 import '../errors/failures.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
 import 'sync_queue_datasource.dart';
 import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
 import '../../features/calculators/data/datasources/remote/calculators_remote_datasource.dart';
+import '../../features/procurement/data/datasources/procurement_local_datasource.dart';
+import '../../features/procurement/data/datasources/procurement_remote_datasource.dart';
+import '../../features/procurement/data/utils/procurement_remote_payloads.dart';
+import '../../features/procurement/domain/entities/procurement.dart';
 
 /// Pousse les éléments `sync_queue` vers l'API (couche 2 → 3).
 class SyncQueueProcessor {
@@ -43,6 +48,8 @@ class SyncQueueProcessor {
     required CashSessionsRemoteDatasource cashSessionsRemote,
     required CalculatorsLocalDatasource calculatorsLocal,
     required CalculatorsRemoteDatasource calculatorsRemote,
+    required ProcurementLocalDatasource procurementLocal,
+    required ProcurementRemoteDatasource procurementRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -58,7 +65,9 @@ class SyncQueueProcessor {
         _cashSessionsLocal = cashSessionsLocal,
         _cashSessionsRemote = cashSessionsRemote,
         _calculatorsLocal = calculatorsLocal,
-        _calculatorsRemote = calculatorsRemote;
+        _calculatorsRemote = calculatorsRemote,
+        _procurementLocal = procurementLocal,
+        _procurementRemote = procurementRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -76,6 +85,8 @@ class SyncQueueProcessor {
   final CashSessionsRemoteDatasource _cashSessionsRemote;
   final CalculatorsLocalDatasource _calculatorsLocal;
   final CalculatorsRemoteDatasource _calculatorsRemote;
+  final ProcurementLocalDatasource _procurementLocal;
+  final ProcurementRemoteDatasource _procurementRemote;
 
   Future<SyncQueueProcessResult> process({required int shopId}) async {
     await _apiGuard.ensureReady();
@@ -137,6 +148,11 @@ class SyncQueueProcessor {
         SyncEntityTable.tenantModules => 8,
         SyncEntityTable.calculatorProductData => 9,
         SyncEntityTable.calculatorHistory => 10,
+        SyncEntityTable.suppliers => 11,
+        SyncEntityTable.purchaseOrders => 12,
+        SyncEntityTable.purchaseReceipts => 13,
+        SyncEntityTable.supplierInvoices => 14,
+        SyncEntityTable.supplierPayments => 15,
         _ => 99,
       };
 
@@ -169,6 +185,16 @@ class SyncQueueProcessor {
         return _processCalculatorProductData(shopId, item, payload);
       case SyncEntityTable.calculatorHistory:
         return _processCalculatorHistory(shopId, item, payload);
+      case SyncEntityTable.suppliers:
+        return _processSupplier(shopId, item, payload);
+      case SyncEntityTable.purchaseOrders:
+        return _processPurchaseOrder(shopId, item, payload);
+      case SyncEntityTable.purchaseReceipts:
+        return _processPurchaseReceipt(shopId, item, payload);
+      case SyncEntityTable.supplierInvoices:
+        return _processSupplierInvoice(shopId, item, payload);
+      case SyncEntityTable.supplierPayments:
+        return _processSupplierPayment(shopId, item, payload);
       default:
         await _queue.markFailed(item.id, 'Table inconnue : ${item.entityTable}');
         return true;
@@ -881,8 +907,14 @@ class SyncQueueProcessor {
     final local = await _calculatorsLocal.getProductConfig(shopId, payload['productId'] as int);
     if (local == null) return true;
 
+    final product = await _inventoryLocal.findProduct(shopId, payload['productId'] as int);
+    if (product == null || product.serverId == null) {
+      await _queue.markDeferred(item.id, 'Produit calculateur non synchronisé.');
+      return false;
+    }
+
     final remote = await _calculatorsRemote.saveProductConfig(
-      productId: payload['productId'] as int,
+      productId: int.parse(product.serverId!),
       calculatorType: payload['calculatorType'] as String,
       metadata: payload['metadata'] as Map<String, dynamic>,
     );
@@ -917,6 +949,402 @@ class SyncQueueProcessor {
       await _calculatorsLocal.updateServerSyncHistory(local.id, '${remote['serverId']}');
     } else if (remote.containsKey('id')) {
       await _calculatorsLocal.updateServerSyncHistory(local.id, '${remote['id']}');
+    }
+    return true;
+  }
+
+  Future<bool> _processSupplier(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final local = await _procurementLocal.findSupplier(shopId, item.recordId);
+    if (local == null) return true;
+
+    switch (item.operation) {
+      case SyncOperation.create:
+        if (local.serverId != null) return true;
+        final remote = await _procurementRemote.createSupplier({
+          'name': payload['name'] ?? local.name,
+          'phone': payload['phone'] ?? local.phone,
+          'email': payload['email'] ?? local.email,
+          'address': payload['address'] ?? local.address,
+        });
+        final serverId = remote['id']?.toString();
+        final version = remote['version'] as int? ?? 1;
+        if (serverId != null) {
+          await _procurementLocal.updateSupplier(
+            shopId,
+            local.id,
+            serverId: serverId,
+            syncStatus: 'synced',
+            version: version,
+          );
+        }
+        return true;
+
+      case SyncOperation.update:
+        if (local.serverId == null) return false; // defer
+        final remote = await _procurementRemote.updateSupplier(
+          int.parse(local.serverId!),
+          payload,
+        );
+        final version = remote['version'] as int? ?? (local.version + 1);
+        await _procurementLocal.updateSupplier(
+          shopId,
+          local.id,
+          syncStatus: 'synced',
+          version: version,
+        );
+        return true;
+    }
+    return true;
+  }
+
+  Future<bool> _processPurchaseOrder(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final local = await _procurementLocal.findPurchaseOrder(shopId, item.recordId);
+    if (local == null) return true;
+
+    switch (item.operation) {
+      case SyncOperation.create:
+        if (local.serverId != null) return true;
+
+        // Resolve supplier serverId
+        final supplier = await _procurementLocal.findSupplier(shopId, local.supplierId);
+        if (supplier == null || supplier.serverId == null) {
+          await _queue.markDeferred(item.id, 'Fournisseur associé non synchronisé.');
+          return false;
+        }
+
+        // Resolve product serverIds
+        final remoteItems = <Map<String, dynamic>>[];
+        final localItems = local.items ?? [];
+        for (final it in localItems) {
+          final prod = await _inventoryLocal.findProduct(shopId, it.productId);
+          if (prod == null || prod.serverId == null) {
+            await _queue.markDeferred(item.id, 'Produit #${it.productId} non synchronisé.');
+            return false;
+          }
+          remoteItems.add({
+            'productId': int.parse(prod.serverId!),
+            'quantityOrdered': it.quantityOrdered,
+            'unitCost': it.unitCost,
+            'discount': it.discount,
+            'tax': it.tax,
+            'subtotal': it.subtotal,
+          });
+        }
+
+        final remote = await _procurementRemote.createPurchaseOrder({
+          'supplierId': int.parse(supplier.serverId!),
+          'number': local.number,
+          'orderedAt': local.orderedAt,
+          if (local.expectedAt != null) 'expectedAt': local.expectedAt,
+          'subtotal': local.subtotal,
+          'discount': local.discount,
+          'tax': local.tax,
+          'total': local.total,
+          'notes': local.notes,
+          'items': remoteItems,
+        });
+
+        var snapshot = remote;
+        if (snapshot['items'] is! List || (snapshot['items'] as List).isEmpty) {
+          final serverPoId = (remote['id'] as num?)?.toInt();
+          if (serverPoId != null) {
+            snapshot = await _procurementRemote.fetchPurchaseOrder(serverPoId);
+          }
+        }
+        await _procurementLocal.applyRemotePurchaseOrderSnapshot(
+          shopId,
+          local.id,
+          snapshot,
+        );
+        return true;
+
+      case SyncOperation.update:
+        if (local.serverId == null) return false;
+
+        final fields = Map<String, dynamic>.from(payload);
+        if (fields.containsKey('supplierId')) {
+          final supplier = await _procurementLocal.findSupplier(shopId, fields['supplierId'] as int);
+          if (supplier == null || supplier.serverId == null) {
+            await _queue.markDeferred(item.id, 'Fournisseur associé non synchronisé.');
+            return false;
+          }
+          fields['supplierId'] = int.parse(supplier.serverId!);
+        }
+
+        if (fields.containsKey('items')) {
+          final remoteItems = <Map<String, dynamic>>[];
+          final itemsList = fields['items'] as List;
+          for (final it in itemsList) {
+            final prod = await _inventoryLocal.findProduct(shopId, it['productId'] as int);
+            if (prod == null || prod.serverId == null) {
+              await _queue.markDeferred(item.id, 'Produit #${it['productId']} non synchronisé.');
+              return false;
+            }
+            remoteItems.add({
+              'productId': int.parse(prod.serverId!),
+              'quantityOrdered': it['quantityOrdered'],
+              'unitCost': it['unitCost'],
+              'discount': it['discount'] ?? 0,
+              'tax': it['tax'] ?? 0,
+              'subtotal': it['subtotal'],
+            });
+          }
+          fields['items'] = remoteItems;
+        }
+
+        final remoteUpdate = await _procurementRemote.updatePurchaseOrder(
+          int.parse(local.serverId!),
+          fields,
+        );
+        await _procurementLocal.applyRemotePurchaseOrderSnapshot(
+          shopId,
+          local.id,
+          remoteUpdate,
+        );
+        return true;
+
+      case SyncOperation.validate:
+        if (local.serverId == null) return false;
+        await _procurementRemote.validatePurchaseOrder(int.parse(local.serverId!));
+        return true;
+
+      case SyncOperation.send:
+        if (local.serverId == null) return false;
+        await _procurementRemote.sendPurchaseOrder(int.parse(local.serverId!));
+        return true;
+
+      case SyncOperation.cancel:
+        if (local.serverId == null) return false;
+        await _procurementRemote.cancelPurchaseOrder(
+          int.parse(local.serverId!),
+          payload['reason'] as String?,
+        );
+        return true;
+    }
+    return true;
+  }
+
+  Future<bool> _processPurchaseReceipt(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final localReceipt = await _procurementLocal.findReceipt(shopId, item.recordId);
+    if (localReceipt == null) return true;
+    if (localReceipt.serverId != null) return true;
+
+    final isDirect = localReceipt.receiptType == PurchaseReceiptType.direct;
+
+    if (isDirect) {
+      return _processDirectGoodsReceipt(shopId, item, localReceipt, payload);
+    }
+
+    final localPo = await _procurementLocal.findPurchaseOrder(
+      shopId,
+      localReceipt.purchaseOrderId!,
+    );
+    if (localPo == null || localPo.serverId == null) {
+      await _queue.markDeferred(item.id, 'Commande associée non synchronisée.');
+      return false;
+    }
+
+    final localPoItems = localPo.items ?? [];
+    final remoteItems = <Map<String, dynamic>>[];
+
+    final itemsList = payload['items'] as List;
+    for (final it in itemsList) {
+      final poItem = localPoItems.where((pi) => pi.id == (it['purchaseOrderItemId'] as int)).firstOrNull;
+      if (poItem == null || poItem.serverId == null) {
+        await _queue.markDeferred(item.id, 'Ligne de commande associée non synchronisée.');
+        return false;
+      }
+
+      final prod = await _inventoryLocal.findProduct(shopId, it['productId'] as int);
+      if (prod == null || prod.serverId == null) {
+        await _queue.markDeferred(item.id, 'Produit associé non synchronisé.');
+        return false;
+      }
+
+      remoteItems.add(
+        ProcurementRemotePayloads.purchaseOrderReceiptItem(
+          serverPurchaseOrderItemId: int.parse(poItem.serverId!),
+          quantityReceived: it['quantityReceived'] as int,
+          unitCost: it['unitCost'] as int,
+          batchNumber: it['batchNumber'] as String?,
+          expiryDate: it['expiryDate'] as int?,
+        ),
+      );
+    }
+
+    final remote = await _procurementRemote.receiveItems(
+      int.parse(localPo.serverId!),
+      ProcurementRemotePayloads.purchaseOrderReceiveBody(
+        receiptNumber: localReceipt.receiptNumber,
+        receivedAt: localReceipt.receivedAt,
+        notes: localReceipt.notes,
+        items: remoteItems,
+      ),
+    );
+
+    final serverId = remote['id']?.toString();
+    if (serverId != null) {
+      await (_procurementLocal.database.update(_procurementLocal.database.purchaseReceipts)
+            ..where((r) => r.id.equals(localReceipt.id)))
+          .write(PurchaseReceiptsCompanion(
+            serverId: Value(serverId),
+            syncStatus: const Value('synced'),
+          ));
+    }
+    return true;
+  }
+
+  Future<bool> _processDirectGoodsReceipt(
+    int shopId,
+    SyncQueueData item,
+    PurchaseReceipt localReceipt,
+    Map<String, dynamic> payload,
+  ) async {
+    final supplier =
+        await _procurementLocal.findSupplier(shopId, localReceipt.supplierId);
+    if (supplier == null || supplier.serverId == null) {
+      await _queue.markDeferred(item.id, 'Fournisseur associé non synchronisé.');
+      return false;
+    }
+
+    final remoteItems = <Map<String, dynamic>>[];
+    final itemsList = payload['items'] as List;
+    for (final it in itemsList) {
+      final prod =
+          await _inventoryLocal.findProduct(shopId, it['productId'] as int);
+      if (prod == null || prod.serverId == null) {
+        await _queue.markDeferred(item.id, 'Produit associé non synchronisé.');
+        return false;
+      }
+
+      remoteItems.add(
+        ProcurementRemotePayloads.directReceiptItem(
+          serverProductId: int.parse(prod.serverId!),
+          quantityReceived: it['quantityReceived'] as int,
+          unitCost: it['unitCost'] as int,
+          batchNumber: it['batchNumber'] as String?,
+          expiryDate: it['expiryDate'] as int?,
+        ),
+      );
+    }
+
+    final remote = await _procurementRemote.createDirectGoodsReceipt(
+      ProcurementRemotePayloads.directGoodsReceiptBody(
+        serverSupplierId: int.parse(supplier.serverId!),
+        receiptNumber: localReceipt.receiptNumber,
+        receivedAt: localReceipt.receivedAt,
+        notes: localReceipt.notes,
+        items: remoteItems,
+      ),
+    );
+
+    final serverId = remote['id']?.toString();
+    if (serverId != null) {
+      await (_procurementLocal.database.update(_procurementLocal.database.purchaseReceipts)
+            ..where((r) => r.id.equals(localReceipt.id)))
+          .write(PurchaseReceiptsCompanion(
+            serverId: Value(serverId),
+            syncStatus: const Value('synced'),
+          ));
+    }
+    return true;
+  }
+
+  Future<bool> _processSupplierInvoice(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final local = await _procurementLocal.findInvoice(shopId, item.recordId);
+    if (local == null) return true;
+    if (local.serverId != null) return true;
+
+    final supplier = await _procurementLocal.findSupplier(shopId, local.supplierId);
+    if (supplier == null || supplier.serverId == null) {
+      await _queue.markDeferred(item.id, 'Fournisseur associé non synchronisé.');
+      return false;
+    }
+
+    int? remotePoId;
+    if (local.purchaseOrderId != null) {
+      final po = await _procurementLocal.findPurchaseOrder(shopId, local.purchaseOrderId!);
+      if (po == null || po.serverId == null) {
+        await _queue.markDeferred(item.id, 'Commande associée non synchronisée.');
+        return false;
+      }
+      remotePoId = int.parse(po.serverId!);
+    }
+
+    final remote = await _procurementRemote.createInvoice({
+      if (remotePoId != null) 'purchaseOrderId': remotePoId,
+      'invoiceNumber': local.invoiceNumber,
+      'supplierId': int.parse(supplier.serverId!),
+      'invoiceDate': local.invoiceDate,
+      if (local.dueDate != null) 'dueDate': local.dueDate,
+      'subtotal': local.subtotal,
+      'tax': local.tax,
+      'total': local.total,
+    });
+
+    final serverId = remote['id']?.toString();
+    if (serverId != null) {
+      await (_procurementLocal.database.update(_procurementLocal.database.supplierInvoices)
+            ..where((i) => i.id.equals(local.id)))
+          .write(SupplierInvoicesCompanion(
+            serverId: Value(serverId),
+            syncStatus: const Value('synced'),
+          ));
+    }
+    return true;
+  }
+
+  Future<bool> _processSupplierPayment(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    // Look up parent invoice server ID
+    final invoiceLocalId = payload['invoiceId'] as int;
+    final invoice = await _procurementLocal.findInvoice(shopId, invoiceLocalId);
+    if (invoice == null || invoice.serverId == null) {
+      await _queue.markDeferred(item.id, 'Facture associée non synchronisée.');
+      return false;
+    }
+
+    // Since payments are simple creation entries in Drift payments table:
+    final payRows = await (_procurementLocal.database.select(_procurementLocal.database.supplierPayments)
+          ..where((p) => p.id.equals(item.recordId)))
+        .get();
+    final localPay = payRows.firstOrNull;
+    if (localPay == null || localPay.serverId != null) return true;
+
+    final remote = await _procurementRemote.recordPayment(int.parse(invoice.serverId!), {
+      'amount': localPay.amount,
+      'paymentMethod': ProcurementLocalDatasource.paymentMethodToApi(localPay.paymentMethod),
+      'paymentDate': localPay.paymentDate,
+      if (localPay.reference != null) 'reference': localPay.reference,
+    });
+
+    final serverId = remote['id']?.toString();
+    if (serverId != null) {
+      await (_procurementLocal.database.update(_procurementLocal.database.supplierPayments)
+            ..where((p) => p.id.equals(localPay.id)))
+          .write(SupplierPaymentsCompanion(
+            serverId: Value(serverId),
+            syncStatus: const Value('synced'),
+          ));
     }
     return true;
   }

@@ -151,6 +151,18 @@ class InventoryRemoteDatasource {
 
 
 
+  Future<List<InventoryLotApiDto>> listInventoryLots({int? productId}) async {
+    final data = await _getData(
+      '/inventory/lots',
+      query: {
+        if (productId != null) 'productId': '$productId',
+      },
+    );
+    return _mapList(data, InventoryLotApiDto.fromJson);
+  }
+
+
+
   List<T> _mapList<T>(
 
     Map<String, dynamic> data,
@@ -159,7 +171,7 @@ class InventoryRemoteDatasource {
 
   ) {
 
-    final items = data['items'] ?? data['products'] ?? data['categories'] ?? data;
+    final items = data['items'] ?? data['products'] ?? data['categories'] ?? data['lots'] ?? data;
 
     if (items is List) {
 

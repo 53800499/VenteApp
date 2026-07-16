@@ -11,6 +11,8 @@ import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
+import '../../../procurement/presentation/models/po_form_prefill.dart';
+import '../../../procurement/presentation/utils/procurement_navigation.dart';
 import '../bloc/product_list_bloc.dart';
 import '../widgets/product_card.dart';
 import 'product_detail_page.dart';
@@ -388,6 +390,11 @@ class _ProductListView extends StatelessWidget {
   }
 
   Widget _buildProductCard(BuildContext context, Product product) {
+    final canProcure = PermissionGuard.can(
+      session.user.permissions,
+      Permission.procurementCreate,
+    );
+
     return ProductCard(
       product: product,
       onTap: () async {
@@ -405,6 +412,27 @@ class _ProductListView extends StatelessWidget {
               .add(const ProductListLocalRefreshRequested());
         }
       },
+      trailing: canProcure && product.isLowStock
+          ? IconButton(
+              tooltip: 'Commander ce produit',
+              icon: const Icon(Icons.shopping_cart_outlined),
+              onPressed: () {
+                final deficit =
+                    (product.alertThreshold - product.quantityInStock)
+                        .clamp(1, product.alertThreshold);
+                openPoFormPage(
+                  context,
+                  session,
+                  prefill: PoFormPrefill(
+                    productId: product.id,
+                    productName: product.name,
+                    suggestedQuantity: product.alertThreshold + deficit,
+                    unitCost: product.priceBuy,
+                  ),
+                );
+              },
+            )
+          : null,
     );
   }
 }

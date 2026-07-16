@@ -5,7 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/audit/local_audit_writer.dart';
 import '../../core/backup/google_drive_backup_service.dart';
 import '../../core/backup/shop_backup_service.dart';
-import '../../core/database/app_database.dart';
+import '../../core/database/app_database.dart' hide Supplier, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, SupplierInvoice, SupplierPayment;
+import '../../features/procurement/data/datasources/procurement_local_datasource.dart';
+import '../../features/procurement/data/datasources/procurement_remote_datasource.dart';
+import '../../features/procurement/data/repositories/procurement_repository_impl.dart';
+import '../../features/procurement/domain/repositories/procurement_repository.dart';
+import '../../features/procurement/presentation/bloc/procurement_bloc.dart';
 import '../../core/auth/app_lock_controller.dart';
 import '../../core/auth/cloud_session_coordinator.dart';
 import '../../core/auth/cloud_session_controller.dart';
@@ -55,6 +60,8 @@ import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../../features/dashboard/domain/services/dashboard_aggregation_service.dart';
 import '../../features/dashboard/domain/usecases/get_dashboard.dart';
 import '../../features/inventory/data/datasources/local/inventory_local_datasource.dart';
+import '../../features/inventory/data/datasources/local/product_pricing_local_datasource.dart';
+import '../../features/inventory/domain/services/product_pricing_service.dart';
 import '../../features/inventory/data/datasources/remote/inventory_remote_datasource.dart';
 import '../../features/inventory/data/repositories/inventory_repository_impl.dart';
 import '../../features/inventory/domain/repositories/inventory_repository.dart';
@@ -317,6 +324,30 @@ void ensureExpensesDependencies() {
   }
   if (!sl.isRegistered<ExpensePdfExporter>()) {
     sl.registerLazySingleton(() => const ExpensePdfExporter());
+  }
+}
+
+/// Enregistre le module Approvisionnement si absent.
+void ensureProcurementDependencies() {
+  if (!sl.isRegistered<ProcurementLocalDatasource>()) {
+    sl.registerLazySingleton(() => ProcurementLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<ProcurementRemoteDatasource>()) {
+    sl.registerLazySingleton(() => ProcurementRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<ProcurementRepository>()) {
+    sl.registerLazySingleton<ProcurementRepository>(
+      () => ProcurementRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        syncPolicy: sl(),
+        recorder: sl(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<ProcurementBloc>()) {
+    sl.registerFactory(() => ProcurementBloc(repository: sl(), session: sl()));
   }
 }
 
@@ -750,6 +781,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => DashboardAggregationService());
   sl.registerLazySingleton(() => DashboardLocalDatasource(sl()));
   ensureExpensesDependencies();
+  ensureProcurementDependencies();
   ensureCashSessionDependencies();
   sl.registerLazySingleton<DashboardRepository>(
     () => DashboardRepositoryImpl(
@@ -767,6 +799,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => const ProductValidationService());
   sl.registerLazySingleton(() => const CategoryValidationService());
   sl.registerLazySingleton(() => InventoryLocalDatasource(sl()));
+  sl.registerLazySingleton(() => ProductPricingLocalDatasource(sl()));
+  sl.registerLazySingleton(() => const ProductPricingService());
   sl.registerLazySingleton(() => InventoryRemoteDatasource(sl()));
   sl.registerLazySingleton<InventoryRepository>(
     () => InventoryRepositoryImpl(
@@ -870,6 +904,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => ExpensesRemoteSyncAdapter(sl<ExpenseRepository>()),
   );
+  sl.registerLazySingleton(
+    () => ProcurementRemoteSyncAdapter(sl<ProcurementRepository>()),
+  );
   sl.registerLazySingleton(() => SyncPolicy(sl(), sl()));
   sl.registerLazySingleton(() => SyncQueueDatasource(sl()));
   sl.registerLazySingleton(() => LocalAuditWriter(sl()));
@@ -907,6 +944,8 @@ Future<void> initDependencies() async {
       cashSessionsRemote: sl(),
       calculatorsLocal: sl(),
       calculatorsRemote: sl(),
+      procurementLocal: sl(),
+      procurementRemote: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -925,6 +964,7 @@ Future<void> initDependencies() async {
         sl<ExpensesRemoteSyncAdapter>(),
         sl<CashSessionsRemoteSyncAdapter>(),
         sl<CalculatorsRemoteSyncAdapter>(),
+        sl<ProcurementRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
       activeShop: sl(),

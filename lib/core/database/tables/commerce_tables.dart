@@ -25,6 +25,11 @@ class Products extends Table {
   IntColumn get priceSell => integer()();
   IntColumn get priceSemiWholesale => integer().nullable()();
   IntColumn get priceWholesale => integer().nullable()();
+  /// manual | fixed_margin | percentage_margin
+  TextColumn get pricingMode =>
+      text().withDefault(const Constant('manual'))();
+  /// Marge fixe (FCFA) ou pourcentage × 100 (ex. 2000 = 20 %).
+  IntColumn get marginValue => integer().nullable()();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();

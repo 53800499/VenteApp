@@ -1,5 +1,8 @@
 import 'package:equatable/equatable.dart';
 
+import 'inventory_lot_entities.dart';
+import 'product_pricing_entities.dart';
+
 enum ProductSort { nameAsc, nameDesc, stockAsc, stockDesc, priceAsc, priceDesc }
 
 enum StockAdjustmentType { restock, adjustment, loss }
@@ -93,6 +96,8 @@ class Product extends Equatable {
     required this.priceSell,
     this.priceSemiWholesale,
     this.priceWholesale,
+    this.pricingMode = ProductPricingMode.manual,
+    this.marginValue,
     required this.isArchived,
     required this.isLowStock,
     this.categoryName,
@@ -109,6 +114,8 @@ class Product extends Equatable {
   final int priceSell;
   final int? priceSemiWholesale;
   final int? priceWholesale;
+  final ProductPricingMode pricingMode;
+  final int? marginValue;
   final bool isArchived;
   final bool isLowStock;
   final String? categoryName;
@@ -126,6 +133,8 @@ class Product extends Equatable {
         priceSell,
         priceSemiWholesale,
         priceWholesale,
+        pricingMode,
+        marginValue,
         isArchived,
         isLowStock,
         categoryName,
@@ -177,14 +186,16 @@ class ProductDetail extends Equatable {
     required this.product,
     required this.recentMovements,
     required this.saleItemCount,
+    this.stockLots = const [],
   });
 
   final Product product;
   final List<StockMovement> recentMovements;
   final int saleItemCount;
+  final List<InventoryLot> stockLots;
 
   @override
-  List<Object?> get props => [product, recentMovements, saleItemCount];
+  List<Object?> get props => [product, recentMovements, saleItemCount, stockLots];
 }
 
 class CreateProductInput extends Equatable {
@@ -196,6 +207,8 @@ class CreateProductInput extends Equatable {
     this.priceBuy,
     this.priceSemiWholesale,
     this.priceWholesale,
+    this.pricingMode = ProductPricingMode.manual,
+    this.marginValue,
     required this.initialQuantity,
     this.alertThreshold,
   });
@@ -207,6 +220,8 @@ class CreateProductInput extends Equatable {
   final int? priceBuy;
   final int? priceSemiWholesale;
   final int? priceWholesale;
+  final ProductPricingMode pricingMode;
+  final int? marginValue;
   final int initialQuantity;
   final int? alertThreshold;
 
@@ -219,6 +234,8 @@ class CreateProductInput extends Equatable {
         priceBuy,
         priceSemiWholesale,
         priceWholesale,
+        pricingMode,
+        marginValue,
         initialQuantity,
         alertThreshold,
       ];
@@ -235,6 +252,8 @@ class UpdateProductInput extends Equatable {
     this.priceWholesale,
     this.clearPriceBuy = false,
     this.alertThreshold,
+    this.pricingMode,
+    this.marginValue,
   });
 
   final String? name;
@@ -246,6 +265,8 @@ class UpdateProductInput extends Equatable {
   final int? priceWholesale;
   final bool clearPriceBuy;
   final int? alertThreshold;
+  final ProductPricingMode? pricingMode;
+  final int? marginValue;
 
   @override
   List<Object?> get props => [
@@ -258,6 +279,8 @@ class UpdateProductInput extends Equatable {
         priceWholesale,
         clearPriceBuy,
         alertThreshold,
+        pricingMode,
+        marginValue,
       ];
 }
 

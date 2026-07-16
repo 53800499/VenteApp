@@ -51,7 +51,13 @@ enum Permission {
   cashSessionsAdjust('cash_sessions:adjust'),
   calculatorsUse('calculators:use'),
   calculatorsExport('calculators:export'),
-  calculatorsHistory('calculators:history');
+  calculatorsHistory('calculators:history'),
+  procurementRead('procurement:read'),
+  procurementCreate('procurement:create'),
+  procurementUpdate('procurement:update'),
+  procurementReceive('procurement:receive'),
+  procurementInvoicePay('procurement:invoice_pay'),
+  procurementCancel('procurement:cancel');
 
   const Permission(this.code);
 
@@ -80,6 +86,8 @@ const _sellerPermissions = <Permission>{
   Permission.calculatorsUse,
   Permission.calculatorsExport,
   Permission.calculatorsHistory,
+  Permission.procurementRead,
+  Permission.procurementReceive,
 };
 
 const _viewerPermissions = <Permission>{
@@ -95,6 +103,7 @@ const _viewerPermissions = <Permission>{
   Permission.cashSessionsRead,
   Permission.calculatorsUse,
   Permission.calculatorsHistory,
+  Permission.procurementRead,
 };
 
 Set<Permission> permissionsForRole(UserRole role) {

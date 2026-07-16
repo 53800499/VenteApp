@@ -130,7 +130,7 @@ class _StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rows = <({String label, String value})>[
       (
-        label: 'Prix catalogue',
+        label: 'Prix de vente',
         value: stats.catalogPrice != null
             ? formatFcfa(stats.catalogPrice!)
             : '—',

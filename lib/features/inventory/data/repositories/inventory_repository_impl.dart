@@ -8,10 +8,13 @@ import '../../../../core/sync/sync_policy.dart';
 import '../../../../core/sync/sync_pull_entity.dart';
 import '../../../../core/utils/time.dart';
 import '../../domain/entities/inventory_entities.dart';
+import '../../domain/entities/inventory_lot_entities.dart';
 import '../../domain/repositories/inventory_repository.dart';
 import '../../domain/services/category_validation_service.dart';
 import '../../domain/services/product_validation_service.dart';
 import '../datasources/local/inventory_local_datasource.dart';
+import '../datasources/local/inventory_lot_local_datasource.dart';
+import '../datasources/local/product_pricing_local_datasource.dart';
 import '../datasources/remote/inventory_remote_datasource.dart';
 import '../mappers/product_mapper.dart';
 
@@ -24,13 +27,17 @@ class InventoryRepositoryImpl implements InventoryRepository {
     ProductValidationService? validation,
     CategoryValidationService? categoryValidation,
     LocalWriteSyncRecorder? recorder,
+    InventoryLotLocalDatasource? lotLocal,
+    ProductPricingLocalDatasource? pricingLocal,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
         _syncPolicy = syncPolicy,
         _validation = validation ?? const ProductValidationService(),
         _categoryValidation = categoryValidation ?? const CategoryValidationService(),
-        _recorder = recorder;
+        _recorder = recorder,
+        _lotLocal = lotLocal ?? InventoryLotLocalDatasource(local.database),
+        _pricingLocal = pricingLocal ?? ProductPricingLocalDatasource(local.database);
 
   final InventoryLocalDatasource _local;
   final InventoryRemoteDatasource? _remote;
@@ -39,6 +46,8 @@ class InventoryRepositoryImpl implements InventoryRepository {
   final ProductValidationService _validation;
   final CategoryValidationService _categoryValidation;
   final LocalWriteSyncRecorder? _recorder;
+  final InventoryLotLocalDatasource _lotLocal;
+  final ProductPricingLocalDatasource _pricingLocal;
 
   @override
   Future<List<ProductCategory>> listCategories({
@@ -239,6 +248,10 @@ class InventoryRepositoryImpl implements InventoryRepository {
 
     final movements = await _local.listRecentMovements(shopId, productId);
     final saleItemCount = await _local.countSaleItems(shopId, productId);
+    final stockLots = await _lotLocal.listActiveLotsForProduct(
+      shopId: shopId,
+      productId: productId,
+    );
 
     return ProductDetail(
       product: ProductMapper.fromRow(
@@ -250,6 +263,7 @@ class InventoryRepositoryImpl implements InventoryRepository {
           .map(ProductMapper.movementFromRow)
           .toList(),
       saleItemCount: saleItemCount,
+      stockLots: stockLots,
     );
   }
 
@@ -291,9 +305,19 @@ class InventoryRepositoryImpl implements InventoryRepository {
       priceSell: input.priceSell,
       priceSemiWholesale: input.priceSemiWholesale,
       priceWholesale: input.priceWholesale,
+      pricingMode: input.pricingMode,
+      marginValue: input.marginValue,
     );
 
     if (input.initialQuantity > 0) {
+      await _lotLocal.createLot(
+        shopId: shopId,
+        productId: productId,
+        sourceType: InventoryLotSourceType.manualRestock,
+        unitCost: input.priceBuy ?? 0,
+        quantity: input.initialQuantity,
+      );
+
       await _local.insertStockMovement(
         shopId: shopId,
         productId: productId,
@@ -303,8 +327,17 @@ class InventoryRepositoryImpl implements InventoryRepository {
         quantityBefore: 0,
         quantityAfter: input.initialQuantity,
         reason: 'Stock initial à la création',
+        unitCost: input.priceBuy,
       );
     }
+
+    await _pricingLocal.recordPriceHistory(
+      shopId: shopId,
+      productId: productId,
+      unitCost: input.priceBuy,
+      priceSell: input.priceSell,
+      reason: 'creation',
+    );
 
     final detail = await getProductDetail(
       shopId: shopId,
@@ -392,6 +425,12 @@ class InventoryRepositoryImpl implements InventoryRepository {
         priceWholesale: input.priceWholesale != null
             ? Value(input.priceWholesale)
             : const Value.absent(),
+        pricingMode: input.pricingMode != null
+            ? Value(input.pricingMode!.toDb())
+            : const Value.absent(),
+        marginValue: input.marginValue != null
+            ? Value(input.marginValue)
+            : const Value.absent(),
         alertThreshold: input.alertThreshold != null
             ? Value(
                 _validation.resolveAlertThreshold(
@@ -404,6 +443,16 @@ class InventoryRepositoryImpl implements InventoryRepository {
         version: Value(existing.version + 1),
       ),
     );
+
+    if (input.priceSell != null && input.priceSell != existing.priceSell) {
+      await _pricingLocal.recordPriceHistory(
+        shopId: shopId,
+        productId: productId,
+        unitCost: nextPriceBuy,
+        priceSell: nextPriceSell,
+        reason: 'manual',
+      );
+    }
 
     final detail = await getProductDetail(
       shopId: shopId,
@@ -486,26 +535,53 @@ class InventoryRepositoryImpl implements InventoryRepository {
       reason: input.reason,
     );
 
-    await _local.updateProductRow(
-      productId,
-      ProductsCompanion(
-        quantityInStock: Value(result.quantityAfter),
-        updatedAt: Value(nowMs()),
-        version: Value(existing.version + 1),
-      ),
-    );
+    await _local.database.transaction(() async {
+      if (input.quantityChange > 0) {
+        final unitCost = input.unitCost ?? existing.priceBuy ?? 0;
+        await _lotLocal.createLot(
+          shopId: shopId,
+          productId: productId,
+          sourceType: InventoryLotSourceType.manualRestock,
+          unitCost: unitCost,
+          quantity: input.quantityChange,
+        );
+        if (input.unitCost != null) {
+          await _lotLocal.updateLastPurchasePrice(
+            productId: productId,
+            unitCost: input.unitCost!,
+          );
+        }
+      } else if (input.quantityChange < 0) {
+        await _lotLocal.allocateFifo(
+          shopId: shopId,
+          productId: productId,
+          quantity: -input.quantityChange,
+        );
+      }
 
-    await _local.insertStockMovement(
-      shopId: shopId,
-      productId: productId,
-      userId: userId,
-      type: ProductMapper.movementTypeToDb(input.type),
-      quantityChange: input.quantityChange,
-      quantityBefore: result.quantityBefore,
-      quantityAfter: result.quantityAfter,
-      reason: input.reason?.trim(),
-      unitCost: input.type == StockAdjustmentType.restock ? input.unitCost : null,
-    );
+      final updated = await _local.findProduct(shopId, productId);
+      final quantityAfter = updated?.quantityInStock ?? result.quantityAfter;
+
+      await _local.updateProductRow(
+        productId,
+        ProductsCompanion(
+          updatedAt: Value(nowMs()),
+          version: Value(existing.version + 1),
+        ),
+      );
+
+      await _local.insertStockMovement(
+        shopId: shopId,
+        productId: productId,
+        userId: userId,
+        type: ProductMapper.movementTypeToDb(input.type),
+        quantityChange: input.quantityChange,
+        quantityBefore: result.quantityBefore,
+        quantityAfter: quantityAfter,
+        reason: input.reason?.trim(),
+        unitCost: input.type == StockAdjustmentType.restock ? input.unitCost : null,
+      );
+    });
 
     await _recorder?.recordStockAdjust(
       shopId: shopId,
@@ -587,9 +663,62 @@ class InventoryRepositoryImpl implements InventoryRepository {
       );
     }
 
+    await _syncInventoryLotsFromRemote(shopId: shopId, remote: remote);
+
     await _syncPolicy.markEntitySynced(
       shopId: shopId,
       entity: SyncPullEntity.products,
+    );
+  }
+
+  Future<void> _syncInventoryLotsFromRemote({
+    required int shopId,
+    required InventoryRemoteDatasource remote,
+  }) async {
+    if (!await _syncPolicy.shouldPullEntity(
+      shopId: shopId,
+      entity: SyncPullEntity.inventoryLots,
+    )) {
+      return;
+    }
+
+    final remoteLots = await remote.listInventoryLots();
+    for (final lot in remoteLots) {
+      final localProductId =
+          await _local.findLocalProductIdByServerId(shopId, '${lot.productId}');
+      if (localProductId == null) continue;
+
+      int? localReceiptItemId;
+      if (lot.purchaseReceiptItemId != null) {
+        localReceiptItemId = await _local.findLocalReceiptItemIdByServerId(
+          shopId,
+          '${lot.purchaseReceiptItemId}',
+        );
+      }
+
+      await _lotLocal.upsertLotFromRemote(
+        shopId: shopId,
+        productId: localProductId,
+        serverId: '${lot.id}',
+        sourceType: lot.sourceType,
+        sourceId: lot.sourceId,
+        purchaseReceiptItemId: localReceiptItemId,
+        supplierId: lot.supplierId,
+        unitCost: lot.unitCost,
+        quantityReceived: lot.quantityReceived,
+        quantityRemaining: lot.quantityRemaining,
+        batchNumber: lot.batchNumber,
+        expiryDate: lot.expiryDate,
+        receivedAt: lot.receivedAt,
+        status: lot.status,
+        createdAt: lot.createdAt,
+        version: lot.version,
+      );
+    }
+
+    await _syncPolicy.markEntitySynced(
+      shopId: shopId,
+      entity: SyncPullEntity.inventoryLots,
     );
   }
 }

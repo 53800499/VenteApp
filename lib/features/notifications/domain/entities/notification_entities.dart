@@ -6,7 +6,9 @@ enum NotificationCode {
   debtPaid('N-04'),
   backupReminder('N-05'),
   goodDay('N-06'),
-  syncConflict('N-07');
+  syncConflict('N-07'),
+  procurementOverdue('N-08'),
+  procurementInvoiceDue('N-09');
 
   const NotificationCode(this.label);
   final String label;

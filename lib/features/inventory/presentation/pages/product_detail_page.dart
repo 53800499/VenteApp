@@ -11,10 +11,14 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../procurement/presentation/models/po_form_prefill.dart';
+import '../../../procurement/presentation/utils/procurement_navigation.dart';
 import '../bloc/product_detail_bloc.dart';
 import '../widgets/inventory_feedback.dart';
 import '../widgets/stock_gauge.dart';
+import '../widgets/stock_lot_tile.dart';
 import '../widgets/stock_movement_tile.dart';
+import '../widgets/product_price_history_section.dart';
 import 'product_form_page.dart';
 import 'stock_adjustment_page.dart';
 
@@ -41,6 +45,16 @@ class ProductDetailPage extends StatelessWidget {
   bool get _canArchive => PermissionGuard.can(
         session.user.permissions,
         Permission.inventoryArchive,
+      );
+
+  bool get _canProcure => PermissionGuard.can(
+        session.user.permissions,
+        Permission.procurementCreate,
+      );
+
+  bool get _canViewLots => PermissionGuard.can(
+        session.user.permissions,
+        Permission.inventoryWrite,
       );
 
   @override
@@ -228,12 +242,12 @@ class ProductDetailPage extends StatelessWidget {
                     child: Column(
                       children: [
                         _InfoTile(
-                          label: 'Prix vente',
+                          label: 'Prix de vente',
                           value: formatFcfa(product.priceSell),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         _InfoTile(
-                          label: 'Prix achat',
+                          label: 'Dernier prix d\'achat (lots)',
                           value: product.priceBuy != null
                               ? formatFcfa(product.priceBuy!)
                               : '—',
@@ -270,20 +284,43 @@ class ProductDetailPage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _InfoTile(
-                      label: 'Prix vente',
+                      label: 'Prix de vente',
                       value: formatFcfa(product.priceSell),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _InfoTile(
-                      label: 'Prix achat',
+                      label: 'Dernier prix d\'achat (lots)',
                       value: product.priceBuy != null
                           ? formatFcfa(product.priceBuy!)
                           : '—',
                     ),
                   ),
                 ],
+              ),
+            ],
+            if (_canProcure && product.isLowStock) ...[
+              const SizedBox(height: AppSpacing.md),
+              FilledButton.icon(
+                onPressed: () {
+                  final deficit =
+                      (product.alertThreshold - product.quantityInStock)
+                          .clamp(1, product.alertThreshold);
+                  final suggestedQty = product.alertThreshold + deficit;
+                  openPoFormPage(
+                    context,
+                    session,
+                    prefill: PoFormPrefill(
+                      productId: product.id,
+                      productName: product.name,
+                      suggestedQuantity: suggestedQty,
+                      unitCost: product.priceBuy,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart_outlined),
+                label: const Text('Commander ce produit'),
               ),
             ],
             if (_canAdjust) ...[
@@ -327,6 +364,40 @@ class ProductDetailPage extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
+            if (_canViewLots) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Lots de stock (FIFO)',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (detail.stockLots.isEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    child: EmptyListPlaceholder(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Aucun lot actif',
+                    ),
+                  ),
+                )
+              else
+                Card(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < detail.stockLots.length; i++)
+                        StockLotTile(
+                          lot: detail.stockLots[i],
+                          fifoRank: i + 1,
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+            ProductPriceHistorySection(
+              shopId: session.shop.id,
+              productId: product.id,
+            ),
             const SizedBox(height: AppSpacing.lg),
             Text(
               'Derniers mouvements',

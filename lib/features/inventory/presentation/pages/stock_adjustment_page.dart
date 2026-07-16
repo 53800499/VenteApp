@@ -208,7 +208,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
                 TextField(
                   controller: _unitCostController,
                   decoration: const InputDecoration(
-                    labelText: 'Coût unitaire (optionnel)',
+                    labelText: 'Prix d\'achat unitaire (optionnel)',
                     prefixIcon: Icon(Icons.payments_outlined),
                   ),
                   keyboardType: TextInputType.number,

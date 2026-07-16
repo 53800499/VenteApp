@@ -328,4 +328,164 @@ class LocalWriteSyncRecorder {
       payload: payload,
     );
   }
+
+  Future<void> recordSupplierCreate({
+    required int shopId,
+    required int supplierId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.suppliers,
+      recordId: supplierId,
+      operation: SyncOperation.create,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordSupplierUpdate({
+    required int shopId,
+    required int supplierId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.suppliers,
+      recordId: supplierId,
+      operation: SyncOperation.update,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordPurchaseOrderCreate({
+    required int shopId,
+    required int poId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseOrders,
+      recordId: poId,
+      operation: SyncOperation.create,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordPurchaseOrderUpdate({
+    required int shopId,
+    required int poId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseOrders,
+      recordId: poId,
+      operation: SyncOperation.update,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordPurchaseOrderValidate({
+    required int shopId,
+    required int poId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseOrders,
+      recordId: poId,
+      operation: SyncOperation.validate,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordPurchaseOrderSend({
+    required int shopId,
+    required int poId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseOrders,
+      recordId: poId,
+      operation: SyncOperation.send,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordPurchaseOrderCancel({
+    required int shopId,
+    required int poId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseOrders,
+      recordId: poId,
+      operation: SyncOperation.cancel,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordPurchaseOrderReceive({
+    required int shopId,
+    required int poId,
+    required int receiptId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseReceipts,
+      recordId: receiptId,
+      operation: SyncOperation.receive,
+      payload: {
+        'purchaseOrderId': poId,
+        ...payload,
+      },
+    );
+  }
+
+  Future<void> recordDirectGoodsReceipt({
+    required int shopId,
+    required int receiptId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.purchaseReceipts,
+      recordId: receiptId,
+      operation: SyncOperation.receive,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordSupplierInvoiceCreate({
+    required int shopId,
+    required int invoiceId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.supplierInvoices,
+      recordId: invoiceId,
+      operation: SyncOperation.create,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordSupplierPaymentCreate({
+    required int shopId,
+    required int invoiceId,
+    required int paymentId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.supplierPayments,
+      recordId: paymentId,
+      operation: SyncOperation.create,
+      payload: {
+        'invoiceId': invoiceId,
+        ...payload,
+      },
+    );
+  }
 }

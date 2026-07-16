@@ -71,6 +71,61 @@ class NotificationFeedBuilder {
       );
     }
 
+    if (preferences.enableStockAlerts) {
+      final overdueOrders =
+          await _local.loadOverduePurchaseOrders(shopId);
+      if (overdueOrders.isNotEmpty) {
+        final preview = overdueOrders
+            .take(2)
+            .map((o) => '#${o.number}')
+            .join(', ');
+        final extra = overdueOrders.length > 2
+            ? ' et ${overdueOrders.length - 2} autre(s)'
+            : '';
+        items.add(
+          NotificationItem(
+            code: NotificationCode.procurementOverdue.label,
+            channel: 'procurement',
+            title: 'Commandes en retard',
+            body:
+                '${overdueOrders.length} commande(s) dépassent la date prévue : $preview$extra.',
+            deepLink: '/procurement',
+            configurable: true,
+            alwaysOn: false,
+            payload: {
+              'poIds': overdueOrders.map((o) => o.poId).toList(),
+              'count': overdueOrders.length,
+            },
+          ),
+        );
+      }
+
+      final overdueInvoices =
+          await _local.loadOverdueSupplierInvoices(shopId);
+      if (overdueInvoices.isNotEmpty) {
+        final preview = overdueInvoices
+            .take(2)
+            .map((i) => '#${i.invoiceNumber}')
+            .join(', ');
+        items.add(
+          NotificationItem(
+            code: NotificationCode.procurementInvoiceDue.label,
+            channel: 'procurement',
+            title: 'Factures fournisseur échues',
+            body:
+                '${overdueInvoices.length} facture(s) impayée(s) après échéance : $preview.',
+            deepLink: '/procurement/invoices',
+            configurable: true,
+            alwaysOn: false,
+            payload: {
+              'invoiceIds': overdueInvoices.map((i) => i.invoiceId).toList(),
+              'count': overdueInvoices.length,
+            },
+          ),
+        );
+      }
+    }
+
     for (final debt in debtCandidates) {
       items.add(
         NotificationItem(
