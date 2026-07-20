@@ -93,6 +93,11 @@ class ProcurementRemoteDatasource {
     return data is Map<String, dynamic> ? data : {};
   }
 
+  Future<List<Map<String, dynamic>>> fetchDirectGoodsReceipts() async {
+    final data = await _getData('/purchases/goods-receipts');
+    return _asListOfMaps(data);
+  }
+
   Future<List<Map<String, dynamic>>> fetchInvoices({int? supplierId}) async {
     final data = await _getData(
       '/purchases/invoices',

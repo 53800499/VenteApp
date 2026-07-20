@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart' as db;
+import '../../../../core/errors/failures.dart';
 import '../../../../core/shop/shop_hierarchy.dart';
 import '../../../../core/utils/time.dart';
 import '../../../inventory/data/datasources/local/inventory_lot_local_datasource.dart';
@@ -783,7 +784,15 @@ class ProcurementLocalDatasource {
           ..where((p) => p.shopId.equals(shopId) & p.id.equals(poId)));
     return poRow.getSingleOrNull().then((po) {
       if (po == null) {
-        throw StateError('Commande introuvable.');
+        throw const ValidationFailure('Commande introuvable.');
+      }
+      final status = _parseOrderStatus(po.status);
+      if (status != PurchaseOrderStatus.sent &&
+          status != PurchaseOrderStatus.partiallyReceived) {
+        throw ValidationFailure(
+          'Réception impossible : la commande doit être envoyée '
+          '(statut actuel : ${status.label}).',
+        );
       }
       return createGoodsReceipt(
         shopId: shopId,

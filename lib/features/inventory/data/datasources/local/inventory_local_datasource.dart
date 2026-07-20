@@ -507,7 +507,50 @@ class InventoryLocalDatasource {
           ..where(
             (p) =>
                 p.shopId.equals(shopId) &
+                p.isArchived.equals(false) &
                 p.name.lower().equals(trimmed.toLowerCase()),
+          )
+          ..orderBy([(p) => OrderingTerm.asc(p.id)])
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.id;
+  }
+
+  /// Comme [findLocalProductIdByName] mais ignore les espaces multiples.
+  Future<int?> findLocalProductIdByNormalizedName(
+    int shopId,
+    String normalizedName,
+  ) async {
+    final target = normalizedName.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    if (target.isEmpty) return null;
+
+    final exact = await findLocalProductIdByName(shopId, target);
+    if (exact != null) return exact;
+
+    final rows = await (_db.select(_db.products)
+          ..where(
+            (p) => p.shopId.equals(shopId) & p.isArchived.equals(false),
+          )
+          ..orderBy([(p) => OrderingTerm.asc(p.id)]))
+        .get();
+    for (final row in rows) {
+      final candidate =
+          row.name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+      if (candidate == target) return row.id;
+    }
+    return null;
+  }
+
+  Future<int?> findLocalProductIdBySku(int shopId, String sku) async {
+    final trimmed = sku.trim();
+    if (trimmed.isEmpty) return null;
+
+    final rows = await (_db.select(_db.products)
+          ..where(
+            (p) =>
+                p.shopId.equals(shopId) &
+                p.isArchived.equals(false) &
+                p.sku.lower().equals(trimmed.toLowerCase()),
           )
           ..orderBy([(p) => OrderingTerm.asc(p.id)])
           ..limit(1))

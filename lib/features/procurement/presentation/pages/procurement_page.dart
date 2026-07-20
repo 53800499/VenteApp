@@ -298,7 +298,9 @@ class _ProcurementViewState extends State<_ProcurementView>
                 child: Stack(
             children: [
               if (state.status == ProcurementStatus.loading &&
-                  state.purchaseOrders.isEmpty)
+                  state.purchaseOrders.isEmpty &&
+                  state.directReceipts.isEmpty &&
+                  state.suppliers.isEmpty)
                 const Center(child: CircularProgressIndicator())
               else
                 TabBarView(

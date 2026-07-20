@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/enums/permission.dart';
+import '../../../../shared/guards/permission_guard.dart';
 import '../../../inventory/data/datasources/local/inventory_local_datasource.dart';
 import '../../../inventory/data/datasources/local/inventory_lot_local_datasource.dart';
 import '../../../inventory/domain/entities/inventory_entities.dart';
@@ -33,14 +35,25 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
   List<dynamic> _allProducts = [];
   bool _loadingProducts = true;
   bool _submitPending = false;
-  bool _recordInvoice = true;
-  bool _payNow = true;
+  bool _recordInvoice = false;
+  bool _payNow = false;
+  bool _canInvoicePay = false;
   PurchasePaymentMethod _paymentMethod = PurchasePaymentMethod.cash;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final permissions = context.read<ProcurementBloc>().session.user.permissions;
+      final canPay = PermissionGuard.can(
+        permissions,
+        Permission.procurementInvoicePay,
+      );
+      setState(() {
+        _canInvoicePay = canPay;
+        _recordInvoice = canPay;
+        _payNow = canPay;
+      });
       _initReceiptNumber();
       _loadProducts();
     });
@@ -240,46 +253,52 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
                   );
                 }),
               const Divider(height: 32),
-              Text(
-                'Facturation & paiement',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Créer une facture fournisseur'),
-                value: _recordInvoice,
-                onChanged: (v) => setState(() => _recordInvoice = v),
-              ),
-              if (_recordInvoice) ...[
-                TextFormField(
-                  controller: _invoiceNumberController,
-                  decoration: const InputDecoration(
-                    labelText: 'Numéro de facture',
-                    border: OutlineInputBorder(),
-                  ),
+              if (_canInvoicePay) ...[
+                Text(
+                  'Facturation & paiement',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Payer maintenant (${formatFcfa(_subtotal)})'),
-                  value: _payNow,
-                  onChanged: (v) => setState(() => _payNow = v),
+                  title: const Text('Créer une facture fournisseur'),
+                  value: _recordInvoice,
+                  onChanged: (v) => setState(() {
+                    _recordInvoice = v;
+                    if (!v) _payNow = false;
+                  }),
                 ),
-                if (!_payNow)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Text(
-                      'La facture sera créée en attente de paiement. '
-                      'Vous pourrez payer plus tard depuis l\'onglet « Appro direct ».',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                if (_recordInvoice) ...[
+                  TextFormField(
+                    controller: _invoiceNumberController,
+                    decoration: const InputDecoration(
+                      labelText: 'Numéro de facture',
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                if (_payNow) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Payer maintenant (${formatFcfa(_subtotal)})'),
+                    value: _payNow,
+                    onChanged: (v) => setState(() => _payNow = v),
+                  ),
+                  if (!_payNow)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: Text(
+                        'La facture sera créée en attente de paiement. '
+                        'Vous pourrez payer plus tard depuis l\'onglet « Appro direct ».',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                      ),
+                    ),
+                  if (_payNow) ...[
                   DropdownButtonFormField<PurchasePaymentMethod>(
                     value: _paymentMethod,
                     decoration: const InputDecoration(
@@ -307,6 +326,7 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
                     ),
                   ),
                 ],
+              ],
               ],
               const SizedBox(height: AppSpacing.sm),
               TextFormField(

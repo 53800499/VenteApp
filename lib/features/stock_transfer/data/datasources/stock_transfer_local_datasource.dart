@@ -2247,6 +2247,7 @@ class StockTransferLocalDatasource {
     required StockTransferItem item,
     int? sourceShopId,
   }) async {
+    // Uniquement la boutique destination (et ses alias SQLite), jamais la source.
     final shopIds = await localShopIdsInSameCloudShop(destinationShopId);
     for (final shopId in shopIds) {
       final found = await _resolveDestinationProductIdInShop(
@@ -2260,35 +2261,33 @@ class StockTransferLocalDatasource {
     return null;
   }
 
+  /// Identité catalogue destination : serverId → sku → nom → lien déjà stocké.
+  /// Le nom / serverId priment sur [destinationProductId] pour éviter de
+  /// réutiliser un doublon créé par erreur lors d'un transfert précédent.
   Future<int?> _resolveDestinationProductIdInShop({
     required InventoryLocalDatasource inventoryLocal,
     required int destinationShopId,
     required StockTransferItem item,
     int? sourceShopId,
   }) async {
-    if (item.destinationProductId != null) {
-      final existing = await inventoryLocal.findProduct(
-        destinationShopId,
-        item.destinationProductId!,
-      );
-      if (existing != null) return existing.id;
+    final serverIdCandidates = <String>{};
+    final nameCandidates = <String>{};
+    String? sourceSku;
+
+    void addServerId(String? value) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty) {
+        serverIdCandidates.add(trimmed);
+      }
     }
 
-    final serverId = item.productServerId?.trim();
-    if (serverId != null && serverId.isNotEmpty) {
-      final localId = await inventoryLocal.findLocalProductIdByServerId(
-        destinationShopId,
-        serverId,
-      );
-      if (localId != null) return localId;
+    void addName(String? value) {
+      final normalized = _normalizeProductName(value);
+      if (normalized != null) nameCandidates.add(normalized);
     }
 
-    final name = item.productName?.trim();
-    if (name != null && name.isNotEmpty) {
-      final byName =
-          await inventoryLocal.findLocalProductIdByName(destinationShopId, name);
-      if (byName != null) return byName;
-    }
+    addServerId(item.productServerId);
+    addName(item.productName);
 
     if (sourceShopId != null) {
       final sourceProduct = await inventoryLocal.findProduct(
@@ -2296,28 +2295,69 @@ class StockTransferLocalDatasource {
         item.sourceProductId,
       );
       if (sourceProduct != null) {
-        final sourceServerId = sourceProduct.serverId?.trim();
-        if (sourceServerId != null &&
-            sourceServerId.isNotEmpty &&
-            sourceServerId != serverId) {
-          final bySourceServerId = await inventoryLocal.findLocalProductIdByServerId(
-            destinationShopId,
-            sourceServerId,
-          );
-          if (bySourceServerId != null) return bySourceServerId;
-        }
-
-        if (name == null || name.isEmpty) {
-          final bySourceName = await inventoryLocal.findLocalProductIdByName(
-            destinationShopId,
-            sourceProduct.name,
-          );
-          if (bySourceName != null) return bySourceName;
-        }
+        addServerId(sourceProduct.serverId);
+        addName(sourceProduct.name);
+        final sku = sourceProduct.sku?.trim();
+        if (sku != null && sku.isNotEmpty) sourceSku = sku;
       }
     }
 
+    for (final serverId in serverIdCandidates) {
+      final byServerId = await inventoryLocal.findLocalProductIdByServerId(
+        destinationShopId,
+        serverId,
+      );
+      if (byServerId != null) return byServerId;
+    }
+
+    if (sourceSku != null) {
+      final bySku = await inventoryLocal.findLocalProductIdBySku(
+        destinationShopId,
+        sourceSku,
+      );
+      if (bySku != null) return bySku;
+    }
+
+    for (final name in nameCandidates) {
+      final byName = await inventoryLocal.findLocalProductIdByNormalizedName(
+        destinationShopId,
+        name,
+      );
+      if (byName != null) {
+        // Aligne le serverId source sur l'existant (si vide) pour les prochains transferts.
+        final preferredServerId = serverIdCandidates.isEmpty
+            ? null
+            : serverIdCandidates.first;
+        if (preferredServerId != null) {
+          final existing =
+              await inventoryLocal.findProduct(destinationShopId, byName);
+          final existingServerId = existing?.serverId?.trim();
+          if (existingServerId == null || existingServerId.isEmpty) {
+            await inventoryLocal.updateProductRow(
+              byName,
+              db.ProductsCompanion(serverId: Value(preferredServerId)),
+            );
+          }
+        }
+        return byName;
+      }
+    }
+
+    if (item.destinationProductId != null) {
+      final linked = await inventoryLocal.findProduct(
+        destinationShopId,
+        item.destinationProductId!,
+      );
+      if (linked != null) return linked.id;
+    }
+
     return null;
+  }
+
+  String? _normalizeProductName(String? value) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) return null;
+    return trimmed.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   Future<List<StockTransfer>> _mapTransfers(
@@ -2421,13 +2461,21 @@ class StockTransferLocalDatasource {
 
     final items = <StockTransferItem>[];
     for (final row in itemRows) {
-      final product = await (_db.select(_db.products)
+      final sourceProduct = await (_db.select(_db.products)
             ..where((p) => p.id.equals(row.sourceProductId)))
           .getSingleOrNull();
+      db.Product? destinationProduct;
+      if (row.destinationProductId != null) {
+        destinationProduct = await (_db.select(_db.products)
+              ..where((p) => p.id.equals(row.destinationProductId!)))
+            .getSingleOrNull();
+      }
 
       final lotRows = await (_db.select(_db.stockTransferLotLines)
             ..where((l) => l.transferItemId.equals(row.id)))
           .get();
+
+      final productName = sourceProduct?.name ?? destinationProduct?.name;
 
       items.add(
         StockTransferItem(
@@ -2436,7 +2484,7 @@ class StockTransferLocalDatasource {
           sourceProductId: row.sourceProductId,
           destinationProductId: row.destinationProductId,
           productServerId: row.productServerId,
-          productName: product?.name,
+          productName: productName,
           quantityRequested: row.quantityRequested,
           quantityShipped: row.quantityShipped,
           quantityReceived: row.quantityReceived,
@@ -3090,12 +3138,13 @@ class StockTransferLocalDatasource {
     final resolvedItems = <Map<String, dynamic>>[];
 
     for (final remoteItem in remoteItems) {
-      final localProductId = await _resolveLocalSourceProductId(
+      // Boutique destination : le catalogue source n'existe souvent pas localement.
+      // On crée un produit « miroir » pour conserver les lignes + le nom affiché.
+      final localProductId = await _ensureLocalSourceProductForRemoteItem(
         inventoryLocal: inventoryLocal,
         localSourceShopId: localSourceShopId,
         remoteItem: remoteItem,
       );
-      if (localProductId == null) continue;
 
       resolvedItems.add({
         'localProductId': localProductId,
@@ -3441,6 +3490,13 @@ class StockTransferLocalDatasource {
                 remoteItem['sourceProductId']?.toString(),
           ),
           destinationProductId: Value(destinationProductId),
+          quantityRequested: Value(
+            StockTransferStatus.mergeQuantity(
+              localItem.quantityRequested,
+              coerceRemoteInt(remoteItem['quantityRequested']) ??
+                  localItem.quantityRequested,
+            ),
+          ),
           quantityShipped: Value(
             StockTransferStatus.mergeQuantity(
               localItem.quantityShipped,
@@ -3457,11 +3513,76 @@ class StockTransferLocalDatasource {
       );
     }
 
+    // Lignes cloud absentes localement (ex. transfert créé sans catalogue source).
+    for (final remoteItem in remoteItems) {
+      final remoteItemId = coerceRemoteInt(remoteItem['id']);
+      if (remoteItemId != null && usedRemoteIds.contains(remoteItemId)) {
+        continue;
+      }
+
+      final alreadyLocal = await _isRemoteItemAlreadyLocal(
+        localItems: transfer.items ?? const [],
+        sourceShopId: localSourceShopId,
+        remoteItem: remoteItem,
+        usedRemoteIds: usedRemoteIds,
+      );
+      if (alreadyLocal) continue;
+
+      final localProductId = await _ensureLocalSourceProductForRemoteItem(
+        inventoryLocal: inventoryLocal,
+        localSourceShopId: localSourceShopId,
+        remoteItem: remoteItem,
+      );
+      final destinationProductId = await _resolveDestinationProductIdFromRemote(
+        inventoryLocal: inventoryLocal,
+        destinationShopId: localDestinationShopId,
+        remoteItem: remoteItem,
+      );
+
+      await _db.into(_db.stockTransferItems).insert(
+            db.StockTransferItemsCompanion.insert(
+              transferId: localTransferId,
+              sourceProductId: localProductId,
+              destinationProductId: Value(destinationProductId),
+              productServerId: Value(
+                remoteItem['productServerId']?.toString() ??
+                    remoteItem['sourceProductId']?.toString(),
+              ),
+              quantityRequested:
+                  coerceRemoteInt(remoteItem['quantityRequested']) ?? 0,
+              quantityShipped:
+                  Value(coerceRemoteInt(remoteItem['quantityShipped']) ?? 0),
+              quantityReceived:
+                  Value(coerceRemoteInt(remoteItem['quantityReceived']) ?? 0),
+            ),
+          );
+
+      if (remoteItemId != null) usedRemoteIds.add(remoteItemId);
+    }
+
     await _syncTransferLotLinesFromRemoteDetail(
       localTransferId: localTransferId,
       localDestinationShopId: localDestinationShopId,
       detail: detail,
     );
+  }
+
+  Future<bool> _isRemoteItemAlreadyLocal({
+    required List<StockTransferItem> localItems,
+    required int sourceShopId,
+    required Map<String, dynamic> remoteItem,
+    required Set<int> usedRemoteIds,
+  }) async {
+    for (final localItem in localItems) {
+      final match = await _matchRemoteTransferItem(
+        localItem: localItem,
+        sourceShopId: sourceShopId,
+        remoteItems: [remoteItem],
+        excludeRemoteIds: usedRemoteIds,
+      );
+      if (match != null) return true;
+    }
+    return false;
   }
 
   Future<int?> _resolveLocalSourceProductId({
@@ -3491,7 +3612,65 @@ class StockTransferLocalDatasource {
       if (product != null) return product.id;
     }
 
+    final name = (remoteItem['productName'] as String?)?.trim();
+    if (name != null && name.isNotEmpty) {
+      final byName =
+          await inventoryLocal.findLocalProductIdByName(localSourceShopId, name);
+      if (byName != null) return byName;
+    }
+
     return null;
+  }
+
+  /// Garantit un produit local côté boutique source pour les FK des lignes.
+  /// Sur la destination, crée un produit miroir (stock 0) si le catalogue
+  /// source n'est pas synchronisé.
+  Future<int> _ensureLocalSourceProductForRemoteItem({
+    required InventoryLocalDatasource inventoryLocal,
+    required int localSourceShopId,
+    required Map<String, dynamic> remoteItem,
+  }) async {
+    final existing = await _resolveLocalSourceProductId(
+      inventoryLocal: inventoryLocal,
+      localSourceShopId: localSourceShopId,
+      remoteItem: remoteItem,
+    );
+    if (existing != null) return existing;
+
+    final name = (remoteItem['productName'] as String?)?.trim();
+    final productServerId = remoteItem['productServerId']?.toString().trim();
+    final remoteSourceProductId = coerceRemoteInt(remoteItem['sourceProductId']);
+    final displayName = (name != null && name.isNotEmpty)
+        ? name
+        : (productServerId != null && productServerId.isNotEmpty)
+            ? 'Produit $productServerId'
+            : 'Produit #${remoteSourceProductId ?? '?'}';
+
+    final categoryId =
+        await _resolveTransferImportCategoryId(localSourceShopId);
+    final defaultThreshold =
+        await inventoryLocal.getDefaultAlertThreshold(localSourceShopId);
+
+    final productId = await inventoryLocal.insertProduct(
+      shopId: localSourceShopId,
+      categoryId: categoryId,
+      name: displayName,
+      quantityInStock: 0,
+      alertThreshold: defaultThreshold,
+      priceSell: 1,
+    );
+
+    final serverIdToStore = (productServerId != null && productServerId.isNotEmpty)
+        ? productServerId
+        : (remoteSourceProductId != null ? '$remoteSourceProductId' : null);
+    if (serverIdToStore != null) {
+      await inventoryLocal.updateProductRow(
+        productId,
+        db.ProductsCompanion(serverId: Value(serverIdToStore)),
+      );
+    }
+
+    return productId;
   }
 
   Future<int?> _resolveDestinationProductIdFromRemote({
@@ -3499,27 +3678,32 @@ class StockTransferLocalDatasource {
     required int destinationShopId,
     required Map<String, dynamic> remoteItem,
   }) async {
+    // Ne jamais traiter destinationProductId cloud comme un id local SQLite.
+    final productServerId = remoteItem['productServerId']?.toString().trim();
+    if (productServerId != null && productServerId.isNotEmpty) {
+      final byServerId = await inventoryLocal.findLocalProductIdByServerId(
+        destinationShopId,
+        productServerId,
+      );
+      if (byServerId != null) return byServerId;
+    }
+
     final remoteDestinationProductId =
         coerceRemoteInt(remoteItem['destinationProductId']);
     if (remoteDestinationProductId != null) {
-      final byRemoteId = await inventoryLocal.findLocalProductIdByServerId(
+      final byRemoteAsServerId = await inventoryLocal.findLocalProductIdByServerId(
         destinationShopId,
         '$remoteDestinationProductId',
       );
-      if (byRemoteId != null) return byRemoteId;
-
-      final product = await inventoryLocal.findProduct(
-        destinationShopId,
-        remoteDestinationProductId,
-      );
-      if (product != null) return product.id;
+      if (byRemoteAsServerId != null) return byRemoteAsServerId;
     }
 
-    final productServerId = remoteItem['productServerId']?.toString().trim();
-    if (productServerId != null && productServerId.isNotEmpty) {
-      return inventoryLocal.findLocalProductIdByServerId(
+    final name = (remoteItem['productName'] as String?)?.trim();
+    if (name != null && name.isNotEmpty) {
+      final normalized = name.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+      return inventoryLocal.findLocalProductIdByNormalizedName(
         destinationShopId,
-        productServerId,
+        normalized,
       );
     }
 
@@ -3630,13 +3814,6 @@ class StockTransferLocalDatasource {
       ),
     );
 
-    if (StockTransferStatus.canShip(mergedStatus)) {
-      await ensureTransferItemReservations(
-        sourceShopId: effectiveSourceShopId,
-        transferId: localTransferId,
-      );
-    }
-
     final remoteItems = (remote['items'] as List?)
             ?.whereType<Map<String, dynamic>>()
             .toList() ??
@@ -3649,6 +3826,20 @@ class StockTransferLocalDatasource {
         localDestinationShopId: effectiveDestinationShopId,
         detail: remote,
       );
+    }
+
+    // Réservations FIFO uniquement si le stock source est réellement disponible
+    // localement (boutique source). Sur la destination, le catalogue source est
+    // souvent un miroir sans stock : ne pas faire échouer le pull.
+    if (StockTransferStatus.canShip(mergedStatus)) {
+      try {
+        await ensureTransferItemReservations(
+          sourceShopId: effectiveSourceShopId,
+          transferId: localTransferId,
+        );
+      } on Failure {
+        // Ignore : snapshot cloud déjà validé côté serveur.
+      }
     }
 
     await _syncReceiptsFromRemoteDetail(

@@ -1136,7 +1136,22 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       }
     }
 
-    // 3. Pull Invoices
+    // 3. Pull réceptions directes (hors commandes)
+    try {
+      final rawDirectReceipts = await _remote.fetchDirectGoodsReceipts();
+      for (final raw in rawDirectReceipts) {
+        final rDto = PurchaseReceiptApiDto.fromJson(raw);
+        await _local.upsertPurchaseReceiptFromRemote(
+          shopId: shopId,
+          defaultUserId: defaultUserId,
+          remote: rDto,
+        );
+      }
+    } catch (_) {
+      // Endpoint absent ou offline : ne pas bloquer le reste du pull.
+    }
+
+    // 4. Pull Invoices
     final rawInvoices = await _remote.fetchInvoices();
     for (final raw in rawInvoices) {
       final dto = SupplierInvoiceApiDto.fromJson(raw);

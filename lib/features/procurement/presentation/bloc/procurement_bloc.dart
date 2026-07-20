@@ -53,7 +53,16 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementSuppliersLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true));
+    emit(
+      state.copyWith(
+        status: state.suppliers.isEmpty &&
+                state.purchaseOrders.isEmpty &&
+                state.directReceipts.isEmpty
+            ? ProcurementStatus.loading
+            : ProcurementStatus.refreshing,
+        clearError: true,
+      ),
+    );
     try {
       final list = await _repository.listSuppliers(shopId: shopId);
       emit(state.copyWith(status: ProcurementStatus.loaded, suppliers: list));
@@ -469,7 +478,16 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementReportLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true));
+    emit(
+      state.copyWith(
+        status: state.reportSummary == null &&
+                state.purchaseOrders.isEmpty &&
+                state.directReceipts.isEmpty
+            ? ProcurementStatus.loading
+            : ProcurementStatus.refreshing,
+        clearError: true,
+      ),
+    );
     try {
       final report = await _repository.getReportSummary(shopId: shopId);
       emit(state.copyWith(status: ProcurementStatus.loaded, reportSummary: report));
