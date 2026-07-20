@@ -147,16 +147,19 @@ class _StockTransferViewState extends State<_StockTransferView>
                   transfers: state.inTransit,
                   emptyMessage: 'Aucun transfert en transit.',
                   emptySubtitle:
-                      'Expéditions partielles ou complètes en attente de réception.',
+                      'Expéditions sortantes ou entrantes en attente de réception.',
                   onRefresh: () => _refreshFromServer(context),
                   onTap: (t) => _openDetail(context, t.id),
+                  shopLabelPrefix: 'Trajet',
+                  shopLabelFor: (t) =>
+                      '${t.sourceShopLabel} → ${t.destinationShopLabel}',
                 ),
                 _TransferList(
                   transfers: state.incoming,
                   emptyMessage: 'Aucun transfert entrant.',
                   emptySubtitle:
-                      'Les transferts à votre destination apparaissent ici '
-                      '(validés, expédiés ou reçus). '
+                      'Validés en attente d\'expédition, ou déjà reçus. '
+                      'Les expéditions en cours sont dans « En transit ». '
                       'Tirez vers le bas pour synchroniser.',
                   onRefresh: () => _refreshFromServer(context),
                   onTap: (t) => _openDetail(context, t.id),
@@ -165,6 +168,10 @@ class _StockTransferViewState extends State<_StockTransferView>
                 ),
                 _ReportTab(
                   report: state.reportSummary,
+                  isLoading: state.status == StockTransferBlocStatus.loading ||
+                      state.isRefreshing,
+                  loadFailed: state.status == StockTransferBlocStatus.failure &&
+                      state.reportSummary == null,
                   onRefresh: () => _refreshFromServer(context),
                   onOpenTransfer: (id) => _openDetail(context, id),
                 ),
@@ -177,7 +184,9 @@ class _StockTransferViewState extends State<_StockTransferView>
   }
 
   Widget? _buildFab(BuildContext context, bool canCreate, bool canReceive) {
-    if (_tabController.index == 2 && canReceive) {
+    // QR : onglets En transit (1) et Entrants (2).
+    if ((_tabController.index == 1 || _tabController.index == 2) &&
+        canReceive) {
       return FloatingActionButton.extended(
         onPressed: () => _openQrScan(context),
         icon: const Icon(Icons.qr_code_scanner),
@@ -326,17 +335,50 @@ class _ReportTab extends StatelessWidget {
     required this.report,
     required this.onRefresh,
     required this.onOpenTransfer,
+    this.isLoading = false,
+    this.loadFailed = false,
   });
 
   final StockTransferReportSummary? report;
   final Future<void> Function() onRefresh;
   final void Function(int transferId) onOpenTransfer;
+  final bool isLoading;
+  final bool loadFailed;
 
   @override
   Widget build(BuildContext context) {
     final r = report;
     if (r == null) {
-      return const Center(child: CircularProgressIndicator());
+      if (isLoading) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
+            Icon(
+              loadFailed ? Icons.error_outline : Icons.insights_outlined,
+              size: 48,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              loadFailed
+                  ? 'Impossible de charger le rapport.'
+                  : 'Aucune donnée de rapport pour le moment.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'Tirez vers le bas pour actualiser.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
     }
 
     return RefreshIndicator(
@@ -452,6 +494,7 @@ class _TransferTile extends StatelessWidget {
         .substring(0, 16);
     final statusColor = switch (transfer.status) {
       StockTransferStatus.draft => Colors.grey,
+      StockTransferStatus.pendingApproval => Colors.indigo,
       StockTransferStatus.validated => Colors.blue,
       StockTransferStatus.partiallyShipped => Colors.deepOrange,
       StockTransferStatus.shipped => Colors.orange,

@@ -72,7 +72,7 @@ class StockTransferBloc extends Bloc<StockTransferEvent, StockTransferState> {
     StockTransferListLoadRequested event,
     Emitter<StockTransferState> emit,
   ) async {
-    await _fetchLists(emit, syncRemote: true);
+    await _fetchLists(emit, syncRemote: true, forceRemote: true);
   }
 
   Future<void> _onRefreshList(
@@ -218,14 +218,22 @@ class StockTransferBloc extends Bloc<StockTransferEvent, StockTransferState> {
     StockTransferReturnCreateRequested event,
     Emitter<StockTransferState> emit,
   ) async {
-    emit(state.copyWith(status: StockTransferBlocStatus.refreshing, clearError: true));
+    emit(
+      state.copyWith(
+        status: StockTransferBlocStatus.refreshing,
+        clearError: true,
+        clearSuccess: true,
+      ),
+    );
     try {
-      final transfer = await _repository.createReturnTransfer(
+      final returnTransfer = await _repository.createReturnTransfer(
         shopId: shopId,
         userId: userId,
         parentTransferId: event.parentTransferId,
         quantitiesByParentItemId: event.quantitiesByParentItemId,
       );
+      final parent = await _loadTransferDetail(event.parentTransferId) ??
+          state.selectedTransfer;
       final lists = await _loadLists();
       emit(
         state.copyWith(
@@ -233,7 +241,9 @@ class StockTransferBloc extends Bloc<StockTransferEvent, StockTransferState> {
           outgoing: lists.outgoing,
           incoming: lists.incoming,
           inTransit: lists.inTransit,
-          selectedTransfer: transfer,
+          selectedTransfer: parent,
+          successMessage:
+              'Retour ${returnTransfer.reference} créé (brouillon).',
         ),
       );
     } on Failure catch (e) {

@@ -78,15 +78,13 @@ abstract final class StockTransferStatus {
       status == received;
 
   /// Transferts visibles dans l'onglet « Entrants » (boutique destination).
+  /// Hors « En transit » pour éviter le chevauchement.
   static const incomingTabStatuses = [
     validated,
-    partiallyShipped,
-    shipped,
-    partiallyReceived,
     received,
   ];
 
-  /// Entrants expédiés, réception incomplète (vue boutique destination).
+  /// Expéditions en cours, réception incomplète (source ou destination).
   static const inTransitTabStatuses = [
     partiallyShipped,
     shipped,
@@ -97,10 +95,7 @@ abstract final class StockTransferStatus {
       inTransitTabStatuses.contains(status);
   static bool canCreateReturn(String status, String transferType) =>
       transferType == StockTransferType.outbound &&
-      (status == received ||
-          status == partiallyReceived ||
-          status == closed ||
-          status == closedWithException);
+      (status == received || status == partiallyReceived);
 
   /// Ordre de progression métier (ne jamais rétrograder local ← cloud).
   static int progressionRank(String status) => switch (status) {

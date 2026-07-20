@@ -12,6 +12,7 @@ class StockTransferState extends Equatable {
     this.selectedTransfer,
     this.reportSummary,
     this.errorMessage,
+    this.successMessage,
     this.isRefreshing = false,
   });
 
@@ -24,6 +25,7 @@ class StockTransferState extends Equatable {
   final StockTransfer? selectedTransfer;
   final StockTransferReportSummary? reportSummary;
   final String? errorMessage;
+  final String? successMessage;
 
   StockTransferState copyWith({
     StockTransferBlocStatus? status,
@@ -34,8 +36,10 @@ class StockTransferState extends Equatable {
     StockTransfer? selectedTransfer,
     StockTransferReportSummary? reportSummary,
     String? errorMessage,
+    String? successMessage,
     bool? isRefreshing,
     bool clearError = false,
+    bool clearSuccess = false,
     bool clearSelectedTransfer = false,
     bool clearReportSummary = false,
   }) {
@@ -52,6 +56,8 @@ class StockTransferState extends Equatable {
       reportSummary:
           clearReportSummary ? null : (reportSummary ?? this.reportSummary),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      successMessage:
+          clearSuccess ? null : (successMessage ?? this.successMessage),
     );
   }
 
@@ -65,6 +71,7 @@ class StockTransferState extends Equatable {
         selectedTransfer,
         reportSummary,
         errorMessage,
+        successMessage,
         isRefreshing,
       ];
 }

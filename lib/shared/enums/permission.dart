@@ -102,6 +102,7 @@ const _sellerPermissions = <Permission>{
   Permission.procurementReceive,
   Permission.inventoryTransferRead,
   Permission.inventoryTransferCreate,
+  Permission.inventoryTransferReceive,
   Permission.fxExchangeRead,
   Permission.fxExchangeOperate,
   Permission.fxExchangeSessionOpen,

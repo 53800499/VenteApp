@@ -46,13 +46,71 @@ class StockTransferLocalDatasource {
   Future<String> nextReference(int shopId) async {
     final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
     final rows = await (_db.select(_db.stockTransfers)
-          ..where((t) => t.sourceShopId.isIn(groupIds)))
+          ..where(
+            (t) =>
+                t.sourceShopId.isIn(groupIds) |
+                t.destinationShopId.isIn(groupIds),
+          ))
         .get();
 
     final seq = _maxTransferSequence(
       rows.map((row) => row.reference).toList(growable: false),
     ) + 1;
     return 'TRF-${seq.toString().padLeft(5, '0')}';
+  }
+
+  /// Garantit une référence libre dans le réseau commercial.
+  Future<String> allocateUniqueReference(
+    int shopId, {
+    String? preferred,
+  }) async {
+    final trimmed = preferred?.trim();
+    if (trimmed != null &&
+        trimmed.isNotEmpty &&
+        !await isReferenceUsedInGroup(shopId: shopId, reference: trimmed)) {
+      return trimmed;
+    }
+
+    if (trimmed != null &&
+        trimmed.isNotEmpty &&
+        !RegExp(r'^(TRF|RET)-\d+', caseSensitive: false).hasMatch(trimmed)) {
+      for (var i = 2; i <= 99; i++) {
+        final candidate = '$trimmed-$i';
+        if (!await isReferenceUsedInGroup(
+          shopId: shopId,
+          reference: candidate,
+        )) {
+          return candidate;
+        }
+      }
+    }
+
+    for (var i = 0; i < 100; i++) {
+      final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+      final rows = await (_db.select(_db.stockTransfers)
+            ..where(
+              (t) =>
+                  t.sourceShopId.isIn(groupIds) |
+                  t.destinationShopId.isIn(groupIds),
+            ))
+          .get();
+      final seq = _maxTransferSequence(
+            rows.map((row) => row.reference).toList(growable: false),
+          ) +
+          1 +
+          i;
+      final candidate = 'TRF-${seq.toString().padLeft(5, '0')}';
+      if (!await isReferenceUsedInGroup(
+        shopId: shopId,
+        reference: candidate,
+      )) {
+        return candidate;
+      }
+    }
+
+    throw const ValidationFailure(
+      'Impossible de générer une référence unique. Réessayez.',
+    );
   }
 
   int _maxTransferSequence(List<String> references) {
@@ -79,7 +137,8 @@ class StockTransferLocalDatasource {
           ..where(
             (t) =>
                 t.reference.equals(trimmed) &
-                t.sourceShopId.isIn(groupIds),
+                (t.sourceShopId.isIn(groupIds) |
+                    t.destinationShopId.isIn(groupIds)),
           )
           ..limit(1))
         .getSingleOrNull();
@@ -120,10 +179,12 @@ class StockTransferLocalDatasource {
 
   Future<List<StockTransfer>> listInTransit(int shopId) async {
     final shopIds = await localShopIdsInSameCloudShop(shopId);
+    final shopIdList = shopIds.toList();
     final rows = await (_db.select(_db.stockTransfers)
           ..where(
             (t) =>
-                t.destinationShopId.isIn(shopIds.toList()) &
+                (t.sourceShopId.isIn(shopIdList) |
+                    t.destinationShopId.isIn(shopIdList)) &
                 t.status.isIn(StockTransferStatus.inTransitTabStatuses),
           )
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
@@ -137,10 +198,11 @@ class StockTransferLocalDatasource {
   Future<StockTransferReportSummary> buildReportSummary(int shopId) async {
     final outgoing = await listOutgoing(shopId);
     final incoming = await listIncoming(shopId);
+    final inTransitList = await listInTransit(shopId);
 
     final seen = <int>{};
     final transferIds = <int>[];
-    for (final transfer in [...outgoing, ...incoming]) {
+    for (final transfer in [...outgoing, ...incoming, ...inTransitList]) {
       if (seen.add(transfer.id)) transferIds.add(transfer.id);
     }
 
@@ -301,15 +363,10 @@ class StockTransferLocalDatasource {
     if (trimmedReference.isEmpty) {
       throw const ValidationFailure('Référence obligatoire.');
     }
-    if (await isReferenceUsedInGroup(
-      shopId: sourceShopId,
-      reference: trimmedReference,
-    )) {
-      throw ValidationFailure(
-        'La référence « $trimmedReference » est déjà utilisée '
-        'dans votre réseau commercial.',
-      );
-    }
+    final uniqueReference = await allocateUniqueReference(
+      sourceShopId,
+      preferred: trimmedReference,
+    );
 
     final inventoryLocal = InventoryLocalDatasource(_db);
     final timestamp = nowMs();
@@ -319,7 +376,7 @@ class StockTransferLocalDatasource {
     return _db.transaction(() async {
       final transferId = await _db.into(_db.stockTransfers).insert(
             db.StockTransfersCompanion.insert(
-              reference: trimmedReference,
+              reference: uniqueReference,
               sourceShopId: sourceShopId,
               destinationShopId: destinationShopId,
               sourceShopName: Value(sourceShopName),
@@ -1577,9 +1634,42 @@ class StockTransferLocalDatasource {
         .go();
   }
 
-  Future<String> nextReturnReference(int shopId, String parentReference) {
+  Future<String> nextReturnReference(int shopId, String parentReference) async {
     final suffix = parentReference.replaceFirst(RegExp(r'^(TRF|RET)-'), '');
-    return Future.value('RET-$suffix');
+    final preferred = 'RET-$suffix';
+    if (!await isReferenceUsedInGroup(
+      shopId: shopId,
+      reference: preferred,
+    )) {
+      return preferred;
+    }
+
+    for (var i = 0; i < 100; i++) {
+      final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+      final rows = await (_db.select(_db.stockTransfers)
+            ..where(
+              (t) =>
+                  t.sourceShopId.isIn(groupIds) |
+                  t.destinationShopId.isIn(groupIds),
+            ))
+          .get();
+      final seq = _maxTransferSequence(
+            rows.map((row) => row.reference).toList(growable: false),
+          ) +
+          1 +
+          i;
+      final candidate = 'RET-${seq.toString().padLeft(5, '0')}';
+      if (!await isReferenceUsedInGroup(
+        shopId: shopId,
+        reference: candidate,
+      )) {
+        return candidate;
+      }
+    }
+
+    throw const ValidationFailure(
+      'Impossible de générer une référence de retour unique.',
+    );
   }
 
   Future<List<PendingIncomingTransfer>> listPendingIncomingForNotifications(

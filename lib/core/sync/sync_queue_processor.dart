@@ -2423,7 +2423,9 @@ class SyncQueueProcessor {
     }
 
     try {
-      final newRef = (await _stockTransferRemote.fetchNextReference()).trim();
+      final newRef = await _stockTransferLocal.allocateUniqueReference(
+        local.sourceShopId,
+      );
       if (newRef.isEmpty) return false;
 
       await _stockTransferLocal.updateTransferReference(local.id, newRef);

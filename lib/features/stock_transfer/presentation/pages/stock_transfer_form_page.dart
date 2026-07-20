@@ -354,8 +354,9 @@ class _StockTransferFormPageState extends State<StockTransferFormPage> {
       );
       return;
     }
+    if (_destinationShopId == null) return;
 
-    _submitPending = true;
+    setState(() => _submitPending = true);
     context.read<StockTransferBloc>().add(
           StockTransferCreateSubmitted(
             destinationShopId: _destinationShopId!,

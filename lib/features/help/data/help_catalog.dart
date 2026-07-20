@@ -1131,7 +1131,7 @@ abstract final class HelpCatalog {
           title: 'Où trouver le module',
           steps: [
             'Ouvrez Plus → Transferts inter-boutiques.',
-            'Trois onglets : Sortants (envois), Entrants (réceptions), Rapports (écarts).',
+            'Quatre onglets : Sortants (envois), En transit (expéditions en cours), Entrants (validés / reçus), Rapports (écarts).',
             'Touchez l\'icône livre en haut à droite pour rouvrir ce guide.',
           ],
         ),
@@ -1203,18 +1203,18 @@ abstract final class HelpCatalog {
         HelpSection(
           title: 'Réceptionner avec le QR — pas à pas (boutique destination)',
           steps: [
-            'Plus → Transferts → onglet Entrants.',
-            'Touchez le bouton flottant « Scanner QR » (ou ouvrez le transfert puis scannez).',
+            'Plus → Transferts → onglet En transit (ou Entrants).',
+            'Touchez le bouton flottant « Scanner QR ».',
             'Autorisez l\'accès à la caméra si demandé.',
             'Cadrez le QR reçu du chauffeur.',
-            'L\'application ouvre le transfert avec les quantités préremplies.',
+            'L\'application ouvre le transfert et propose la réception avec les quantités préremplies.',
             'Vérifiez les quantités reçues et validez la réception.',
           ],
         ),
         HelpSection(
           title: 'Réceptionner manuellement — pas à pas',
           steps: [
-            'Onglet Entrants → touchez le transfert à réceptionner.',
+            'Onglet En transit → touchez le transfert à réceptionner.',
             'Pour chaque ligne, saisissez la quantité reçue (≤ quantité expédiée restante).',
             'Touchez « Réceptionner » et confirmez.',
             'Le stock entre en lots FIFO dans la boutique destination avec le même prix d\'achat.',
@@ -1246,9 +1246,9 @@ abstract final class HelpCatalog {
           title: 'Annuler un transfert',
           body: 'Selon l\'avancement :',
           bullets: [
-            'Brouillon ou Validé (sans expédition) : annulation simple, réservations libérées.',
-            'Expédié sans réception : annulation avec restock FIFO dans la boutique source.',
-            'Déjà reçu partiellement : annulation limitée — traitez plutôt un retour.',
+            'Brouillon, en attente d\'approbation ou Validé (sans expédition) : annulation simple ; les réservations sont libérées si le transfert était validé.',
+            'Déjà expédié : utilisez la clôture et la résolution d\'écarts plutôt que l\'annulation.',
+            'Déjà reçu partiellement : créez plutôt un retour.',
           ],
           steps: [
             'Ouvrez le transfert côté boutique source.',
@@ -1259,9 +1259,10 @@ abstract final class HelpCatalog {
         HelpSection(
           title: 'Permissions',
           bullets: [
-            'Consulter : voir les transferts sortants et entrants.',
+            'Consulter : voir les transferts sortants, en transit et entrants.',
             'Créer / expédier : boutique source (brouillon, validation, expédition).',
-            'Réceptionner : boutique destination (saisie ou scan QR).',
+            'Réceptionner : boutique destination — vendeur et patron (saisie ou scan QR).',
+            'Approuver : patron uniquement (si le circuit d\'approbation est utilisé).',
           ],
         ),
         HelpSection(

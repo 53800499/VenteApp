@@ -2,6 +2,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/remote_api_guard.dart';
 import '../../../../core/sync/local_write_sync_recorder.dart';
+import '../../../../core/sync/sync_constants.dart';
 import '../../../../core/sync/sync_policy.dart';
 import '../../../../core/sync/sync_pull_entity.dart';
 import '../../../shop/domain/repositories/shop_repository.dart';
@@ -106,12 +107,31 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       await _apiGuard.ensureReady();
       final remoteRef = await _remote.fetchNextReference();
       if (remoteRef.trim().isNotEmpty) {
-        return remoteRef.trim();
+        return _local.allocateUniqueReference(
+          shopId,
+          preferred: remoteRef.trim(),
+        );
       }
     } catch (_) {
       // Hors ligne ou API indisponible : numérotation locale.
     }
-    return _local.nextReference(shopId);
+    return _local.allocateUniqueReference(shopId);
+  }
+
+  Future<void> _invalidateTransferCaches({
+    required int sourceShopId,
+    required int destinationShopId,
+  }) async {
+    await _syncPolicy.invalidateEntitiesForWrite(
+      shopId: sourceShopId,
+      entityTable: SyncEntityTable.stockTransfers,
+    );
+    if (destinationShopId != sourceShopId) {
+      await _syncPolicy.invalidateEntitiesForWrite(
+        shopId: destinationShopId,
+        entityTable: SyncEntityTable.stockTransfers,
+      );
+    }
   }
 
   @override
@@ -137,10 +157,14 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       transferId: transfer.id,
       payload: {
         'destinationShopId': destinationShopId,
-        'reference': reference,
+        'reference': transfer.reference,
         if (notes != null) 'notes': notes,
         'items': items,
       },
+    );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: destinationShopId,
     );
 
     _pushTransferCreateInBackground(
@@ -169,6 +193,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       shopId: sourceShopId,
       transferId: transferId,
     );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: transfer.destinationShopId,
+    );
 
     _pushTransferValidateInBackground(sourceShopId, transferId);
     return transfer;
@@ -190,6 +218,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       shopId: sourceShopId,
       transferId: transferId,
     );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: transfer.destinationShopId,
+    );
 
     _pushTransferSubmitInBackground(sourceShopId, transferId);
     return transfer;
@@ -210,6 +242,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
     await _recorder?.recordStockTransferApprove(
       shopId: sourceShopId,
       transferId: transferId,
+    );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: transfer.destinationShopId,
     );
 
     _pushTransferApproveInBackground(sourceShopId, transferId);
@@ -270,6 +306,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
         'quantitiesByItemId':
             quantitiesForSync.map((k, v) => MapEntry('$k', v)),
       },
+    );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: transfer.destinationShopId,
     );
 
     _pushTransferShipInBackground(
@@ -398,6 +438,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
           ),
       },
     );
+    await _invalidateTransferCaches(
+      sourceShopId: transfer.sourceShopId,
+      destinationShopId: effectiveDestinationShopId,
+    );
 
     _pushTransferReceiveInBackground(
       destinationShopId: effectiveDestinationShopId,
@@ -450,11 +494,19 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
     required int userId,
     required int transferId,
   }) async {
+    final before = await _local.findTransfer(transferId);
     await _local.cancelTransfer(
       sourceShopId: sourceShopId,
       userId: userId,
       transferId: transferId,
     );
+
+    if (before != null) {
+      await _invalidateTransferCaches(
+        sourceShopId: sourceShopId,
+        destinationShopId: before.destinationShopId,
+      );
+    }
 
     final serverId = await _local.findTransferServerId(transferId);
     if (serverId == null) {
@@ -488,6 +540,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       shopId: sourceShopId,
       transferId: transferId,
       payload: {if (notes != null && notes.isNotEmpty) 'notes': notes},
+    );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: transfer.destinationShopId,
     );
 
     _pushTransferCloseInBackground(
@@ -530,6 +586,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
         'resolution': resolution,
         if (notes != null && notes.isNotEmpty) 'notes': notes,
       },
+    );
+    await _invalidateTransferCaches(
+      sourceShopId: sourceShopId,
+      destinationShopId: transfer.destinationShopId,
     );
 
     _pushTransferResolveDiscrepancyInBackground(
@@ -619,6 +679,10 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
             )
             .toList(),
       },
+    );
+    await _invalidateTransferCaches(
+      sourceShopId: shopId,
+      destinationShopId: transfer.destinationShopId,
     );
 
     _pushTransferCreateInBackground(
@@ -746,18 +810,40 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
           parentServerId = raw != null ? int.tryParse(raw) : null;
         }
 
-        final remote = await _remote.createTransfer(
-          StockTransferRemotePayloads.createBody(
-            destinationShopId: destServerId,
-            reference: transfer.reference,
-            notes: transfer.notes,
-            items: remoteItems,
-            transferType: transfer.transferType,
-            parentTransferId: parentServerId,
-          ),
-        );
+        var working = transfer;
+        for (var attempt = 0; attempt < 5; attempt++) {
+          try {
+            final remote = await _remote.createTransfer(
+              StockTransferRemotePayloads.createBody(
+                destinationShopId: destServerId,
+                reference: working.reference,
+                notes: working.notes,
+                items: remoteItems,
+                transferType: working.transferType,
+                parentTransferId: parentServerId,
+              ),
+            );
+            await _local.applyRemoteStockTransferSnapshot(working.id, remote);
+            await _invalidateTransferCaches(
+              sourceShopId: sourceShopId,
+              destinationShopId: destinationShopId,
+            );
+            return;
+          } on Failure catch (error) {
+            final message = error.message.toLowerCase();
+            final isDuplicate = message.contains('référence') ||
+                message.contains('reference') ||
+                message.contains('déjà utilisée') ||
+                message.contains('already');
+            if (!isDuplicate || attempt == 4) return;
 
-        await _local.applyRemoteStockTransferSnapshot(transfer.id, remote);
+            final newRef = await _local.allocateUniqueReference(sourceShopId);
+            await _local.updateTransferReference(working.id, newRef);
+            final refreshed = await _local.findTransfer(working.id);
+            if (refreshed == null) return;
+            working = refreshed;
+          }
+        }
       } catch (_) {}
     });
   }

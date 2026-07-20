@@ -16,6 +16,7 @@ import '../../domain/utils/stock_transfer_cloud_gate.dart';
 import '../bloc/stock_transfer_bloc.dart' hide StockTransferEvent;
 import '../services/stock_transfer_qr_sharer.dart';
 import '../widgets/stock_transfer_qr_dialog.dart';
+import '../widgets/transfer_missing_products_dialog.dart';
 import '../widgets/transfer_receive_dialog.dart';
 import '../widgets/transfer_resolve_discrepancy_dialog.dart';
 
@@ -44,6 +45,7 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
   final Map<int, TextEditingController> _shipControllers = {};
   Set<int> _shopAliasIds = {};
   bool _shopAliasesLoaded = false;
+  bool _qrReceivePromptScheduled = false;
 
   @override
   void initState() {
@@ -114,8 +116,17 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
     );
 
     return BlocConsumer<StockTransferBloc, StockTransferState>(
-      listenWhen: (prev, curr) => _actionPending && prev.status != curr.status,
+      listenWhen: (prev, curr) =>
+          (_actionPending && prev.status != curr.status) ||
+          (curr.successMessage != null &&
+              curr.successMessage != prev.successMessage),
       listener: (context, state) async {
+        if (state.successMessage != null && context.mounted) {
+          final message = state.successMessage!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
         if (!_actionPending) return;
         if (state.status == StockTransferBlocStatus.failure) {
           _actionPending = false;
@@ -156,7 +167,7 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
               _showQrForShipment(context, transfer, label);
             });
           }
-          if (context.mounted) {
+          if (context.mounted && state.successMessage == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
@@ -213,6 +224,25 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
         final canResolveDiscrepancy = isSource &&
             canManage &&
             StockTransferStatus.canResolveDiscrepancy(transfer.status);
+
+        if (!_qrReceivePromptScheduled &&
+            widget.initialReceiveQuantities != null &&
+            canReceive &&
+            isDestination &&
+            StockTransferStatus.canReceive(transfer.status)) {
+          _qrReceivePromptScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            unawaited(
+              _submitReceive(
+                context,
+                transfer,
+                shipmentId: widget.initialShipmentId,
+              ),
+            );
+          });
+        }
+
         final events = transfer.events ?? [];
         final cloudEnabled = transfer.cloudSyncEnabled;
         final canShowValidate = isSource &&
@@ -525,7 +555,10 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
                     label: Text(
                       transfer.status == StockTransferStatus.validated
                           ? 'Annuler (libérer réservations)'
-                          : 'Annuler le brouillon',
+                          : transfer.status ==
+                                  StockTransferStatus.pendingApproval
+                              ? 'Annuler la demande'
+                              : 'Annuler le brouillon',
                     ),
                   ),
                 ),
@@ -958,7 +991,9 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
         content: Text(
           transfer.status == StockTransferStatus.validated
               ? 'Les réservations seront libérées.'
-              : 'Le brouillon sera annulé.',
+              : transfer.status == StockTransferStatus.pendingApproval
+                  ? 'La demande d\'approbation sera annulée.'
+                  : 'Le brouillon sera annulé.',
         ),
         actions: [
           TextButton(
@@ -1060,17 +1095,23 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
     );
 
     if (missing.isNotEmpty && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            missing.length == 1
-                ? '« ${missing.first.productName} » sera créé automatiquement '
-                    'dans votre catalogue.'
-                : '${missing.length} produits seront créés automatiquement '
-                    'dans votre catalogue.',
-          ),
-        ),
+      final salePrices = await TransferMissingProductsDialog.show(
+        context,
+        products: missing,
       );
+      if (salePrices == null || !context.mounted) return;
+
+      setState(() => _actionPending = true);
+      context.read<StockTransferBloc>().add(
+            StockTransferReceiveSubmitted(
+              transferId: transfer.id,
+              quantitiesByItemId: result.quantitiesByItemId,
+              refusalsByItemId: result.refusalsByItemId,
+              salePriceByItemId: salePrices,
+              shipmentId: shipmentId,
+            ),
+          );
+      return;
     }
 
     setState(() => _actionPending = true);
