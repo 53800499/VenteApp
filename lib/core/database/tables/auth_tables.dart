@@ -108,3 +108,11 @@ class AuditLogs extends Table {
   IntColumn get createdAt => integer()();
   IntColumn get syncedAt => integer().nullable()();
 }
+
+/// Snapshot du contexte identité (offline) issu de GET /auth/identity.
+class IdentitySnapshots extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get userServerId => integer()();
+  TextColumn get payloadJson => text()();
+  IntColumn get updatedAt => integer()();
+}

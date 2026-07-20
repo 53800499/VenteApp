@@ -7,7 +7,7 @@ import '../../../../shared/components/ui_primitives.dart';
 import '../../domain/entities/auth_entities.dart';
 import '../bloc/auth_bloc.dart';
 
-/// Choix du contexte boutique après vérification WhatsApp.
+/// Choix de l'identité (entreprise / rôle) après vérification WhatsApp.
 class MembershipSelectionPage extends StatelessWidget {
   const MembershipSelectionPage({super.key});
 
@@ -31,10 +31,10 @@ class MembershipSelectionPage extends StatelessWidget {
                   children: [
                     const SizedBox(height: AppSpacing.lg),
                     const PageHeader(
-                      icon: Icons.store_mall_directory_outlined,
-                      title: 'Choisissez votre accès',
+                      icon: Icons.badge_outlined,
+                      title: 'Choisissez votre identité',
                       subtitle:
-                          'Sélectionnez la boutique et le rôle avec lesquels vous souhaitez vous connecter.',
+                          'Sélectionnez l\'entreprise et le rôle avec lesquels vous souhaitez vous connecter.',
                     ),
                     if (state.errorMessage != null) ...[
                       const SizedBox(height: AppSpacing.md),
@@ -91,6 +91,8 @@ class _MembershipTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isOrganization =
+        membership.scopeType == MembershipScopeType.organization;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -102,7 +104,12 @@ class _MembershipTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 backgroundColor: colorScheme.primaryContainer,
-                child: Icon(Icons.store, color: colorScheme.primary),
+                child: Icon(
+                  isOrganization
+                      ? Icons.domain_outlined
+                      : Icons.store_outlined,
+                  color: colorScheme.primary,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -110,20 +117,22 @@ class _MembershipTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      membership.shopName,
+                      membership.displayName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      membership.roleLabel,
+                      membership.subtitle,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     if (membership.isDefault) ...[
                       const SizedBox(height: 4),
                       Text(
-                        'Boutique par défaut',
+                        isOrganization
+                            ? 'Entreprise par défaut'
+                            : 'Boutique par défaut',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: colorScheme.primary,
                             ),

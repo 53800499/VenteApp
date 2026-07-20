@@ -73,6 +73,25 @@ class SyncQueueDatasource {
         .get();
   }
 
+  Future<SyncQueueData?> findPendingOperation({
+    required int shopId,
+    required String entityTable,
+    required int recordId,
+    required String operation,
+  }) async {
+    return (_db.select(_db.syncQueue)
+          ..where(
+            (q) =>
+                q.shopId.equals(shopId) &
+                q.entityTable.equals(entityTable) &
+                q.recordId.equals(recordId) &
+                q.operation.equals(operation) &
+                q.status.equals('pending'),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   /// Résumé lisible des éléments encore en file (pour l'UI cloud).
   Future<String?> describePendingBlock({required int shopId}) async {
     final rows = await fetchPending(shopId: shopId, limit: 50);
@@ -95,6 +114,12 @@ class SyncQueueDatasource {
       SyncEntityTable.tenantModules: 'module(s) boutique',
       SyncEntityTable.calculatorProductData: 'config(s) calculateur',
       SyncEntityTable.calculatorHistory: 'calcul(s) enregistré(s)',
+      SyncEntityTable.suppliers: 'fournisseur(s)',
+      SyncEntityTable.purchaseOrders: 'commande(s) achat',
+      SyncEntityTable.purchaseReceipts: 'réception(s) achat',
+      SyncEntityTable.supplierInvoices: 'facture(s) fournisseur',
+      SyncEntityTable.supplierPayments: 'paiement(s) fournisseur',
+      SyncEntityTable.stockTransfers: 'transfert(s) inter-boutiques',
     };
 
     final parts = byTable.entries
@@ -144,6 +169,7 @@ class SyncQueueDatasource {
                 q.shopId.equals(shopId) &
                 q.entityTable.equals(tableName) &
                 q.recordId.equals(recordId) &
+                q.operation.equals(operation) &
                 q.status.equals('pending'),
           ))
         .go();

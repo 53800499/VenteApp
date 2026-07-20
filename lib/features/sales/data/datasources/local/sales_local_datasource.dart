@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../../../inventory/data/datasources/local/inventory_local_datasource.dart';
 import '../../../../../core/database/app_database.dart' as db;
 import '../../../../../core/utils/benin_day_range.dart';
 import '../../../../../core/utils/time.dart';
@@ -333,7 +334,8 @@ class SalesLocalDatasource {
       final saleRow = await (_db.select(_db.sales)
             ..where(
               (s) => s.id.equals(saleId) & s.shopId.equals(shopId),
-            ))
+            )
+            ..limit(1))
           .getSingleOrNull();
       if (saleRow == null) return;
 
@@ -472,14 +474,16 @@ class SalesLocalDatasource {
 
   Future<int?> resolveLocalCustomerId(int shopId, int? remoteCustomerId) async {
     if (remoteCustomerId == null) return null;
-    final row = await (_db.select(_db.customers)
+    final rows = await (_db.select(_db.customers)
           ..where(
             (c) =>
                 c.shopId.equals(shopId) &
                 c.serverId.equals('$remoteCustomerId'),
-          ))
-        .getSingleOrNull();
-    return row?.id;
+          )
+          ..orderBy([(c) => OrderingTerm.asc(c.id)])
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.id;
   }
 
   Future<bool> saleNeedsPaymentDetail(int shopId, String serverId) async {
@@ -686,6 +690,38 @@ class SalesLocalDatasource {
     return itemsList.isNotEmpty;
   }
 
+  Future<bool> saleItemsNeedUnitCostBackfill(int shopId, String serverId) async {
+    final sale = await _firstSaleByServerId(shopId, serverId);
+    if (sale == null) return false;
+    final itemsList = await (_db.select(_db.saleItems)
+          ..where((i) => i.saleId.equals(sale.id)))
+        .get();
+    if (itemsList.isEmpty) return false;
+    return itemsList.every(
+      (item) => item.unitCost == null || item.unitCost! <= 0,
+    );
+  }
+
+  Future<int?> _resolveRemoteItemUnitCost({
+    required int shopId,
+    required SaleDetailItemApiDto item,
+    int? localProductId,
+  }) async {
+    if (item.unitCost != null && item.unitCost! > 0) {
+      return item.unitCost;
+    }
+
+    if (localProductId != null) {
+      final product = await (_db.select(_db.products)
+            ..where((p) => p.shopId.equals(shopId) & p.id.equals(localProductId)))
+          .getSingleOrNull();
+      final priceBuy = product?.priceBuy;
+      if (priceBuy != null && priceBuy > 0) return priceBuy;
+    }
+
+    return null;
+  }
+
   Future<void> upsertSaleItemsFromRemote({
     required int shopId,
     required String serverId,
@@ -699,16 +735,23 @@ class SalesLocalDatasource {
     }
 
     await _db.transaction(() async {
+      final inventoryLocal = InventoryLocalDatasource(_db);
       await (_db.delete(_db.saleItems)..where((i) => i.saleId.equals(sale.id))).go();
 
       for (final item in items) {
         int? localProductId;
         if (item.productId != null) {
-          final prod = await (_db.select(_db.products)
-                ..where((p) => p.shopId.equals(shopId) & p.serverId.equals('${item.productId}')))
-              .getSingleOrNull();
-          localProductId = prod?.id;
+          localProductId = await inventoryLocal.findLocalProductIdByServerId(
+            shopId,
+            '${item.productId}',
+          );
         }
+
+        final unitCost = await _resolveRemoteItemUnitCost(
+          shopId: shopId,
+          item: item,
+          localProductId: localProductId,
+        );
 
         await _db.into(_db.saleItems).insert(
               db.SaleItemsCompanion.insert(
@@ -718,6 +761,7 @@ class SalesLocalDatasource {
                 productName: item.productName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
+                unitCost: unitCost != null ? Value(unitCost) : const Value.absent(),
                 lineTotal: item.lineTotal,
                 createdAt: sale.createdAt,
               ),

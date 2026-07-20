@@ -7,10 +7,9 @@ import '../../features/auth/domain/entities/auth_entities.dart';
 class CommerceShopScope {
   const CommerceShopScope._();
 
-  /// IDs locaux à interroger, dans l'ordre de priorité (V1 compat + V3 user.shopId).
+  /// Boutique locale active (V3 : une seule boutique à la fois).
   static List<int> candidateLocalShopIds(AuthSession session) {
-    final ids = <int>{session.shop.id, session.user.shopId};
-    return ids.toList();
+    return [session.shop.id];
   }
 
   /// Boutique cible pour la synchronisation cloud (V3 : une boutique à la fois).

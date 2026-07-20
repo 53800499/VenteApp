@@ -14,6 +14,8 @@ import 'tables/calculator_tables.dart';
 import 'tables/purchase_tables.dart';
 import 'tables/inventory_lot_tables.dart';
 import 'tables/product_pricing_tables.dart';
+import 'tables/stock_transfer_tables.dart';
+import 'tables/fx_exchange_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -23,6 +25,7 @@ part 'app_database.g.dart';
   Settings,
   AuthSessions,
   AuditLogs,
+  IdentitySnapshots,
   Categories,
   Products,
   Customers,
@@ -55,6 +58,22 @@ part 'app_database.g.dart';
   InventoryLots,
   SaleItemLotAllocations,
   ProductPriceHistory,
+  StockTransfers,
+  StockTransferItems,
+  StockTransferShipments,
+  StockTransferLotReservations,
+  StockTransferLotLines,
+  StockTransferEvents,
+  StockTransferDiscrepancies,
+  StockTransferReceipts,
+  StockTransferReceiptItems,
+  FxCurrencies,
+  FxShopCurrencies,
+  FxRateSnapshots,
+  FxSessions,
+  FxSessionBalances,
+  FxOperations,
+  FxMovements,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase({required DatabaseKeyStorage keyStorage})
@@ -63,15 +82,21 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 35;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         beforeOpen: (details) async {
           await _backfillNotificationSettingsColumns();
+          try {
+            await seedFxCurrencies(this);
+          } catch (_) {
+            // Tables FX absentes tant que la migration 35 n'a pas tourné.
+          }
         },
         onCreate: (Migrator m) async {
           await m.createAll();
+          await seedFxCurrencies(this);
         },
         onUpgrade: (Migrator m, int from, int to) async {
           if (from < 2) {
@@ -203,6 +228,184 @@ class AppDatabase extends _$AppDatabase {
             await _addColumnIfMissing(m, products, products.marginValue);
             await m.createTable(productPriceHistory);
             await _backfillProductPriceHistory(this);
+          }
+          if (from < 25) {
+            await m.createTable(stockTransfers);
+            await m.createTable(stockTransferItems);
+            await m.createTable(stockTransferLotLines);
+          }
+          if (from < 26) {
+            await _addColumnIfMissing(
+              m,
+              inventoryLots,
+              inventoryLots.quantityReserved,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.validatedBy,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.validatedAt,
+            );
+            await m.createTable(stockTransferShipments);
+            await m.createTable(stockTransferLotReservations);
+            await _addColumnIfMissing(
+              m,
+              stockTransferLotLines,
+              stockTransferLotLines.shipmentId,
+            );
+          }
+          if (from < 27) {
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.transferType,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.parentTransferId,
+            );
+          }
+          if (from < 28) {
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.sourceShopName,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.destinationShopName,
+            );
+            await customStatement('''
+              UPDATE stock_transfers
+              SET source_shop_name = (
+                SELECT name FROM shops WHERE shops.id = stock_transfers.source_shop_id
+              )
+              WHERE source_shop_name IS NULL
+            ''');
+            await customStatement('''
+              UPDATE stock_transfers
+              SET destination_shop_name = (
+                SELECT name FROM shops WHERE shops.id = stock_transfers.destination_shop_id
+              )
+              WHERE destination_shop_name IS NULL
+            ''');
+          }
+          if (from < 29) {
+            await customStatement('''
+              CREATE TABLE stock_transfer_lot_lines_v29 (
+                id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                transfer_item_id INTEGER NOT NULL REFERENCES stock_transfer_items(id),
+                shipment_id INTEGER REFERENCES stock_transfer_shipments(id),
+                source_lot_id INTEGER REFERENCES inventory_lots(id),
+                destination_lot_id INTEGER REFERENCES inventory_lots(id),
+                quantity INTEGER NOT NULL,
+                quantity_received INTEGER NOT NULL DEFAULT 0,
+                unit_cost INTEGER NOT NULL
+              )
+            ''');
+            await customStatement('''
+              INSERT INTO stock_transfer_lot_lines_v29 (
+                id,
+                transfer_item_id,
+                shipment_id,
+                source_lot_id,
+                destination_lot_id,
+                quantity,
+                quantity_received,
+                unit_cost
+              )
+              SELECT
+                id,
+                transfer_item_id,
+                shipment_id,
+                source_lot_id,
+                destination_lot_id,
+                quantity,
+                quantity_received,
+                unit_cost
+              FROM stock_transfer_lot_lines
+            ''');
+            await customStatement('DROP TABLE stock_transfer_lot_lines');
+            await customStatement(
+              'ALTER TABLE stock_transfer_lot_lines_v29 '
+              'RENAME TO stock_transfer_lot_lines',
+            );
+          }
+          if (from < 30) {
+            await m.createTable(identitySnapshots);
+          }
+          if (from < 31) {
+            await _addColumnIfMissing(
+              m,
+              stockTransferShipments,
+              stockTransferShipments.reference,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransferShipments,
+              stockTransferShipments.driverName,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransferShipments,
+              stockTransferShipments.vehiclePlate,
+            );
+            await customStatement('''
+              UPDATE stock_transfer_shipments
+              SET reference = 'SHP-' || transfer_id || '-' || id
+              WHERE reference IS NULL OR reference = ''
+            ''');
+          }
+          if (from < 32) {
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.closedBy,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransfers,
+              stockTransfers.closedAt,
+            );
+            await m.createTable(stockTransferEvents);
+            await m.createTable(stockTransferDiscrepancies);
+          }
+          if (from < 33) {
+            await m.createTable(stockTransferReceipts);
+            await m.createTable(stockTransferReceiptItems);
+          }
+          if (from < 34) {
+            await _addColumnIfMissing(
+              m,
+              stockTransferReceiptItems,
+              stockTransferReceiptItems.quantityRefused,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransferReceiptItems,
+              stockTransferReceiptItems.refusalReason,
+            );
+            await _addColumnIfMissing(
+              m,
+              stockTransferReceiptItems,
+              stockTransferReceiptItems.refusalResolution,
+            );
+          }
+          if (from < 35) {
+            await m.createTable(fxCurrencies);
+            await m.createTable(fxShopCurrencies);
+            await m.createTable(fxRateSnapshots);
+            await m.createTable(fxSessions);
+            await m.createTable(fxSessionBalances);
+            await m.createTable(fxOperations);
+            await m.createTable(fxMovements);
+            await seedFxCurrencies(this);
           }
         },
       );
@@ -345,6 +548,29 @@ Future<void> _migrateDirectProcurementReceipts(AppDatabase db) async {
   await db.customStatement(
     'ALTER TABLE purchase_receipt_items_new RENAME TO purchase_receipt_items',
   );
+}
+
+/// Catalogue FX (idempotent) — appelé à la création, migration et à chaque ouverture.
+Future<void> seedFxCurrencies(AppDatabase db) async {
+  final seeds = [
+    ('XOF', 'Franc CFA', 'FCFA', 0, 1),
+    ('NGN', 'Naira nigérian', '₦', 2, 2),
+    ('GHS', 'Cedi ghanéen', '₵', 2, 3),
+    ('USD', 'Dollar US', r'$', 2, 4),
+    ('EUR', 'Euro', '€', 2, 5),
+  ];
+
+  for (final (code, label, symbol, minor, order) in seeds) {
+    await db.into(db.fxCurrencies).insertOnConflictUpdate(
+          FxCurrenciesCompanion.insert(
+            code: code,
+            label: label,
+            symbol: symbol,
+            minorUnit: Value(minor),
+            sortOrder: Value(order),
+          ),
+        );
+  }
 }
 
 Future<void> _seedDefaultCategories(AppDatabase db) async {

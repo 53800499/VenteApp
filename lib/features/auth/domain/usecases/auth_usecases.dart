@@ -267,6 +267,14 @@ class HasRestorableSession {
   Future<bool> call() => _repository.hasRestorableSession();
 }
 
+class GetRestorableSessionShopId {
+  const GetRestorableSessionShopId(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<int?> call() => _repository.getRestorableSessionShopId();
+}
+
 class UnlockWithPin {
   const UnlockWithPin(this._repository);
 
@@ -340,6 +348,22 @@ class SwitchShop {
 
   Future<AuthSession> call({required int shopId}) =>
       _repository.switchShop(shopId: shopId);
+}
+
+class GetIdentityContext {
+  const GetIdentityContext(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<AuthIdentityContext> call() => _repository.getIdentityContext();
+}
+
+class TryResolveServerShopId {
+  const TryResolveServerShopId(this._repository);
+
+  final AuthRepository _repository;
+
+  Future<int?> call(int shopId) => _repository.tryResolveServerShopId(shopId);
 }
 
 class ListDeviceSessions {

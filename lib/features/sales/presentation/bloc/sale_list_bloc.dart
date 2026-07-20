@@ -146,6 +146,8 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         );
       } on Failure {
         // Sync cloud optionnelle — conserver les ventes locales affichées.
+      } catch (_) {
+        // Doublons locaux ou données cloud partielles : ne pas bloquer la liste.
       }
 
       final refreshedSales = await _listSales(

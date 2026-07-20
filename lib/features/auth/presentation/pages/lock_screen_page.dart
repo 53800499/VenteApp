@@ -22,17 +22,62 @@ class _LockScreenPageState extends State<LockScreenPage> {
   static const _maxPinLength = 6;
   String _pin = '';
   int? _selectedUserId;
+  int? _lastLockShopId;
+
+  void _syncSelectedUser(LockScreenData lockScreen) {
+    if (_lastLockShopId != lockScreen.shopId) {
+      _lastLockShopId = lockScreen.shopId;
+      _selectedUserId = null;
+    }
+    final validIds = lockScreen.users.map((user) => user.id).toSet();
+    if (_selectedUserId == null || !validIds.contains(_selectedUserId)) {
+      _selectedUserId = lockScreen.users.firstOrNull?.id;
+    }
+  }
+
+  Future<void> _confirmExitToEntry(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Retour à l\'accueil'),
+        content: const Text(
+          'Vous quitterez la session en cours et pourrez vous reconnecter '
+          'par WhatsApp, PIN ou une autre boutique.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Continuer'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    context.read<AuthBloc>().add(const AuthLockScreenExitRequested());
+  }
 
   void _submitPin() {
     if (_pin.length < _minPinLength) return;
     final state = context.read<AuthBloc>().state;
     if (state is! AuthLocked) return;
 
+    final lockScreen = state.lockScreen;
+    _syncSelectedUser(lockScreen);
+    final userId = lockScreen.users
+            .where((user) => user.id == _selectedUserId)
+            .firstOrNull
+            ?.id ??
+        lockScreen.users.firstOrNull?.id;
+
     context.read<AuthBloc>().add(
           AuthLoginRequested(
             pin: _pin,
-            shopId: state.lockScreen.shopId,
-            userId: _selectedUserId ?? state.lockScreen.users.firstOrNull?.id,
+            shopId: lockScreen.shopId,
+            userId: userId,
           ),
         );
     setState(() => _pin = '');
@@ -54,7 +99,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
         }
 
         final lockScreen = state.lockScreen;
-        _selectedUserId ??= lockScreen.users.firstOrNull?.id;
+        _syncSelectedUser(lockScreen);
         final selectedUser = lockScreen.users
             .where((user) => user.id == _selectedUserId)
             .firstOrNull;
@@ -125,6 +170,38 @@ class _LockScreenPageState extends State<LockScreenPage> {
                           if (state.errorMessage != null) ...[
                             SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
                             ErrorBanner(message: state.errorMessage!),
+                            SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
+                            if (state.canGoBack)
+                              TextButton.icon(
+                                onPressed: state.isSubmitting
+                                    ? null
+                                    : () => context.read<AuthBloc>().add(
+                                          const AuthLockScreenBackRequested(),
+                                        ),
+                                icon: const Icon(Icons.home_outlined),
+                                label: const Text('Retour à l\'accueil'),
+                              )
+                            else
+                              OutlinedButton.icon(
+                                onPressed: state.isSubmitting
+                                    ? null
+                                    : () => _confirmExitToEntry(context),
+                                icon: const Icon(Icons.logout),
+                                label: const Text('Retour à l\'accueil'),
+                              ),
+                            Text(
+                              state.canGoBack
+                                  ? 'Choisissez un autre mode de connexion '
+                                      '(WhatsApp, PIN…).'
+                                  : 'Quittez le verrouillage et reconnectez-vous '
+                                      'par WhatsApp, PIN ou une autre boutique.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
                           ],
                           SizedBox(height: compact ? AppSpacing.md : AppSpacing.lg),
                           PinPad(

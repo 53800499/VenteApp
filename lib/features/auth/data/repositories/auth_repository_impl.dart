@@ -130,10 +130,12 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<LockScreenData> getLockScreen({required int shopId}) async {
     final serverShopId = await _resolveServerShopId(shopId);
     final localShopId = await _resolveLocalShopId(serverShopId);
+    await _ensureLocalShopServerId(localShopId, serverShopId);
+    if (shopId != localShopId) {
+      await _ensureLocalShopServerId(shopId, serverShopId);
+    }
 
-    final localUsers = await (_db.select(_db.users)
-          ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
-        .get();
+    final localUsers = await _activeUsersForShop(localShopId);
 
     if (localUsers.isNotEmpty) {
       final local = await _lockScreenFromLocal(localShopId);
@@ -191,9 +193,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final serverShopId = await _resolveServerShopId(shopId);
     final localShopId = await _resolveLocalShopId(serverShopId);
 
-    final localUsers = await (_db.select(_db.users)
-          ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
-        .get();
+    final localUsers = await _activeUsersForShop(localShopId);
 
     if (localUsers.isNotEmpty) {
       try {
@@ -264,17 +264,57 @@ class AuthRepositoryImpl implements AuthRepository {
       userId: userId,
     );
     final device = await _deviceIds.getAuthDevice();
-    final result = await _remote!.loginWithPin(
-      pin: pin,
-      shopId: serverShopId,
-      userId: serverUserId,
-      deviceId: device.deviceId,
-      deviceLabel: device.deviceLabel,
-    ).timeout(
-      _onlinePinRefreshTimeout,
-      onTimeout: () => throw NetworkFailure(_onlinePinTimeoutMessage),
+
+    Future<LoginSuccessData> callRemote(int? remoteUserId) {
+      return _remote!.loginWithPin(
+        pin: pin,
+        shopId: serverShopId,
+        userId: remoteUserId,
+        deviceId: device.deviceId,
+        deviceLabel: device.deviceLabel,
+      ).timeout(
+        _onlinePinRefreshTimeout,
+        onTimeout: () => throw NetworkFailure(_onlinePinTimeoutMessage),
+      );
+    }
+
+    try {
+      final result = await callRemote(serverUserId);
+      return _finalizeOnlineLogin(result, pin: pin);
+    } on Failure catch (error) {
+      if (serverUserId != null && _shouldRetryPinLoginWithoutUserId(error)) {
+        final result = await callRemote(null);
+        return _finalizeOnlineLogin(result, pin: pin);
+      }
+      rethrow;
+    }
+  }
+
+  bool _shouldRetryPinLoginWithoutUserId(Failure error) {
+    final lower = error.message.toLowerCase();
+    return lower.contains('introuvable dans cette boutique') ||
+        lower.contains('aucun utilisateur trouvé pour cette boutique') ||
+        (lower.contains('utilisateur') && lower.contains('introuvable'));
+  }
+
+  Future<int?> _serverShopIdFromSessionContext() async {
+    final active = _activeShop.serverShopId;
+    if (active != null) return active;
+
+    final profile = await _credentials.getProfile();
+    final profileShopId = profile?['shopId'];
+    if (profileShopId is int) return profileShopId;
+    if (profileShopId is String) return int.tryParse(profileShopId.trim());
+    return null;
+  }
+
+  Future<void> _ensureLocalShopServerId(int localShopId, int serverShopId) async {
+    await (_db.update(_db.shops)..where((s) => s.id.equals(localShopId))).write(
+      ShopsCompanion(
+        serverId: Value('$serverShopId'),
+        syncedAt: Value(nowMs()),
+      ),
     );
-    return _finalizeOnlineLogin(result, pin: pin);
   }
 
   Future<void> _refreshOnlineCredentialsAfterLocalPin({
@@ -629,11 +669,10 @@ class AuthRepositoryImpl implements AuthRepository {
     final serverShopId = await _resolveServerShopId(shopId);
     AuthMembership? membership;
     for (final candidate in verifyResult.memberships) {
-      if (candidate.shopId == serverShopId &&
-          (userId == null || candidate.userId == userId)) {
-        membership = candidate;
-        break;
-      }
+      if (!candidate.coversServerShop(serverShopId)) continue;
+      if (userId != null && candidate.userId != userId) continue;
+      membership = candidate;
+      break;
     }
 
     membership ??= verifyResult.memberships.length == 1
@@ -663,7 +702,7 @@ class AuthRepositoryImpl implements AuthRepository {
 
     return completeWhatsappLogin(
       verificationToken: verifyResult.verificationToken,
-      shopId: membership.shopId,
+      shopId: serverShopId,
       userId: membership.userId,
     );
   }
@@ -1062,6 +1101,17 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<int?> getRestorableSessionShopId() async {
+    final token = await _sessionStorage.getSessionToken();
+    if (token == null) return null;
+
+    final dbSession = await (_db.select(_db.authSessions)
+          ..where((s) => s.id.equals(token)))
+        .getSingleOrNull();
+    return dbSession?.shopId;
+  }
+
+  @override
   Future<AuthSession> unlockWithPin({
     required String pin,
     required int shopId,
@@ -1070,9 +1120,7 @@ class AuthRepositoryImpl implements AuthRepository {
     final serverShopId = await _resolveServerShopId(shopId);
     final localShopId = await _resolveLocalShopId(serverShopId);
 
-    final localUsers = await (_db.select(_db.users)
-          ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
-        .get();
+    final localUsers = await _activeUsersForShop(localShopId);
 
     if (localUsers.isNotEmpty) {
       try {
@@ -1390,6 +1438,136 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  @override
+  Future<AuthIdentityContext> getIdentityContext() async {
+    if (_remote == null || !await _networkInfo.isConnected) {
+      return _identityContextFromLocal();
+    }
+    try {
+      final dto = await _remote!.getIdentityContext().timeout(
+        const Duration(seconds: 5),
+      );
+      final context = AuthIdentityContext(
+        membershipId: dto.membershipId,
+        identityId: dto.identityId,
+        organizationId: dto.organizationId,
+        organizationName: dto.organizationName,
+        role: dto.role,
+        roleLabel: dto.roleLabel,
+        effectiveRole: dto.effectiveRole,
+        effectiveRoleLabel: dto.effectiveRoleLabel,
+        activeShopId: dto.activeShopId,
+        activeShopName: dto.activeShopName,
+        accessibleShops: dto.accessibleShops
+            .map(
+              (shop) => AccessibleShopSummary(
+                id: shop.id,
+                name: shop.name,
+                isCurrent: shop.isCurrent,
+                isDefault: shop.isDefault,
+                accessRole: shop.accessRole,
+                roleLabel: shop.roleLabel,
+              ),
+            )
+            .toList(),
+      );
+      await _persistIdentitySnapshot(context);
+      return context;
+    } on Object {
+      return _identityContextFromLocal();
+    }
+  }
+
+  Future<void> _persistIdentitySnapshot(AuthIdentityContext context) async {
+    final profile = await _credentials.getProfile();
+    final serverUserId = profile?['id'];
+    if (serverUserId is! int) return;
+
+    final payload = jsonEncode(context.toJson());
+    final existing = await (_db.select(_db.identitySnapshots)
+          ..where((row) => row.userServerId.equals(serverUserId)))
+        .getSingleOrNull();
+
+    if (existing == null) {
+      await _db.into(_db.identitySnapshots).insert(
+            IdentitySnapshotsCompanion.insert(
+              userServerId: serverUserId,
+              payloadJson: payload,
+              updatedAt: nowMs(),
+            ),
+          );
+      return;
+    }
+
+    await (_db.update(_db.identitySnapshots)
+          ..where((row) => row.id.equals(existing.id)))
+        .write(
+      IdentitySnapshotsCompanion(
+        payloadJson: Value(payload),
+        updatedAt: Value(nowMs()),
+      ),
+    );
+  }
+
+  Future<AuthIdentityContext?> _loadIdentitySnapshot() async {
+    final profile = await _credentials.getProfile();
+    final serverUserId = profile?['id'];
+    if (serverUserId is! int) return null;
+
+    final row = await (_db.select(_db.identitySnapshots)
+          ..where((entry) => entry.userServerId.equals(serverUserId)))
+        .getSingleOrNull();
+    if (row == null) return null;
+
+    try {
+      final decoded = jsonDecode(row.payloadJson) as Map<String, dynamic>;
+      return AuthIdentityContext.fromJson(decoded);
+    } on Object {
+      return null;
+    }
+  }
+
+  Future<AuthIdentityContext> _identityContextFromLocal() async {
+    final snapshot = await _loadIdentitySnapshot();
+    if (snapshot != null) return snapshot;
+
+    final owned = await _listOwnedShopsLocally();
+    final active = owned.activeShops;
+    final current = active.firstWhere(
+      (shop) => shop.id == owned.activeShopId,
+      orElse: () => active.first,
+    );
+    final defaults = active.where((shop) => shop.isDefault).toList();
+    final rootName = defaults.isNotEmpty ? defaults.first.name : current.name;
+    final role =
+        (await _credentials.getProfile())?['role'] as String? ?? 'owner';
+    final roleLabel =
+        (await _credentials.getProfile())?['roleLabel'] as String? ?? 'Patron';
+
+    return AuthIdentityContext(
+      membershipId: 0,
+      organizationId: 0,
+      organizationName: rootName,
+      role: role,
+      roleLabel: roleLabel,
+      effectiveRole: role,
+      effectiveRoleLabel: roleLabel,
+      activeShopId: current.id,
+      activeShopName: current.name,
+      accessibleShops: active
+          .map(
+            (shop) => AccessibleShopSummary(
+              id: shop.id,
+              name: shop.name,
+              isCurrent: shop.id == current.id,
+              isDefault: shop.isDefault,
+              roleLabel: roleLabel,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Future<OwnedShopList> _listOwnedShopsLocally() async {
     final rows = await (_db.select(_db.shops)
           ..orderBy([(s) => OrderingTerm.desc(s.isDefault)]))
@@ -1597,6 +1775,12 @@ class AuthRepositoryImpl implements AuthRepository {
               role: UserRole.fromCode(m.role),
               roleLabel: m.roleLabel,
               isDefault: m.isDefault,
+              scopeType: m.scopeType == 'organization'
+                  ? MembershipScopeType.organization
+                  : MembershipScopeType.shop,
+              organizationName: m.organizationName,
+              shopCount: m.shopCount,
+              accessibleShopIds: m.accessibleShopIds,
             ),
           )
           .toList(),
@@ -1686,14 +1870,16 @@ class AuthRepositoryImpl implements AuthRepository {
     required int expiresAt,
     required SwitchShopDataDto result,
   }) async {
+    final serverShopId = result.activeShopId;
     final localShopId = await _resolveLocalShopId(
-      result.shop.id,
+      serverShopId,
       shopName: result.shop.name,
     );
 
     await (_db.update(_db.shops)..where((s) => s.id.equals(localShopId))).write(
       ShopsCompanion(
         name: Value(result.shop.name),
+        serverId: Value('$serverShopId'),
         syncedAt: Value(nowMs()),
       ),
     );
@@ -1710,10 +1896,6 @@ class AuthRepositoryImpl implements AuthRepository {
     await (_db.update(_db.authSessions)..where((s) => s.id.equals(sessionToken)))
         .write(AuthSessionsCompanion(shopId: Value(localShopId)));
 
-    await (_db.update(_db.users)..where((u) => u.id.equals(userId))).write(
-      UsersCompanion(shopId: Value(localShopId)),
-    );
-
     final user = await (_db.select(_db.users)..where((u) => u.id.equals(userId)))
         .getSingle();
 
@@ -1728,8 +1910,16 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     if (_isOnlineMode) {
-      await _credentials.updateProfileShopId(result.activeShopId);
-      _activeShop.setServerShopId(result.activeShopId);
+      await _credentials.updateProfileShopId(serverShopId);
+      _activeShop.setServerShopId(serverShopId);
+      if (_remote != null && await _networkInfo.isConnected) {
+        try {
+          final remote = await _remote!.getLockScreen(serverShopId);
+          await _syncLockScreenFromApi(remote);
+        } on Object {
+          // Le switch local reste utilisable sans le réseau.
+        }
+      }
     }
 
     final permissions = await _resolvePermissions(UserRole.fromCode(user.role));
@@ -1742,7 +1932,7 @@ class AuthRepositoryImpl implements AuthRepository {
       shop: AuthShop(
         id: localShopId,
         name: result.shop.name,
-        serverShopId: result.activeShopId,
+        serverShopId: serverShopId,
       ),
       user: AuthUser(
         id: user.id,
@@ -2333,20 +2523,40 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
+  @override
+  Future<int?> tryResolveServerShopId(int shopId) async {
+    try {
+      return await _resolveServerShopId(shopId);
+    } on Object {
+      return null;
+    }
+  }
+
   Future<int> _resolveServerShopId(int shopId) async {
     final byLocalId = await (_db.select(_db.shops)..where((s) => s.id.equals(shopId)))
         .getSingleOrNull();
-    if (byLocalId?.serverId != null) {
-      return int.parse(byLocalId!.serverId!);
-    }
+    final parsed = _parseServerId(byLocalId?.serverId);
+    if (parsed != null) return parsed;
 
     final byServerId = await (_db.select(_db.shops)
           ..where((s) => s.serverId.equals('$shopId')))
         .getSingleOrNull();
     if (byServerId != null) return shopId;
 
-    return shopId;
+    final fromContext = await _serverShopIdFromSessionContext();
+    if (fromContext != null) {
+      if (byLocalId != null) {
+        await _ensureLocalShopServerId(shopId, fromContext);
+      }
+      return fromContext;
     }
+
+    if (!_isOnlineMode) return shopId;
+
+    throw const NotFoundFailure(
+      'Boutique non synchronisée. Reconnectez-vous ou resynchronisez les boutiques.',
+    );
+  }
 
   Future<int> _resolveLocalShopId(int serverShopId, {String? shopName}) async {
     final byServer = await (_db.select(_db.shops)
@@ -2354,9 +2564,25 @@ class AuthRepositoryImpl implements AuthRepository {
         .getSingleOrNull();
     if (byServer != null) return byServer.id;
 
+    // Compat V1 : id local == id serveur uniquement si la ligne n'est pas déjà
+    // rattachée à une autre boutique cloud (évite de basculer sur la boutique
+    // principale quand les PK locales divergent des ids serveur).
     final byId = await (_db.select(_db.shops)..where((s) => s.id.equals(serverShopId)))
         .getSingleOrNull();
-    if (byId != null) return byId.id;
+    if (byId != null) {
+      final mappedServerId = _parseServerId(byId.serverId);
+      if (mappedServerId == null || mappedServerId == serverShopId) {
+        if (mappedServerId == null) {
+          await (_db.update(_db.shops)..where((s) => s.id.equals(byId.id))).write(
+            ShopsCompanion(
+              serverId: Value('$serverShopId'),
+              syncedAt: Value(nowMs()),
+            ),
+          );
+        }
+        return byId.id;
+      }
+    }
 
     await _db.into(_db.shops).insert(
           ShopsCompanion.insert(
@@ -2400,6 +2626,58 @@ class AuthRepositoryImpl implements AuthRepository {
           updatedAt: Value(timestamp),
         ),
       );
+    }
+
+    await _syncLockScreenUsersFromRemote(
+      localShopId: localShopId,
+      remoteUsers: remote.users,
+      timestamp: timestamp,
+    );
+  }
+
+  Future<void> _syncLockScreenUsersFromRemote({
+    required int localShopId,
+    required List<LockScreenUserDto> remoteUsers,
+    required int timestamp,
+  }) async {
+    for (final remoteUser in remoteUsers) {
+      final serverUserId = '${remoteUser.id}';
+      final existing = await (_db.select(_db.users)
+            ..where(
+              (u) =>
+                  u.serverId.equals(serverUserId) |
+                  (u.shopId.equals(localShopId) & u.name.equals(remoteUser.name)),
+            ))
+          .getSingleOrNull();
+
+      if (existing != null) {
+        await (_db.update(_db.users)..where((u) => u.id.equals(existing.id))).write(
+          UsersCompanion(
+            name: Value(remoteUser.name),
+            role: Value(remoteUser.role),
+            biometricEnabled: Value(remoteUser.biometricEnabled),
+            serverId: Value(serverUserId),
+            updatedAt: Value(timestamp),
+            syncedAt: Value(timestamp),
+          ),
+        );
+        continue;
+      }
+
+      await _db.into(_db.users).insert(
+            UsersCompanion.insert(
+              shopId: localShopId,
+              name: remoteUser.name,
+              pinHash: _pinHasher.hash(_uuid.v4()),
+              pinProvisional: const Value(true),
+              role: Value(remoteUser.role),
+              biometricEnabled: Value(remoteUser.biometricEnabled),
+              createdAt: timestamp,
+              updatedAt: timestamp,
+              serverId: Value(serverUserId),
+              syncedAt: Value(timestamp),
+            ),
+          );
     }
   }
 
@@ -2479,10 +2757,16 @@ class AuthRepositoryImpl implements AuthRepository {
       final user = await (_db.select(_db.users)
             ..where((u) => u.id.equals(userId) & u.shopId.equals(shopId)))
           .getSingleOrNull();
-      if (user == null) {
-        throw const NotFoundFailure('Utilisateur introuvable.');
-      }
-      return user;
+      if (user != null) return user;
+
+      // Après changement de boutique, l'écran PIN peut cibler une boutique
+      // différente de celle enregistrée sur l'utilisateur.
+      final byId = await (_db.select(_db.users)
+            ..where((u) => u.id.equals(userId) & u.isActive.equals(true)))
+          .getSingleOrNull();
+      if (byId != null) return byId;
+
+      throw const NotFoundFailure('Utilisateur introuvable.');
     }
 
     final users = await (_db.select(_db.users)
@@ -2515,14 +2799,25 @@ class AuthRepositoryImpl implements AuthRepository {
     required int localShopId,
     int? userId,
   }) async {
-    if (userId == null) return null;
+    if (userId != null) {
+      final user = await (_db.select(_db.users)
+            ..where((u) => u.id.equals(userId)))
+          .getSingleOrNull();
+      if (user != null) {
+        final parsed = _parseServerId(user.serverId);
+        if (parsed != null) return parsed;
+      }
+    }
 
-    final user = await (_db.select(_db.users)
-          ..where((u) => u.id.equals(userId) & u.shopId.equals(localShopId)))
+    final profile = await _credentials.getProfile();
+    final profileId = profile?['id'];
+    if (profileId is int) return profileId;
+    if (profileId is String) return int.tryParse(profileId);
+
+    final owner = await (_db.select(_db.users)
+          ..where((u) => u.role.equals('owner') & u.isActive.equals(true)))
         .getSingleOrNull();
-    if (user == null) return null;
-
-    return _parseServerId(user.serverId);
+    return _parseServerId(owner?.serverId);
   }
 
   Future<Setting> _getSettings(int shopId) async {

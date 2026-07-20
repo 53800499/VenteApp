@@ -55,6 +55,8 @@ class StockMovementTile extends StatelessWidget {
       StockMovementType.return_ => 'Retour',
       StockMovementType.initial => 'Stock initial',
       StockMovementType.saleCancel => 'Annulation vente',
+      StockMovementType.transferOut => 'Transfert sortant',
+      StockMovementType.transferIn => 'Transfert entrant',
     };
   }
 

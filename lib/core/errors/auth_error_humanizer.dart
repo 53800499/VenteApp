@@ -104,6 +104,45 @@ String _humanizeDuplicateKey(String lower) {
     return (summary: message, fieldErrors: fields);
   }
 
+  if (lower.contains('stock_transfers_reference') ||
+      (lower.contains('stock_transfers') && lower.contains('reference'))) {
+    const message =
+        'Cette référence de transfert existe déjà sur le serveur. '
+        'Synchronisez à nouveau ou créez le transfert avec une autre référence.';
+    return (summary: message, fieldErrors: fields);
+  }
+
+  if (lower.contains('supplier_invoices') ||
+      lower.contains('invoice_number')) {
+    const message =
+        'Ce numéro de facture fournisseur existe déjà sur le serveur. '
+        'Modifiez le numéro ou synchronisez à nouveau.';
+    return (summary: message, fieldErrors: fields);
+  }
+
+  if (lower.contains('purchase_receipts') ||
+      lower.contains('receipt_number')) {
+    const message =
+        'Ce numéro de bon de réception existe déjà sur le serveur. '
+        'Utilisez un autre numéro ou synchronisez à nouveau.';
+    return (summary: message, fieldErrors: fields);
+  }
+
+  if (lower.contains('supplier_payments')) {
+    const message =
+        'Ce paiement fournisseur existe déjà sur le serveur. '
+        'Synchronisez à nouveau pour réconcilier les données.';
+    return (summary: message, fieldErrors: fields);
+  }
+
+  if (lower.contains('purchase_orders') &&
+      (lower.contains('number') || lower.contains('unique'))) {
+    const message =
+        'Ce numéro de commande existe déjà sur le serveur. '
+        'Utilisez un autre numéro ou synchronisez à nouveau.';
+    return (summary: message, fieldErrors: fields);
+  }
+
   const summary =
       'Certaines informations existent déjà. Modifiez les champs signalés ou connectez-vous avec WhatsApp.';
   return (summary: summary, fieldErrors: fields);

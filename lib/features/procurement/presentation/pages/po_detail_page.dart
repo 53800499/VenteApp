@@ -79,107 +79,145 @@ class _PoDetailPageState extends State<PoDetailPage> {
           }
         },
         builder: (context, state) {
-          if (state.status == ProcurementStatus.loading && state.selectedOrder == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           final po = state.selectedOrder;
-          if (po == null || po.id != widget.poId) {
-            return const Center(child: Text('Impossible de charger les détails.'));
+          if (po?.id == widget.poId) {
+            return _buildOrderContent(
+              context,
+              state,
+              po!,
+              canCreate: canCreate,
+              canUpdate: canUpdate,
+              canReceive: canReceive,
+              canCancel: canCancel,
+              canInvoice: canInvoice,
+            );
           }
 
-          final history = state.orderHistory;
-          final receipts = state.orderReceipts;
+          if (state.status == ProcurementStatus.failure &&
+              state.errorMessage != null) {
+            return Center(child: Text(state.errorMessage!));
+          }
 
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
-              // Order Metadata Card
-              _PoHeaderCard(po: po),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Action Buttons
-              _PoActionButtons(
-                po: po,
-                canCreate: canCreate,
-                canUpdate: canUpdate,
-                canReceive: canReceive,
-                canCancel: canCancel,
-                canInvoice: canInvoice,
-                receipts: receipts,
-                onActionConfirmed: (success) {
-                  setState(() => _pendingSuccess = success);
-                },
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Items Table Card
-              _PoItemsCard(items: po.items ?? []),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Receipts list
-              if (receipts.isNotEmpty) ...[
-                const Text('Réceptions enregistrées', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const Divider(),
-                ...receipts.map((r) => Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.local_shipping_outlined, color: Colors.green),
-                        title: Text('BR #${r.receiptNumber}'),
-                        subtitle: Text('Reçu le: ${DateTime.fromMillisecondsSinceEpoch(r.receivedAt).toLocal().toString().substring(0, 10)} par ${r.receivedByName ?? "ID #${r.receivedBy}"}'),
-                        trailing: Text('${(r.items ?? []).fold<int>(0, (sum, i) => sum + i.quantityReceived)} art.'),
-                      ),
-                    )),
-                const SizedBox(height: AppSpacing.lg),
-              ],
-
-              // History logs timeline
-              const Text('Historique de la commande', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              const Divider(),
-              if (history.isEmpty)
-                const Text('Aucun historique enregistré.', style: TextStyle(fontStyle: FontStyle.italic))
-              else
-                ...history.map((h) {
-                  final actionLabel = switch (h.action.toLowerCase()) {
-                    'created' || 'create' || 'commande créée' => 'Création',
-                    'updated' || 'update' || 'commande modifiée' => 'Modification',
-                    'validated' || 'validate' || 'validation' => 'Validation',
-                    'sent' || 'send' || 'envoi' => 'Envoi fournisseur',
-                    'received' || 'receive' || 'réception' => 'Réception',
-                    'cancelled' || 'cancel' || 'annulation' => 'Annulation',
-                    'paiement' => 'Paiement',
-                    _ => h.action,
-                  };
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.lens, size: 10, color: Colors.blue),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '$actionLabel - ${DateTime.fromMillisecondsSinceEpoch(h.performedAt).toLocal().toString().substring(0, 16)}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                              if (h.details != null && h.details!.isNotEmpty)
-                                Text(
-                                  h.details!,
-                                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-            ],
-          );
+          return const Center(child: CircularProgressIndicator());
         },
       ),
+    );
+  }
+
+  Widget _buildOrderContent(
+    BuildContext context,
+    ProcurementState state,
+    PurchaseOrder po, {
+    required bool canCreate,
+    required bool canUpdate,
+    required bool canReceive,
+    required bool canCancel,
+    required bool canInvoice,
+  }) {
+    final receipts = state.orderReceipts;
+    final history = state.orderHistory;
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        _PoHeaderCard(po: po),
+        const SizedBox(height: AppSpacing.lg),
+        _PoActionButtons(
+          po: po,
+          canCreate: canCreate,
+          canUpdate: canUpdate,
+          canReceive: canReceive,
+          canCancel: canCancel,
+          canInvoice: canInvoice,
+          receipts: receipts,
+          onActionConfirmed: (success) {
+            setState(() => _pendingSuccess = success);
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        _PoItemsCard(items: po.items ?? []),
+        const SizedBox(height: AppSpacing.lg),
+        if (receipts.isNotEmpty) ...[
+          const Text(
+            'Réceptions enregistrées',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const Divider(),
+          ...receipts.map(
+            (r) => Card(
+              child: ListTile(
+                leading: const Icon(
+                  Icons.local_shipping_outlined,
+                  color: Colors.green,
+                ),
+                title: Text('BR #${r.receiptNumber}'),
+                subtitle: Text(
+                  'Reçu le: ${DateTime.fromMillisecondsSinceEpoch(r.receivedAt).toLocal().toString().substring(0, 10)} par ${r.receivedByName ?? "ID #${r.receivedBy}"}',
+                ),
+                trailing: Text(
+                  '${(r.items ?? []).fold<int>(0, (sum, i) => sum + i.quantityReceived)} art.',
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+        const Text(
+          'Historique de la commande',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const Divider(),
+        if (history.isEmpty)
+          const Text(
+            'Aucun historique enregistré.',
+            style: TextStyle(fontStyle: FontStyle.italic),
+          )
+        else
+          ...history.map((h) {
+            final actionLabel = switch (h.action.toLowerCase()) {
+              'created' || 'create' || 'commande créée' => 'Création',
+              'updated' || 'update' || 'commande modifiée' => 'Modification',
+              'validated' || 'validate' || 'validation' => 'Validation',
+              'sent' || 'send' || 'envoi' => 'Envoi fournisseur',
+              'received' || 'receive' || 'réception' => 'Réception',
+              'cancelled' || 'cancel' || 'annulation' => 'Annulation',
+              'paiement' => 'Paiement',
+              _ => h.action,
+            };
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.lens, size: 10, color: Colors.blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$actionLabel - ${DateTime.fromMillisecondsSinceEpoch(h.performedAt).toLocal().toString().substring(0, 16)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        if (h.details != null && h.details!.isNotEmpty)
+                          Text(
+                            h.details!,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+      ],
     );
   }
 }

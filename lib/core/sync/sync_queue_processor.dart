@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:drift/drift.dart';
 import '../../features/customers/data/datasources/local/customers_local_datasource.dart';
 import '../../features/customers/data/datasources/remote/customers_remote_datasource.dart';
 import '../../features/debts/data/datasources/local/debts_local_datasource.dart';
@@ -17,8 +16,20 @@ import '../../features/sales/data/datasources/local/sales_local_datasource.dart'
 import '../../features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import '../../features/sales/data/models/sale_api_models.dart';
 import '../../features/sales/domain/entities/sale_entities.dart';
-import '../database/app_database.dart' hide Sale, Expense, Supplier, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, SupplierInvoice, SupplierPayment;
+import '../database/app_database.dart'
+    hide
+        Sale,
+        Expense,
+        Supplier,
+        PurchaseOrder,
+        PurchaseOrderItem,
+        PurchaseReceipt,
+        PurchaseReceiptItem,
+        SupplierInvoice,
+        SupplierPayment,
+        StockTransfer;
 import '../errors/failures.dart';
+import '../network/api_client.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
 import 'sync_queue_datasource.dart';
@@ -28,6 +39,11 @@ import '../../features/procurement/data/datasources/procurement_local_datasource
 import '../../features/procurement/data/datasources/procurement_remote_datasource.dart';
 import '../../features/procurement/data/utils/procurement_remote_payloads.dart';
 import '../../features/procurement/domain/entities/procurement.dart';
+import '../../features/stock_transfer/data/datasources/stock_transfer_local_datasource.dart';
+import '../../features/stock_transfer/data/datasources/stock_transfer_remote_datasource.dart';
+import '../../features/stock_transfer/data/utils/stock_transfer_cloud_sync_helper.dart';
+import '../../features/stock_transfer/data/utils/stock_transfer_remote_payloads.dart';
+import '../../features/stock_transfer/domain/entities/stock_transfer.dart';
 
 /// Pousse les éléments `sync_queue` vers l'API (couche 2 → 3).
 class SyncQueueProcessor {
@@ -50,6 +66,8 @@ class SyncQueueProcessor {
     required CalculatorsRemoteDatasource calculatorsRemote,
     required ProcurementLocalDatasource procurementLocal,
     required ProcurementRemoteDatasource procurementRemote,
+    required StockTransferLocalDatasource stockTransferLocal,
+    required StockTransferRemoteDatasource stockTransferRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -67,7 +85,9 @@ class SyncQueueProcessor {
         _calculatorsLocal = calculatorsLocal,
         _calculatorsRemote = calculatorsRemote,
         _procurementLocal = procurementLocal,
-        _procurementRemote = procurementRemote;
+        _procurementRemote = procurementRemote,
+        _stockTransferLocal = stockTransferLocal,
+        _stockTransferRemote = stockTransferRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -87,6 +107,14 @@ class SyncQueueProcessor {
   final CalculatorsRemoteDatasource _calculatorsRemote;
   final ProcurementLocalDatasource _procurementLocal;
   final ProcurementRemoteDatasource _procurementRemote;
+  final StockTransferLocalDatasource _stockTransferLocal;
+  final StockTransferRemoteDatasource _stockTransferRemote;
+
+  StockTransferCloudSyncHelper get _stockTransferCloudSync =>
+      StockTransferCloudSyncHelper(
+        local: _stockTransferLocal,
+        remote: _stockTransferRemote,
+      );
 
   Future<SyncQueueProcessResult> process({required int shopId}) async {
     await _apiGuard.ensureReady();
@@ -104,6 +132,9 @@ class SyncQueueProcessor {
           final priority = _entityPriority(a.entityTable)
               .compareTo(_entityPriority(b.entityTable));
           if (priority != 0) return priority;
+          final opPriority = _operationPriority(a.operation)
+              .compareTo(_operationPriority(b.operation));
+          if (opPriority != 0) return opPriority;
           return a.createdAt.compareTo(b.createdAt);
         });
 
@@ -153,7 +184,28 @@ class SyncQueueProcessor {
         SyncEntityTable.purchaseReceipts => 13,
         SyncEntityTable.supplierInvoices => 14,
         SyncEntityTable.supplierPayments => 15,
+        SyncEntityTable.stockTransfers => 16,
         _ => 99,
+      };
+
+  static int _operationPriority(String operation) => switch (operation) {
+        SyncOperation.create => 0,
+        SyncOperation.update => 1,
+        SyncOperation.validate => 2,
+        SyncOperation.send => 3,
+        SyncOperation.receive => 4,
+        SyncOperation.resolveDiscrepancy => 5,
+        SyncOperation.cancel => 6,
+        SyncOperation.close => 7,
+        SyncOperation.archive => 8,
+        SyncOperation.stockAdjust => 9,
+        SyncOperation.payment => 10,
+        SyncOperation.forgive => 11,
+        SyncOperation.saleQuick => 12,
+        SyncOperation.cashSessionOpen => 13,
+        SyncOperation.cashSessionClose => 14,
+        SyncOperation.cashMovementCreate => 15,
+        _ => 50,
       };
 
   Future<bool> _processItem({
@@ -195,6 +247,8 @@ class SyncQueueProcessor {
         return _processSupplierInvoice(shopId, item, payload);
       case SyncEntityTable.supplierPayments:
         return _processSupplierPayment(shopId, item, payload);
+      case SyncEntityTable.stockTransfers:
+        return _processStockTransfer(shopId, item, payload);
       default:
         await _queue.markFailed(item.id, 'Table inconnue : ${item.entityTable}');
         return true;
@@ -964,24 +1018,33 @@ class SyncQueueProcessor {
     switch (item.operation) {
       case SyncOperation.create:
         if (local.serverId != null) return true;
-        final remote = await _procurementRemote.createSupplier({
-          'name': payload['name'] ?? local.name,
-          'phone': payload['phone'] ?? local.phone,
-          'email': payload['email'] ?? local.email,
-          'address': payload['address'] ?? local.address,
-        });
-        final serverId = remote['id']?.toString();
-        final version = remote['version'] as int? ?? 1;
-        if (serverId != null) {
-          await _procurementLocal.updateSupplier(
-            shopId,
-            local.id,
-            serverId: serverId,
-            syncStatus: 'synced',
-            version: version,
-          );
+        if (await _adoptRemoteSupplierIfPossible(shopId, local)) return true;
+        try {
+          final remote = await _procurementRemote.createSupplier({
+            'name': payload['name'] ?? local.name,
+            'phone': payload['phone'] ?? local.phone,
+            'email': payload['email'] ?? local.email,
+            'address': payload['address'] ?? local.address,
+          });
+          final serverId = remote['id']?.toString();
+          final version = remote['version'] as int? ?? 1;
+          if (serverId != null) {
+            await _procurementLocal.updateSupplier(
+              shopId,
+              local.id,
+              serverId: serverId,
+              syncStatus: 'synced',
+              version: version,
+            );
+          }
+          return true;
+        } catch (error) {
+          if (_isDuplicateProcurementKeyError(error.toString()) &&
+              await _adoptRemoteSupplierIfPossible(shopId, local)) {
+            return true;
+          }
+          rethrow;
         }
-        return true;
 
       case SyncOperation.update:
         if (local.serverId == null) return false; // defer
@@ -1012,6 +1075,7 @@ class SyncQueueProcessor {
     switch (item.operation) {
       case SyncOperation.create:
         if (local.serverId != null) return true;
+        if (await _adoptRemotePurchaseOrderIfPossible(shopId, local)) return true;
 
         // Resolve supplier serverId
         final supplier = await _procurementLocal.findSupplier(shopId, local.supplierId);
@@ -1039,49 +1103,73 @@ class SyncQueueProcessor {
           });
         }
 
-        final remote = await _procurementRemote.createPurchaseOrder({
-          'supplierId': int.parse(supplier.serverId!),
-          'number': local.number,
-          'orderedAt': local.orderedAt,
-          if (local.expectedAt != null) 'expectedAt': local.expectedAt,
-          'subtotal': local.subtotal,
-          'discount': local.discount,
-          'tax': local.tax,
-          'total': local.total,
-          'notes': local.notes,
-          'items': remoteItems,
-        });
+        try {
+          final remote = await _procurementRemote.createPurchaseOrder({
+            'supplierId': int.parse(supplier.serverId!),
+            'number': local.number,
+            'orderedAt': local.orderedAt,
+            if (local.expectedAt != null) 'expectedAt': local.expectedAt,
+            'subtotal': local.subtotal,
+            'discount': local.discount,
+            'tax': local.tax,
+            'total': local.total,
+            'notes': local.notes,
+            'items': remoteItems,
+          });
 
-        var snapshot = remote;
-        if (snapshot['items'] is! List || (snapshot['items'] as List).isEmpty) {
-          final serverPoId = (remote['id'] as num?)?.toInt();
-          if (serverPoId != null) {
-            snapshot = await _procurementRemote.fetchPurchaseOrder(serverPoId);
+          var snapshot = remote;
+          if (snapshot['items'] is! List || (snapshot['items'] as List).isEmpty) {
+            final serverPoId = (remote['id'] as num?)?.toInt();
+            if (serverPoId != null) {
+              snapshot = await _procurementRemote.fetchPurchaseOrder(serverPoId);
+            }
           }
+          await _procurementLocal.applyRemotePurchaseOrderSnapshot(
+            shopId,
+            local.id,
+            snapshot,
+          );
+          return true;
+        } catch (error) {
+          if (_isDuplicateProcurementKeyError(error.toString()) &&
+              await _adoptRemotePurchaseOrderIfPossible(shopId, local)) {
+            return true;
+          }
+          rethrow;
         }
-        await _procurementLocal.applyRemotePurchaseOrderSnapshot(
-          shopId,
-          local.id,
-          snapshot,
-        );
-        return true;
 
       case SyncOperation.update:
         if (local.serverId == null) return false;
 
-        final fields = Map<String, dynamic>.from(payload);
-        if (fields.containsKey('supplierId')) {
-          final supplier = await _procurementLocal.findSupplier(shopId, fields['supplierId'] as int);
+        final body = <String, dynamic>{};
+        for (final key in [
+          'number',
+          'orderedAt',
+          'expectedAt',
+          'subtotal',
+          'discount',
+          'tax',
+          'total',
+          'notes',
+        ]) {
+          if (payload.containsKey(key)) body[key] = payload[key];
+        }
+
+        if (payload.containsKey('supplierId')) {
+          final supplier = await _procurementLocal.findSupplier(
+            shopId,
+            payload['supplierId'] as int,
+          );
           if (supplier == null || supplier.serverId == null) {
             await _queue.markDeferred(item.id, 'Fournisseur associé non synchronisé.');
             return false;
           }
-          fields['supplierId'] = int.parse(supplier.serverId!);
+          body['supplierId'] = int.parse(supplier.serverId!);
         }
 
-        if (fields.containsKey('items')) {
+        if (payload.containsKey('items')) {
           final remoteItems = <Map<String, dynamic>>[];
-          final itemsList = fields['items'] as List;
+          final itemsList = payload['items'] as List;
           for (final it in itemsList) {
             final prod = await _inventoryLocal.findProduct(shopId, it['productId'] as int);
             if (prod == null || prod.serverId == null) {
@@ -1097,12 +1185,14 @@ class SyncQueueProcessor {
               'subtotal': it['subtotal'],
             });
           }
-          fields['items'] = remoteItems;
+          body['items'] = remoteItems;
         }
+
+        if (body.isEmpty) return true;
 
         final remoteUpdate = await _procurementRemote.updatePurchaseOrder(
           int.parse(local.serverId!),
-          fields,
+          body,
         );
         await _procurementLocal.applyRemotePurchaseOrderSnapshot(
           shopId,
@@ -1140,6 +1230,7 @@ class SyncQueueProcessor {
     final localReceipt = await _procurementLocal.findReceipt(shopId, item.recordId);
     if (localReceipt == null) return true;
     if (localReceipt.serverId != null) return true;
+    if (await _adoptRemoteReceiptIfPossible(shopId, localReceipt)) return true;
 
     final isDirect = localReceipt.receiptType == PurchaseReceiptType.direct;
 
@@ -1184,26 +1275,34 @@ class SyncQueueProcessor {
       );
     }
 
-    final remote = await _procurementRemote.receiveItems(
-      int.parse(localPo.serverId!),
-      ProcurementRemotePayloads.purchaseOrderReceiveBody(
-        receiptNumber: localReceipt.receiptNumber,
-        receivedAt: localReceipt.receivedAt,
-        notes: localReceipt.notes,
-        items: remoteItems,
-      ),
-    );
+    try {
+      final remote = await _procurementRemote.receiveItems(
+        int.parse(localPo.serverId!),
+        ProcurementRemotePayloads.purchaseOrderReceiveBody(
+          receiptNumber: localReceipt.receiptNumber,
+          receivedAt: localReceipt.receivedAt,
+          notes: localReceipt.notes,
+          items: remoteItems,
+        ),
+      );
 
-    final serverId = remote['id']?.toString();
-    if (serverId != null) {
-      await (_procurementLocal.database.update(_procurementLocal.database.purchaseReceipts)
-            ..where((r) => r.id.equals(localReceipt.id)))
-          .write(PurchaseReceiptsCompanion(
-            serverId: Value(serverId),
-            syncStatus: const Value('synced'),
-          ));
+      final serverId = remote['id']?.toString();
+      if (serverId != null) {
+        await _procurementLocal.linkReceiptServerSync(
+          shopId: shopId,
+          localId: localReceipt.id,
+          serverId: serverId,
+          version: remote['version'] as int? ?? 1,
+        );
+      }
+      return true;
+    } catch (error) {
+      if (_isDuplicateProcurementKeyError(error.toString()) &&
+          await _adoptRemoteReceiptIfPossible(shopId, localReceipt)) {
+        return true;
+      }
+      rethrow;
     }
-    return true;
   }
 
   Future<bool> _processDirectGoodsReceipt(
@@ -1240,26 +1339,34 @@ class SyncQueueProcessor {
       );
     }
 
-    final remote = await _procurementRemote.createDirectGoodsReceipt(
-      ProcurementRemotePayloads.directGoodsReceiptBody(
-        serverSupplierId: int.parse(supplier.serverId!),
-        receiptNumber: localReceipt.receiptNumber,
-        receivedAt: localReceipt.receivedAt,
-        notes: localReceipt.notes,
-        items: remoteItems,
-      ),
-    );
+    try {
+      final remote = await _procurementRemote.createDirectGoodsReceipt(
+        ProcurementRemotePayloads.directGoodsReceiptBody(
+          serverSupplierId: int.parse(supplier.serverId!),
+          receiptNumber: localReceipt.receiptNumber,
+          receivedAt: localReceipt.receivedAt,
+          notes: localReceipt.notes,
+          items: remoteItems,
+        ),
+      );
 
-    final serverId = remote['id']?.toString();
-    if (serverId != null) {
-      await (_procurementLocal.database.update(_procurementLocal.database.purchaseReceipts)
-            ..where((r) => r.id.equals(localReceipt.id)))
-          .write(PurchaseReceiptsCompanion(
-            serverId: Value(serverId),
-            syncStatus: const Value('synced'),
-          ));
+      final serverId = remote['id']?.toString();
+      if (serverId != null) {
+        await _procurementLocal.linkReceiptServerSync(
+          shopId: shopId,
+          localId: localReceipt.id,
+          serverId: serverId,
+          version: remote['version'] as int? ?? 1,
+        );
+      }
+      return true;
+    } catch (error) {
+      if (_isDuplicateProcurementKeyError(error.toString()) &&
+          await _adoptRemoteReceiptIfPossible(shopId, localReceipt)) {
+        return true;
+      }
+      rethrow;
     }
-    return true;
   }
 
   Future<bool> _processSupplierInvoice(
@@ -1277,6 +1384,8 @@ class SyncQueueProcessor {
       return false;
     }
 
+    if (await _adoptRemoteInvoiceIfPossible(shopId, local, supplier)) return true;
+
     int? remotePoId;
     if (local.purchaseOrderId != null) {
       final po = await _procurementLocal.findPurchaseOrder(shopId, local.purchaseOrderId!);
@@ -1287,27 +1396,35 @@ class SyncQueueProcessor {
       remotePoId = int.parse(po.serverId!);
     }
 
-    final remote = await _procurementRemote.createInvoice({
-      if (remotePoId != null) 'purchaseOrderId': remotePoId,
-      'invoiceNumber': local.invoiceNumber,
-      'supplierId': int.parse(supplier.serverId!),
-      'invoiceDate': local.invoiceDate,
-      if (local.dueDate != null) 'dueDate': local.dueDate,
-      'subtotal': local.subtotal,
-      'tax': local.tax,
-      'total': local.total,
-    });
+    try {
+      final remote = await _procurementRemote.createInvoice({
+        if (remotePoId != null) 'purchaseOrderId': remotePoId,
+        'invoiceNumber': local.invoiceNumber,
+        'supplierId': int.parse(supplier.serverId!),
+        'invoiceDate': local.invoiceDate,
+        if (local.dueDate != null) 'dueDate': local.dueDate,
+        'subtotal': local.subtotal,
+        'tax': local.tax,
+        'total': local.total,
+      });
 
-    final serverId = remote['id']?.toString();
-    if (serverId != null) {
-      await (_procurementLocal.database.update(_procurementLocal.database.supplierInvoices)
-            ..where((i) => i.id.equals(local.id)))
-          .write(SupplierInvoicesCompanion(
-            serverId: Value(serverId),
-            syncStatus: const Value('synced'),
-          ));
+      final serverId = remote['id']?.toString();
+      if (serverId != null) {
+        await _procurementLocal.linkInvoiceServerSync(
+          shopId: shopId,
+          localId: local.id,
+          serverId: serverId,
+          version: remote['version'] as int? ?? 1,
+        );
+      }
+      return true;
+    } catch (error) {
+      if (_isDuplicateProcurementKeyError(error.toString()) &&
+          await _adoptRemoteInvoiceIfPossible(shopId, local, supplier)) {
+        return true;
+      }
+      rethrow;
     }
-    return true;
   }
 
   Future<bool> _processSupplierPayment(
@@ -1317,7 +1434,17 @@ class SyncQueueProcessor {
   ) async {
     // Look up parent invoice server ID
     final invoiceLocalId = payload['invoiceId'] as int;
-    final invoice = await _procurementLocal.findInvoice(shopId, invoiceLocalId);
+    var invoice = await _procurementLocal.findInvoice(shopId, invoiceLocalId);
+    if (invoice == null) return true;
+
+    if (invoice.serverId == null) {
+      final supplier = await _procurementLocal.findSupplier(shopId, invoice.supplierId);
+      if (supplier?.serverId != null) {
+        await _adoptRemoteInvoiceIfPossible(shopId, invoice, supplier!);
+        invoice = await _procurementLocal.findInvoice(shopId, invoiceLocalId);
+      }
+    }
+
     if (invoice == null || invoice.serverId == null) {
       await _queue.markDeferred(item.id, 'Facture associée non synchronisée.');
       return false;
@@ -1330,23 +1457,1074 @@ class SyncQueueProcessor {
     final localPay = payRows.firstOrNull;
     if (localPay == null || localPay.serverId != null) return true;
 
-    final remote = await _procurementRemote.recordPayment(int.parse(invoice.serverId!), {
-      'amount': localPay.amount,
-      'paymentMethod': ProcurementLocalDatasource.paymentMethodToApi(localPay.paymentMethod),
-      'paymentDate': localPay.paymentDate,
-      if (localPay.reference != null) 'reference': localPay.reference,
-    });
+    if (await _adoptRemotePaymentIfPossible(
+      shopId,
+      localPayId: localPay.id,
+      amount: localPay.amount,
+      paymentDate: localPay.paymentDate,
+      invoice: invoice,
+    )) {
+      return true;
+    }
 
-    final serverId = remote['id']?.toString();
-    if (serverId != null) {
-      await (_procurementLocal.database.update(_procurementLocal.database.supplierPayments)
-            ..where((p) => p.id.equals(localPay.id)))
-          .write(SupplierPaymentsCompanion(
-            serverId: Value(serverId),
-            syncStatus: const Value('synced'),
-          ));
+    try {
+      final remote = await _procurementRemote.recordPayment(int.parse(invoice.serverId!), {
+        'amount': localPay.amount,
+        'paymentMethod': ProcurementLocalDatasource.paymentMethodToApi(localPay.paymentMethod),
+        'paymentDate': localPay.paymentDate,
+        if (localPay.reference != null) 'reference': localPay.reference,
+      });
+
+      final serverId = remote['id']?.toString();
+      if (serverId != null) {
+        await _procurementLocal.linkPaymentServerSync(
+          shopId: shopId,
+          localId: localPay.id,
+          serverId: serverId,
+          version: remote['version'] as int? ?? 1,
+        );
+      }
+      return true;
+    } catch (error) {
+      if (_isDuplicateProcurementKeyError(error.toString()) &&
+          await _adoptRemotePaymentIfPossible(
+            shopId,
+            localPayId: localPay.id,
+            amount: localPay.amount,
+            paymentDate: localPay.paymentDate,
+            invoice: invoice,
+          )) {
+        return true;
+      }
+      rethrow;
+    }
+  }
+
+  Future<bool> _adoptRemoteSupplierIfPossible(int shopId, Supplier local) async {
+    try {
+      final remoteSuppliers = await _procurementRemote.fetchSuppliers();
+      final match = remoteSuppliers
+          .where(
+            (s) =>
+                (s['name'] as String?)?.trim().toLowerCase() ==
+                local.name.trim().toLowerCase(),
+          )
+          .firstOrNull;
+      if (match == null) return false;
+      final serverId = match['id']?.toString();
+      if (serverId == null) return false;
+      await _procurementLocal.updateSupplier(
+        shopId,
+        local.id,
+        serverId: serverId,
+        syncStatus: 'synced',
+        version: match['version'] as int? ?? 1,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _adoptRemotePurchaseOrderIfPossible(
+    int shopId,
+    PurchaseOrder local,
+  ) async {
+    try {
+      final remoteOrders = await _procurementRemote.fetchPurchaseOrders();
+      final match = remoteOrders
+          .where((o) => o['number'] == local.number)
+          .firstOrNull;
+      if (match == null) return false;
+      final serverPoId = (match['id'] as num?)?.toInt();
+      if (serverPoId == null) return false;
+      final snapshot = await _procurementRemote.fetchPurchaseOrder(serverPoId);
+      await _procurementLocal.applyRemotePurchaseOrderSnapshot(
+        shopId,
+        local.id,
+        snapshot,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _adoptRemoteInvoiceIfPossible(
+    int shopId,
+    SupplierInvoice local,
+    Supplier supplier,
+  ) async {
+    if (supplier.serverId == null) return false;
+    try {
+      final remoteInvoices = await _procurementRemote.fetchInvoices(
+        supplierId: int.parse(supplier.serverId!),
+      );
+      final match = remoteInvoices
+          .where((i) => i['invoiceNumber'] == local.invoiceNumber)
+          .firstOrNull;
+      if (match == null) return false;
+      final serverId = match['id']?.toString();
+      if (serverId == null) return false;
+      await _procurementLocal.linkInvoiceServerSync(
+        shopId: shopId,
+        localId: local.id,
+        serverId: serverId,
+        version: match['version'] as int? ?? 1,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _adoptRemoteReceiptIfPossible(
+    int shopId,
+    PurchaseReceipt local,
+  ) async {
+    if (local.receiptType == PurchaseReceiptType.direct) return false;
+    if (local.purchaseOrderId == null) return false;
+    try {
+      final po = await _procurementLocal.findPurchaseOrder(
+        shopId,
+        local.purchaseOrderId!,
+      );
+      if (po?.serverId == null) return false;
+      final detail = await _procurementRemote.fetchPurchaseOrder(
+        int.parse(po!.serverId!),
+      );
+      final receipts = detail['receipts'] as List?;
+      if (receipts == null) return false;
+      final match = receipts
+          .whereType<Map<String, dynamic>>()
+          .where((r) => r['receiptNumber'] == local.receiptNumber)
+          .firstOrNull;
+      if (match == null) return false;
+      final serverId = match['id']?.toString();
+      if (serverId == null) return false;
+      await _procurementLocal.linkReceiptServerSync(
+        shopId: shopId,
+        localId: local.id,
+        serverId: serverId,
+        version: match['version'] as int? ?? 1,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _adoptRemotePaymentIfPossible(
+    int shopId, {
+    required int localPayId,
+    required int amount,
+    required int paymentDate,
+    required SupplierInvoice invoice,
+  }) async {
+    if (invoice.serverId == null) return false;
+    try {
+      final detail = await _procurementRemote.fetchInvoice(
+        int.parse(invoice.serverId!),
+      );
+      final payments = detail['payments'] as List?;
+      if (payments == null) return false;
+      final match = payments
+          .whereType<Map<String, dynamic>>()
+          .where(
+            (p) =>
+                (p['amount'] as num?)?.toInt() == amount &&
+                (p['paymentDate'] as num?)?.toInt() == paymentDate,
+          )
+          .firstOrNull;
+      if (match == null) return false;
+      final serverId = match['id']?.toString();
+      if (serverId == null) return false;
+      await _procurementLocal.linkPaymentServerSync(
+        shopId: shopId,
+        localId: localPayId,
+        serverId: serverId,
+        version: match['version'] as int? ?? 1,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  bool _isDuplicateProcurementKeyError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('supplier_invoices') ||
+        lower.contains('invoice_number') ||
+        lower.contains('purchase_receipts') ||
+        lower.contains('receipt_number') ||
+        lower.contains('supplier_payments') ||
+        lower.contains('purchase_orders') ||
+        (_isDuplicateKeyError(lower) &&
+            (lower.contains('invoice') ||
+                lower.contains('receipt') ||
+                lower.contains('supplier') ||
+                lower.contains('purchase')));
+  }
+
+  bool _isDuplicateKeyError(String lower) {
+    return lower.contains('duplicate key') ||
+        lower.contains('unique constraint') ||
+        lower.contains('23505') ||
+        lower.contains('unique constraint failed');
+  }
+
+  Future<bool> _processStockTransfer(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final local = await _stockTransferLocal.findTransfer(item.recordId);
+    if (local == null) return true;
+
+    switch (item.operation) {
+      case SyncOperation.create:
+        if (await _stockTransferLocal.findTransferServerId(local.id) != null) {
+          return true;
+        }
+
+        if (local.sourceShopId != shopId) {
+          if (await _adoptRemoteTransferIfPossible(local)) return true;
+          // Ne pas bloquer la boutique courante : la création relève de la source.
+          return true;
+        }
+
+        final destinationShopId =
+            (payload['destinationShopId'] as num?)?.toInt() ??
+                local.destinationShopId;
+        final destServerId =
+            await _stockTransferLocal.resolveShopServerId(destinationShopId);
+        if (destServerId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Boutique destination non synchronisée.',
+          );
+          return false;
+        }
+
+        final items = (payload['items'] as List?) ?? [];
+        final remoteItems = <Map<String, dynamic>>[];
+        for (final raw in items) {
+          if (raw is! Map<String, dynamic>) continue;
+          final productId = raw['productId'] as int;
+          final serverProductId = await _stockTransferLocal.resolveProductServerId(
+            shopId,
+            productId,
+          );
+          if (serverProductId == null) {
+            await _queue.markDeferred(
+              item.id,
+              'Produit #$productId non synchronisé.',
+            );
+            return false;
+          }
+          remoteItems.add({
+            'productId': serverProductId,
+            'quantityRequested': raw['quantityRequested'],
+          });
+        }
+
+        if (remoteItems.isEmpty) {
+          await _queue.markDeferred(
+            item.id,
+            'Aucun produit synchronisé pour ce transfert.',
+          );
+          return false;
+        }
+
+        try {
+          return await _createStockTransferOnRemote(
+            local: local,
+            destServerId: destServerId,
+            remoteItems: remoteItems,
+          );
+        } on Failure catch (error) {
+          if (_isDuplicateReferenceError(error.message)) {
+            final resolved = await _resolveStockTransferDuplicateCreate(
+              local: local,
+              destServerId: destServerId,
+              remoteItems: remoteItems,
+            );
+            if (resolved) return true;
+
+            await _queue.markDeferred(
+              item.id,
+              'Référence « ${local.reference} » déjà utilisée côté serveur. '
+              'Synchronisez depuis l\'onglet Transferts ou recréez le transfert.',
+            );
+            return false;
+          }
+          if (await _adoptRemoteTransferIfPossible(local)) return true;
+          rethrow;
+        }
+
+      case SyncOperation.validate:
+        final validateServerId =
+            await _stockTransferLocal.findTransferServerId(local.id);
+        if (validateServerId == null) {
+          await _queue.markDeferred(item.id, 'Transfert non synchronisé.');
+          return false;
+        }
+        final validateServerInt = int.parse(validateServerId);
+        final ensured = await _stockTransferCloudSync.ensureValidatedOnServer(
+          localTransferId: local.id,
+          serverTransferId: validateServerInt,
+        );
+        if (!ensured.ok) {
+          await _queue.markDeferred(
+            item.id,
+            ensured.deferReason ?? 'Validation du transfert impossible côté serveur.',
+          );
+          return false;
+        }
+        return true;
+
+      case SyncOperation.submit:
+        final submitServerId =
+            await _stockTransferLocal.findTransferServerId(local.id);
+        if (submitServerId == null) {
+          await _queue.markDeferred(item.id, 'Transfert non synchronisé.');
+          return false;
+        }
+        final submitServerInt = int.parse(submitServerId);
+        final submitRemote = await _stockTransferCloudSync.runOnSourceShop(
+          transfer: local,
+          action: () => _stockTransferRemote.submitTransfer(submitServerInt),
+        );
+        if (submitRemote == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Soumission impossible côté serveur.',
+          );
+          return false;
+        }
+        await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+          local.id,
+          submitRemote,
+        );
+        return true;
+
+      case SyncOperation.approve:
+        final approveServerId =
+            await _stockTransferLocal.findTransferServerId(local.id);
+        if (approveServerId == null) {
+          await _queue.markDeferred(item.id, 'Transfert non synchronisé.');
+          return false;
+        }
+        final approveServerInt = int.parse(approveServerId);
+        final ensuredApprove =
+            await _stockTransferCloudSync.ensureValidatedOnServer(
+          localTransferId: local.id,
+          serverTransferId: approveServerInt,
+        );
+        if (!ensuredApprove.ok) {
+          await _queue.markDeferred(
+            item.id,
+            ensuredApprove.deferReason ??
+                'Approbation du transfert impossible côté serveur.',
+          );
+          return false;
+        }
+        return true;
+
+      case SyncOperation.send:
+        final serverId = await _stockTransferLocal.findTransferServerId(local.id);
+        if (serverId == null) {
+          final pendingCreate = await _queue.findPendingOperation(
+            shopId: shopId,
+            entityTable: SyncEntityTable.stockTransfers,
+            recordId: local.id,
+            operation: SyncOperation.create,
+          );
+          await _queue.markDeferred(
+            item.id,
+            pendingCreate?.lastError ??
+                'Création du transfert en attente côté serveur.',
+          );
+          return false;
+        }
+
+        final pendingCreate = await _queue.findPendingOperation(
+          shopId: shopId,
+          entityTable: SyncEntityTable.stockTransfers,
+          recordId: local.id,
+          operation: SyncOperation.create,
+        );
+        if (pendingCreate != null) {
+          await _queue.markDeferred(
+            item.id,
+            pendingCreate.lastError ??
+                'Création du transfert requise avant l\'expédition côté serveur.',
+          );
+          return false;
+        }
+
+        final pendingValidate = await _queue.findPendingOperation(
+          shopId: shopId,
+          entityTable: SyncEntityTable.stockTransfers,
+          recordId: local.id,
+          operation: SyncOperation.validate,
+        );
+        if (pendingValidate != null) {
+          await _queue.markDeferred(
+            item.id,
+            pendingValidate.lastError ??
+                'Validation du transfert requise avant l\'expédition côté serveur.',
+          );
+          return false;
+        }
+
+        final sendServerInt = int.parse(serverId);
+        final ensured = await _stockTransferCloudSync.ensureValidatedOnServer(
+          localTransferId: local.id,
+          serverTransferId: sendServerInt,
+          requireShippable: true,
+        );
+        if (!ensured.ok) {
+          await _queue.markDeferred(
+            item.id,
+            ensured.deferReason ??
+                'Validation du transfert requise avant l\'expédition côté serveur.',
+          );
+          return false;
+        }
+
+        if (ensured.alreadyComplete) {
+          if (ensured.remote != null) {
+            await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+              local.id,
+              ensured.remote!,
+            );
+          }
+          return true;
+        }
+
+        final remoteDetail = ensured.remote ??
+            await _stockTransferCloudSync.runOnSourceShop(
+              transfer: local,
+              action: () => _stockTransferRemote.fetchTransfer(sendServerInt),
+            );
+        if (remoteDetail == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Boutique source non synchronisée.',
+          );
+          return false;
+        }
+        final remoteItems = (remoteDetail['items'] as List?)
+                ?.whereType<Map<String, dynamic>>()
+                .toList() ??
+            [];
+
+        final shipQuantities = _stockTransferLocal.resolveShipQuantitiesForSync(
+          transfer: local,
+          payload: payload,
+        );
+
+        var shipMapping = await _stockTransferLocal.buildRemoteItemMapping(
+          transfer: local,
+          remoteItems: remoteItems,
+        );
+
+        if (shipMapping.isEmpty) {
+          await _stockTransferLocal.linkRemoteTransferItemsFromSnapshot(
+            local.id,
+            remoteItems,
+          );
+          shipMapping = await _stockTransferLocal.buildRemoteItemMapping(
+            transfer: local,
+            remoteItems: remoteItems,
+          );
+          if (shipMapping.isEmpty) {
+            await _queue.markDeferred(
+              item.id,
+              await _stockTransferLocal.describeUnmappedTransferItems(
+                transfer: local,
+                remoteItems: remoteItems,
+              ),
+            );
+            return false;
+          }
+        }
+
+        final shipBody = StockTransferRemotePayloads.shipBody(
+          label: payload['label'] as String? ?? 'Expédition',
+          notes: payload['notes'] as String?,
+          driverName: payload['driverName'] as String?,
+          vehiclePlate: payload['vehiclePlate'] as String?,
+          quantitiesByItemId: shipQuantities,
+          remoteItems: shipMapping,
+        );
+        if ((shipBody['items'] as List?)?.isEmpty ?? true) {
+          await _queue.markDeferred(
+            item.id,
+            'Quantités d\'expédition introuvables pour la synchronisation.',
+          );
+          return false;
+        }
+
+        try {
+          final remote = await _stockTransferCloudSync.runOnSourceShop(
+                transfer: local,
+                action: () => _stockTransferRemote.shipTransfer(
+                  sendServerInt,
+                  shipBody,
+                ),
+              ) ??
+              (throw const NetworkFailure('Boutique source non synchronisée.'));
+          await _stockTransferLocal.applyRemoteStockTransferSnapshot(local.id, remote);
+          return true;
+        } on Failure catch (error) {
+          if (StockTransferCloudSyncHelper.isNotReadyToShipError(error.message)) {
+            final refreshed = await _stockTransferCloudSync.runOnSourceShop(
+              transfer: local,
+              action: () => _stockTransferRemote.fetchTransfer(sendServerInt),
+            );
+            final status = refreshed?['status'] as String? ?? '';
+            if (status == StockTransferStatus.draft) {
+              final revalidate =
+                  await _stockTransferCloudSync.ensureValidatedOnServer(
+                localTransferId: local.id,
+                serverTransferId: sendServerInt,
+                requireShippable: true,
+              );
+              if (!revalidate.ok) {
+                await _queue.markDeferred(
+                  item.id,
+                  revalidate.deferReason ??
+                      'Validation du transfert requise avant l\'expédition côté serveur.',
+                );
+                return false;
+              }
+              if (revalidate.alreadyComplete) {
+                if (revalidate.remote != null) {
+                  await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                    local.id,
+                    revalidate.remote!,
+                  );
+                }
+                return true;
+              }
+              final remote = await _stockTransferCloudSync.runOnSourceShop(
+                    transfer: local,
+                    action: () => _stockTransferRemote.shipTransfer(
+                      sendServerInt,
+                      shipBody,
+                    ),
+                  ) ??
+                  (throw const NetworkFailure('Boutique source non synchronisée.'));
+              await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                local.id,
+                remote,
+              );
+              return true;
+            }
+            if (StockTransferCloudSyncHelper.isPostShipStatus(status)) {
+              await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                local.id,
+                refreshed!,
+              );
+              return true;
+            }
+          }
+          if (_isInsufficientReservationError(error.message)) {
+            await _queue.markDeferred(
+              item.id,
+              '${error.message} Relancez une synchronisation complète du stock '
+              '(produits et lots) depuis la boutique source, puis réessayez.',
+            );
+            return false;
+          }
+          if (_isWrongShopShipError(error.message)) {
+            await _queue.markDeferred(
+              item.id,
+              '${error.message} Ouvrez la boutique source du transfert pour synchroniser.',
+            );
+            return false;
+          }
+          if (StockTransferCloudSyncHelper.isNotReadyToShipError(error.message)) {
+            await _queue.markDeferred(
+              item.id,
+              'Le transfert doit être validé côté cloud avant expédition. '
+              'Depuis la boutique source, synchronisez d\'abord produits/lots puis relancez.',
+            );
+            return false;
+          }
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
+
+      case SyncOperation.receive:
+        var transfer = local;
+        final serverId = await _stockTransferLocal.findTransferServerId(transfer.id);
+        if (serverId == null) {
+          await _queue.markDeferred(item.id, 'Transfert non synchronisé.');
+          return false;
+        }
+
+        final receiveServerInt = int.parse(serverId);
+        final sourceServerId =
+            await _stockTransferLocal.resolveShopServerId(transfer.sourceShopId);
+
+        Map<String, dynamic>? remoteDetail;
+        if (sourceServerId != null) {
+          try {
+            remoteDetail = await ApiClient.runScopedToServerShop(
+              sourceServerId,
+              () => _stockTransferRemote.fetchTransfer(receiveServerInt),
+            );
+          } on Failure {
+            remoteDetail = null;
+          }
+        }
+
+        var destServerId = remoteDetail != null
+            ? StockTransferLocalDatasource.destinationServerIdFromRemote(
+                remoteDetail,
+              )
+            : null;
+        destServerId ??=
+            await _stockTransferLocal.resolveShopServerId(transfer.destinationShopId);
+
+        if (remoteDetail == null && destServerId != null) {
+          try {
+            remoteDetail = await ApiClient.runScopedToServerShop(
+              destServerId,
+              () => _stockTransferRemote.fetchTransfer(receiveServerInt),
+            );
+          } on Failure {
+            remoteDetail = null;
+          }
+        }
+
+        destServerId = remoteDetail != null
+            ? StockTransferLocalDatasource.destinationServerIdFromRemote(
+                  remoteDetail,
+                ) ??
+                destServerId
+            : destServerId;
+
+        if (destServerId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Boutique destination non synchronisée.',
+          );
+          return false;
+        }
+
+        if (remoteDetail != null) {
+          await _stockTransferLocal.reconcileTransferShopsFromRemote(
+            transfer.id,
+            remoteDetail,
+          );
+          final refreshed = await _stockTransferLocal.findTransfer(transfer.id);
+          if (refreshed != null) {
+            transfer = refreshed;
+          }
+        }
+
+        try {
+          return await ApiClient.runScopedToServerShop(destServerId, () async {
+            final remoteDetailFinal = remoteDetail ??
+                await _stockTransferRemote.fetchTransfer(receiveServerInt);
+            final remoteItems = (remoteDetailFinal['items'] as List?)
+                    ?.whereType<Map<String, dynamic>>()
+                    .toList() ??
+                [];
+
+            final quantitiesByItemId =
+                _stockTransferLocal.resolveReceiveQuantitiesForSync(
+              transfer: transfer,
+              payload: payload,
+            );
+
+            var mapping = await _stockTransferLocal.buildRemoteItemMapping(
+              transfer: transfer,
+              remoteItems: remoteItems,
+            );
+
+            if (mapping.isEmpty) {
+              await _stockTransferLocal.linkRemoteTransferItemsFromSnapshot(
+                transfer.id,
+                remoteItems,
+              );
+              mapping = await _stockTransferLocal.buildRemoteItemMapping(
+                transfer: transfer,
+                remoteItems: remoteItems,
+              );
+              if (mapping.isEmpty) {
+                await _queue.markDeferred(
+                  item.id,
+                  await _stockTransferLocal.describeUnmappedTransferItems(
+                    transfer: transfer,
+                    remoteItems: remoteItems,
+                  ),
+                );
+                return false;
+              }
+            }
+
+            final productSetups = (payload['productSetups'] as List?)
+                    ?.whereType<Map<String, dynamic>>()
+                    .toList() ??
+                [];
+            final refusalsByItemId = <int, StockTransferReceiveRefusal>{};
+            final rawRefusals = payload['refusalsByItemId'];
+            if (rawRefusals is Map) {
+              for (final entry in rawRefusals.entries) {
+                final itemId = int.tryParse(entry.key.toString());
+                final value = entry.value;
+                if (itemId == null || value is! Map) continue;
+                final quantity = (value['quantity'] as num?)?.toInt() ?? 0;
+                final reason = value['reason'] as String?;
+                final resolution = value['resolution'] as String?;
+                if (quantity <= 0 ||
+                    reason == null ||
+                    reason.isEmpty ||
+                    resolution == null ||
+                    resolution.isEmpty) {
+                  continue;
+                }
+                refusalsByItemId[itemId] = StockTransferReceiveRefusal(
+                  quantity: quantity,
+                  reason: reason,
+                  resolution: resolution,
+                );
+              }
+            }
+            final localShipmentId = (payload['shipmentId'] as num?)?.toInt();
+            final remoteShipments = (remoteDetailFinal['shipments'] as List?)
+                    ?.whereType<Map<String, dynamic>>()
+                    .toList() ??
+                [];
+            final remoteShipmentId = localShipmentId != null
+                ? _stockTransferLocal.resolveRemoteShipmentId(
+                    transfer: transfer,
+                    localShipmentId: localShipmentId,
+                    remoteShipments: remoteShipments,
+                  )
+                : null;
+
+            final receiveBody = StockTransferRemotePayloads.receiveBody(
+              quantitiesByItemId: quantitiesByItemId,
+              remoteItems: mapping,
+              refusalsByItemId: refusalsByItemId,
+              productSetups: productSetups,
+              shipmentId: remoteShipmentId,
+            );
+            if ((receiveBody['items'] as List?)?.isEmpty ?? true) {
+              await _queue.markDeferred(
+                item.id,
+                'Quantités de réception introuvables pour la synchronisation.',
+              );
+              return false;
+            }
+
+            final remote = await _stockTransferRemote.receiveTransfer(
+              receiveServerInt,
+              receiveBody,
+            );
+            await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+              transfer.id,
+              remote,
+            );
+            return true;
+          });
+        } on Failure catch (error) {
+          if (_isWrongShopReceiveError(error.message)) {
+            await _queue.markDeferred(
+              item.id,
+              '${error.message} Relancez une synchronisation complète depuis '
+              'l\'onglet Transferts.',
+            );
+            return false;
+          }
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
+
+      case SyncOperation.cancel:
+        final cancelServerId =
+            await _stockTransferLocal.findTransferServerId(local.id);
+        if (cancelServerId == null) {
+          await _stockTransferLocal.purgePendingTransferSyncOps(local.id);
+          return true;
+        }
+        try {
+          await _stockTransferRemote.cancelTransfer(int.parse(cancelServerId));
+        } on Failure catch (error) {
+          if (_isTransferAlreadyCancelledError(error.message)) {
+            return true;
+          }
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
+        return true;
+
+      case SyncOperation.close:
+        if (local.sourceShopId != shopId) {
+          return true;
+        }
+        final closeServerId =
+            await _stockTransferLocal.findTransferServerId(local.id);
+        if (closeServerId == null) {
+          await _queue.markDeferred(item.id, 'Transfert non synchronisé.');
+          return false;
+        }
+        try {
+          final remote = await _stockTransferCloudSync.runOnSourceShop(
+                transfer: local,
+                action: () => _stockTransferRemote.closeTransfer(
+                  int.parse(closeServerId),
+                  StockTransferRemotePayloads.closeBody(
+                    notes: payload['notes'] as String?,
+                  ),
+                ),
+              ) ??
+              (throw const NetworkFailure('Boutique source non synchronisée.'));
+          await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+            local.id,
+            remote,
+          );
+          return true;
+        } on Failure catch (error) {
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
+
+      case SyncOperation.resolveDiscrepancy:
+        if (local.sourceShopId != shopId) {
+          return true;
+        }
+        final resolveServerId =
+            await _stockTransferLocal.findTransferServerId(local.id);
+        if (resolveServerId == null) {
+          await _queue.markDeferred(item.id, 'Transfert non synchronisé.');
+          return false;
+        }
+        final localItemId = (payload['itemId'] as num?)?.toInt();
+        if (localItemId == null) {
+          await _queue.markDeferred(item.id, 'Article d\'écart introuvable.');
+          return false;
+        }
+        try {
+          return await _stockTransferCloudSync.runOnSourceShop(
+                transfer: local,
+                action: () async {
+                  final remoteDetail = await _stockTransferRemote.fetchTransfer(
+                    int.parse(resolveServerId),
+                  );
+                  final remoteItems = (remoteDetail['items'] as List?)
+                          ?.whereType<Map<String, dynamic>>()
+                          .toList() ??
+                      [];
+                  final mapping = await _stockTransferLocal.buildRemoteItemMapping(
+                    transfer: local,
+                    remoteItems: remoteItems,
+                  );
+                  final remoteItemId = mapping
+                      .where((row) => row['localItemId'] == localItemId)
+                      .map((row) => row['remoteItemId'] as int?)
+                      .whereType<int>()
+                      .firstOrNull;
+                  if (remoteItemId == null) {
+                    await _queue.markDeferred(
+                      item.id,
+                      'Article local non mappé côté serveur.',
+                    );
+                    return false;
+                  }
+
+                  final remote = await _stockTransferRemote.resolveDiscrepancy(
+                    int.parse(resolveServerId),
+                    StockTransferRemotePayloads.resolveDiscrepancyBody(
+                      itemId: remoteItemId,
+                      quantity: (payload['quantity'] as num?)?.toInt() ?? 0,
+                      reason: payload['reason'] as String? ?? 'loss',
+                      resolution:
+                          payload['resolution'] as String? ?? 'write_off',
+                      notes: payload['notes'] as String?,
+                    ),
+                  );
+                  await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                    local.id,
+                    remote,
+                  );
+                  return true;
+                },
+              ) ??
+              false;
+        } on Failure catch (error) {
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
     }
     return true;
+  }
+
+  Future<bool> _createStockTransferOnRemote({
+    required StockTransfer local,
+    required int destServerId,
+    required List<Map<String, dynamic>> remoteItems,
+  }) async {
+    final remote = await _stockTransferRemote.createTransfer(
+      StockTransferRemotePayloads.createBody(
+        destinationShopId: destServerId,
+        reference: local.reference,
+        notes: local.notes,
+        items: remoteItems,
+      ),
+    );
+    await _applyCreatedRemoteTransfer(local.id, remote);
+    return true;
+  }
+
+  Future<void> _applyCreatedRemoteTransfer(
+    int localTransferId,
+    Map<String, dynamic> remote,
+  ) async {
+    await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+      localTransferId,
+      remote,
+    );
+    final createdItems = (remote['items'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        [];
+    if (createdItems.isNotEmpty) {
+      await _stockTransferLocal.linkRemoteTransferItemsFromSnapshot(
+        localTransferId,
+        createdItems,
+      );
+    }
+  }
+
+  Future<bool> _resolveStockTransferDuplicateCreate({
+    required StockTransfer local,
+    required int destServerId,
+    required List<Map<String, dynamic>> remoteItems,
+  }) async {
+    final existing = await _findRemoteTransferByReference(local.reference);
+    if (existing != null) {
+      final existingDest = StockTransferLocalDatasource.coerceRemoteInt(
+        existing['destinationShopId'],
+      );
+      if (existingDest == destServerId) {
+        final linked = await _linkLocalTransferToRemoteDetail(
+          localTransferId: local.id,
+          existing: existing,
+        );
+        if (linked) return true;
+      }
+    }
+
+    try {
+      final newRef = (await _stockTransferRemote.fetchNextReference()).trim();
+      if (newRef.isEmpty) return false;
+
+      await _stockTransferLocal.updateTransferReference(local.id, newRef);
+      final refreshed = await _stockTransferLocal.findTransfer(local.id);
+      if (refreshed == null) return false;
+
+      return await _createStockTransferOnRemote(
+        local: refreshed,
+        destServerId: destServerId,
+        remoteItems: remoteItems,
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _adoptRemoteTransferIfPossible(StockTransfer local) async {
+    final existing = await _findRemoteTransferByReference(local.reference);
+    if (existing == null) return false;
+    return _linkLocalTransferToRemoteDetail(
+      localTransferId: local.id,
+      existing: existing,
+    );
+  }
+
+  Future<bool> _linkLocalTransferToRemoteDetail({
+    required int localTransferId,
+    required Map<String, dynamic> existing,
+  }) async {
+    final existingId = StockTransferLocalDatasource.coerceRemoteInt(existing['id']);
+    Map<String, dynamic> detail = existing;
+    if (existingId != null) {
+      try {
+        detail = await _stockTransferRemote.fetchTransfer(existingId);
+      } catch (_) {}
+    }
+
+    await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+      localTransferId,
+      detail,
+    );
+    final remoteItems = (detail['items'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        [];
+    if (remoteItems.isNotEmpty) {
+      await _stockTransferLocal.linkRemoteTransferItemsFromSnapshot(
+        localTransferId,
+        remoteItems,
+      );
+    }
+    return true;
+  }
+
+  Future<Map<String, dynamic>?> _findRemoteTransferByReference(
+    String reference,
+  ) async {
+    final outgoing = await _stockTransferRemote.fetchOutgoing();
+    for (final raw in outgoing) {
+      if (raw['reference'] == reference) return raw;
+    }
+    final incoming = await _stockTransferRemote.fetchIncoming();
+    for (final raw in incoming) {
+      if (raw['reference'] == reference) return raw;
+    }
+    return null;
+  }
+
+  bool _isDuplicateReferenceError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('stock_transfers_reference') ||
+        (lower.contains('reference') &&
+            (lower.contains('existe') ||
+                lower.contains('duplicate') ||
+                lower.contains('unique')));
+  }
+
+  bool _isTransferAlreadyCancelledError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('introuvable') ||
+        lower.contains('not found') ||
+        lower.contains('ne peut pas être annulé') ||
+        lower.contains('deja annul') ||
+        lower.contains('déjà annul') ||
+        lower.contains('cancelled');
+  }
+
+  bool _isInsufficientReservationError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('réservations insuffisantes') ||
+        lower.contains('reservations insuffisantes');
+  }
+
+  bool _isWrongShopShipError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('boutique source');
+  }
+
+  bool _isWrongShopReceiveError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('boutique destination');
   }
 }
 

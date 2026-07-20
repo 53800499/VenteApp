@@ -81,10 +81,9 @@ class InventoryLotLocalDatasource {
 
     for (final lot in lots) {
       if (remaining <= 0) break;
-      final take = lot.quantityRemaining < remaining
-          ? lot.quantityRemaining
-          : remaining;
-      if (take <= 0) continue;
+      final available = lot.quantityRemaining - lot.quantityReserved;
+      if (available <= 0) continue;
+      final take = available < remaining ? available : remaining;
 
       final newRemaining = lot.quantityRemaining - take;
       await (_db.update(_db.inventoryLots)..where((l) => l.id.equals(lot.id)))
@@ -312,6 +311,12 @@ class InventoryLotLocalDatasource {
   }
 
   /// Crée un lot initial si le produit a du stock mais aucun lot actif.
+  Future<void> ensureLotsForAllocation({
+    required int shopId,
+    required int productId,
+  }) =>
+      _ensureLotsForAllocation(shopId: shopId, productId: productId);
+
   Future<void> _ensureLotsForAllocation({
     required int shopId,
     required int productId,
@@ -407,6 +412,57 @@ class InventoryLotLocalDatasource {
     );
   }
 
+  Future<List<InventoryLot>> _findLotsByServerId(int shopId, String serverId) {
+    return (_db.select(_db.inventoryLots)
+          ..where(
+            (l) => l.shopId.equals(shopId) & l.serverId.equals(serverId),
+          )
+          ..orderBy([(l) => OrderingTerm.asc(l.id)]))
+        .get();
+  }
+
+  Future<void> _dedupeLots(List<InventoryLot> rows, {required int keepId}) async {
+    final duplicateIds =
+        rows.where((l) => l.id != keepId).map((l) => l.id).toList();
+    if (duplicateIds.isEmpty) return;
+
+    await _db.transaction(() async {
+      for (final dupId in duplicateIds) {
+        await (_db.update(_db.saleItemLotAllocations)
+              ..where((a) => a.inventoryLotId.equals(dupId)))
+            .write(
+          SaleItemLotAllocationsCompanion(
+            inventoryLotId: Value(keepId),
+          ),
+        );
+        await (_db.update(_db.stockTransferLotReservations)
+              ..where((r) => r.lotId.equals(dupId)))
+            .write(
+          StockTransferLotReservationsCompanion(
+            lotId: Value(keepId),
+          ),
+        );
+        await (_db.update(_db.stockTransferLotLines)
+              ..where((l) => l.sourceLotId.equals(dupId)))
+            .write(
+          StockTransferLotLinesCompanion(
+            sourceLotId: Value(keepId),
+          ),
+        );
+        await (_db.update(_db.stockTransferLotLines)
+              ..where((l) => l.destinationLotId.equals(dupId)))
+            .write(
+          StockTransferLotLinesCompanion(
+            destinationLotId: Value(keepId),
+          ),
+        );
+      }
+      await (_db.delete(_db.inventoryLots)
+            ..where((l) => l.id.isIn(duplicateIds)))
+          .go();
+    });
+  }
+
   Future<void> upsertLotFromRemote({
     required int shopId,
     required int productId,
@@ -425,9 +481,8 @@ class InventoryLotLocalDatasource {
     required int createdAt,
     required int version,
   }) async {
-    final existing = await (_db.select(_db.inventoryLots)
-          ..where((l) => l.shopId.equals(shopId) & l.serverId.equals(serverId)))
-        .getSingleOrNull();
+    final existingRows = await _findLotsByServerId(shopId, serverId);
+    final existing = existingRows.firstOrNull;
 
     final companion = InventoryLotsCompanion(
       shopId: Value(shopId),
@@ -454,6 +509,9 @@ class InventoryLotLocalDatasource {
     } else {
       await (_db.update(_db.inventoryLots)..where((l) => l.id.equals(existing.id)))
           .write(companion);
+      if (existingRows.length > 1) {
+        await _dedupeLots(existingRows, keepId: existing.id);
+      }
     }
 
     await refreshProductStockFromLots(shopId: shopId, productId: productId);

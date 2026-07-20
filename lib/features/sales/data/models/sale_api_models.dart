@@ -203,6 +203,7 @@ class SaleDetailItemApiDto {
     required this.productName,
     required this.quantity,
     required this.unitPrice,
+    this.unitCost,
     required this.lineTotal,
   });
 
@@ -211,6 +212,7 @@ class SaleDetailItemApiDto {
   final String productName;
   final double quantity;
   final int unitPrice;
+  final int? unitCost;
   final int lineTotal;
 
   factory SaleDetailItemApiDto.fromJson(Map<String, dynamic> json) {
@@ -220,6 +222,7 @@ class SaleDetailItemApiDto {
       productName: json['productName'] as String? ?? '',
       quantity: (json['quantity'] as num? ?? 0).toDouble(),
       unitPrice: json['unitPrice'] as int? ?? 0,
+      unitCost: (json['unitCost'] as num?)?.toInt(),
       lineTotal: json['lineTotal'] as int? ?? 0,
     );
   }

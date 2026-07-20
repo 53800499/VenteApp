@@ -7,6 +7,8 @@ import '../../features/inventory/domain/repositories/inventory_repository.dart';
 import '../../features/sales/domain/repositories/sale_repository.dart';
 import '../../features/calculators/domain/repositories/calculators_repository.dart';
 import '../../features/procurement/domain/repositories/procurement_repository.dart';
+import '../../features/stock_transfer/domain/repositories/stock_transfer_repository.dart';
+import '../../features/fx_exchange/domain/repositories/fx_exchange_repository.dart';
 
 class CustomerRemoteSyncAdapter implements RemoteSyncPort {
   CustomerRemoteSyncAdapter(this._repository);
@@ -113,6 +115,34 @@ class ProcurementRemoteSyncAdapter implements RemoteSyncPort {
 
   @override
   String get moduleName => 'procurement';
+
+  @override
+  Future<void> syncFromRemote({required int shopId}) {
+    return _repository.syncFromRemote(shopId: shopId);
+  }
+}
+
+class StockTransferRemoteSyncAdapter implements RemoteSyncPort {
+  StockTransferRemoteSyncAdapter(this._repository);
+
+  final StockTransferRepository _repository;
+
+  @override
+  String get moduleName => 'stock_transfers';
+
+  @override
+  Future<void> syncFromRemote({required int shopId}) {
+    return _repository.syncFromRemote(shopId: shopId);
+  }
+}
+
+class FxExchangeRemoteSyncAdapter implements RemoteSyncPort {
+  FxExchangeRemoteSyncAdapter(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  @override
+  String get moduleName => 'fx_exchange';
 
   @override
   Future<void> syncFromRemote({required int shopId}) {

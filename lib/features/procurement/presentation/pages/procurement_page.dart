@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/sync/sync_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
@@ -10,10 +11,17 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/procurement.dart';
 import '../../domain/repositories/procurement_repository.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
 import '../widgets/procurement_reports_tab.dart';
-import '../widgets/procurement_supplier_dialog.dart';
+import '../../data/services/procurement_sync_status_service.dart';
+import '../../domain/entities/procurement_sync_entities.dart';
+import '../widgets/procurement_sync_banner.dart';
+import '../widgets/procurement_sync_badge.dart';
+import '../widgets/procurement_sync_scope.dart';
+import 'procurement_sync_panel_page.dart';
+import 'supplier_form_page.dart';
 import 'invoice_detail_page.dart';
 import 'po_detail_page.dart';
 import 'po_form_page.dart';
@@ -60,6 +68,10 @@ class _ProcurementView extends StatefulWidget {
 class _ProcurementViewState extends State<_ProcurementView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  ProcurementSyncOverview _syncOverview = const ProcurementSyncOverview();
+  bool _syncLoading = false;
+
+  int get _shopId => context.read<ProcurementBloc>().shopId;
 
   @override
   void initState() {
@@ -71,6 +83,27 @@ class _ProcurementViewState extends State<_ProcurementView>
         setState(() {});
       }
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bootstrapSync();
+    });
+  }
+
+  Future<void> _bootstrapSync() async {
+    sl<SyncService>().scheduleSync(shopId: _shopId);
+    await _refreshSyncOverview();
+  }
+
+  Future<void> _refreshSyncOverview() async {
+    if (!mounted) return;
+    setState(() => _syncLoading = true);
+    final overview = await sl<ProcurementSyncStatusService>()
+        .loadOverview(shopId: _shopId);
+    if (mounted) {
+      setState(() {
+        _syncOverview = overview;
+        _syncLoading = false;
+      });
+    }
   }
 
   @override
@@ -88,6 +121,7 @@ class _ProcurementViewState extends State<_ProcurementView>
     if (includeReport) {
       context.read<ProcurementBloc>().add(const ProcurementReportLoadRequested());
     }
+    _refreshSyncOverview();
   }
 
   void _showNewProcurementSheet(
@@ -186,7 +220,10 @@ class _ProcurementViewState extends State<_ProcurementView>
         }
       },
       builder: (context, state) {
-        return Scaffold(
+        return ProcurementSyncScope(
+          overview: _syncOverview,
+          onRefresh: _refreshSyncOverview,
+          child: Scaffold(
           appBar: AppBar(
             title: const Text('Approvisionnement'),
             bottom: TabBar(
@@ -215,17 +252,50 @@ class _ProcurementViewState extends State<_ProcurementView>
               ],
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Actualiser',
-                onPressed: () => _refresh(
-                  context,
-                  includeReport: _tabController.index == 4,
+              if (_syncOverview.hasIssues)
+                IconButton(
+                  tooltip: 'Sync approvisionnement',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            ProcurementSyncPanelPage(shopId: _shopId),
+                      ),
+                    ).then((_) => _refreshSyncOverview());
+                  },
+                  icon: Badge(
+                    label: Text('${_syncOverview.pendingCount + _syncOverview.errorCount}'),
+                    child: const Icon(Icons.cloud_upload_outlined),
+                  ),
                 ),
+              const ModuleHelpButton(
+                articleId: 'procurement',
+                tooltip: 'Guide approvisionnement',
+              ),
+              IconButton(
+                icon: _syncLoading
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                tooltip: 'Actualiser',
+                onPressed: _syncLoading
+                    ? null
+                    : () => _refresh(
+                          context,
+                          includeReport: _tabController.index == 4,
+                        ),
               ),
             ],
           ),
-          body: Stack(
+          body: Column(
+            children: [
+              ProcurementSyncBanner(shopId: _shopId),
+              Expanded(
+                child: Stack(
             children: [
               if (state.status == ProcurementStatus.loading &&
                   state.purchaseOrders.isEmpty)
@@ -270,6 +340,9 @@ class _ProcurementViewState extends State<_ProcurementView>
                 ),
             ],
           ),
+              ),
+            ],
+          ),
           floatingActionButton: _tabController.index == 0 && (canCreate || canReceive)
               ? FloatingActionButton.extended(
                   onPressed: () => _showNewProcurementSheet(
@@ -291,19 +364,19 @@ class _ProcurementViewState extends State<_ProcurementView>
                               child: const DirectProcurementPage(),
                             ),
                           ),
-                        );
+                        ).then((_) => _refresh(context));
                       },
                       icon: const Icon(Icons.add),
                       label: const Text('Nouvel appro direct'),
                     )
                   : _tabController.index == 2 && canCreate
                   ? FloatingActionButton.extended(
-                      onPressed: () =>
-                          showProcurementSupplierDialog(context),
+                      onPressed: () => openSupplierFormPage(context),
                       icon: const Icon(Icons.person_add_alt_1_outlined),
                       label: const Text('Ajouter Fournisseur'),
                     )
                   : null,
+        ),
         );
       },
     );
@@ -665,6 +738,12 @@ class _OrderCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
+                  ProcurementSyncBadge(
+                    kind: ProcurementSyncEntityKind.purchaseOrder,
+                    localId: po.id,
+                    serverId: po.serverId,
+                  ),
+                  const SizedBox(width: 4),
                   _StatusBadge(status: po.status),
                 ],
               ),
@@ -958,6 +1037,12 @@ class _DirectReceiptCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 4),
+                  ProcurementSyncBadge(
+                    kind: ProcurementSyncEntityKind.receipt,
+                    localId: receipt.id,
+                    serverId: receipt.serverId,
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
@@ -1065,7 +1150,7 @@ class _SuppliersTab extends StatelessWidget {
                         ),
                         icon: const Icon(Icons.add),
                         label: const Text('Ajouter un fournisseur'),
-                        onPressed: () => showProcurementSupplierDialog(context),
+                        onPressed: () => openSupplierFormPage(context),
                       ),
                   ],
                 ),
@@ -1164,7 +1249,7 @@ class _SuppliersTab extends StatelessWidget {
                       icon: const Icon(Icons.edit_outlined),
                       tooltip: 'Modifier',
                       onPressed: () =>
-                          showProcurementSupplierDialog(context, supplier: s),
+                          openSupplierFormPage(context, supplier: s),
                     ),
                 ],
               ),
@@ -1250,7 +1335,11 @@ class _InvoicesTab extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.sm),
-                        _InvoiceStatusBadge(status: inv.status),
+                        ProcurementInvoiceStatusChip(
+                          invoiceId: inv.id,
+                          status: inv.status,
+                          serverId: inv.serverId,
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -1338,45 +1427,6 @@ class _StatusBadge extends StatelessWidget {
           'Annulé',
           Colors.red.shade100,
           Colors.red.shade800
-        ),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-            color: fg, fontSize: 11, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _InvoiceStatusBadge extends StatelessWidget {
-  const _InvoiceStatusBadge({required this.status});
-  final SupplierInvoiceStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, bg, fg) = switch (status) {
-      SupplierInvoiceStatus.unpaid => (
-          'Non payé',
-          Colors.red.shade100,
-          Colors.red.shade800
-        ),
-      SupplierInvoiceStatus.partiallyPaid => (
-          'Partiel',
-          Colors.orange.shade100,
-          Colors.orange.shade800
-        ),
-      SupplierInvoiceStatus.paid => (
-          'Payé',
-          Colors.green.shade100,
-          Colors.green.shade800
         ),
     };
 

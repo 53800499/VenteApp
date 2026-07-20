@@ -76,6 +76,23 @@ class UserRemoteDatasource {
     );
   }
 
+  Future<UserShopAccessDto> getUserShopAccess(int userId) async {
+    final data = await _getData('/identity/users/$userId/shop-access');
+    return UserShopAccessDto.fromJson(data);
+  }
+
+  Future<void> syncUserShopAccess({
+    required int userId,
+    required List<ShopAccessGrantInputDto> shops,
+  }) async {
+    await _putData(
+      '/identity/users/$userId/shop-access',
+      {
+        'shops': shops.map((shop) => shop.toJson()).toList(),
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> _getData(String path) async {
     try {
       final response = await _client.get<Map<String, dynamic>>(path);
@@ -114,6 +131,19 @@ class UserRemoteDatasource {
     try {
       final response =
           await _client.patch<Map<String, dynamic>>(path, data: body);
+      return _unwrapMap(response.data);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<Map<String, dynamic>> _putData(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response =
+          await _client.put<Map<String, dynamic>>(path, data: body);
       return _unwrapMap(response.data);
     } on DioException catch (error) {
       throw mapDioException(error);

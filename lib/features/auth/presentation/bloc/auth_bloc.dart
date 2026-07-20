@@ -23,6 +23,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     required IsSetupComplete isSetupComplete,
     required WasLoggedOut wasLoggedOut,
     required HasRestorableSession hasRestorableSession,
+    required GetRestorableSessionShopId getRestorableSessionShopId,
     required RestoreSession restoreSession,
     required GetLockScreen getLockScreen,
     required LoginWithPin loginWithPin,
@@ -35,6 +36,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     required Logout logout,
     required ListOwnedShops listOwnedShops,
     required SwitchShop switchShop,
+    required TryResolveServerShopId tryResolveServerShopId,
     required RequestWhatsappOtp requestWhatsappOtp,
     required VerifyWhatsappOtp verifyWhatsappOtp,
     required CompleteWhatsappLogin completeWhatsappLogin,
@@ -44,6 +46,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   })  : _isSetupComplete = isSetupComplete,
         _wasLoggedOut = wasLoggedOut,
         _hasRestorableSession = hasRestorableSession,
+        _getRestorableSessionShopId = getRestorableSessionShopId,
         _restoreSession = restoreSession,
         _getLockScreen = getLockScreen,
         _loginWithPin = loginWithPin,
@@ -56,6 +59,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
         _logout = logout,
         _listOwnedShops = listOwnedShops,
         _switchShop = switchShop,
+        _tryResolveServerShopId = tryResolveServerShopId,
         _requestWhatsappOtp = requestWhatsappOtp,
         _verifyWhatsappOtp = verifyWhatsappOtp,
         _completeWhatsappLogin = completeWhatsappLogin,
@@ -85,12 +89,14 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthLogoutRequested>(_onLogout);
     on<AuthEntryResetRequested>(_onEntryResetRequested);
     on<AuthLockScreenBackRequested>(_onLockScreenBackRequested);
+    on<AuthLockScreenExitRequested>(_onLockScreenExitRequested);
     on<AuthSessionRestored>(_onSessionRestored);
   }
 
   final IsSetupComplete _isSetupComplete;
   final WasLoggedOut _wasLoggedOut;
   final HasRestorableSession _hasRestorableSession;
+  final GetRestorableSessionShopId _getRestorableSessionShopId;
   final RestoreSession _restoreSession;
   final GetLockScreen _getLockScreen;
   final LoginWithPin _loginWithPin;
@@ -103,6 +109,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   final Logout _logout;
   final ListOwnedShops _listOwnedShops;
   final SwitchShop _switchShop;
+  final TryResolveServerShopId _tryResolveServerShopId;
   final RequestWhatsappOtp _requestWhatsappOtp;
   final VerifyWhatsappOtp _verifyWhatsappOtp;
   final CompleteWhatsappLogin _completeWhatsappLogin;
@@ -111,6 +118,17 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   final AppLockController _appLockController;
 
   int get _defaultShopId => _lastShopStorage.lastShopId;
+
+  /// Boutique pour l'écran PIN : session SQLite persistée (après switch),
+  /// sinon dernière boutique enregistrée.
+  Future<int> _shopIdForUnlockScreen() async {
+    final sessionShopId = await _getRestorableSessionShopId();
+    if (sessionShopId != null) {
+      await _lastShopStorage.save(sessionShopId);
+      return sessionShopId;
+    }
+    return _defaultShopId;
+  }
 
   void _scheduleBackgroundSync(AuthSession session) {
     _syncService.scheduleSync(shopId: session.shop.id);
@@ -190,7 +208,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       }
     }
 
-    final lockScreen = await _getLockScreen(shopId: _defaultShopId);
+    final shopId = await _shopIdForUnlockScreen();
+    final lockScreen = await _getLockScreen(shopId: shopId);
     return AuthLocked(lockScreen, canGoBack: false, isUnlockOnly: true);
   }
 
@@ -461,7 +480,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       emit(const AuthLoading());
     }
     try {
-      final shopId = event.shopId ?? _defaultShopId;
+      final shopId = event.shopId ?? await _shopIdForUnlockScreen();
       final lockScreen = await _getLockScreen(shopId: shopId);
       final isUnlockOnly = await _hasRestorableSession();
       emit(AuthLocked(
@@ -612,7 +631,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     }
     if (failure is AccountLockedFailure) {
       final minutes = (failure.remainingSeconds / 60).ceil();
-      return 'Compte verrouillé. Réessayez dans $minutes min ou utilisez « PIN oublié ? ».';
+      return 'Compte verrouillé. Réessayez dans $minutes min, utilisez « PIN oublié ? » '
+          'ou revenez à l\'accueil pour vous reconnecter.';
     }
     if (failure is NetworkFailure) {
       return failure.message;
@@ -630,45 +650,88 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   }) async {
     _appLockController.markUnlocked();
 
-    // Étape Workspace — choisir le contexte de travail (≠ authentification).
-    if (await _resolveWorkspaceSelection(
+    // Étape Workspace — ouvrir la dernière boutique connue si possible.
+    final workspaceSession = await _resolveOwnerWorkspace(
       session,
       emit,
       localOnly: deferCloudSync,
-    )) {
-      return;
-    }
+    );
+    if (workspaceSession == null) return;
 
-    await _enterWorkspace(session, emit, deferCloudSync: deferCloudSync);
+    await _enterWorkspace(workspaceSession, emit, deferCloudSync: deferCloudSync);
   }
 
-  /// Étape Workspace : un patron multi-boutiques choisit son contexte de
-  /// travail après ouverture de session. Ce n'est pas de l'authentification —
-  /// c'est la sélection de l'espace de travail. Retourne `true` si un choix est
-  /// requis (état émis), `false` pour entrer directement dans la boutique
-  /// courante. Isolée ici pour pouvoir être extraite plus tard dans un
-  /// `WorkspaceBloc` dédié sans toucher à l'authentification.
-  Future<bool> _resolveWorkspaceSelection(
+  /// Patron multi-boutiques : bascule sur la dernière boutique utilisée si
+  /// elle est encore accessible. Sinon affiche l'écran de sélection.
+  /// Retourne la session prête à l'emploi, ou `null` si un choix manuel est
+  /// requis (état [AuthShopSelection] déjà émis).
+  Future<AuthSession?> _resolveOwnerWorkspace(
     AuthSession session,
     Emitter<AuthState> emit, {
     bool localOnly = false,
   }) async {
-    if (session.user.role != UserRole.owner) return false;
-    // Déverrouillage local : entrer tout de suite avec la boutique courante.
-    if (localOnly) return false;
+    if (session.user.role != UserRole.owner) return session;
+    if (localOnly) return session;
+
     try {
       final shops = await _listOwnedShops().timeout(
         const Duration(seconds: 3),
         onTimeout: () => throw const NetworkFailure('Délai dépassé'),
       );
-      if (shops.activeShops.length > 1) {
+      final active = shops.activeShops;
+      if (active.length <= 1) return session;
+
+      final preferredId = await _resolvePreferredOwnerShopId(session, shops);
+      if (preferredId == null) {
         emit(AuthShopSelection(provisionalSession: session, shops: shops));
-        return true;
+        return null;
+      }
+
+      if (preferredId == session.shop.apiShopId) return session;
+
+      try {
+        return await _switchShop(shopId: preferredId).timeout(
+          const Duration(seconds: 15),
+        );
+      } on Object {
+        emit(AuthShopSelection(provisionalSession: session, shops: shops));
+        return null;
       }
     } on Object {
-      // Réseau lent ou indisponible : ouvrir l'app avec la boutique courante.
+      // Réseau lent ou indisponible : ouvrir avec la boutique d'entrée.
+      return session;
     }
-    return false;
+  }
+
+  Future<int?> _resolvePreferredOwnerShopId(
+    AuthSession session,
+    OwnedShopList shops,
+  ) async {
+    final active = shops.activeShops;
+    if (active.isEmpty) return null;
+
+    final activeIds = active.map((shop) => shop.id).toSet();
+
+    final lastServerId =
+        await _tryResolveServerShopId(_lastShopStorage.lastShopId);
+    if (lastServerId != null && activeIds.contains(lastServerId)) {
+      return lastServerId;
+    }
+
+    if (activeIds.contains(shops.activeShopId)) {
+      return shops.activeShopId;
+    }
+
+    if (activeIds.contains(session.shop.apiShopId)) {
+      return session.shop.apiShopId;
+    }
+
+    for (final shop in active) {
+      if (shop.isDefault) return shop.id;
+    }
+
+    if (active.length == 1) return active.first.id;
+    return null;
   }
 
   /// Entrée effective dans l'espace de travail : persiste la boutique courante,
@@ -848,11 +911,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     AuthLogoutRequested event,
     Emitter<AuthState> emit,
   ) async {
-    _syncService.pauseSync();
-    await _logout();
-    _syncService.clearShop();
-    await _lastShopStorage.clear();
-    await _emitEntryScreen(emit);
+    await _exitToEntryAfterLogout(emit);
   }
 
   Future<void> _onEntryResetRequested(
@@ -868,6 +927,22 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final current = state;
     if (current is! AuthLocked || !current.canGoBack) return;
+    await _emitEntryScreen(emit);
+  }
+
+  Future<void> _onLockScreenExitRequested(
+    AuthLockScreenExitRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    if (state is! AuthLocked) return;
+    await _exitToEntryAfterLogout(emit);
+  }
+
+  Future<void> _exitToEntryAfterLogout(Emitter<AuthState> emit) async {
+    _syncService.pauseSync();
+    await _logout();
+    _syncService.clearShop();
+    await _lastShopStorage.clear();
     await _emitEntryScreen(emit);
   }
 

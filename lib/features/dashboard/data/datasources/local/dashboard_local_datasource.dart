@@ -67,6 +67,10 @@ class DashboardLocalDatasource {
   ) async {
     final query = _db.select(_db.saleItems).join([
       innerJoin(_db.sales, _db.sales.id.equalsExp(_db.saleItems.saleId)),
+      leftOuterJoin(
+        _db.products,
+        _db.products.id.equalsExp(_db.saleItems.productId),
+      ),
     ])
       ..where(
         _db.saleItems.shopId.equals(shopId) &
@@ -78,11 +82,20 @@ class DashboardLocalDatasource {
     final rows = await query.get();
     return rows
         .map(
-          (row) => SaleProfitRow(
-            quantity: row.readTable(_db.saleItems).quantity,
-            unitPrice: row.readTable(_db.saleItems).unitPrice,
-            unitCost: row.readTable(_db.saleItems).unitCost,
-          ),
+          (row) {
+            final item = row.readTable(_db.saleItems);
+            final product = row.readTableOrNull(_db.products);
+            final unitCost = (item.unitCost != null && item.unitCost! > 0)
+                ? item.unitCost
+                : (product?.priceBuy != null && product!.priceBuy! > 0
+                    ? product.priceBuy
+                    : null);
+            return SaleProfitRow(
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              unitCost: unitCost,
+            );
+          },
         )
         .toList();
   }

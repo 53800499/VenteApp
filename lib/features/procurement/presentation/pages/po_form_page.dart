@@ -8,6 +8,7 @@ import '../../../inventory/domain/entities/inventory_entities.dart';
 import '../../../inventory/data/datasources/local/inventory_local_datasource.dart';
 import '../../../inventory/data/datasources/local/inventory_lot_local_datasource.dart';
 import '../../domain/entities/procurement.dart';
+import '../../domain/repositories/procurement_repository.dart';
 import '../bloc/procurement_bloc.dart';
 import '../models/po_form_prefill.dart';
 import '../widgets/procurement_feedback.dart';
@@ -56,14 +57,22 @@ class _PoFormPageState extends State<PoFormPage> {
       _notesController.text = order.notes ?? '';
       _expectedAtMs = order.expectedAt;
     } else {
-      _numberController.text =
-          'PO-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}';
       _expectedAtMs =
           DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProducts();
+      if (!_isEditMode) _loadNextPoNumber();
     });
+  }
+
+  Future<void> _loadNextPoNumber() async {
+    final shopId = context.read<ProcurementBloc>().shopId;
+    final number =
+        await sl<ProcurementRepository>().nextPurchaseOrderNumber(shopId: shopId);
+    if (mounted) {
+      setState(() => _numberController.text = number);
+    }
   }
 
   Future<void> _loadProducts() async {

@@ -33,7 +33,7 @@ class AuthGate extends StatelessWidget {
           AuthShopSelection() => const ShopSelectionPage(),
           AuthAuthenticated(:final session) =>
             HomeShellPage(
-              key: ValueKey('shop-${session.shop.id}'),
+              key: ValueKey('shop-${session.shop.apiShopId}'),
               session: session,
             ),
           AuthFailure(:final message) => Scaffold(

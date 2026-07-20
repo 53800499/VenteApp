@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../features/stock_transfer/presentation/utils/stock_transfer_navigation.dart';
 import '../../features/procurement/presentation/utils/procurement_navigation.dart';
 import '../../features/auth/domain/entities/auth_entities.dart';
 import '../../features/customers/presentation/pages/customer_detail_page.dart';
@@ -60,6 +61,14 @@ class NotificationDeepLinkHandler {
 
     if (deepLink.startsWith('/procurement')) {
       openProcurementPage(context, session);
+      return;
+    }
+
+    if (deepLink.startsWith('/stock-transfers/')) {
+      final id = int.tryParse(deepLink.split('/').last);
+      if (id != null) {
+        openStockTransferDetailPage(context, session, transferId: id);
+      }
       return;
     }
 

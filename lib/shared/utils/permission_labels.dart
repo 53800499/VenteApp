@@ -78,6 +78,15 @@ const _labels = <Permission, String>{
   Permission.calculatorsUse: 'Utiliser les calculateurs',
   Permission.calculatorsExport: 'Exporter les calculs',
   Permission.calculatorsHistory: 'Consulter l\'historique',
+  Permission.procurementRead: 'Consulter les approvisionnements',
+  Permission.procurementCreate: 'Créer une commande fournisseur',
+  Permission.procurementUpdate: 'Modifier une commande fournisseur',
+  Permission.procurementReceive: 'Réceptionner des marchandises',
+  Permission.procurementInvoicePay: 'Payer une facture fournisseur',
+  Permission.procurementCancel: 'Annuler une commande fournisseur',
+  Permission.inventoryTransferRead: 'Consulter les transferts inter-boutiques',
+  Permission.inventoryTransferCreate: 'Créer et expédier un transfert',
+  Permission.inventoryTransferReceive: 'Réceptionner un transfert entrant',
 };
 
 String permissionModuleCode(Permission permission) {

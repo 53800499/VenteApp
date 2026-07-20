@@ -7,6 +7,7 @@ abstract final class InventoryLotSourceType {
   static const directProcurement = 'direct_procurement';
   static const manualRestock = 'manual_restock';
   static const saleCancelRestore = 'sale_cancel_restore';
+  static const stockTransferIn = 'stock_transfer_in';
 }
 
 abstract final class InventoryLotStatus {

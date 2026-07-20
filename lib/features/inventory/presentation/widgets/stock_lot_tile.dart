@@ -56,6 +56,7 @@ class StockLotTile extends StatelessWidget {
       InventoryLotSourceType.initialMigration => 'Migration initiale',
       InventoryLotSourceType.procurementReceipt => 'Réception achat',
       InventoryLotSourceType.directProcurement => 'Approvisionnement direct',
+      InventoryLotSourceType.stockTransferIn => 'Transfert entrant',
       InventoryLotSourceType.manualRestock => 'Réappro manuel',
       InventoryLotSourceType.saleCancelRestore => 'Restauration vente',
       _ => sourceType,

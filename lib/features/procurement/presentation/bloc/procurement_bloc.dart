@@ -108,7 +108,12 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementOrdersLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true));
+    emit(state.copyWith(
+      status: state.purchaseOrders.isEmpty
+          ? ProcurementStatus.loading
+          : ProcurementStatus.refreshing,
+      clearError: true,
+    ));
     try {
       final list = await _repository.listPurchaseOrders(
         shopId: shopId,
@@ -125,7 +130,12 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementOrderDetailLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true, clearSelectedOrder: true));
+    final sameOrder = state.selectedOrder?.id == event.poId;
+    emit(state.copyWith(
+      status: sameOrder ? ProcurementStatus.refreshing : ProcurementStatus.loading,
+      clearError: true,
+      clearSelectedOrder: !sameOrder,
+    ));
     try {
       final order = await _repository.findPurchaseOrder(shopId: shopId, id: event.poId);
       if (order == null) {
@@ -307,7 +317,12 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementDirectReceiptsLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true));
+    emit(state.copyWith(
+      status: state.directReceipts.isEmpty
+          ? ProcurementStatus.loading
+          : ProcurementStatus.refreshing,
+      clearError: true,
+    ));
     try {
       final list = await _repository.listDirectReceipts(
         shopId: shopId,
@@ -326,10 +341,11 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementDirectReceiptDetailLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
+    final sameReceipt = state.selectedDirectReceipt?.id == event.receiptId;
     emit(state.copyWith(
-      status: ProcurementStatus.loading,
+      status: sameReceipt ? ProcurementStatus.refreshing : ProcurementStatus.loading,
       clearError: true,
-      clearSelectedDirectReceipt: true,
+      clearSelectedDirectReceipt: !sameReceipt,
     ));
     try {
       final receipt = await _repository.findReceipt(
@@ -363,7 +379,12 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementInvoicesLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true));
+    emit(state.copyWith(
+      status: state.invoices.isEmpty
+          ? ProcurementStatus.loading
+          : ProcurementStatus.refreshing,
+      clearError: true,
+    ));
     try {
       final list = await _repository.listInvoices(shopId: shopId, supplierId: event.supplierId);
       emit(state.copyWith(status: ProcurementStatus.loaded, invoices: list));
@@ -376,7 +397,12 @@ class ProcurementBloc extends Bloc<ProcurementEvent, ProcurementState> {
     ProcurementInvoiceDetailLoadRequested event,
     Emitter<ProcurementState> emit,
   ) async {
-    emit(state.copyWith(status: ProcurementStatus.loading, clearError: true, clearSelectedInvoice: true));
+    final sameInvoice = state.selectedInvoice?.id == event.invoiceId;
+    emit(state.copyWith(
+      status: sameInvoice ? ProcurementStatus.refreshing : ProcurementStatus.loading,
+      clearError: true,
+      clearSelectedInvoice: !sameInvoice,
+    ));
     try {
       final invoice = await _repository.findInvoice(shopId: shopId, id: event.invoiceId);
       if (invoice == null) {

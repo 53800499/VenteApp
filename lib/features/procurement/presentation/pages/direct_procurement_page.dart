@@ -11,6 +11,7 @@ import '../../domain/entities/procurement.dart';
 import '../../domain/repositories/procurement_repository.dart';
 import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
+import '../widgets/procurement_sync_progress_sheet.dart';
 import '../utils/procurement_price_update_flow.dart';
 
 class DirectProcurementPage extends StatefulWidget {
@@ -111,14 +112,20 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
         if (state.status == ProcurementStatus.loaded) {
           _submitPending = false;
           if (!context.mounted) return;
-          await ProcurementFeedback.showSuccess(
-            context: context,
-            title: 'Approvisionnement enregistré',
-            message:
-                'Le bon « ${_receiptNumberController.text.trim()} » a été enregistré. '
-                'Le stock a été mis à jour.',
-          );
-          if (context.mounted) Navigator.pop(context);
+          final shopId = context.read<ProcurementBloc>().shopId;
+          final receiptNumber = _receiptNumberController.text.trim();
+          final withInvoice = _recordInvoice;
+          final withPayment = _payNow && withInvoice;
+          Navigator.pop(context);
+          if (context.mounted) {
+            await ProcurementSyncProgressSheet.show(
+              context,
+              shopId: shopId,
+              receiptNumber: receiptNumber,
+              invoiceExpected: withInvoice,
+              paymentExpected: withPayment,
+            );
+          }
         }
       },
       child: Scaffold(

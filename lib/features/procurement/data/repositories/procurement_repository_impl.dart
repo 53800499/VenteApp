@@ -11,6 +11,7 @@ import '../../domain/repositories/procurement_repository.dart';
 import '../datasources/procurement_local_datasource.dart';
 import '../datasources/procurement_remote_datasource.dart';
 import '../models/procurement_api_models.dart';
+import '../services/procurement_sync_status_service.dart';
 import '../utils/procurement_remote_payloads.dart';
 
 class ProcurementRepositoryImpl implements ProcurementRepository {
@@ -20,17 +21,66 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     required RemoteApiGuard apiGuard,
     required SyncPolicy syncPolicy,
     LocalWriteSyncRecorder? recorder,
+    ProcurementSyncStatusService? syncStatus,
   })  : _local = local,
         _remote = remote,
         _apiGuard = apiGuard,
         _syncPolicy = syncPolicy,
-        _recorder = recorder;
+        _recorder = recorder,
+        _syncStatus = syncStatus;
 
   final ProcurementLocalDatasource _local;
   final ProcurementRemoteDatasource _remote;
   final RemoteApiGuard _apiGuard;
   final SyncPolicy _syncPolicy;
   final LocalWriteSyncRecorder? _recorder;
+  final ProcurementSyncStatusService? _syncStatus;
+
+  Future<bool> _usesSyncQueue(int shopId) async {
+    return (await _syncPolicy.resolve(shopId: shopId)).shouldUseSyncQueue;
+  }
+
+  Future<void> _assertReceiptNumberAvailable(int shopId, String receiptNumber) async {
+    final trimmed = receiptNumber.trim();
+    if (await _local.isReceiptNumberUsedInGroup(
+      shopId: shopId,
+      receiptNumber: trimmed,
+    )) {
+      final suggested = await _local.nextOrderReceiptNumber(shopId);
+      throw ValidationFailure(
+        'Le bon « $trimmed » existe déjà dans votre réseau de boutiques. '
+        'Utilisez « $suggested » ou synchronisez à nouveau.',
+      );
+    }
+  }
+
+  Future<void> _assertPurchaseOrderNumberAvailable(int shopId, String number) async {
+    final trimmed = number.trim();
+    if (await _local.isPurchaseOrderNumberUsedInGroup(
+      shopId: shopId,
+      number: trimmed,
+    )) {
+      final suggested = await _local.nextPurchaseOrderNumber(shopId);
+      throw ValidationFailure(
+        'La commande « $trimmed » existe déjà dans votre réseau de boutiques. '
+        'Utilisez « $suggested » ou synchronisez à nouveau.',
+      );
+    }
+  }
+
+  Future<void> _assertInvoiceNumberAvailable(int shopId, String invoiceNumber) async {
+    final trimmed = invoiceNumber.trim();
+    if (await _local.isInvoiceNumberUsedInGroup(
+      shopId: shopId,
+      invoiceNumber: trimmed,
+    )) {
+      final suggested = await _local.nextSupplierInvoiceNumber(shopId);
+      throw ValidationFailure(
+        'La facture « $trimmed » existe déjà dans votre réseau de boutiques. '
+        'Utilisez « $suggested » ou synchronisez à nouveau.',
+      );
+    }
+  }
 
   // ---------------------------------------------------------------------------
   // Suppliers
@@ -67,7 +117,9 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushSupplierCreateInBackground(shopId, supplier);
+    if (!(await _usesSyncQueue(shopId))) {
+      _pushSupplierCreateInBackground(shopId, supplier);
+    }
     return supplier;
   }
 
@@ -103,13 +155,15 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushSupplierUpdateInBackground(shopId, id, {
-      if (name != null) 'name': name,
-      if (phone != null) 'phone': phone,
-      if (email != null) 'email': email,
-      if (address != null) 'address': address,
-      if (isActive != null) 'isActive': isActive,
-    });
+    if (!(await _usesSyncQueue(shopId))) {
+      _pushSupplierUpdateInBackground(shopId, id, {
+        if (name != null) 'name': name,
+        if (phone != null) 'phone': phone,
+        if (email != null) 'email': email,
+        if (address != null) 'address': address,
+        if (isActive != null) 'isActive': isActive,
+      });
+    }
     return supplier;
   }
 
@@ -152,6 +206,7 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     String? notes,
     required List<Map<String, dynamic>> items,
   }) async {
+    await _assertPurchaseOrderNumberAvailable(shopId, number);
     final po = await _local.createPurchaseOrder(
       shopId,
       userId,
@@ -192,7 +247,9 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushPurchaseOrderCreateInBackground(shopId, po, items);
+    if (!(await _usesSyncQueue(shopId))) {
+      _pushPurchaseOrderCreateInBackground(shopId, po, items);
+    }
     return po;
   }
 
@@ -262,18 +319,20 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushPurchaseOrderUpdateInBackground(shopId, poId, {
-      if (number != null) 'number': number,
-      if (supplierId != null) 'supplierId': supplierId,
-      if (orderedAt != null) 'orderedAt': orderedAt,
-      if (expectedAt != null) 'expectedAt': expectedAt,
-      if (subtotal != null) 'subtotal': subtotal,
-      if (discount != null) 'discount': discount,
-      if (tax != null) 'tax': tax,
-      if (total != null) 'total': total,
-      if (notes != null) 'notes': notes,
-      if (items != null) 'items': items,
-    });
+    if (!(await _usesSyncQueue(shopId))) {
+      _pushPurchaseOrderUpdateInBackground(shopId, poId, {
+        if (number != null) 'number': number,
+        if (supplierId != null) 'supplierId': supplierId,
+        if (orderedAt != null) 'orderedAt': orderedAt,
+        if (expectedAt != null) 'expectedAt': expectedAt,
+        if (subtotal != null) 'subtotal': subtotal,
+        if (discount != null) 'discount': discount,
+        if (tax != null) 'tax': tax,
+        if (total != null) 'total': total,
+        if (notes != null) 'notes': notes,
+        if (items != null) 'items': items,
+      });
+    }
 
     return po;
   }
@@ -294,15 +353,17 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     );
     await _recorder?.recordPurchaseOrderValidate(shopId: shopId, poId: poId);
 
-    Future(() async {
-      try {
-        final serverId = await _resolvePoServerId(shopId, poId);
-        if (serverId != null) {
-          await _apiGuard.ensureReady();
-          await _remote.validatePurchaseOrder(serverId);
-        }
-      } catch (_) {}
-    });
+    if (!(await _usesSyncQueue(shopId))) {
+      Future(() async {
+        try {
+          final serverId = await _resolvePoServerId(shopId, poId);
+          if (serverId != null) {
+            await _apiGuard.ensureReady();
+            await _remote.validatePurchaseOrder(serverId);
+          }
+        } catch (_) {}
+      });
+    }
   }
 
   @override
@@ -321,15 +382,17 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     );
     await _recorder?.recordPurchaseOrderSend(shopId: shopId, poId: poId);
 
-    Future(() async {
-      try {
-        final serverId = await _resolvePoServerId(shopId, poId);
-        if (serverId != null) {
-          await _apiGuard.ensureReady();
-          await _remote.sendPurchaseOrder(serverId);
-        }
-      } catch (_) {}
-    });
+    if (!(await _usesSyncQueue(shopId))) {
+      Future(() async {
+        try {
+          final serverId = await _resolvePoServerId(shopId, poId);
+          if (serverId != null) {
+            await _apiGuard.ensureReady();
+            await _remote.sendPurchaseOrder(serverId);
+          }
+        } catch (_) {}
+      });
+    }
   }
 
   @override
@@ -353,15 +416,17 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       payload: {if (reason != null) 'reason': reason},
     );
 
-    Future(() async {
-      try {
-        final serverId = await _resolvePoServerId(shopId, poId);
-        if (serverId != null) {
-          await _apiGuard.ensureReady();
-          await _remote.cancelPurchaseOrder(serverId, reason);
-        }
-      } catch (_) {}
-    });
+    if (!(await _usesSyncQueue(shopId))) {
+      Future(() async {
+        try {
+          final serverId = await _resolvePoServerId(shopId, poId);
+          if (serverId != null) {
+            await _apiGuard.ensureReady();
+            await _remote.cancelPurchaseOrder(serverId, reason);
+          }
+        } catch (_) {}
+      });
+    }
   }
 
   @override
@@ -374,6 +439,7 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     String? notes,
     required List<Map<String, dynamic>> items,
   }) async {
+    await _assertReceiptNumberAvailable(shopId, receiptNumber);
     final receipt = await _local.createReceipt(
       shopId,
       poId,
@@ -404,13 +470,31 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushReceiptCreateInBackground(shopId, poId, receipt, items);
+    final syncContext = await _syncPolicy.resolve(shopId: shopId);
+    if (!syncContext.shouldUseSyncQueue) {
+      await _pushReceiptCreateToRemote(shopId, poId, receipt, items);
+    }
     return receipt;
   }
 
   @override
   Future<String> nextDirectReceiptNumber({required int shopId}) {
     return _local.nextDirectReceiptNumber(shopId);
+  }
+
+  @override
+  Future<String> nextOrderReceiptNumber({required int shopId}) {
+    return _local.nextOrderReceiptNumber(shopId);
+  }
+
+  @override
+  Future<String> nextPurchaseOrderNumber({required int shopId}) {
+    return _local.nextPurchaseOrderNumber(shopId);
+  }
+
+  @override
+  Future<String> nextSupplierInvoiceNumber({required int shopId}) {
+    return _local.nextSupplierInvoiceNumber(shopId);
   }
 
   @override
@@ -428,6 +512,7 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     PurchasePaymentMethod paymentMethod = PurchasePaymentMethod.cash,
     String? paymentReference,
   }) async {
+    await _assertReceiptNumberAvailable(shopId, receiptNumber);
     final receipt = await _local.createDirectReceipt(
       shopId: shopId,
       supplierId: supplierId,
@@ -562,6 +647,7 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
     required int tax,
     required int total,
   }) async {
+    await _assertInvoiceNumberAvailable(shopId, invoiceNumber);
     final invoice = await _local.createInvoice(
       shopId,
       poId,
@@ -589,7 +675,9 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushInvoiceCreateInBackground(shopId, invoice);
+    if (!(await _usesSyncQueue(shopId))) {
+      _pushInvoiceCreateInBackground(shopId, invoice);
+    }
     return invoice;
   }
 
@@ -608,6 +696,17 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       throw const ValidationFailure('Facture introuvable.');
     }
     if (invoice.status == SupplierInvoiceStatus.paid) {
+      final pendingSync = await _syncStatus?.hasPendingPaymentForInvoice(
+            shopId: shopId,
+            invoiceId: invoiceId,
+          ) ??
+          false;
+      if (pendingSync) {
+        throw const ValidationFailure(
+          'Cette facture est déjà payée sur cet appareil. '
+          'Le paiement est en cours de synchronisation cloud — aucune action nécessaire.',
+        );
+      }
       throw const ValidationFailure('La facture est déjà entièrement payée.');
     }
     final paidSoFar = await _local.sumPaymentsForInvoice(shopId, invoiceId);
@@ -651,7 +750,9 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       },
     );
 
-    _pushPaymentCreateInBackground(shopId, invoiceId, payment);
+    if (!(await _usesSyncQueue(shopId))) {
+      _pushPaymentCreateInBackground(shopId, invoiceId, payment);
+    }
     return payment;
   }
 
@@ -744,66 +845,112 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
   void _pushPurchaseOrderUpdateInBackground(int shopId, int poId, Map<String, dynamic> fields) {
     Future(() async {
       try {
-        final po = await _local.findPurchaseOrder(shopId, poId);
-        if (po == null || po.serverId == null) return;
-        await _apiGuard.ensureReady();
-        await _remote.updatePurchaseOrder(int.parse(po.serverId!), fields);
+        await _pushPurchaseOrderUpdateToRemote(shopId, poId, fields);
       } catch (_) {}
     });
   }
 
-  void _pushReceiptCreateInBackground(int shopId, int poId, PurchaseReceipt receipt, List<Map<String, dynamic>> items) {
-    Future(() async {
-      try {
-        final po = await _local.findPurchaseOrder(shopId, poId);
-        if (po == null || po.serverId == null) return;
+  Future<void> _pushPurchaseOrderUpdateToRemote(
+    int shopId,
+    int poId,
+    Map<String, dynamic> fields,
+  ) async {
+    final po = await _local.findPurchaseOrder(shopId, poId);
+    if (po == null || po.serverId == null) return;
 
-        final remoteItems = <Map<String, dynamic>>[];
-        for (final it in items) {
-          final prod = await (_local.database.select(_local.database.products)
-                ..where((p) => p.id.equals(it['productId'] as int)))
-              .getSingleOrNull();
-          if (prod == null || prod.serverId == null) return;
+    final body = <String, dynamic>{};
+    if (fields.containsKey('number')) body['number'] = fields['number'];
+    if (fields.containsKey('orderedAt')) body['orderedAt'] = fields['orderedAt'];
+    if (fields.containsKey('expectedAt')) body['expectedAt'] = fields['expectedAt'];
+    if (fields.containsKey('subtotal')) body['subtotal'] = fields['subtotal'];
+    if (fields.containsKey('discount')) body['discount'] = fields['discount'];
+    if (fields.containsKey('tax')) body['tax'] = fields['tax'];
+    if (fields.containsKey('total')) body['total'] = fields['total'];
+    if (fields.containsKey('notes')) body['notes'] = fields['notes'];
 
-          // Find backend PO item serverId
-          final poItem = await (_local.database.select(_local.database.purchaseOrderItems)
-                ..where((i) => i.id.equals(it['purchaseOrderItemId'] as int)))
-              .getSingleOrNull();
-          if (poItem == null || poItem.serverId == null) return;
+    if (fields.containsKey('supplierId')) {
+      final supplier =
+          await _local.findSupplier(shopId, fields['supplierId'] as int);
+      if (supplier == null || supplier.serverId == null) return;
+      body['supplierId'] = int.parse(supplier.serverId!);
+    }
 
-          remoteItems.add(
-            ProcurementRemotePayloads.purchaseOrderReceiptItem(
-              serverPurchaseOrderItemId: int.parse(poItem.serverId!),
-              quantityReceived: it['quantityReceived'] as int,
-              unitCost: it['unitCost'] as int,
-              batchNumber: it['batchNumber'] as String?,
-              expiryDate: it['expiryDate'] as int?,
-            ),
-          );
-        }
+    if (fields.containsKey('items')) {
+      final remoteItems = <Map<String, dynamic>>[];
+      for (final it in fields['items'] as List) {
+        final prod = await (_local.database.select(_local.database.products)
+              ..where((p) => p.id.equals(it['productId'] as int)))
+            .getSingleOrNull();
+        if (prod == null || prod.serverId == null) return;
+        remoteItems.add({
+          'productId': int.parse(prod.serverId!),
+          'quantityOrdered': it['quantityOrdered'],
+          'unitCost': it['unitCost'],
+          'discount': it['discount'] ?? 0,
+          'tax': it['tax'] ?? 0,
+          'subtotal': it['subtotal'],
+        });
+      }
+      body['items'] = remoteItems;
+    }
 
-        await _apiGuard.ensureReady();
-        final res = await _remote.receiveItems(
-          int.parse(po.serverId!),
-          ProcurementRemotePayloads.purchaseOrderReceiveBody(
-            receiptNumber: receipt.receiptNumber,
-            receivedAt: receipt.receivedAt,
-            notes: receipt.notes,
-            items: remoteItems,
-          ),
+    if (body.isEmpty) return;
+
+    await _apiGuard.ensureReady();
+    await _remote.updatePurchaseOrder(int.parse(po.serverId!), body);
+  }
+
+  Future<void> _pushReceiptCreateToRemote(
+    int shopId,
+    int poId,
+    PurchaseReceipt receipt,
+    List<Map<String, dynamic>> items,
+  ) async {
+    final po = await _local.findPurchaseOrder(shopId, poId);
+    if (po == null || po.serverId == null) return;
+
+    final remoteItems = <Map<String, dynamic>>[];
+    for (final it in items) {
+      final poItem = await (_local.database.select(_local.database.purchaseOrderItems)
+            ..where((i) => i.id.equals(it['purchaseOrderItemId'] as int)))
+          .getSingleOrNull();
+      if (poItem == null || poItem.serverId == null) {
+        throw const ValidationFailure(
+          'Ligne de commande non synchronisée. Réessayez après la synchronisation cloud.',
         );
+      }
 
-        final serverId = res['id']?.toString();
-        if (serverId != null) {
-          await (_local.database.update(_local.database.purchaseReceipts)
-                ..where((r) => r.id.equals(receipt.id)))
-              .write(db.PurchaseReceiptsCompanion(
-            serverId: Value(serverId),
-            syncStatus: const Value('synced'),
-          ));
-        }
-      } catch (_) {}
-    });
+      remoteItems.add(
+        ProcurementRemotePayloads.purchaseOrderReceiptItem(
+          serverPurchaseOrderItemId: int.parse(poItem.serverId!),
+          quantityReceived: it['quantityReceived'] as int,
+          unitCost: it['unitCost'] as int,
+          batchNumber: it['batchNumber'] as String?,
+          expiryDate: it['expiryDate'] as int?,
+        ),
+      );
+    }
+
+    await _apiGuard.ensureReady();
+    final res = await _remote.receiveItems(
+      int.parse(po.serverId!),
+      ProcurementRemotePayloads.purchaseOrderReceiveBody(
+        receiptNumber: receipt.receiptNumber,
+        receivedAt: receipt.receivedAt,
+        notes: receipt.notes,
+        items: remoteItems,
+      ),
+    );
+
+    final serverId = res['id']?.toString();
+    if (serverId != null) {
+      await (_local.database.update(_local.database.purchaseReceipts)
+            ..where((r) => r.id.equals(receipt.id)))
+          .write(db.PurchaseReceiptsCompanion(
+        serverId: Value(serverId),
+        syncStatus: const Value('synced'),
+      ));
+    }
   }
 
   Future<void> _pushDirectReceiptCreateToRemote(

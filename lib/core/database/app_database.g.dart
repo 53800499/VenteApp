@@ -4389,6 +4389,322 @@ class AuditLogsCompanion extends UpdateCompanion<AuditLog> {
   }
 }
 
+class $IdentitySnapshotsTable extends IdentitySnapshots
+    with TableInfo<$IdentitySnapshotsTable, IdentitySnapshot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IdentitySnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _userServerIdMeta = const VerificationMeta(
+    'userServerId',
+  );
+  @override
+  late final GeneratedColumn<int> userServerId = GeneratedColumn<int>(
+    'user_server_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    userServerId,
+    payloadJson,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'identity_snapshots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<IdentitySnapshot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('user_server_id')) {
+      context.handle(
+        _userServerIdMeta,
+        userServerId.isAcceptableOrUnknown(
+          data['user_server_id']!,
+          _userServerIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_userServerIdMeta);
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  IdentitySnapshot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IdentitySnapshot(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      userServerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}user_server_id'],
+      )!,
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $IdentitySnapshotsTable createAlias(String alias) {
+    return $IdentitySnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class IdentitySnapshot extends DataClass
+    implements Insertable<IdentitySnapshot> {
+  final int id;
+  final int userServerId;
+  final String payloadJson;
+  final int updatedAt;
+  const IdentitySnapshot({
+    required this.id,
+    required this.userServerId,
+    required this.payloadJson,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['user_server_id'] = Variable<int>(userServerId);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['updated_at'] = Variable<int>(updatedAt);
+    return map;
+  }
+
+  IdentitySnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return IdentitySnapshotsCompanion(
+      id: Value(id),
+      userServerId: Value(userServerId),
+      payloadJson: Value(payloadJson),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory IdentitySnapshot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IdentitySnapshot(
+      id: serializer.fromJson<int>(json['id']),
+      userServerId: serializer.fromJson<int>(json['userServerId']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'userServerId': serializer.toJson<int>(userServerId),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+    };
+  }
+
+  IdentitySnapshot copyWith({
+    int? id,
+    int? userServerId,
+    String? payloadJson,
+    int? updatedAt,
+  }) => IdentitySnapshot(
+    id: id ?? this.id,
+    userServerId: userServerId ?? this.userServerId,
+    payloadJson: payloadJson ?? this.payloadJson,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  IdentitySnapshot copyWithCompanion(IdentitySnapshotsCompanion data) {
+    return IdentitySnapshot(
+      id: data.id.present ? data.id.value : this.id,
+      userServerId: data.userServerId.present
+          ? data.userServerId.value
+          : this.userServerId,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IdentitySnapshot(')
+          ..write('id: $id, ')
+          ..write('userServerId: $userServerId, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, userServerId, payloadJson, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IdentitySnapshot &&
+          other.id == this.id &&
+          other.userServerId == this.userServerId &&
+          other.payloadJson == this.payloadJson &&
+          other.updatedAt == this.updatedAt);
+}
+
+class IdentitySnapshotsCompanion extends UpdateCompanion<IdentitySnapshot> {
+  final Value<int> id;
+  final Value<int> userServerId;
+  final Value<String> payloadJson;
+  final Value<int> updatedAt;
+  const IdentitySnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.userServerId = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  IdentitySnapshotsCompanion.insert({
+    this.id = const Value.absent(),
+    required int userServerId,
+    required String payloadJson,
+    required int updatedAt,
+  }) : userServerId = Value(userServerId),
+       payloadJson = Value(payloadJson),
+       updatedAt = Value(updatedAt);
+  static Insertable<IdentitySnapshot> custom({
+    Expression<int>? id,
+    Expression<int>? userServerId,
+    Expression<String>? payloadJson,
+    Expression<int>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userServerId != null) 'user_server_id': userServerId,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  IdentitySnapshotsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? userServerId,
+    Value<String>? payloadJson,
+    Value<int>? updatedAt,
+  }) {
+    return IdentitySnapshotsCompanion(
+      id: id ?? this.id,
+      userServerId: userServerId ?? this.userServerId,
+      payloadJson: payloadJson ?? this.payloadJson,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (userServerId.present) {
+      map['user_server_id'] = Variable<int>(userServerId.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IdentitySnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('userServerId: $userServerId, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CategoriesTable extends Categories
     with TableInfo<$CategoriesTable, Category> {
   @override
@@ -25755,6 +26071,18 @@ class $InventoryLotsTable extends InventoryLots
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _quantityReservedMeta = const VerificationMeta(
+    'quantityReserved',
+  );
+  @override
+  late final GeneratedColumn<int> quantityReserved = GeneratedColumn<int>(
+    'quantity_reserved',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _batchNumberMeta = const VerificationMeta(
     'batchNumber',
   );
@@ -25855,6 +26183,7 @@ class $InventoryLotsTable extends InventoryLots
     unitCost,
     quantityReceived,
     quantityRemaining,
+    quantityReserved,
     batchNumber,
     expiryDate,
     receivedAt,
@@ -25953,6 +26282,15 @@ class $InventoryLotsTable extends InventoryLots
       );
     } else if (isInserting) {
       context.missing(_quantityRemainingMeta);
+    }
+    if (data.containsKey('quantity_reserved')) {
+      context.handle(
+        _quantityReservedMeta,
+        quantityReserved.isAcceptableOrUnknown(
+          data['quantity_reserved']!,
+          _quantityReservedMeta,
+        ),
+      );
     }
     if (data.containsKey('batch_number')) {
       context.handle(
@@ -26058,6 +26396,10 @@ class $InventoryLotsTable extends InventoryLots
         DriftSqlType.int,
         data['${effectivePrefix}quantity_remaining'],
       )!,
+      quantityReserved: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_reserved'],
+      )!,
       batchNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}batch_number'],
@@ -26110,6 +26452,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
   final int unitCost;
   final int quantityReceived;
   final int quantityRemaining;
+  final int quantityReserved;
   final String? batchNumber;
   final int? expiryDate;
   final int receivedAt;
@@ -26129,6 +26472,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
     required this.unitCost,
     required this.quantityReceived,
     required this.quantityRemaining,
+    required this.quantityReserved,
     this.batchNumber,
     this.expiryDate,
     required this.receivedAt,
@@ -26157,6 +26501,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
     map['unit_cost'] = Variable<int>(unitCost);
     map['quantity_received'] = Variable<int>(quantityReceived);
     map['quantity_remaining'] = Variable<int>(quantityRemaining);
+    map['quantity_reserved'] = Variable<int>(quantityReserved);
     if (!nullToAbsent || batchNumber != null) {
       map['batch_number'] = Variable<String>(batchNumber);
     }
@@ -26194,6 +26539,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
       unitCost: Value(unitCost),
       quantityReceived: Value(quantityReceived),
       quantityRemaining: Value(quantityRemaining),
+      quantityReserved: Value(quantityReserved),
       batchNumber: batchNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(batchNumber),
@@ -26231,6 +26577,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
       unitCost: serializer.fromJson<int>(json['unitCost']),
       quantityReceived: serializer.fromJson<int>(json['quantityReceived']),
       quantityRemaining: serializer.fromJson<int>(json['quantityRemaining']),
+      quantityReserved: serializer.fromJson<int>(json['quantityReserved']),
       batchNumber: serializer.fromJson<String?>(json['batchNumber']),
       expiryDate: serializer.fromJson<int?>(json['expiryDate']),
       receivedAt: serializer.fromJson<int>(json['receivedAt']),
@@ -26255,6 +26602,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
       'unitCost': serializer.toJson<int>(unitCost),
       'quantityReceived': serializer.toJson<int>(quantityReceived),
       'quantityRemaining': serializer.toJson<int>(quantityRemaining),
+      'quantityReserved': serializer.toJson<int>(quantityReserved),
       'batchNumber': serializer.toJson<String?>(batchNumber),
       'expiryDate': serializer.toJson<int?>(expiryDate),
       'receivedAt': serializer.toJson<int>(receivedAt),
@@ -26277,6 +26625,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
     int? unitCost,
     int? quantityReceived,
     int? quantityRemaining,
+    int? quantityReserved,
     Value<String?> batchNumber = const Value.absent(),
     Value<int?> expiryDate = const Value.absent(),
     int? receivedAt,
@@ -26298,6 +26647,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
     unitCost: unitCost ?? this.unitCost,
     quantityReceived: quantityReceived ?? this.quantityReceived,
     quantityRemaining: quantityRemaining ?? this.quantityRemaining,
+    quantityReserved: quantityReserved ?? this.quantityReserved,
     batchNumber: batchNumber.present ? batchNumber.value : this.batchNumber,
     expiryDate: expiryDate.present ? expiryDate.value : this.expiryDate,
     receivedAt: receivedAt ?? this.receivedAt,
@@ -26329,6 +26679,9 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
       quantityRemaining: data.quantityRemaining.present
           ? data.quantityRemaining.value
           : this.quantityRemaining,
+      quantityReserved: data.quantityReserved.present
+          ? data.quantityReserved.value
+          : this.quantityReserved,
       batchNumber: data.batchNumber.present
           ? data.batchNumber.value
           : this.batchNumber,
@@ -26361,6 +26714,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
           ..write('unitCost: $unitCost, ')
           ..write('quantityReceived: $quantityReceived, ')
           ..write('quantityRemaining: $quantityRemaining, ')
+          ..write('quantityReserved: $quantityReserved, ')
           ..write('batchNumber: $batchNumber, ')
           ..write('expiryDate: $expiryDate, ')
           ..write('receivedAt: $receivedAt, ')
@@ -26385,6 +26739,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
     unitCost,
     quantityReceived,
     quantityRemaining,
+    quantityReserved,
     batchNumber,
     expiryDate,
     receivedAt,
@@ -26408,6 +26763,7 @@ class InventoryLot extends DataClass implements Insertable<InventoryLot> {
           other.unitCost == this.unitCost &&
           other.quantityReceived == this.quantityReceived &&
           other.quantityRemaining == this.quantityRemaining &&
+          other.quantityReserved == this.quantityReserved &&
           other.batchNumber == this.batchNumber &&
           other.expiryDate == this.expiryDate &&
           other.receivedAt == this.receivedAt &&
@@ -26429,6 +26785,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
   final Value<int> unitCost;
   final Value<int> quantityReceived;
   final Value<int> quantityRemaining;
+  final Value<int> quantityReserved;
   final Value<String?> batchNumber;
   final Value<int?> expiryDate;
   final Value<int> receivedAt;
@@ -26448,6 +26805,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
     this.unitCost = const Value.absent(),
     this.quantityReceived = const Value.absent(),
     this.quantityRemaining = const Value.absent(),
+    this.quantityReserved = const Value.absent(),
     this.batchNumber = const Value.absent(),
     this.expiryDate = const Value.absent(),
     this.receivedAt = const Value.absent(),
@@ -26468,6 +26826,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
     required int unitCost,
     required int quantityReceived,
     required int quantityRemaining,
+    this.quantityReserved = const Value.absent(),
     this.batchNumber = const Value.absent(),
     this.expiryDate = const Value.absent(),
     required int receivedAt,
@@ -26495,6 +26854,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
     Expression<int>? unitCost,
     Expression<int>? quantityReceived,
     Expression<int>? quantityRemaining,
+    Expression<int>? quantityReserved,
     Expression<String>? batchNumber,
     Expression<int>? expiryDate,
     Expression<int>? receivedAt,
@@ -26516,6 +26876,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
       if (unitCost != null) 'unit_cost': unitCost,
       if (quantityReceived != null) 'quantity_received': quantityReceived,
       if (quantityRemaining != null) 'quantity_remaining': quantityRemaining,
+      if (quantityReserved != null) 'quantity_reserved': quantityReserved,
       if (batchNumber != null) 'batch_number': batchNumber,
       if (expiryDate != null) 'expiry_date': expiryDate,
       if (receivedAt != null) 'received_at': receivedAt,
@@ -26538,6 +26899,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
     Value<int>? unitCost,
     Value<int>? quantityReceived,
     Value<int>? quantityRemaining,
+    Value<int>? quantityReserved,
     Value<String?>? batchNumber,
     Value<int?>? expiryDate,
     Value<int>? receivedAt,
@@ -26559,6 +26921,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
       unitCost: unitCost ?? this.unitCost,
       quantityReceived: quantityReceived ?? this.quantityReceived,
       quantityRemaining: quantityRemaining ?? this.quantityRemaining,
+      quantityReserved: quantityReserved ?? this.quantityReserved,
       batchNumber: batchNumber ?? this.batchNumber,
       expiryDate: expiryDate ?? this.expiryDate,
       receivedAt: receivedAt ?? this.receivedAt,
@@ -26605,6 +26968,9 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
     if (quantityRemaining.present) {
       map['quantity_remaining'] = Variable<int>(quantityRemaining.value);
     }
+    if (quantityReserved.present) {
+      map['quantity_reserved'] = Variable<int>(quantityReserved.value);
+    }
     if (batchNumber.present) {
       map['batch_number'] = Variable<String>(batchNumber.value);
     }
@@ -26645,6 +27011,7 @@ class InventoryLotsCompanion extends UpdateCompanion<InventoryLot> {
           ..write('unitCost: $unitCost, ')
           ..write('quantityReceived: $quantityReceived, ')
           ..write('quantityRemaining: $quantityRemaining, ')
+          ..write('quantityReserved: $quantityReserved, ')
           ..write('batchNumber: $batchNumber, ')
           ..write('expiryDate: $expiryDate, ')
           ..write('receivedAt: $receivedAt, ')
@@ -27642,6 +28009,10954 @@ class ProductPriceHistoryCompanion
   }
 }
 
+class $StockTransfersTable extends StockTransfers
+    with TableInfo<$StockTransfersTable, StockTransfer> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransfersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _referenceMeta = const VerificationMeta(
+    'reference',
+  );
+  @override
+  late final GeneratedColumn<String> reference = GeneratedColumn<String>(
+    'reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceShopIdMeta = const VerificationMeta(
+    'sourceShopId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceShopId = GeneratedColumn<int>(
+    'source_shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _destinationShopIdMeta = const VerificationMeta(
+    'destinationShopId',
+  );
+  @override
+  late final GeneratedColumn<int> destinationShopId = GeneratedColumn<int>(
+    'destination_shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _sourceShopNameMeta = const VerificationMeta(
+    'sourceShopName',
+  );
+  @override
+  late final GeneratedColumn<String> sourceShopName = GeneratedColumn<String>(
+    'source_shop_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _destinationShopNameMeta =
+      const VerificationMeta('destinationShopName');
+  @override
+  late final GeneratedColumn<String> destinationShopName =
+      GeneratedColumn<String>(
+        'destination_shop_name',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('draft'),
+  );
+  static const VerificationMeta _transferTypeMeta = const VerificationMeta(
+    'transferType',
+  );
+  @override
+  late final GeneratedColumn<String> transferType = GeneratedColumn<String>(
+    'transfer_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('outbound'),
+  );
+  static const VerificationMeta _parentTransferIdMeta = const VerificationMeta(
+    'parentTransferId',
+  );
+  @override
+  late final GeneratedColumn<int> parentTransferId = GeneratedColumn<int>(
+    'parent_transfer_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfers (id)',
+    ),
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _validatedByMeta = const VerificationMeta(
+    'validatedBy',
+  );
+  @override
+  late final GeneratedColumn<int> validatedBy = GeneratedColumn<int>(
+    'validated_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _shippedByMeta = const VerificationMeta(
+    'shippedBy',
+  );
+  @override
+  late final GeneratedColumn<int> shippedBy = GeneratedColumn<int>(
+    'shipped_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _receivedByMeta = const VerificationMeta(
+    'receivedBy',
+  );
+  @override
+  late final GeneratedColumn<int> receivedBy = GeneratedColumn<int>(
+    'received_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _closedByMeta = const VerificationMeta(
+    'closedBy',
+  );
+  @override
+  late final GeneratedColumn<int> closedBy = GeneratedColumn<int>(
+    'closed_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _validatedAtMeta = const VerificationMeta(
+    'validatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> validatedAt = GeneratedColumn<int>(
+    'validated_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shippedAtMeta = const VerificationMeta(
+    'shippedAt',
+  );
+  @override
+  late final GeneratedColumn<int> shippedAt = GeneratedColumn<int>(
+    'shipped_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+    'received_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<int> closedAt = GeneratedColumn<int>(
+    'closed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    reference,
+    sourceShopId,
+    destinationShopId,
+    sourceShopName,
+    destinationShopName,
+    status,
+    transferType,
+    parentTransferId,
+    notes,
+    createdBy,
+    validatedBy,
+    shippedBy,
+    receivedBy,
+    closedBy,
+    createdAt,
+    updatedAt,
+    validatedAt,
+    shippedAt,
+    receivedAt,
+    closedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransfer> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('reference')) {
+      context.handle(
+        _referenceMeta,
+        reference.isAcceptableOrUnknown(data['reference']!, _referenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_referenceMeta);
+    }
+    if (data.containsKey('source_shop_id')) {
+      context.handle(
+        _sourceShopIdMeta,
+        sourceShopId.isAcceptableOrUnknown(
+          data['source_shop_id']!,
+          _sourceShopIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceShopIdMeta);
+    }
+    if (data.containsKey('destination_shop_id')) {
+      context.handle(
+        _destinationShopIdMeta,
+        destinationShopId.isAcceptableOrUnknown(
+          data['destination_shop_id']!,
+          _destinationShopIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_destinationShopIdMeta);
+    }
+    if (data.containsKey('source_shop_name')) {
+      context.handle(
+        _sourceShopNameMeta,
+        sourceShopName.isAcceptableOrUnknown(
+          data['source_shop_name']!,
+          _sourceShopNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('destination_shop_name')) {
+      context.handle(
+        _destinationShopNameMeta,
+        destinationShopName.isAcceptableOrUnknown(
+          data['destination_shop_name']!,
+          _destinationShopNameMeta,
+        ),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('transfer_type')) {
+      context.handle(
+        _transferTypeMeta,
+        transferType.isAcceptableOrUnknown(
+          data['transfer_type']!,
+          _transferTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('parent_transfer_id')) {
+      context.handle(
+        _parentTransferIdMeta,
+        parentTransferId.isAcceptableOrUnknown(
+          data['parent_transfer_id']!,
+          _parentTransferIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('validated_by')) {
+      context.handle(
+        _validatedByMeta,
+        validatedBy.isAcceptableOrUnknown(
+          data['validated_by']!,
+          _validatedByMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shipped_by')) {
+      context.handle(
+        _shippedByMeta,
+        shippedBy.isAcceptableOrUnknown(data['shipped_by']!, _shippedByMeta),
+      );
+    }
+    if (data.containsKey('received_by')) {
+      context.handle(
+        _receivedByMeta,
+        receivedBy.isAcceptableOrUnknown(data['received_by']!, _receivedByMeta),
+      );
+    }
+    if (data.containsKey('closed_by')) {
+      context.handle(
+        _closedByMeta,
+        closedBy.isAcceptableOrUnknown(data['closed_by']!, _closedByMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('validated_at')) {
+      context.handle(
+        _validatedAtMeta,
+        validatedAt.isAcceptableOrUnknown(
+          data['validated_at']!,
+          _validatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shipped_at')) {
+      context.handle(
+        _shippedAtMeta,
+        shippedAt.isAcceptableOrUnknown(data['shipped_at']!, _shippedAtMeta),
+      );
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransfer map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransfer(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference'],
+      )!,
+      sourceShopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_shop_id'],
+      )!,
+      destinationShopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}destination_shop_id'],
+      )!,
+      sourceShopName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_shop_name'],
+      ),
+      destinationShopName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}destination_shop_name'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      transferType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}transfer_type'],
+      )!,
+      parentTransferId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parent_transfer_id'],
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      )!,
+      validatedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validated_by'],
+      ),
+      shippedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shipped_by'],
+      ),
+      receivedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_by'],
+      ),
+      closedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_by'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      validatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}validated_at'],
+      ),
+      shippedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shipped_at'],
+      ),
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_at'],
+      ),
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_at'],
+      ),
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $StockTransfersTable createAlias(String alias) {
+    return $StockTransfersTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransfer extends DataClass implements Insertable<StockTransfer> {
+  final int id;
+  final String reference;
+  final int sourceShopId;
+  final int destinationShopId;
+  final String? sourceShopName;
+  final String? destinationShopName;
+  final String status;
+  final String transferType;
+  final int? parentTransferId;
+  final String? notes;
+  final int createdBy;
+  final int? validatedBy;
+  final int? shippedBy;
+  final int? receivedBy;
+  final int? closedBy;
+  final int createdAt;
+  final int updatedAt;
+  final int? validatedAt;
+  final int? shippedAt;
+  final int? receivedAt;
+  final int? closedAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const StockTransfer({
+    required this.id,
+    required this.reference,
+    required this.sourceShopId,
+    required this.destinationShopId,
+    this.sourceShopName,
+    this.destinationShopName,
+    required this.status,
+    required this.transferType,
+    this.parentTransferId,
+    this.notes,
+    required this.createdBy,
+    this.validatedBy,
+    this.shippedBy,
+    this.receivedBy,
+    this.closedBy,
+    required this.createdAt,
+    required this.updatedAt,
+    this.validatedAt,
+    this.shippedAt,
+    this.receivedAt,
+    this.closedAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['reference'] = Variable<String>(reference);
+    map['source_shop_id'] = Variable<int>(sourceShopId);
+    map['destination_shop_id'] = Variable<int>(destinationShopId);
+    if (!nullToAbsent || sourceShopName != null) {
+      map['source_shop_name'] = Variable<String>(sourceShopName);
+    }
+    if (!nullToAbsent || destinationShopName != null) {
+      map['destination_shop_name'] = Variable<String>(destinationShopName);
+    }
+    map['status'] = Variable<String>(status);
+    map['transfer_type'] = Variable<String>(transferType);
+    if (!nullToAbsent || parentTransferId != null) {
+      map['parent_transfer_id'] = Variable<int>(parentTransferId);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_by'] = Variable<int>(createdBy);
+    if (!nullToAbsent || validatedBy != null) {
+      map['validated_by'] = Variable<int>(validatedBy);
+    }
+    if (!nullToAbsent || shippedBy != null) {
+      map['shipped_by'] = Variable<int>(shippedBy);
+    }
+    if (!nullToAbsent || receivedBy != null) {
+      map['received_by'] = Variable<int>(receivedBy);
+    }
+    if (!nullToAbsent || closedBy != null) {
+      map['closed_by'] = Variable<int>(closedBy);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || validatedAt != null) {
+      map['validated_at'] = Variable<int>(validatedAt);
+    }
+    if (!nullToAbsent || shippedAt != null) {
+      map['shipped_at'] = Variable<int>(shippedAt);
+    }
+    if (!nullToAbsent || receivedAt != null) {
+      map['received_at'] = Variable<int>(receivedAt);
+    }
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<int>(closedAt);
+    }
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  StockTransfersCompanion toCompanion(bool nullToAbsent) {
+    return StockTransfersCompanion(
+      id: Value(id),
+      reference: Value(reference),
+      sourceShopId: Value(sourceShopId),
+      destinationShopId: Value(destinationShopId),
+      sourceShopName: sourceShopName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceShopName),
+      destinationShopName: destinationShopName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destinationShopName),
+      status: Value(status),
+      transferType: Value(transferType),
+      parentTransferId: parentTransferId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentTransferId),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      createdBy: Value(createdBy),
+      validatedBy: validatedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(validatedBy),
+      shippedBy: shippedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shippedBy),
+      receivedBy: receivedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receivedBy),
+      closedBy: closedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedBy),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      validatedAt: validatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(validatedAt),
+      shippedAt: shippedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shippedAt),
+      receivedAt: receivedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receivedAt),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory StockTransfer.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransfer(
+      id: serializer.fromJson<int>(json['id']),
+      reference: serializer.fromJson<String>(json['reference']),
+      sourceShopId: serializer.fromJson<int>(json['sourceShopId']),
+      destinationShopId: serializer.fromJson<int>(json['destinationShopId']),
+      sourceShopName: serializer.fromJson<String?>(json['sourceShopName']),
+      destinationShopName: serializer.fromJson<String?>(
+        json['destinationShopName'],
+      ),
+      status: serializer.fromJson<String>(json['status']),
+      transferType: serializer.fromJson<String>(json['transferType']),
+      parentTransferId: serializer.fromJson<int?>(json['parentTransferId']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdBy: serializer.fromJson<int>(json['createdBy']),
+      validatedBy: serializer.fromJson<int?>(json['validatedBy']),
+      shippedBy: serializer.fromJson<int?>(json['shippedBy']),
+      receivedBy: serializer.fromJson<int?>(json['receivedBy']),
+      closedBy: serializer.fromJson<int?>(json['closedBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      validatedAt: serializer.fromJson<int?>(json['validatedAt']),
+      shippedAt: serializer.fromJson<int?>(json['shippedAt']),
+      receivedAt: serializer.fromJson<int?>(json['receivedAt']),
+      closedAt: serializer.fromJson<int?>(json['closedAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'reference': serializer.toJson<String>(reference),
+      'sourceShopId': serializer.toJson<int>(sourceShopId),
+      'destinationShopId': serializer.toJson<int>(destinationShopId),
+      'sourceShopName': serializer.toJson<String?>(sourceShopName),
+      'destinationShopName': serializer.toJson<String?>(destinationShopName),
+      'status': serializer.toJson<String>(status),
+      'transferType': serializer.toJson<String>(transferType),
+      'parentTransferId': serializer.toJson<int?>(parentTransferId),
+      'notes': serializer.toJson<String?>(notes),
+      'createdBy': serializer.toJson<int>(createdBy),
+      'validatedBy': serializer.toJson<int?>(validatedBy),
+      'shippedBy': serializer.toJson<int?>(shippedBy),
+      'receivedBy': serializer.toJson<int?>(receivedBy),
+      'closedBy': serializer.toJson<int?>(closedBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'validatedAt': serializer.toJson<int?>(validatedAt),
+      'shippedAt': serializer.toJson<int?>(shippedAt),
+      'receivedAt': serializer.toJson<int?>(receivedAt),
+      'closedAt': serializer.toJson<int?>(closedAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  StockTransfer copyWith({
+    int? id,
+    String? reference,
+    int? sourceShopId,
+    int? destinationShopId,
+    Value<String?> sourceShopName = const Value.absent(),
+    Value<String?> destinationShopName = const Value.absent(),
+    String? status,
+    String? transferType,
+    Value<int?> parentTransferId = const Value.absent(),
+    Value<String?> notes = const Value.absent(),
+    int? createdBy,
+    Value<int?> validatedBy = const Value.absent(),
+    Value<int?> shippedBy = const Value.absent(),
+    Value<int?> receivedBy = const Value.absent(),
+    Value<int?> closedBy = const Value.absent(),
+    int? createdAt,
+    int? updatedAt,
+    Value<int?> validatedAt = const Value.absent(),
+    Value<int?> shippedAt = const Value.absent(),
+    Value<int?> receivedAt = const Value.absent(),
+    Value<int?> closedAt = const Value.absent(),
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => StockTransfer(
+    id: id ?? this.id,
+    reference: reference ?? this.reference,
+    sourceShopId: sourceShopId ?? this.sourceShopId,
+    destinationShopId: destinationShopId ?? this.destinationShopId,
+    sourceShopName: sourceShopName.present
+        ? sourceShopName.value
+        : this.sourceShopName,
+    destinationShopName: destinationShopName.present
+        ? destinationShopName.value
+        : this.destinationShopName,
+    status: status ?? this.status,
+    transferType: transferType ?? this.transferType,
+    parentTransferId: parentTransferId.present
+        ? parentTransferId.value
+        : this.parentTransferId,
+    notes: notes.present ? notes.value : this.notes,
+    createdBy: createdBy ?? this.createdBy,
+    validatedBy: validatedBy.present ? validatedBy.value : this.validatedBy,
+    shippedBy: shippedBy.present ? shippedBy.value : this.shippedBy,
+    receivedBy: receivedBy.present ? receivedBy.value : this.receivedBy,
+    closedBy: closedBy.present ? closedBy.value : this.closedBy,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    validatedAt: validatedAt.present ? validatedAt.value : this.validatedAt,
+    shippedAt: shippedAt.present ? shippedAt.value : this.shippedAt,
+    receivedAt: receivedAt.present ? receivedAt.value : this.receivedAt,
+    closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  StockTransfer copyWithCompanion(StockTransfersCompanion data) {
+    return StockTransfer(
+      id: data.id.present ? data.id.value : this.id,
+      reference: data.reference.present ? data.reference.value : this.reference,
+      sourceShopId: data.sourceShopId.present
+          ? data.sourceShopId.value
+          : this.sourceShopId,
+      destinationShopId: data.destinationShopId.present
+          ? data.destinationShopId.value
+          : this.destinationShopId,
+      sourceShopName: data.sourceShopName.present
+          ? data.sourceShopName.value
+          : this.sourceShopName,
+      destinationShopName: data.destinationShopName.present
+          ? data.destinationShopName.value
+          : this.destinationShopName,
+      status: data.status.present ? data.status.value : this.status,
+      transferType: data.transferType.present
+          ? data.transferType.value
+          : this.transferType,
+      parentTransferId: data.parentTransferId.present
+          ? data.parentTransferId.value
+          : this.parentTransferId,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      validatedBy: data.validatedBy.present
+          ? data.validatedBy.value
+          : this.validatedBy,
+      shippedBy: data.shippedBy.present ? data.shippedBy.value : this.shippedBy,
+      receivedBy: data.receivedBy.present
+          ? data.receivedBy.value
+          : this.receivedBy,
+      closedBy: data.closedBy.present ? data.closedBy.value : this.closedBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      validatedAt: data.validatedAt.present
+          ? data.validatedAt.value
+          : this.validatedAt,
+      shippedAt: data.shippedAt.present ? data.shippedAt.value : this.shippedAt,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransfer(')
+          ..write('id: $id, ')
+          ..write('reference: $reference, ')
+          ..write('sourceShopId: $sourceShopId, ')
+          ..write('destinationShopId: $destinationShopId, ')
+          ..write('sourceShopName: $sourceShopName, ')
+          ..write('destinationShopName: $destinationShopName, ')
+          ..write('status: $status, ')
+          ..write('transferType: $transferType, ')
+          ..write('parentTransferId: $parentTransferId, ')
+          ..write('notes: $notes, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('validatedBy: $validatedBy, ')
+          ..write('shippedBy: $shippedBy, ')
+          ..write('receivedBy: $receivedBy, ')
+          ..write('closedBy: $closedBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('validatedAt: $validatedAt, ')
+          ..write('shippedAt: $shippedAt, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    id,
+    reference,
+    sourceShopId,
+    destinationShopId,
+    sourceShopName,
+    destinationShopName,
+    status,
+    transferType,
+    parentTransferId,
+    notes,
+    createdBy,
+    validatedBy,
+    shippedBy,
+    receivedBy,
+    closedBy,
+    createdAt,
+    updatedAt,
+    validatedAt,
+    shippedAt,
+    receivedAt,
+    closedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ]);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransfer &&
+          other.id == this.id &&
+          other.reference == this.reference &&
+          other.sourceShopId == this.sourceShopId &&
+          other.destinationShopId == this.destinationShopId &&
+          other.sourceShopName == this.sourceShopName &&
+          other.destinationShopName == this.destinationShopName &&
+          other.status == this.status &&
+          other.transferType == this.transferType &&
+          other.parentTransferId == this.parentTransferId &&
+          other.notes == this.notes &&
+          other.createdBy == this.createdBy &&
+          other.validatedBy == this.validatedBy &&
+          other.shippedBy == this.shippedBy &&
+          other.receivedBy == this.receivedBy &&
+          other.closedBy == this.closedBy &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.validatedAt == this.validatedAt &&
+          other.shippedAt == this.shippedAt &&
+          other.receivedAt == this.receivedAt &&
+          other.closedAt == this.closedAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class StockTransfersCompanion extends UpdateCompanion<StockTransfer> {
+  final Value<int> id;
+  final Value<String> reference;
+  final Value<int> sourceShopId;
+  final Value<int> destinationShopId;
+  final Value<String?> sourceShopName;
+  final Value<String?> destinationShopName;
+  final Value<String> status;
+  final Value<String> transferType;
+  final Value<int?> parentTransferId;
+  final Value<String?> notes;
+  final Value<int> createdBy;
+  final Value<int?> validatedBy;
+  final Value<int?> shippedBy;
+  final Value<int?> receivedBy;
+  final Value<int?> closedBy;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int?> validatedAt;
+  final Value<int?> shippedAt;
+  final Value<int?> receivedAt;
+  final Value<int?> closedAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const StockTransfersCompanion({
+    this.id = const Value.absent(),
+    this.reference = const Value.absent(),
+    this.sourceShopId = const Value.absent(),
+    this.destinationShopId = const Value.absent(),
+    this.sourceShopName = const Value.absent(),
+    this.destinationShopName = const Value.absent(),
+    this.status = const Value.absent(),
+    this.transferType = const Value.absent(),
+    this.parentTransferId = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.validatedBy = const Value.absent(),
+    this.shippedBy = const Value.absent(),
+    this.receivedBy = const Value.absent(),
+    this.closedBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.validatedAt = const Value.absent(),
+    this.shippedAt = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  StockTransfersCompanion.insert({
+    this.id = const Value.absent(),
+    required String reference,
+    required int sourceShopId,
+    required int destinationShopId,
+    this.sourceShopName = const Value.absent(),
+    this.destinationShopName = const Value.absent(),
+    this.status = const Value.absent(),
+    this.transferType = const Value.absent(),
+    this.parentTransferId = const Value.absent(),
+    this.notes = const Value.absent(),
+    required int createdBy,
+    this.validatedBy = const Value.absent(),
+    this.shippedBy = const Value.absent(),
+    this.receivedBy = const Value.absent(),
+    this.closedBy = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.validatedAt = const Value.absent(),
+    this.shippedAt = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : reference = Value(reference),
+       sourceShopId = Value(sourceShopId),
+       destinationShopId = Value(destinationShopId),
+       createdBy = Value(createdBy),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<StockTransfer> custom({
+    Expression<int>? id,
+    Expression<String>? reference,
+    Expression<int>? sourceShopId,
+    Expression<int>? destinationShopId,
+    Expression<String>? sourceShopName,
+    Expression<String>? destinationShopName,
+    Expression<String>? status,
+    Expression<String>? transferType,
+    Expression<int>? parentTransferId,
+    Expression<String>? notes,
+    Expression<int>? createdBy,
+    Expression<int>? validatedBy,
+    Expression<int>? shippedBy,
+    Expression<int>? receivedBy,
+    Expression<int>? closedBy,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? validatedAt,
+    Expression<int>? shippedAt,
+    Expression<int>? receivedAt,
+    Expression<int>? closedAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (reference != null) 'reference': reference,
+      if (sourceShopId != null) 'source_shop_id': sourceShopId,
+      if (destinationShopId != null) 'destination_shop_id': destinationShopId,
+      if (sourceShopName != null) 'source_shop_name': sourceShopName,
+      if (destinationShopName != null)
+        'destination_shop_name': destinationShopName,
+      if (status != null) 'status': status,
+      if (transferType != null) 'transfer_type': transferType,
+      if (parentTransferId != null) 'parent_transfer_id': parentTransferId,
+      if (notes != null) 'notes': notes,
+      if (createdBy != null) 'created_by': createdBy,
+      if (validatedBy != null) 'validated_by': validatedBy,
+      if (shippedBy != null) 'shipped_by': shippedBy,
+      if (receivedBy != null) 'received_by': receivedBy,
+      if (closedBy != null) 'closed_by': closedBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (validatedAt != null) 'validated_at': validatedAt,
+      if (shippedAt != null) 'shipped_at': shippedAt,
+      if (receivedAt != null) 'received_at': receivedAt,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  StockTransfersCompanion copyWith({
+    Value<int>? id,
+    Value<String>? reference,
+    Value<int>? sourceShopId,
+    Value<int>? destinationShopId,
+    Value<String?>? sourceShopName,
+    Value<String?>? destinationShopName,
+    Value<String>? status,
+    Value<String>? transferType,
+    Value<int?>? parentTransferId,
+    Value<String?>? notes,
+    Value<int>? createdBy,
+    Value<int?>? validatedBy,
+    Value<int?>? shippedBy,
+    Value<int?>? receivedBy,
+    Value<int?>? closedBy,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int?>? validatedAt,
+    Value<int?>? shippedAt,
+    Value<int?>? receivedAt,
+    Value<int?>? closedAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return StockTransfersCompanion(
+      id: id ?? this.id,
+      reference: reference ?? this.reference,
+      sourceShopId: sourceShopId ?? this.sourceShopId,
+      destinationShopId: destinationShopId ?? this.destinationShopId,
+      sourceShopName: sourceShopName ?? this.sourceShopName,
+      destinationShopName: destinationShopName ?? this.destinationShopName,
+      status: status ?? this.status,
+      transferType: transferType ?? this.transferType,
+      parentTransferId: parentTransferId ?? this.parentTransferId,
+      notes: notes ?? this.notes,
+      createdBy: createdBy ?? this.createdBy,
+      validatedBy: validatedBy ?? this.validatedBy,
+      shippedBy: shippedBy ?? this.shippedBy,
+      receivedBy: receivedBy ?? this.receivedBy,
+      closedBy: closedBy ?? this.closedBy,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      validatedAt: validatedAt ?? this.validatedAt,
+      shippedAt: shippedAt ?? this.shippedAt,
+      receivedAt: receivedAt ?? this.receivedAt,
+      closedAt: closedAt ?? this.closedAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (reference.present) {
+      map['reference'] = Variable<String>(reference.value);
+    }
+    if (sourceShopId.present) {
+      map['source_shop_id'] = Variable<int>(sourceShopId.value);
+    }
+    if (destinationShopId.present) {
+      map['destination_shop_id'] = Variable<int>(destinationShopId.value);
+    }
+    if (sourceShopName.present) {
+      map['source_shop_name'] = Variable<String>(sourceShopName.value);
+    }
+    if (destinationShopName.present) {
+      map['destination_shop_name'] = Variable<String>(
+        destinationShopName.value,
+      );
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (transferType.present) {
+      map['transfer_type'] = Variable<String>(transferType.value);
+    }
+    if (parentTransferId.present) {
+      map['parent_transfer_id'] = Variable<int>(parentTransferId.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (validatedBy.present) {
+      map['validated_by'] = Variable<int>(validatedBy.value);
+    }
+    if (shippedBy.present) {
+      map['shipped_by'] = Variable<int>(shippedBy.value);
+    }
+    if (receivedBy.present) {
+      map['received_by'] = Variable<int>(receivedBy.value);
+    }
+    if (closedBy.present) {
+      map['closed_by'] = Variable<int>(closedBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (validatedAt.present) {
+      map['validated_at'] = Variable<int>(validatedAt.value);
+    }
+    if (shippedAt.present) {
+      map['shipped_at'] = Variable<int>(shippedAt.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<int>(closedAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransfersCompanion(')
+          ..write('id: $id, ')
+          ..write('reference: $reference, ')
+          ..write('sourceShopId: $sourceShopId, ')
+          ..write('destinationShopId: $destinationShopId, ')
+          ..write('sourceShopName: $sourceShopName, ')
+          ..write('destinationShopName: $destinationShopName, ')
+          ..write('status: $status, ')
+          ..write('transferType: $transferType, ')
+          ..write('parentTransferId: $parentTransferId, ')
+          ..write('notes: $notes, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('validatedBy: $validatedBy, ')
+          ..write('shippedBy: $shippedBy, ')
+          ..write('receivedBy: $receivedBy, ')
+          ..write('closedBy: $closedBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('validatedAt: $validatedAt, ')
+          ..write('shippedAt: $shippedAt, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferItemsTable extends StockTransferItems
+    with TableInfo<$StockTransferItemsTable, StockTransferItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferIdMeta = const VerificationMeta(
+    'transferId',
+  );
+  @override
+  late final GeneratedColumn<int> transferId = GeneratedColumn<int>(
+    'transfer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfers (id)',
+    ),
+  );
+  static const VerificationMeta _sourceProductIdMeta = const VerificationMeta(
+    'sourceProductId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceProductId = GeneratedColumn<int>(
+    'source_product_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES products (id)',
+    ),
+  );
+  static const VerificationMeta _destinationProductIdMeta =
+      const VerificationMeta('destinationProductId');
+  @override
+  late final GeneratedColumn<int> destinationProductId = GeneratedColumn<int>(
+    'destination_product_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES products (id)',
+    ),
+  );
+  static const VerificationMeta _productServerIdMeta = const VerificationMeta(
+    'productServerId',
+  );
+  @override
+  late final GeneratedColumn<String> productServerId = GeneratedColumn<String>(
+    'product_server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _quantityRequestedMeta = const VerificationMeta(
+    'quantityRequested',
+  );
+  @override
+  late final GeneratedColumn<int> quantityRequested = GeneratedColumn<int>(
+    'quantity_requested',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityShippedMeta = const VerificationMeta(
+    'quantityShipped',
+  );
+  @override
+  late final GeneratedColumn<int> quantityShipped = GeneratedColumn<int>(
+    'quantity_shipped',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _quantityReceivedMeta = const VerificationMeta(
+    'quantityReceived',
+  );
+  @override
+  late final GeneratedColumn<int> quantityReceived = GeneratedColumn<int>(
+    'quantity_received',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferId,
+    sourceProductId,
+    destinationProductId,
+    productServerId,
+    quantityRequested,
+    quantityShipped,
+    quantityReceived,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_id')) {
+      context.handle(
+        _transferIdMeta,
+        transferId.isAcceptableOrUnknown(data['transfer_id']!, _transferIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_transferIdMeta);
+    }
+    if (data.containsKey('source_product_id')) {
+      context.handle(
+        _sourceProductIdMeta,
+        sourceProductId.isAcceptableOrUnknown(
+          data['source_product_id']!,
+          _sourceProductIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceProductIdMeta);
+    }
+    if (data.containsKey('destination_product_id')) {
+      context.handle(
+        _destinationProductIdMeta,
+        destinationProductId.isAcceptableOrUnknown(
+          data['destination_product_id']!,
+          _destinationProductIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('product_server_id')) {
+      context.handle(
+        _productServerIdMeta,
+        productServerId.isAcceptableOrUnknown(
+          data['product_server_id']!,
+          _productServerIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('quantity_requested')) {
+      context.handle(
+        _quantityRequestedMeta,
+        quantityRequested.isAcceptableOrUnknown(
+          data['quantity_requested']!,
+          _quantityRequestedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityRequestedMeta);
+    }
+    if (data.containsKey('quantity_shipped')) {
+      context.handle(
+        _quantityShippedMeta,
+        quantityShipped.isAcceptableOrUnknown(
+          data['quantity_shipped']!,
+          _quantityShippedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('quantity_received')) {
+      context.handle(
+        _quantityReceivedMeta,
+        quantityReceived.isAcceptableOrUnknown(
+          data['quantity_received']!,
+          _quantityReceivedMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_id'],
+      )!,
+      sourceProductId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_product_id'],
+      )!,
+      destinationProductId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}destination_product_id'],
+      ),
+      productServerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}product_server_id'],
+      ),
+      quantityRequested: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_requested'],
+      )!,
+      quantityShipped: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_shipped'],
+      )!,
+      quantityReceived: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_received'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferItemsTable createAlias(String alias) {
+    return $StockTransferItemsTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferItem extends DataClass
+    implements Insertable<StockTransferItem> {
+  final int id;
+  final int transferId;
+  final int sourceProductId;
+  final int? destinationProductId;
+  final String? productServerId;
+  final int quantityRequested;
+  final int quantityShipped;
+  final int quantityReceived;
+  const StockTransferItem({
+    required this.id,
+    required this.transferId,
+    required this.sourceProductId,
+    this.destinationProductId,
+    this.productServerId,
+    required this.quantityRequested,
+    required this.quantityShipped,
+    required this.quantityReceived,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_id'] = Variable<int>(transferId);
+    map['source_product_id'] = Variable<int>(sourceProductId);
+    if (!nullToAbsent || destinationProductId != null) {
+      map['destination_product_id'] = Variable<int>(destinationProductId);
+    }
+    if (!nullToAbsent || productServerId != null) {
+      map['product_server_id'] = Variable<String>(productServerId);
+    }
+    map['quantity_requested'] = Variable<int>(quantityRequested);
+    map['quantity_shipped'] = Variable<int>(quantityShipped);
+    map['quantity_received'] = Variable<int>(quantityReceived);
+    return map;
+  }
+
+  StockTransferItemsCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferItemsCompanion(
+      id: Value(id),
+      transferId: Value(transferId),
+      sourceProductId: Value(sourceProductId),
+      destinationProductId: destinationProductId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destinationProductId),
+      productServerId: productServerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(productServerId),
+      quantityRequested: Value(quantityRequested),
+      quantityShipped: Value(quantityShipped),
+      quantityReceived: Value(quantityReceived),
+    );
+  }
+
+  factory StockTransferItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferItem(
+      id: serializer.fromJson<int>(json['id']),
+      transferId: serializer.fromJson<int>(json['transferId']),
+      sourceProductId: serializer.fromJson<int>(json['sourceProductId']),
+      destinationProductId: serializer.fromJson<int?>(
+        json['destinationProductId'],
+      ),
+      productServerId: serializer.fromJson<String?>(json['productServerId']),
+      quantityRequested: serializer.fromJson<int>(json['quantityRequested']),
+      quantityShipped: serializer.fromJson<int>(json['quantityShipped']),
+      quantityReceived: serializer.fromJson<int>(json['quantityReceived']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferId': serializer.toJson<int>(transferId),
+      'sourceProductId': serializer.toJson<int>(sourceProductId),
+      'destinationProductId': serializer.toJson<int?>(destinationProductId),
+      'productServerId': serializer.toJson<String?>(productServerId),
+      'quantityRequested': serializer.toJson<int>(quantityRequested),
+      'quantityShipped': serializer.toJson<int>(quantityShipped),
+      'quantityReceived': serializer.toJson<int>(quantityReceived),
+    };
+  }
+
+  StockTransferItem copyWith({
+    int? id,
+    int? transferId,
+    int? sourceProductId,
+    Value<int?> destinationProductId = const Value.absent(),
+    Value<String?> productServerId = const Value.absent(),
+    int? quantityRequested,
+    int? quantityShipped,
+    int? quantityReceived,
+  }) => StockTransferItem(
+    id: id ?? this.id,
+    transferId: transferId ?? this.transferId,
+    sourceProductId: sourceProductId ?? this.sourceProductId,
+    destinationProductId: destinationProductId.present
+        ? destinationProductId.value
+        : this.destinationProductId,
+    productServerId: productServerId.present
+        ? productServerId.value
+        : this.productServerId,
+    quantityRequested: quantityRequested ?? this.quantityRequested,
+    quantityShipped: quantityShipped ?? this.quantityShipped,
+    quantityReceived: quantityReceived ?? this.quantityReceived,
+  );
+  StockTransferItem copyWithCompanion(StockTransferItemsCompanion data) {
+    return StockTransferItem(
+      id: data.id.present ? data.id.value : this.id,
+      transferId: data.transferId.present
+          ? data.transferId.value
+          : this.transferId,
+      sourceProductId: data.sourceProductId.present
+          ? data.sourceProductId.value
+          : this.sourceProductId,
+      destinationProductId: data.destinationProductId.present
+          ? data.destinationProductId.value
+          : this.destinationProductId,
+      productServerId: data.productServerId.present
+          ? data.productServerId.value
+          : this.productServerId,
+      quantityRequested: data.quantityRequested.present
+          ? data.quantityRequested.value
+          : this.quantityRequested,
+      quantityShipped: data.quantityShipped.present
+          ? data.quantityShipped.value
+          : this.quantityShipped,
+      quantityReceived: data.quantityReceived.present
+          ? data.quantityReceived.value
+          : this.quantityReceived,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferItem(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('sourceProductId: $sourceProductId, ')
+          ..write('destinationProductId: $destinationProductId, ')
+          ..write('productServerId: $productServerId, ')
+          ..write('quantityRequested: $quantityRequested, ')
+          ..write('quantityShipped: $quantityShipped, ')
+          ..write('quantityReceived: $quantityReceived')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferId,
+    sourceProductId,
+    destinationProductId,
+    productServerId,
+    quantityRequested,
+    quantityShipped,
+    quantityReceived,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferItem &&
+          other.id == this.id &&
+          other.transferId == this.transferId &&
+          other.sourceProductId == this.sourceProductId &&
+          other.destinationProductId == this.destinationProductId &&
+          other.productServerId == this.productServerId &&
+          other.quantityRequested == this.quantityRequested &&
+          other.quantityShipped == this.quantityShipped &&
+          other.quantityReceived == this.quantityReceived);
+}
+
+class StockTransferItemsCompanion extends UpdateCompanion<StockTransferItem> {
+  final Value<int> id;
+  final Value<int> transferId;
+  final Value<int> sourceProductId;
+  final Value<int?> destinationProductId;
+  final Value<String?> productServerId;
+  final Value<int> quantityRequested;
+  final Value<int> quantityShipped;
+  final Value<int> quantityReceived;
+  const StockTransferItemsCompanion({
+    this.id = const Value.absent(),
+    this.transferId = const Value.absent(),
+    this.sourceProductId = const Value.absent(),
+    this.destinationProductId = const Value.absent(),
+    this.productServerId = const Value.absent(),
+    this.quantityRequested = const Value.absent(),
+    this.quantityShipped = const Value.absent(),
+    this.quantityReceived = const Value.absent(),
+  });
+  StockTransferItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferId,
+    required int sourceProductId,
+    this.destinationProductId = const Value.absent(),
+    this.productServerId = const Value.absent(),
+    required int quantityRequested,
+    this.quantityShipped = const Value.absent(),
+    this.quantityReceived = const Value.absent(),
+  }) : transferId = Value(transferId),
+       sourceProductId = Value(sourceProductId),
+       quantityRequested = Value(quantityRequested);
+  static Insertable<StockTransferItem> custom({
+    Expression<int>? id,
+    Expression<int>? transferId,
+    Expression<int>? sourceProductId,
+    Expression<int>? destinationProductId,
+    Expression<String>? productServerId,
+    Expression<int>? quantityRequested,
+    Expression<int>? quantityShipped,
+    Expression<int>? quantityReceived,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferId != null) 'transfer_id': transferId,
+      if (sourceProductId != null) 'source_product_id': sourceProductId,
+      if (destinationProductId != null)
+        'destination_product_id': destinationProductId,
+      if (productServerId != null) 'product_server_id': productServerId,
+      if (quantityRequested != null) 'quantity_requested': quantityRequested,
+      if (quantityShipped != null) 'quantity_shipped': quantityShipped,
+      if (quantityReceived != null) 'quantity_received': quantityReceived,
+    });
+  }
+
+  StockTransferItemsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferId,
+    Value<int>? sourceProductId,
+    Value<int?>? destinationProductId,
+    Value<String?>? productServerId,
+    Value<int>? quantityRequested,
+    Value<int>? quantityShipped,
+    Value<int>? quantityReceived,
+  }) {
+    return StockTransferItemsCompanion(
+      id: id ?? this.id,
+      transferId: transferId ?? this.transferId,
+      sourceProductId: sourceProductId ?? this.sourceProductId,
+      destinationProductId: destinationProductId ?? this.destinationProductId,
+      productServerId: productServerId ?? this.productServerId,
+      quantityRequested: quantityRequested ?? this.quantityRequested,
+      quantityShipped: quantityShipped ?? this.quantityShipped,
+      quantityReceived: quantityReceived ?? this.quantityReceived,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferId.present) {
+      map['transfer_id'] = Variable<int>(transferId.value);
+    }
+    if (sourceProductId.present) {
+      map['source_product_id'] = Variable<int>(sourceProductId.value);
+    }
+    if (destinationProductId.present) {
+      map['destination_product_id'] = Variable<int>(destinationProductId.value);
+    }
+    if (productServerId.present) {
+      map['product_server_id'] = Variable<String>(productServerId.value);
+    }
+    if (quantityRequested.present) {
+      map['quantity_requested'] = Variable<int>(quantityRequested.value);
+    }
+    if (quantityShipped.present) {
+      map['quantity_shipped'] = Variable<int>(quantityShipped.value);
+    }
+    if (quantityReceived.present) {
+      map['quantity_received'] = Variable<int>(quantityReceived.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('sourceProductId: $sourceProductId, ')
+          ..write('destinationProductId: $destinationProductId, ')
+          ..write('productServerId: $productServerId, ')
+          ..write('quantityRequested: $quantityRequested, ')
+          ..write('quantityShipped: $quantityShipped, ')
+          ..write('quantityReceived: $quantityReceived')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferShipmentsTable extends StockTransferShipments
+    with TableInfo<$StockTransferShipmentsTable, StockTransferShipment> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferShipmentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferIdMeta = const VerificationMeta(
+    'transferId',
+  );
+  @override
+  late final GeneratedColumn<int> transferId = GeneratedColumn<int>(
+    'transfer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfers (id)',
+    ),
+  );
+  static const VerificationMeta _referenceMeta = const VerificationMeta(
+    'reference',
+  );
+  @override
+  late final GeneratedColumn<String> reference = GeneratedColumn<String>(
+    'reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _driverNameMeta = const VerificationMeta(
+    'driverName',
+  );
+  @override
+  late final GeneratedColumn<String> driverName = GeneratedColumn<String>(
+    'driver_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _vehiclePlateMeta = const VerificationMeta(
+    'vehiclePlate',
+  );
+  @override
+  late final GeneratedColumn<String> vehiclePlate = GeneratedColumn<String>(
+    'vehicle_plate',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shippedByMeta = const VerificationMeta(
+    'shippedBy',
+  );
+  @override
+  late final GeneratedColumn<int> shippedBy = GeneratedColumn<int>(
+    'shipped_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _shippedAtMeta = const VerificationMeta(
+    'shippedAt',
+  );
+  @override
+  late final GeneratedColumn<int> shippedAt = GeneratedColumn<int>(
+    'shipped_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferId,
+    reference,
+    label,
+    notes,
+    driverName,
+    vehiclePlate,
+    shippedBy,
+    shippedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_shipments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferShipment> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_id')) {
+      context.handle(
+        _transferIdMeta,
+        transferId.isAcceptableOrUnknown(data['transfer_id']!, _transferIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_transferIdMeta);
+    }
+    if (data.containsKey('reference')) {
+      context.handle(
+        _referenceMeta,
+        reference.isAcceptableOrUnknown(data['reference']!, _referenceMeta),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('driver_name')) {
+      context.handle(
+        _driverNameMeta,
+        driverName.isAcceptableOrUnknown(data['driver_name']!, _driverNameMeta),
+      );
+    }
+    if (data.containsKey('vehicle_plate')) {
+      context.handle(
+        _vehiclePlateMeta,
+        vehiclePlate.isAcceptableOrUnknown(
+          data['vehicle_plate']!,
+          _vehiclePlateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('shipped_by')) {
+      context.handle(
+        _shippedByMeta,
+        shippedBy.isAcceptableOrUnknown(data['shipped_by']!, _shippedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shippedByMeta);
+    }
+    if (data.containsKey('shipped_at')) {
+      context.handle(
+        _shippedAtMeta,
+        shippedAt.isAcceptableOrUnknown(data['shipped_at']!, _shippedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shippedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferShipment map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferShipment(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_id'],
+      )!,
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      driverName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}driver_name'],
+      ),
+      vehiclePlate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}vehicle_plate'],
+      ),
+      shippedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shipped_by'],
+      )!,
+      shippedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shipped_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferShipmentsTable createAlias(String alias) {
+    return $StockTransferShipmentsTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferShipment extends DataClass
+    implements Insertable<StockTransferShipment> {
+  final int id;
+  final int transferId;
+  final String reference;
+  final String label;
+  final String? notes;
+  final String? driverName;
+  final String? vehiclePlate;
+  final int shippedBy;
+  final int shippedAt;
+  const StockTransferShipment({
+    required this.id,
+    required this.transferId,
+    required this.reference,
+    required this.label,
+    this.notes,
+    this.driverName,
+    this.vehiclePlate,
+    required this.shippedBy,
+    required this.shippedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_id'] = Variable<int>(transferId);
+    map['reference'] = Variable<String>(reference);
+    map['label'] = Variable<String>(label);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || driverName != null) {
+      map['driver_name'] = Variable<String>(driverName);
+    }
+    if (!nullToAbsent || vehiclePlate != null) {
+      map['vehicle_plate'] = Variable<String>(vehiclePlate);
+    }
+    map['shipped_by'] = Variable<int>(shippedBy);
+    map['shipped_at'] = Variable<int>(shippedAt);
+    return map;
+  }
+
+  StockTransferShipmentsCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferShipmentsCompanion(
+      id: Value(id),
+      transferId: Value(transferId),
+      reference: Value(reference),
+      label: Value(label),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      driverName: driverName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(driverName),
+      vehiclePlate: vehiclePlate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(vehiclePlate),
+      shippedBy: Value(shippedBy),
+      shippedAt: Value(shippedAt),
+    );
+  }
+
+  factory StockTransferShipment.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferShipment(
+      id: serializer.fromJson<int>(json['id']),
+      transferId: serializer.fromJson<int>(json['transferId']),
+      reference: serializer.fromJson<String>(json['reference']),
+      label: serializer.fromJson<String>(json['label']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      driverName: serializer.fromJson<String?>(json['driverName']),
+      vehiclePlate: serializer.fromJson<String?>(json['vehiclePlate']),
+      shippedBy: serializer.fromJson<int>(json['shippedBy']),
+      shippedAt: serializer.fromJson<int>(json['shippedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferId': serializer.toJson<int>(transferId),
+      'reference': serializer.toJson<String>(reference),
+      'label': serializer.toJson<String>(label),
+      'notes': serializer.toJson<String?>(notes),
+      'driverName': serializer.toJson<String?>(driverName),
+      'vehiclePlate': serializer.toJson<String?>(vehiclePlate),
+      'shippedBy': serializer.toJson<int>(shippedBy),
+      'shippedAt': serializer.toJson<int>(shippedAt),
+    };
+  }
+
+  StockTransferShipment copyWith({
+    int? id,
+    int? transferId,
+    String? reference,
+    String? label,
+    Value<String?> notes = const Value.absent(),
+    Value<String?> driverName = const Value.absent(),
+    Value<String?> vehiclePlate = const Value.absent(),
+    int? shippedBy,
+    int? shippedAt,
+  }) => StockTransferShipment(
+    id: id ?? this.id,
+    transferId: transferId ?? this.transferId,
+    reference: reference ?? this.reference,
+    label: label ?? this.label,
+    notes: notes.present ? notes.value : this.notes,
+    driverName: driverName.present ? driverName.value : this.driverName,
+    vehiclePlate: vehiclePlate.present ? vehiclePlate.value : this.vehiclePlate,
+    shippedBy: shippedBy ?? this.shippedBy,
+    shippedAt: shippedAt ?? this.shippedAt,
+  );
+  StockTransferShipment copyWithCompanion(
+    StockTransferShipmentsCompanion data,
+  ) {
+    return StockTransferShipment(
+      id: data.id.present ? data.id.value : this.id,
+      transferId: data.transferId.present
+          ? data.transferId.value
+          : this.transferId,
+      reference: data.reference.present ? data.reference.value : this.reference,
+      label: data.label.present ? data.label.value : this.label,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      driverName: data.driverName.present
+          ? data.driverName.value
+          : this.driverName,
+      vehiclePlate: data.vehiclePlate.present
+          ? data.vehiclePlate.value
+          : this.vehiclePlate,
+      shippedBy: data.shippedBy.present ? data.shippedBy.value : this.shippedBy,
+      shippedAt: data.shippedAt.present ? data.shippedAt.value : this.shippedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferShipment(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('reference: $reference, ')
+          ..write('label: $label, ')
+          ..write('notes: $notes, ')
+          ..write('driverName: $driverName, ')
+          ..write('vehiclePlate: $vehiclePlate, ')
+          ..write('shippedBy: $shippedBy, ')
+          ..write('shippedAt: $shippedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferId,
+    reference,
+    label,
+    notes,
+    driverName,
+    vehiclePlate,
+    shippedBy,
+    shippedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferShipment &&
+          other.id == this.id &&
+          other.transferId == this.transferId &&
+          other.reference == this.reference &&
+          other.label == this.label &&
+          other.notes == this.notes &&
+          other.driverName == this.driverName &&
+          other.vehiclePlate == this.vehiclePlate &&
+          other.shippedBy == this.shippedBy &&
+          other.shippedAt == this.shippedAt);
+}
+
+class StockTransferShipmentsCompanion
+    extends UpdateCompanion<StockTransferShipment> {
+  final Value<int> id;
+  final Value<int> transferId;
+  final Value<String> reference;
+  final Value<String> label;
+  final Value<String?> notes;
+  final Value<String?> driverName;
+  final Value<String?> vehiclePlate;
+  final Value<int> shippedBy;
+  final Value<int> shippedAt;
+  const StockTransferShipmentsCompanion({
+    this.id = const Value.absent(),
+    this.transferId = const Value.absent(),
+    this.reference = const Value.absent(),
+    this.label = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.driverName = const Value.absent(),
+    this.vehiclePlate = const Value.absent(),
+    this.shippedBy = const Value.absent(),
+    this.shippedAt = const Value.absent(),
+  });
+  StockTransferShipmentsCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferId,
+    this.reference = const Value.absent(),
+    required String label,
+    this.notes = const Value.absent(),
+    this.driverName = const Value.absent(),
+    this.vehiclePlate = const Value.absent(),
+    required int shippedBy,
+    required int shippedAt,
+  }) : transferId = Value(transferId),
+       label = Value(label),
+       shippedBy = Value(shippedBy),
+       shippedAt = Value(shippedAt);
+  static Insertable<StockTransferShipment> custom({
+    Expression<int>? id,
+    Expression<int>? transferId,
+    Expression<String>? reference,
+    Expression<String>? label,
+    Expression<String>? notes,
+    Expression<String>? driverName,
+    Expression<String>? vehiclePlate,
+    Expression<int>? shippedBy,
+    Expression<int>? shippedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferId != null) 'transfer_id': transferId,
+      if (reference != null) 'reference': reference,
+      if (label != null) 'label': label,
+      if (notes != null) 'notes': notes,
+      if (driverName != null) 'driver_name': driverName,
+      if (vehiclePlate != null) 'vehicle_plate': vehiclePlate,
+      if (shippedBy != null) 'shipped_by': shippedBy,
+      if (shippedAt != null) 'shipped_at': shippedAt,
+    });
+  }
+
+  StockTransferShipmentsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferId,
+    Value<String>? reference,
+    Value<String>? label,
+    Value<String?>? notes,
+    Value<String?>? driverName,
+    Value<String?>? vehiclePlate,
+    Value<int>? shippedBy,
+    Value<int>? shippedAt,
+  }) {
+    return StockTransferShipmentsCompanion(
+      id: id ?? this.id,
+      transferId: transferId ?? this.transferId,
+      reference: reference ?? this.reference,
+      label: label ?? this.label,
+      notes: notes ?? this.notes,
+      driverName: driverName ?? this.driverName,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+      shippedBy: shippedBy ?? this.shippedBy,
+      shippedAt: shippedAt ?? this.shippedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferId.present) {
+      map['transfer_id'] = Variable<int>(transferId.value);
+    }
+    if (reference.present) {
+      map['reference'] = Variable<String>(reference.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (driverName.present) {
+      map['driver_name'] = Variable<String>(driverName.value);
+    }
+    if (vehiclePlate.present) {
+      map['vehicle_plate'] = Variable<String>(vehiclePlate.value);
+    }
+    if (shippedBy.present) {
+      map['shipped_by'] = Variable<int>(shippedBy.value);
+    }
+    if (shippedAt.present) {
+      map['shipped_at'] = Variable<int>(shippedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferShipmentsCompanion(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('reference: $reference, ')
+          ..write('label: $label, ')
+          ..write('notes: $notes, ')
+          ..write('driverName: $driverName, ')
+          ..write('vehiclePlate: $vehiclePlate, ')
+          ..write('shippedBy: $shippedBy, ')
+          ..write('shippedAt: $shippedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferLotReservationsTable extends StockTransferLotReservations
+    with
+        TableInfo<
+          $StockTransferLotReservationsTable,
+          StockTransferLotReservation
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferLotReservationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferItemIdMeta = const VerificationMeta(
+    'transferItemId',
+  );
+  @override
+  late final GeneratedColumn<int> transferItemId = GeneratedColumn<int>(
+    'transfer_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_items (id)',
+    ),
+  );
+  static const VerificationMeta _lotIdMeta = const VerificationMeta('lotId');
+  @override
+  late final GeneratedColumn<int> lotId = GeneratedColumn<int>(
+    'lot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES inventory_lots (id)',
+    ),
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityShippedMeta = const VerificationMeta(
+    'quantityShipped',
+  );
+  @override
+  late final GeneratedColumn<int> quantityShipped = GeneratedColumn<int>(
+    'quantity_shipped',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _unitCostMeta = const VerificationMeta(
+    'unitCost',
+  );
+  @override
+  late final GeneratedColumn<int> unitCost = GeneratedColumn<int>(
+    'unit_cost',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferItemId,
+    lotId,
+    quantity,
+    quantityShipped,
+    unitCost,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_lot_reservations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferLotReservation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_item_id')) {
+      context.handle(
+        _transferItemIdMeta,
+        transferItemId.isAcceptableOrUnknown(
+          data['transfer_item_id']!,
+          _transferItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transferItemIdMeta);
+    }
+    if (data.containsKey('lot_id')) {
+      context.handle(
+        _lotIdMeta,
+        lotId.isAcceptableOrUnknown(data['lot_id']!, _lotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_lotIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('quantity_shipped')) {
+      context.handle(
+        _quantityShippedMeta,
+        quantityShipped.isAcceptableOrUnknown(
+          data['quantity_shipped']!,
+          _quantityShippedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unit_cost')) {
+      context.handle(
+        _unitCostMeta,
+        unitCost.isAcceptableOrUnknown(data['unit_cost']!, _unitCostMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_unitCostMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferLotReservation map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferLotReservation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_item_id'],
+      )!,
+      lotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}lot_id'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      quantityShipped: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_shipped'],
+      )!,
+      unitCost: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unit_cost'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferLotReservationsTable createAlias(String alias) {
+    return $StockTransferLotReservationsTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferLotReservation extends DataClass
+    implements Insertable<StockTransferLotReservation> {
+  final int id;
+  final int transferItemId;
+  final int lotId;
+  final int quantity;
+  final int quantityShipped;
+  final int unitCost;
+  const StockTransferLotReservation({
+    required this.id,
+    required this.transferItemId,
+    required this.lotId,
+    required this.quantity,
+    required this.quantityShipped,
+    required this.unitCost,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_item_id'] = Variable<int>(transferItemId);
+    map['lot_id'] = Variable<int>(lotId);
+    map['quantity'] = Variable<int>(quantity);
+    map['quantity_shipped'] = Variable<int>(quantityShipped);
+    map['unit_cost'] = Variable<int>(unitCost);
+    return map;
+  }
+
+  StockTransferLotReservationsCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferLotReservationsCompanion(
+      id: Value(id),
+      transferItemId: Value(transferItemId),
+      lotId: Value(lotId),
+      quantity: Value(quantity),
+      quantityShipped: Value(quantityShipped),
+      unitCost: Value(unitCost),
+    );
+  }
+
+  factory StockTransferLotReservation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferLotReservation(
+      id: serializer.fromJson<int>(json['id']),
+      transferItemId: serializer.fromJson<int>(json['transferItemId']),
+      lotId: serializer.fromJson<int>(json['lotId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      quantityShipped: serializer.fromJson<int>(json['quantityShipped']),
+      unitCost: serializer.fromJson<int>(json['unitCost']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferItemId': serializer.toJson<int>(transferItemId),
+      'lotId': serializer.toJson<int>(lotId),
+      'quantity': serializer.toJson<int>(quantity),
+      'quantityShipped': serializer.toJson<int>(quantityShipped),
+      'unitCost': serializer.toJson<int>(unitCost),
+    };
+  }
+
+  StockTransferLotReservation copyWith({
+    int? id,
+    int? transferItemId,
+    int? lotId,
+    int? quantity,
+    int? quantityShipped,
+    int? unitCost,
+  }) => StockTransferLotReservation(
+    id: id ?? this.id,
+    transferItemId: transferItemId ?? this.transferItemId,
+    lotId: lotId ?? this.lotId,
+    quantity: quantity ?? this.quantity,
+    quantityShipped: quantityShipped ?? this.quantityShipped,
+    unitCost: unitCost ?? this.unitCost,
+  );
+  StockTransferLotReservation copyWithCompanion(
+    StockTransferLotReservationsCompanion data,
+  ) {
+    return StockTransferLotReservation(
+      id: data.id.present ? data.id.value : this.id,
+      transferItemId: data.transferItemId.present
+          ? data.transferItemId.value
+          : this.transferItemId,
+      lotId: data.lotId.present ? data.lotId.value : this.lotId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      quantityShipped: data.quantityShipped.present
+          ? data.quantityShipped.value
+          : this.quantityShipped,
+      unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferLotReservation(')
+          ..write('id: $id, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('lotId: $lotId, ')
+          ..write('quantity: $quantity, ')
+          ..write('quantityShipped: $quantityShipped, ')
+          ..write('unitCost: $unitCost')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferItemId,
+    lotId,
+    quantity,
+    quantityShipped,
+    unitCost,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferLotReservation &&
+          other.id == this.id &&
+          other.transferItemId == this.transferItemId &&
+          other.lotId == this.lotId &&
+          other.quantity == this.quantity &&
+          other.quantityShipped == this.quantityShipped &&
+          other.unitCost == this.unitCost);
+}
+
+class StockTransferLotReservationsCompanion
+    extends UpdateCompanion<StockTransferLotReservation> {
+  final Value<int> id;
+  final Value<int> transferItemId;
+  final Value<int> lotId;
+  final Value<int> quantity;
+  final Value<int> quantityShipped;
+  final Value<int> unitCost;
+  const StockTransferLotReservationsCompanion({
+    this.id = const Value.absent(),
+    this.transferItemId = const Value.absent(),
+    this.lotId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.quantityShipped = const Value.absent(),
+    this.unitCost = const Value.absent(),
+  });
+  StockTransferLotReservationsCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferItemId,
+    required int lotId,
+    required int quantity,
+    this.quantityShipped = const Value.absent(),
+    required int unitCost,
+  }) : transferItemId = Value(transferItemId),
+       lotId = Value(lotId),
+       quantity = Value(quantity),
+       unitCost = Value(unitCost);
+  static Insertable<StockTransferLotReservation> custom({
+    Expression<int>? id,
+    Expression<int>? transferItemId,
+    Expression<int>? lotId,
+    Expression<int>? quantity,
+    Expression<int>? quantityShipped,
+    Expression<int>? unitCost,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferItemId != null) 'transfer_item_id': transferItemId,
+      if (lotId != null) 'lot_id': lotId,
+      if (quantity != null) 'quantity': quantity,
+      if (quantityShipped != null) 'quantity_shipped': quantityShipped,
+      if (unitCost != null) 'unit_cost': unitCost,
+    });
+  }
+
+  StockTransferLotReservationsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferItemId,
+    Value<int>? lotId,
+    Value<int>? quantity,
+    Value<int>? quantityShipped,
+    Value<int>? unitCost,
+  }) {
+    return StockTransferLotReservationsCompanion(
+      id: id ?? this.id,
+      transferItemId: transferItemId ?? this.transferItemId,
+      lotId: lotId ?? this.lotId,
+      quantity: quantity ?? this.quantity,
+      quantityShipped: quantityShipped ?? this.quantityShipped,
+      unitCost: unitCost ?? this.unitCost,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferItemId.present) {
+      map['transfer_item_id'] = Variable<int>(transferItemId.value);
+    }
+    if (lotId.present) {
+      map['lot_id'] = Variable<int>(lotId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (quantityShipped.present) {
+      map['quantity_shipped'] = Variable<int>(quantityShipped.value);
+    }
+    if (unitCost.present) {
+      map['unit_cost'] = Variable<int>(unitCost.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferLotReservationsCompanion(')
+          ..write('id: $id, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('lotId: $lotId, ')
+          ..write('quantity: $quantity, ')
+          ..write('quantityShipped: $quantityShipped, ')
+          ..write('unitCost: $unitCost')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferLotLinesTable extends StockTransferLotLines
+    with TableInfo<$StockTransferLotLinesTable, StockTransferLotLine> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferLotLinesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferItemIdMeta = const VerificationMeta(
+    'transferItemId',
+  );
+  @override
+  late final GeneratedColumn<int> transferItemId = GeneratedColumn<int>(
+    'transfer_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_items (id)',
+    ),
+  );
+  static const VerificationMeta _shipmentIdMeta = const VerificationMeta(
+    'shipmentId',
+  );
+  @override
+  late final GeneratedColumn<int> shipmentId = GeneratedColumn<int>(
+    'shipment_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_shipments (id)',
+    ),
+  );
+  static const VerificationMeta _sourceLotIdMeta = const VerificationMeta(
+    'sourceLotId',
+  );
+  @override
+  late final GeneratedColumn<int> sourceLotId = GeneratedColumn<int>(
+    'source_lot_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES inventory_lots (id)',
+    ),
+  );
+  static const VerificationMeta _destinationLotIdMeta = const VerificationMeta(
+    'destinationLotId',
+  );
+  @override
+  late final GeneratedColumn<int> destinationLotId = GeneratedColumn<int>(
+    'destination_lot_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES inventory_lots (id)',
+    ),
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityReceivedMeta = const VerificationMeta(
+    'quantityReceived',
+  );
+  @override
+  late final GeneratedColumn<int> quantityReceived = GeneratedColumn<int>(
+    'quantity_received',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _unitCostMeta = const VerificationMeta(
+    'unitCost',
+  );
+  @override
+  late final GeneratedColumn<int> unitCost = GeneratedColumn<int>(
+    'unit_cost',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferItemId,
+    shipmentId,
+    sourceLotId,
+    destinationLotId,
+    quantity,
+    quantityReceived,
+    unitCost,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_lot_lines';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferLotLine> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_item_id')) {
+      context.handle(
+        _transferItemIdMeta,
+        transferItemId.isAcceptableOrUnknown(
+          data['transfer_item_id']!,
+          _transferItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transferItemIdMeta);
+    }
+    if (data.containsKey('shipment_id')) {
+      context.handle(
+        _shipmentIdMeta,
+        shipmentId.isAcceptableOrUnknown(data['shipment_id']!, _shipmentIdMeta),
+      );
+    }
+    if (data.containsKey('source_lot_id')) {
+      context.handle(
+        _sourceLotIdMeta,
+        sourceLotId.isAcceptableOrUnknown(
+          data['source_lot_id']!,
+          _sourceLotIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('destination_lot_id')) {
+      context.handle(
+        _destinationLotIdMeta,
+        destinationLotId.isAcceptableOrUnknown(
+          data['destination_lot_id']!,
+          _destinationLotIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('quantity_received')) {
+      context.handle(
+        _quantityReceivedMeta,
+        quantityReceived.isAcceptableOrUnknown(
+          data['quantity_received']!,
+          _quantityReceivedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('unit_cost')) {
+      context.handle(
+        _unitCostMeta,
+        unitCost.isAcceptableOrUnknown(data['unit_cost']!, _unitCostMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_unitCostMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferLotLine map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferLotLine(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_item_id'],
+      )!,
+      shipmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shipment_id'],
+      ),
+      sourceLotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_lot_id'],
+      ),
+      destinationLotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}destination_lot_id'],
+      ),
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      quantityReceived: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_received'],
+      )!,
+      unitCost: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}unit_cost'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferLotLinesTable createAlias(String alias) {
+    return $StockTransferLotLinesTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferLotLine extends DataClass
+    implements Insertable<StockTransferLotLine> {
+  final int id;
+  final int transferItemId;
+  final int? shipmentId;
+  final int? sourceLotId;
+  final int? destinationLotId;
+  final int quantity;
+  final int quantityReceived;
+  final int unitCost;
+  const StockTransferLotLine({
+    required this.id,
+    required this.transferItemId,
+    this.shipmentId,
+    this.sourceLotId,
+    this.destinationLotId,
+    required this.quantity,
+    required this.quantityReceived,
+    required this.unitCost,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_item_id'] = Variable<int>(transferItemId);
+    if (!nullToAbsent || shipmentId != null) {
+      map['shipment_id'] = Variable<int>(shipmentId);
+    }
+    if (!nullToAbsent || sourceLotId != null) {
+      map['source_lot_id'] = Variable<int>(sourceLotId);
+    }
+    if (!nullToAbsent || destinationLotId != null) {
+      map['destination_lot_id'] = Variable<int>(destinationLotId);
+    }
+    map['quantity'] = Variable<int>(quantity);
+    map['quantity_received'] = Variable<int>(quantityReceived);
+    map['unit_cost'] = Variable<int>(unitCost);
+    return map;
+  }
+
+  StockTransferLotLinesCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferLotLinesCompanion(
+      id: Value(id),
+      transferItemId: Value(transferItemId),
+      shipmentId: shipmentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shipmentId),
+      sourceLotId: sourceLotId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceLotId),
+      destinationLotId: destinationLotId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destinationLotId),
+      quantity: Value(quantity),
+      quantityReceived: Value(quantityReceived),
+      unitCost: Value(unitCost),
+    );
+  }
+
+  factory StockTransferLotLine.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferLotLine(
+      id: serializer.fromJson<int>(json['id']),
+      transferItemId: serializer.fromJson<int>(json['transferItemId']),
+      shipmentId: serializer.fromJson<int?>(json['shipmentId']),
+      sourceLotId: serializer.fromJson<int?>(json['sourceLotId']),
+      destinationLotId: serializer.fromJson<int?>(json['destinationLotId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      quantityReceived: serializer.fromJson<int>(json['quantityReceived']),
+      unitCost: serializer.fromJson<int>(json['unitCost']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferItemId': serializer.toJson<int>(transferItemId),
+      'shipmentId': serializer.toJson<int?>(shipmentId),
+      'sourceLotId': serializer.toJson<int?>(sourceLotId),
+      'destinationLotId': serializer.toJson<int?>(destinationLotId),
+      'quantity': serializer.toJson<int>(quantity),
+      'quantityReceived': serializer.toJson<int>(quantityReceived),
+      'unitCost': serializer.toJson<int>(unitCost),
+    };
+  }
+
+  StockTransferLotLine copyWith({
+    int? id,
+    int? transferItemId,
+    Value<int?> shipmentId = const Value.absent(),
+    Value<int?> sourceLotId = const Value.absent(),
+    Value<int?> destinationLotId = const Value.absent(),
+    int? quantity,
+    int? quantityReceived,
+    int? unitCost,
+  }) => StockTransferLotLine(
+    id: id ?? this.id,
+    transferItemId: transferItemId ?? this.transferItemId,
+    shipmentId: shipmentId.present ? shipmentId.value : this.shipmentId,
+    sourceLotId: sourceLotId.present ? sourceLotId.value : this.sourceLotId,
+    destinationLotId: destinationLotId.present
+        ? destinationLotId.value
+        : this.destinationLotId,
+    quantity: quantity ?? this.quantity,
+    quantityReceived: quantityReceived ?? this.quantityReceived,
+    unitCost: unitCost ?? this.unitCost,
+  );
+  StockTransferLotLine copyWithCompanion(StockTransferLotLinesCompanion data) {
+    return StockTransferLotLine(
+      id: data.id.present ? data.id.value : this.id,
+      transferItemId: data.transferItemId.present
+          ? data.transferItemId.value
+          : this.transferItemId,
+      shipmentId: data.shipmentId.present
+          ? data.shipmentId.value
+          : this.shipmentId,
+      sourceLotId: data.sourceLotId.present
+          ? data.sourceLotId.value
+          : this.sourceLotId,
+      destinationLotId: data.destinationLotId.present
+          ? data.destinationLotId.value
+          : this.destinationLotId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      quantityReceived: data.quantityReceived.present
+          ? data.quantityReceived.value
+          : this.quantityReceived,
+      unitCost: data.unitCost.present ? data.unitCost.value : this.unitCost,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferLotLine(')
+          ..write('id: $id, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('shipmentId: $shipmentId, ')
+          ..write('sourceLotId: $sourceLotId, ')
+          ..write('destinationLotId: $destinationLotId, ')
+          ..write('quantity: $quantity, ')
+          ..write('quantityReceived: $quantityReceived, ')
+          ..write('unitCost: $unitCost')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferItemId,
+    shipmentId,
+    sourceLotId,
+    destinationLotId,
+    quantity,
+    quantityReceived,
+    unitCost,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferLotLine &&
+          other.id == this.id &&
+          other.transferItemId == this.transferItemId &&
+          other.shipmentId == this.shipmentId &&
+          other.sourceLotId == this.sourceLotId &&
+          other.destinationLotId == this.destinationLotId &&
+          other.quantity == this.quantity &&
+          other.quantityReceived == this.quantityReceived &&
+          other.unitCost == this.unitCost);
+}
+
+class StockTransferLotLinesCompanion
+    extends UpdateCompanion<StockTransferLotLine> {
+  final Value<int> id;
+  final Value<int> transferItemId;
+  final Value<int?> shipmentId;
+  final Value<int?> sourceLotId;
+  final Value<int?> destinationLotId;
+  final Value<int> quantity;
+  final Value<int> quantityReceived;
+  final Value<int> unitCost;
+  const StockTransferLotLinesCompanion({
+    this.id = const Value.absent(),
+    this.transferItemId = const Value.absent(),
+    this.shipmentId = const Value.absent(),
+    this.sourceLotId = const Value.absent(),
+    this.destinationLotId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.quantityReceived = const Value.absent(),
+    this.unitCost = const Value.absent(),
+  });
+  StockTransferLotLinesCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferItemId,
+    this.shipmentId = const Value.absent(),
+    this.sourceLotId = const Value.absent(),
+    this.destinationLotId = const Value.absent(),
+    required int quantity,
+    this.quantityReceived = const Value.absent(),
+    required int unitCost,
+  }) : transferItemId = Value(transferItemId),
+       quantity = Value(quantity),
+       unitCost = Value(unitCost);
+  static Insertable<StockTransferLotLine> custom({
+    Expression<int>? id,
+    Expression<int>? transferItemId,
+    Expression<int>? shipmentId,
+    Expression<int>? sourceLotId,
+    Expression<int>? destinationLotId,
+    Expression<int>? quantity,
+    Expression<int>? quantityReceived,
+    Expression<int>? unitCost,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferItemId != null) 'transfer_item_id': transferItemId,
+      if (shipmentId != null) 'shipment_id': shipmentId,
+      if (sourceLotId != null) 'source_lot_id': sourceLotId,
+      if (destinationLotId != null) 'destination_lot_id': destinationLotId,
+      if (quantity != null) 'quantity': quantity,
+      if (quantityReceived != null) 'quantity_received': quantityReceived,
+      if (unitCost != null) 'unit_cost': unitCost,
+    });
+  }
+
+  StockTransferLotLinesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferItemId,
+    Value<int?>? shipmentId,
+    Value<int?>? sourceLotId,
+    Value<int?>? destinationLotId,
+    Value<int>? quantity,
+    Value<int>? quantityReceived,
+    Value<int>? unitCost,
+  }) {
+    return StockTransferLotLinesCompanion(
+      id: id ?? this.id,
+      transferItemId: transferItemId ?? this.transferItemId,
+      shipmentId: shipmentId ?? this.shipmentId,
+      sourceLotId: sourceLotId ?? this.sourceLotId,
+      destinationLotId: destinationLotId ?? this.destinationLotId,
+      quantity: quantity ?? this.quantity,
+      quantityReceived: quantityReceived ?? this.quantityReceived,
+      unitCost: unitCost ?? this.unitCost,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferItemId.present) {
+      map['transfer_item_id'] = Variable<int>(transferItemId.value);
+    }
+    if (shipmentId.present) {
+      map['shipment_id'] = Variable<int>(shipmentId.value);
+    }
+    if (sourceLotId.present) {
+      map['source_lot_id'] = Variable<int>(sourceLotId.value);
+    }
+    if (destinationLotId.present) {
+      map['destination_lot_id'] = Variable<int>(destinationLotId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (quantityReceived.present) {
+      map['quantity_received'] = Variable<int>(quantityReceived.value);
+    }
+    if (unitCost.present) {
+      map['unit_cost'] = Variable<int>(unitCost.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferLotLinesCompanion(')
+          ..write('id: $id, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('shipmentId: $shipmentId, ')
+          ..write('sourceLotId: $sourceLotId, ')
+          ..write('destinationLotId: $destinationLotId, ')
+          ..write('quantity: $quantity, ')
+          ..write('quantityReceived: $quantityReceived, ')
+          ..write('unitCost: $unitCost')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferEventsTable extends StockTransferEvents
+    with TableInfo<$StockTransferEventsTable, StockTransferEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferIdMeta = const VerificationMeta(
+    'transferId',
+  );
+  @override
+  late final GeneratedColumn<int> transferId = GeneratedColumn<int>(
+    'transfer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfers (id)',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _eventTypeMeta = const VerificationMeta(
+    'eventType',
+  );
+  @override
+  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
+    'event_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _actorUserIdMeta = const VerificationMeta(
+    'actorUserId',
+  );
+  @override
+  late final GeneratedColumn<int> actorUserId = GeneratedColumn<int>(
+    'actor_user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
+  @override
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferId,
+    shopId,
+    eventType,
+    actorUserId,
+    notes,
+    payloadJson,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_id')) {
+      context.handle(
+        _transferIdMeta,
+        transferId.isAcceptableOrUnknown(data['transfer_id']!, _transferIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_transferIdMeta);
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('event_type')) {
+      context.handle(
+        _eventTypeMeta,
+        eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_eventTypeMeta);
+    }
+    if (data.containsKey('actor_user_id')) {
+      context.handle(
+        _actorUserIdMeta,
+        actorUserId.isAcceptableOrUnknown(
+          data['actor_user_id']!,
+          _actorUserIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_actorUserIdMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('payload_json')) {
+      context.handle(
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferEvent(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      eventType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_type'],
+      )!,
+      actorUserId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}actor_user_id'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      payloadJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_json'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferEventsTable createAlias(String alias) {
+    return $StockTransferEventsTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferEvent extends DataClass
+    implements Insertable<StockTransferEvent> {
+  final int id;
+  final int transferId;
+  final int shopId;
+  final String eventType;
+  final int actorUserId;
+  final String? notes;
+  final String? payloadJson;
+  final int createdAt;
+  const StockTransferEvent({
+    required this.id,
+    required this.transferId,
+    required this.shopId,
+    required this.eventType,
+    required this.actorUserId,
+    this.notes,
+    this.payloadJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_id'] = Variable<int>(transferId);
+    map['shop_id'] = Variable<int>(shopId);
+    map['event_type'] = Variable<String>(eventType);
+    map['actor_user_id'] = Variable<int>(actorUserId);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || payloadJson != null) {
+      map['payload_json'] = Variable<String>(payloadJson);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  StockTransferEventsCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferEventsCompanion(
+      id: Value(id),
+      transferId: Value(transferId),
+      shopId: Value(shopId),
+      eventType: Value(eventType),
+      actorUserId: Value(actorUserId),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      payloadJson: payloadJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(payloadJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StockTransferEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferEvent(
+      id: serializer.fromJson<int>(json['id']),
+      transferId: serializer.fromJson<int>(json['transferId']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      eventType: serializer.fromJson<String>(json['eventType']),
+      actorUserId: serializer.fromJson<int>(json['actorUserId']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      payloadJson: serializer.fromJson<String?>(json['payloadJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferId': serializer.toJson<int>(transferId),
+      'shopId': serializer.toJson<int>(shopId),
+      'eventType': serializer.toJson<String>(eventType),
+      'actorUserId': serializer.toJson<int>(actorUserId),
+      'notes': serializer.toJson<String?>(notes),
+      'payloadJson': serializer.toJson<String?>(payloadJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  StockTransferEvent copyWith({
+    int? id,
+    int? transferId,
+    int? shopId,
+    String? eventType,
+    int? actorUserId,
+    Value<String?> notes = const Value.absent(),
+    Value<String?> payloadJson = const Value.absent(),
+    int? createdAt,
+  }) => StockTransferEvent(
+    id: id ?? this.id,
+    transferId: transferId ?? this.transferId,
+    shopId: shopId ?? this.shopId,
+    eventType: eventType ?? this.eventType,
+    actorUserId: actorUserId ?? this.actorUserId,
+    notes: notes.present ? notes.value : this.notes,
+    payloadJson: payloadJson.present ? payloadJson.value : this.payloadJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  StockTransferEvent copyWithCompanion(StockTransferEventsCompanion data) {
+    return StockTransferEvent(
+      id: data.id.present ? data.id.value : this.id,
+      transferId: data.transferId.present
+          ? data.transferId.value
+          : this.transferId,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      eventType: data.eventType.present ? data.eventType.value : this.eventType,
+      actorUserId: data.actorUserId.present
+          ? data.actorUserId.value
+          : this.actorUserId,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferEvent(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('shopId: $shopId, ')
+          ..write('eventType: $eventType, ')
+          ..write('actorUserId: $actorUserId, ')
+          ..write('notes: $notes, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferId,
+    shopId,
+    eventType,
+    actorUserId,
+    notes,
+    payloadJson,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferEvent &&
+          other.id == this.id &&
+          other.transferId == this.transferId &&
+          other.shopId == this.shopId &&
+          other.eventType == this.eventType &&
+          other.actorUserId == this.actorUserId &&
+          other.notes == this.notes &&
+          other.payloadJson == this.payloadJson &&
+          other.createdAt == this.createdAt);
+}
+
+class StockTransferEventsCompanion extends UpdateCompanion<StockTransferEvent> {
+  final Value<int> id;
+  final Value<int> transferId;
+  final Value<int> shopId;
+  final Value<String> eventType;
+  final Value<int> actorUserId;
+  final Value<String?> notes;
+  final Value<String?> payloadJson;
+  final Value<int> createdAt;
+  const StockTransferEventsCompanion({
+    this.id = const Value.absent(),
+    this.transferId = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.actorUserId = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  StockTransferEventsCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferId,
+    required int shopId,
+    required String eventType,
+    required int actorUserId,
+    this.notes = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    required int createdAt,
+  }) : transferId = Value(transferId),
+       shopId = Value(shopId),
+       eventType = Value(eventType),
+       actorUserId = Value(actorUserId),
+       createdAt = Value(createdAt);
+  static Insertable<StockTransferEvent> custom({
+    Expression<int>? id,
+    Expression<int>? transferId,
+    Expression<int>? shopId,
+    Expression<String>? eventType,
+    Expression<int>? actorUserId,
+    Expression<String>? notes,
+    Expression<String>? payloadJson,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferId != null) 'transfer_id': transferId,
+      if (shopId != null) 'shop_id': shopId,
+      if (eventType != null) 'event_type': eventType,
+      if (actorUserId != null) 'actor_user_id': actorUserId,
+      if (notes != null) 'notes': notes,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  StockTransferEventsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferId,
+    Value<int>? shopId,
+    Value<String>? eventType,
+    Value<int>? actorUserId,
+    Value<String?>? notes,
+    Value<String?>? payloadJson,
+    Value<int>? createdAt,
+  }) {
+    return StockTransferEventsCompanion(
+      id: id ?? this.id,
+      transferId: transferId ?? this.transferId,
+      shopId: shopId ?? this.shopId,
+      eventType: eventType ?? this.eventType,
+      actorUserId: actorUserId ?? this.actorUserId,
+      notes: notes ?? this.notes,
+      payloadJson: payloadJson ?? this.payloadJson,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferId.present) {
+      map['transfer_id'] = Variable<int>(transferId.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (eventType.present) {
+      map['event_type'] = Variable<String>(eventType.value);
+    }
+    if (actorUserId.present) {
+      map['actor_user_id'] = Variable<int>(actorUserId.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('shopId: $shopId, ')
+          ..write('eventType: $eventType, ')
+          ..write('actorUserId: $actorUserId, ')
+          ..write('notes: $notes, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferDiscrepanciesTable extends StockTransferDiscrepancies
+    with TableInfo<$StockTransferDiscrepanciesTable, StockTransferDiscrepancy> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferDiscrepanciesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferIdMeta = const VerificationMeta(
+    'transferId',
+  );
+  @override
+  late final GeneratedColumn<int> transferId = GeneratedColumn<int>(
+    'transfer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfers (id)',
+    ),
+  );
+  static const VerificationMeta _transferItemIdMeta = const VerificationMeta(
+    'transferItemId',
+  );
+  @override
+  late final GeneratedColumn<int> transferItemId = GeneratedColumn<int>(
+    'transfer_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_items (id)',
+    ),
+  );
+  static const VerificationMeta _quantityMeta = const VerificationMeta(
+    'quantity',
+  );
+  @override
+  late final GeneratedColumn<int> quantity = GeneratedColumn<int>(
+    'quantity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resolutionMeta = const VerificationMeta(
+    'resolution',
+  );
+  @override
+  late final GeneratedColumn<String> resolution = GeneratedColumn<String>(
+    'resolution',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _resolvedByMeta = const VerificationMeta(
+    'resolvedBy',
+  );
+  @override
+  late final GeneratedColumn<int> resolvedBy = GeneratedColumn<int>(
+    'resolved_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _resolvedAtMeta = const VerificationMeta(
+    'resolvedAt',
+  );
+  @override
+  late final GeneratedColumn<int> resolvedAt = GeneratedColumn<int>(
+    'resolved_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferId,
+    transferItemId,
+    quantity,
+    reason,
+    resolution,
+    notes,
+    resolvedBy,
+    resolvedAt,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_discrepancies';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferDiscrepancy> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_id')) {
+      context.handle(
+        _transferIdMeta,
+        transferId.isAcceptableOrUnknown(data['transfer_id']!, _transferIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_transferIdMeta);
+    }
+    if (data.containsKey('transfer_item_id')) {
+      context.handle(
+        _transferItemIdMeta,
+        transferItemId.isAcceptableOrUnknown(
+          data['transfer_item_id']!,
+          _transferItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transferItemIdMeta);
+    }
+    if (data.containsKey('quantity')) {
+      context.handle(
+        _quantityMeta,
+        quantity.isAcceptableOrUnknown(data['quantity']!, _quantityMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reasonMeta);
+    }
+    if (data.containsKey('resolution')) {
+      context.handle(
+        _resolutionMeta,
+        resolution.isAcceptableOrUnknown(data['resolution']!, _resolutionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resolutionMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('resolved_by')) {
+      context.handle(
+        _resolvedByMeta,
+        resolvedBy.isAcceptableOrUnknown(data['resolved_by']!, _resolvedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resolvedByMeta);
+    }
+    if (data.containsKey('resolved_at')) {
+      context.handle(
+        _resolvedAtMeta,
+        resolvedAt.isAcceptableOrUnknown(data['resolved_at']!, _resolvedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resolvedAtMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferDiscrepancy map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferDiscrepancy(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_id'],
+      )!,
+      transferItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_item_id'],
+      )!,
+      quantity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      )!,
+      resolution: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}resolution'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      resolvedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}resolved_by'],
+      )!,
+      resolvedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}resolved_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferDiscrepanciesTable createAlias(String alias) {
+    return $StockTransferDiscrepanciesTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferDiscrepancy extends DataClass
+    implements Insertable<StockTransferDiscrepancy> {
+  final int id;
+  final int transferId;
+  final int transferItemId;
+  final int quantity;
+  final String reason;
+  final String resolution;
+  final String? notes;
+  final int resolvedBy;
+  final int resolvedAt;
+  final int createdAt;
+  const StockTransferDiscrepancy({
+    required this.id,
+    required this.transferId,
+    required this.transferItemId,
+    required this.quantity,
+    required this.reason,
+    required this.resolution,
+    this.notes,
+    required this.resolvedBy,
+    required this.resolvedAt,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_id'] = Variable<int>(transferId);
+    map['transfer_item_id'] = Variable<int>(transferItemId);
+    map['quantity'] = Variable<int>(quantity);
+    map['reason'] = Variable<String>(reason);
+    map['resolution'] = Variable<String>(resolution);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['resolved_by'] = Variable<int>(resolvedBy);
+    map['resolved_at'] = Variable<int>(resolvedAt);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  StockTransferDiscrepanciesCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferDiscrepanciesCompanion(
+      id: Value(id),
+      transferId: Value(transferId),
+      transferItemId: Value(transferItemId),
+      quantity: Value(quantity),
+      reason: Value(reason),
+      resolution: Value(resolution),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      resolvedBy: Value(resolvedBy),
+      resolvedAt: Value(resolvedAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StockTransferDiscrepancy.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferDiscrepancy(
+      id: serializer.fromJson<int>(json['id']),
+      transferId: serializer.fromJson<int>(json['transferId']),
+      transferItemId: serializer.fromJson<int>(json['transferItemId']),
+      quantity: serializer.fromJson<int>(json['quantity']),
+      reason: serializer.fromJson<String>(json['reason']),
+      resolution: serializer.fromJson<String>(json['resolution']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      resolvedBy: serializer.fromJson<int>(json['resolvedBy']),
+      resolvedAt: serializer.fromJson<int>(json['resolvedAt']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferId': serializer.toJson<int>(transferId),
+      'transferItemId': serializer.toJson<int>(transferItemId),
+      'quantity': serializer.toJson<int>(quantity),
+      'reason': serializer.toJson<String>(reason),
+      'resolution': serializer.toJson<String>(resolution),
+      'notes': serializer.toJson<String?>(notes),
+      'resolvedBy': serializer.toJson<int>(resolvedBy),
+      'resolvedAt': serializer.toJson<int>(resolvedAt),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  StockTransferDiscrepancy copyWith({
+    int? id,
+    int? transferId,
+    int? transferItemId,
+    int? quantity,
+    String? reason,
+    String? resolution,
+    Value<String?> notes = const Value.absent(),
+    int? resolvedBy,
+    int? resolvedAt,
+    int? createdAt,
+  }) => StockTransferDiscrepancy(
+    id: id ?? this.id,
+    transferId: transferId ?? this.transferId,
+    transferItemId: transferItemId ?? this.transferItemId,
+    quantity: quantity ?? this.quantity,
+    reason: reason ?? this.reason,
+    resolution: resolution ?? this.resolution,
+    notes: notes.present ? notes.value : this.notes,
+    resolvedBy: resolvedBy ?? this.resolvedBy,
+    resolvedAt: resolvedAt ?? this.resolvedAt,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  StockTransferDiscrepancy copyWithCompanion(
+    StockTransferDiscrepanciesCompanion data,
+  ) {
+    return StockTransferDiscrepancy(
+      id: data.id.present ? data.id.value : this.id,
+      transferId: data.transferId.present
+          ? data.transferId.value
+          : this.transferId,
+      transferItemId: data.transferItemId.present
+          ? data.transferItemId.value
+          : this.transferItemId,
+      quantity: data.quantity.present ? data.quantity.value : this.quantity,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      resolution: data.resolution.present
+          ? data.resolution.value
+          : this.resolution,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      resolvedBy: data.resolvedBy.present
+          ? data.resolvedBy.value
+          : this.resolvedBy,
+      resolvedAt: data.resolvedAt.present
+          ? data.resolvedAt.value
+          : this.resolvedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferDiscrepancy(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('quantity: $quantity, ')
+          ..write('reason: $reason, ')
+          ..write('resolution: $resolution, ')
+          ..write('notes: $notes, ')
+          ..write('resolvedBy: $resolvedBy, ')
+          ..write('resolvedAt: $resolvedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferId,
+    transferItemId,
+    quantity,
+    reason,
+    resolution,
+    notes,
+    resolvedBy,
+    resolvedAt,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferDiscrepancy &&
+          other.id == this.id &&
+          other.transferId == this.transferId &&
+          other.transferItemId == this.transferItemId &&
+          other.quantity == this.quantity &&
+          other.reason == this.reason &&
+          other.resolution == this.resolution &&
+          other.notes == this.notes &&
+          other.resolvedBy == this.resolvedBy &&
+          other.resolvedAt == this.resolvedAt &&
+          other.createdAt == this.createdAt);
+}
+
+class StockTransferDiscrepanciesCompanion
+    extends UpdateCompanion<StockTransferDiscrepancy> {
+  final Value<int> id;
+  final Value<int> transferId;
+  final Value<int> transferItemId;
+  final Value<int> quantity;
+  final Value<String> reason;
+  final Value<String> resolution;
+  final Value<String?> notes;
+  final Value<int> resolvedBy;
+  final Value<int> resolvedAt;
+  final Value<int> createdAt;
+  const StockTransferDiscrepanciesCompanion({
+    this.id = const Value.absent(),
+    this.transferId = const Value.absent(),
+    this.transferItemId = const Value.absent(),
+    this.quantity = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.resolution = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.resolvedBy = const Value.absent(),
+    this.resolvedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  StockTransferDiscrepanciesCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferId,
+    required int transferItemId,
+    required int quantity,
+    required String reason,
+    required String resolution,
+    this.notes = const Value.absent(),
+    required int resolvedBy,
+    required int resolvedAt,
+    required int createdAt,
+  }) : transferId = Value(transferId),
+       transferItemId = Value(transferItemId),
+       quantity = Value(quantity),
+       reason = Value(reason),
+       resolution = Value(resolution),
+       resolvedBy = Value(resolvedBy),
+       resolvedAt = Value(resolvedAt),
+       createdAt = Value(createdAt);
+  static Insertable<StockTransferDiscrepancy> custom({
+    Expression<int>? id,
+    Expression<int>? transferId,
+    Expression<int>? transferItemId,
+    Expression<int>? quantity,
+    Expression<String>? reason,
+    Expression<String>? resolution,
+    Expression<String>? notes,
+    Expression<int>? resolvedBy,
+    Expression<int>? resolvedAt,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferId != null) 'transfer_id': transferId,
+      if (transferItemId != null) 'transfer_item_id': transferItemId,
+      if (quantity != null) 'quantity': quantity,
+      if (reason != null) 'reason': reason,
+      if (resolution != null) 'resolution': resolution,
+      if (notes != null) 'notes': notes,
+      if (resolvedBy != null) 'resolved_by': resolvedBy,
+      if (resolvedAt != null) 'resolved_at': resolvedAt,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  StockTransferDiscrepanciesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferId,
+    Value<int>? transferItemId,
+    Value<int>? quantity,
+    Value<String>? reason,
+    Value<String>? resolution,
+    Value<String?>? notes,
+    Value<int>? resolvedBy,
+    Value<int>? resolvedAt,
+    Value<int>? createdAt,
+  }) {
+    return StockTransferDiscrepanciesCompanion(
+      id: id ?? this.id,
+      transferId: transferId ?? this.transferId,
+      transferItemId: transferItemId ?? this.transferItemId,
+      quantity: quantity ?? this.quantity,
+      reason: reason ?? this.reason,
+      resolution: resolution ?? this.resolution,
+      notes: notes ?? this.notes,
+      resolvedBy: resolvedBy ?? this.resolvedBy,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferId.present) {
+      map['transfer_id'] = Variable<int>(transferId.value);
+    }
+    if (transferItemId.present) {
+      map['transfer_item_id'] = Variable<int>(transferItemId.value);
+    }
+    if (quantity.present) {
+      map['quantity'] = Variable<int>(quantity.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (resolution.present) {
+      map['resolution'] = Variable<String>(resolution.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (resolvedBy.present) {
+      map['resolved_by'] = Variable<int>(resolvedBy.value);
+    }
+    if (resolvedAt.present) {
+      map['resolved_at'] = Variable<int>(resolvedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferDiscrepanciesCompanion(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('quantity: $quantity, ')
+          ..write('reason: $reason, ')
+          ..write('resolution: $resolution, ')
+          ..write('notes: $notes, ')
+          ..write('resolvedBy: $resolvedBy, ')
+          ..write('resolvedAt: $resolvedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferReceiptsTable extends StockTransferReceipts
+    with TableInfo<$StockTransferReceiptsTable, StockTransferReceipt> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferReceiptsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _transferIdMeta = const VerificationMeta(
+    'transferId',
+  );
+  @override
+  late final GeneratedColumn<int> transferId = GeneratedColumn<int>(
+    'transfer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfers (id)',
+    ),
+  );
+  static const VerificationMeta _shipmentIdMeta = const VerificationMeta(
+    'shipmentId',
+  );
+  @override
+  late final GeneratedColumn<int> shipmentId = GeneratedColumn<int>(
+    'shipment_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_shipments (id)',
+    ),
+  );
+  static const VerificationMeta _referenceMeta = const VerificationMeta(
+    'reference',
+  );
+  @override
+  late final GeneratedColumn<String> reference = GeneratedColumn<String>(
+    'reference',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _receivedByMeta = const VerificationMeta(
+    'receivedBy',
+  );
+  @override
+  late final GeneratedColumn<int> receivedBy = GeneratedColumn<int>(
+    'received_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _receivedAtMeta = const VerificationMeta(
+    'receivedAt',
+  );
+  @override
+  late final GeneratedColumn<int> receivedAt = GeneratedColumn<int>(
+    'received_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    transferId,
+    shipmentId,
+    reference,
+    notes,
+    receivedBy,
+    receivedAt,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_receipts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferReceipt> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('transfer_id')) {
+      context.handle(
+        _transferIdMeta,
+        transferId.isAcceptableOrUnknown(data['transfer_id']!, _transferIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_transferIdMeta);
+    }
+    if (data.containsKey('shipment_id')) {
+      context.handle(
+        _shipmentIdMeta,
+        shipmentId.isAcceptableOrUnknown(data['shipment_id']!, _shipmentIdMeta),
+      );
+    }
+    if (data.containsKey('reference')) {
+      context.handle(
+        _referenceMeta,
+        reference.isAcceptableOrUnknown(data['reference']!, _referenceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_referenceMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('received_by')) {
+      context.handle(
+        _receivedByMeta,
+        receivedBy.isAcceptableOrUnknown(data['received_by']!, _receivedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedByMeta);
+    }
+    if (data.containsKey('received_at')) {
+      context.handle(
+        _receivedAtMeta,
+        receivedAt.isAcceptableOrUnknown(data['received_at']!, _receivedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receivedAtMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferReceipt map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferReceipt(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      transferId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_id'],
+      )!,
+      shipmentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shipment_id'],
+      ),
+      reference: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reference'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      receivedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_by'],
+      )!,
+      receivedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}received_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferReceiptsTable createAlias(String alias) {
+    return $StockTransferReceiptsTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferReceipt extends DataClass
+    implements Insertable<StockTransferReceipt> {
+  final int id;
+  final int transferId;
+  final int? shipmentId;
+  final String reference;
+  final String? notes;
+  final int receivedBy;
+  final int receivedAt;
+  final int createdAt;
+  const StockTransferReceipt({
+    required this.id,
+    required this.transferId,
+    this.shipmentId,
+    required this.reference,
+    this.notes,
+    required this.receivedBy,
+    required this.receivedAt,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['transfer_id'] = Variable<int>(transferId);
+    if (!nullToAbsent || shipmentId != null) {
+      map['shipment_id'] = Variable<int>(shipmentId);
+    }
+    map['reference'] = Variable<String>(reference);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['received_by'] = Variable<int>(receivedBy);
+    map['received_at'] = Variable<int>(receivedAt);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  StockTransferReceiptsCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferReceiptsCompanion(
+      id: Value(id),
+      transferId: Value(transferId),
+      shipmentId: shipmentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shipmentId),
+      reference: Value(reference),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      receivedBy: Value(receivedBy),
+      receivedAt: Value(receivedAt),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StockTransferReceipt.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferReceipt(
+      id: serializer.fromJson<int>(json['id']),
+      transferId: serializer.fromJson<int>(json['transferId']),
+      shipmentId: serializer.fromJson<int?>(json['shipmentId']),
+      reference: serializer.fromJson<String>(json['reference']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      receivedBy: serializer.fromJson<int>(json['receivedBy']),
+      receivedAt: serializer.fromJson<int>(json['receivedAt']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'transferId': serializer.toJson<int>(transferId),
+      'shipmentId': serializer.toJson<int?>(shipmentId),
+      'reference': serializer.toJson<String>(reference),
+      'notes': serializer.toJson<String?>(notes),
+      'receivedBy': serializer.toJson<int>(receivedBy),
+      'receivedAt': serializer.toJson<int>(receivedAt),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  StockTransferReceipt copyWith({
+    int? id,
+    int? transferId,
+    Value<int?> shipmentId = const Value.absent(),
+    String? reference,
+    Value<String?> notes = const Value.absent(),
+    int? receivedBy,
+    int? receivedAt,
+    int? createdAt,
+  }) => StockTransferReceipt(
+    id: id ?? this.id,
+    transferId: transferId ?? this.transferId,
+    shipmentId: shipmentId.present ? shipmentId.value : this.shipmentId,
+    reference: reference ?? this.reference,
+    notes: notes.present ? notes.value : this.notes,
+    receivedBy: receivedBy ?? this.receivedBy,
+    receivedAt: receivedAt ?? this.receivedAt,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  StockTransferReceipt copyWithCompanion(StockTransferReceiptsCompanion data) {
+    return StockTransferReceipt(
+      id: data.id.present ? data.id.value : this.id,
+      transferId: data.transferId.present
+          ? data.transferId.value
+          : this.transferId,
+      shipmentId: data.shipmentId.present
+          ? data.shipmentId.value
+          : this.shipmentId,
+      reference: data.reference.present ? data.reference.value : this.reference,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      receivedBy: data.receivedBy.present
+          ? data.receivedBy.value
+          : this.receivedBy,
+      receivedAt: data.receivedAt.present
+          ? data.receivedAt.value
+          : this.receivedAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferReceipt(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('shipmentId: $shipmentId, ')
+          ..write('reference: $reference, ')
+          ..write('notes: $notes, ')
+          ..write('receivedBy: $receivedBy, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    transferId,
+    shipmentId,
+    reference,
+    notes,
+    receivedBy,
+    receivedAt,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferReceipt &&
+          other.id == this.id &&
+          other.transferId == this.transferId &&
+          other.shipmentId == this.shipmentId &&
+          other.reference == this.reference &&
+          other.notes == this.notes &&
+          other.receivedBy == this.receivedBy &&
+          other.receivedAt == this.receivedAt &&
+          other.createdAt == this.createdAt);
+}
+
+class StockTransferReceiptsCompanion
+    extends UpdateCompanion<StockTransferReceipt> {
+  final Value<int> id;
+  final Value<int> transferId;
+  final Value<int?> shipmentId;
+  final Value<String> reference;
+  final Value<String?> notes;
+  final Value<int> receivedBy;
+  final Value<int> receivedAt;
+  final Value<int> createdAt;
+  const StockTransferReceiptsCompanion({
+    this.id = const Value.absent(),
+    this.transferId = const Value.absent(),
+    this.shipmentId = const Value.absent(),
+    this.reference = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.receivedBy = const Value.absent(),
+    this.receivedAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  StockTransferReceiptsCompanion.insert({
+    this.id = const Value.absent(),
+    required int transferId,
+    this.shipmentId = const Value.absent(),
+    required String reference,
+    this.notes = const Value.absent(),
+    required int receivedBy,
+    required int receivedAt,
+    required int createdAt,
+  }) : transferId = Value(transferId),
+       reference = Value(reference),
+       receivedBy = Value(receivedBy),
+       receivedAt = Value(receivedAt),
+       createdAt = Value(createdAt);
+  static Insertable<StockTransferReceipt> custom({
+    Expression<int>? id,
+    Expression<int>? transferId,
+    Expression<int>? shipmentId,
+    Expression<String>? reference,
+    Expression<String>? notes,
+    Expression<int>? receivedBy,
+    Expression<int>? receivedAt,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (transferId != null) 'transfer_id': transferId,
+      if (shipmentId != null) 'shipment_id': shipmentId,
+      if (reference != null) 'reference': reference,
+      if (notes != null) 'notes': notes,
+      if (receivedBy != null) 'received_by': receivedBy,
+      if (receivedAt != null) 'received_at': receivedAt,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  StockTransferReceiptsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? transferId,
+    Value<int?>? shipmentId,
+    Value<String>? reference,
+    Value<String?>? notes,
+    Value<int>? receivedBy,
+    Value<int>? receivedAt,
+    Value<int>? createdAt,
+  }) {
+    return StockTransferReceiptsCompanion(
+      id: id ?? this.id,
+      transferId: transferId ?? this.transferId,
+      shipmentId: shipmentId ?? this.shipmentId,
+      reference: reference ?? this.reference,
+      notes: notes ?? this.notes,
+      receivedBy: receivedBy ?? this.receivedBy,
+      receivedAt: receivedAt ?? this.receivedAt,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (transferId.present) {
+      map['transfer_id'] = Variable<int>(transferId.value);
+    }
+    if (shipmentId.present) {
+      map['shipment_id'] = Variable<int>(shipmentId.value);
+    }
+    if (reference.present) {
+      map['reference'] = Variable<String>(reference.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (receivedBy.present) {
+      map['received_by'] = Variable<int>(receivedBy.value);
+    }
+    if (receivedAt.present) {
+      map['received_at'] = Variable<int>(receivedAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferReceiptsCompanion(')
+          ..write('id: $id, ')
+          ..write('transferId: $transferId, ')
+          ..write('shipmentId: $shipmentId, ')
+          ..write('reference: $reference, ')
+          ..write('notes: $notes, ')
+          ..write('receivedBy: $receivedBy, ')
+          ..write('receivedAt: $receivedAt, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $StockTransferReceiptItemsTable extends StockTransferReceiptItems
+    with TableInfo<$StockTransferReceiptItemsTable, StockTransferReceiptItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $StockTransferReceiptItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _receiptIdMeta = const VerificationMeta(
+    'receiptId',
+  );
+  @override
+  late final GeneratedColumn<int> receiptId = GeneratedColumn<int>(
+    'receipt_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_receipts (id)',
+    ),
+  );
+  static const VerificationMeta _transferItemIdMeta = const VerificationMeta(
+    'transferItemId',
+  );
+  @override
+  late final GeneratedColumn<int> transferItemId = GeneratedColumn<int>(
+    'transfer_item_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES stock_transfer_items (id)',
+    ),
+  );
+  static const VerificationMeta _quantityReceivedMeta = const VerificationMeta(
+    'quantityReceived',
+  );
+  @override
+  late final GeneratedColumn<int> quantityReceived = GeneratedColumn<int>(
+    'quantity_received',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _quantityRefusedMeta = const VerificationMeta(
+    'quantityRefused',
+  );
+  @override
+  late final GeneratedColumn<int> quantityRefused = GeneratedColumn<int>(
+    'quantity_refused',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _refusalReasonMeta = const VerificationMeta(
+    'refusalReason',
+  );
+  @override
+  late final GeneratedColumn<String> refusalReason = GeneratedColumn<String>(
+    'refusal_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _refusalResolutionMeta = const VerificationMeta(
+    'refusalResolution',
+  );
+  @override
+  late final GeneratedColumn<String> refusalResolution =
+      GeneratedColumn<String>(
+        'refusal_resolution',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    receiptId,
+    transferItemId,
+    quantityReceived,
+    quantityRefused,
+    refusalReason,
+    refusalResolution,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'stock_transfer_receipt_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<StockTransferReceiptItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('receipt_id')) {
+      context.handle(
+        _receiptIdMeta,
+        receiptId.isAcceptableOrUnknown(data['receipt_id']!, _receiptIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_receiptIdMeta);
+    }
+    if (data.containsKey('transfer_item_id')) {
+      context.handle(
+        _transferItemIdMeta,
+        transferItemId.isAcceptableOrUnknown(
+          data['transfer_item_id']!,
+          _transferItemIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_transferItemIdMeta);
+    }
+    if (data.containsKey('quantity_received')) {
+      context.handle(
+        _quantityReceivedMeta,
+        quantityReceived.isAcceptableOrUnknown(
+          data['quantity_received']!,
+          _quantityReceivedMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityReceivedMeta);
+    }
+    if (data.containsKey('quantity_refused')) {
+      context.handle(
+        _quantityRefusedMeta,
+        quantityRefused.isAcceptableOrUnknown(
+          data['quantity_refused']!,
+          _quantityRefusedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('refusal_reason')) {
+      context.handle(
+        _refusalReasonMeta,
+        refusalReason.isAcceptableOrUnknown(
+          data['refusal_reason']!,
+          _refusalReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('refusal_resolution')) {
+      context.handle(
+        _refusalResolutionMeta,
+        refusalResolution.isAcceptableOrUnknown(
+          data['refusal_resolution']!,
+          _refusalResolutionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  StockTransferReceiptItem map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return StockTransferReceiptItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      receiptId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}receipt_id'],
+      )!,
+      transferItemId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}transfer_item_id'],
+      )!,
+      quantityReceived: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_received'],
+      )!,
+      quantityRefused: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_refused'],
+      )!,
+      refusalReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}refusal_reason'],
+      ),
+      refusalResolution: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}refusal_resolution'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $StockTransferReceiptItemsTable createAlias(String alias) {
+    return $StockTransferReceiptItemsTable(attachedDatabase, alias);
+  }
+}
+
+class StockTransferReceiptItem extends DataClass
+    implements Insertable<StockTransferReceiptItem> {
+  final int id;
+  final int receiptId;
+  final int transferItemId;
+  final int quantityReceived;
+  final int quantityRefused;
+  final String? refusalReason;
+  final String? refusalResolution;
+  final int createdAt;
+  const StockTransferReceiptItem({
+    required this.id,
+    required this.receiptId,
+    required this.transferItemId,
+    required this.quantityReceived,
+    required this.quantityRefused,
+    this.refusalReason,
+    this.refusalResolution,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['receipt_id'] = Variable<int>(receiptId);
+    map['transfer_item_id'] = Variable<int>(transferItemId);
+    map['quantity_received'] = Variable<int>(quantityReceived);
+    map['quantity_refused'] = Variable<int>(quantityRefused);
+    if (!nullToAbsent || refusalReason != null) {
+      map['refusal_reason'] = Variable<String>(refusalReason);
+    }
+    if (!nullToAbsent || refusalResolution != null) {
+      map['refusal_resolution'] = Variable<String>(refusalResolution);
+    }
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  StockTransferReceiptItemsCompanion toCompanion(bool nullToAbsent) {
+    return StockTransferReceiptItemsCompanion(
+      id: Value(id),
+      receiptId: Value(receiptId),
+      transferItemId: Value(transferItemId),
+      quantityReceived: Value(quantityReceived),
+      quantityRefused: Value(quantityRefused),
+      refusalReason: refusalReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refusalReason),
+      refusalResolution: refusalResolution == null && nullToAbsent
+          ? const Value.absent()
+          : Value(refusalResolution),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory StockTransferReceiptItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return StockTransferReceiptItem(
+      id: serializer.fromJson<int>(json['id']),
+      receiptId: serializer.fromJson<int>(json['receiptId']),
+      transferItemId: serializer.fromJson<int>(json['transferItemId']),
+      quantityReceived: serializer.fromJson<int>(json['quantityReceived']),
+      quantityRefused: serializer.fromJson<int>(json['quantityRefused']),
+      refusalReason: serializer.fromJson<String?>(json['refusalReason']),
+      refusalResolution: serializer.fromJson<String?>(
+        json['refusalResolution'],
+      ),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'receiptId': serializer.toJson<int>(receiptId),
+      'transferItemId': serializer.toJson<int>(transferItemId),
+      'quantityReceived': serializer.toJson<int>(quantityReceived),
+      'quantityRefused': serializer.toJson<int>(quantityRefused),
+      'refusalReason': serializer.toJson<String?>(refusalReason),
+      'refusalResolution': serializer.toJson<String?>(refusalResolution),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  StockTransferReceiptItem copyWith({
+    int? id,
+    int? receiptId,
+    int? transferItemId,
+    int? quantityReceived,
+    int? quantityRefused,
+    Value<String?> refusalReason = const Value.absent(),
+    Value<String?> refusalResolution = const Value.absent(),
+    int? createdAt,
+  }) => StockTransferReceiptItem(
+    id: id ?? this.id,
+    receiptId: receiptId ?? this.receiptId,
+    transferItemId: transferItemId ?? this.transferItemId,
+    quantityReceived: quantityReceived ?? this.quantityReceived,
+    quantityRefused: quantityRefused ?? this.quantityRefused,
+    refusalReason: refusalReason.present
+        ? refusalReason.value
+        : this.refusalReason,
+    refusalResolution: refusalResolution.present
+        ? refusalResolution.value
+        : this.refusalResolution,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  StockTransferReceiptItem copyWithCompanion(
+    StockTransferReceiptItemsCompanion data,
+  ) {
+    return StockTransferReceiptItem(
+      id: data.id.present ? data.id.value : this.id,
+      receiptId: data.receiptId.present ? data.receiptId.value : this.receiptId,
+      transferItemId: data.transferItemId.present
+          ? data.transferItemId.value
+          : this.transferItemId,
+      quantityReceived: data.quantityReceived.present
+          ? data.quantityReceived.value
+          : this.quantityReceived,
+      quantityRefused: data.quantityRefused.present
+          ? data.quantityRefused.value
+          : this.quantityRefused,
+      refusalReason: data.refusalReason.present
+          ? data.refusalReason.value
+          : this.refusalReason,
+      refusalResolution: data.refusalResolution.present
+          ? data.refusalResolution.value
+          : this.refusalResolution,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferReceiptItem(')
+          ..write('id: $id, ')
+          ..write('receiptId: $receiptId, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('quantityReceived: $quantityReceived, ')
+          ..write('quantityRefused: $quantityRefused, ')
+          ..write('refusalReason: $refusalReason, ')
+          ..write('refusalResolution: $refusalResolution, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    receiptId,
+    transferItemId,
+    quantityReceived,
+    quantityRefused,
+    refusalReason,
+    refusalResolution,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is StockTransferReceiptItem &&
+          other.id == this.id &&
+          other.receiptId == this.receiptId &&
+          other.transferItemId == this.transferItemId &&
+          other.quantityReceived == this.quantityReceived &&
+          other.quantityRefused == this.quantityRefused &&
+          other.refusalReason == this.refusalReason &&
+          other.refusalResolution == this.refusalResolution &&
+          other.createdAt == this.createdAt);
+}
+
+class StockTransferReceiptItemsCompanion
+    extends UpdateCompanion<StockTransferReceiptItem> {
+  final Value<int> id;
+  final Value<int> receiptId;
+  final Value<int> transferItemId;
+  final Value<int> quantityReceived;
+  final Value<int> quantityRefused;
+  final Value<String?> refusalReason;
+  final Value<String?> refusalResolution;
+  final Value<int> createdAt;
+  const StockTransferReceiptItemsCompanion({
+    this.id = const Value.absent(),
+    this.receiptId = const Value.absent(),
+    this.transferItemId = const Value.absent(),
+    this.quantityReceived = const Value.absent(),
+    this.quantityRefused = const Value.absent(),
+    this.refusalReason = const Value.absent(),
+    this.refusalResolution = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  StockTransferReceiptItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required int receiptId,
+    required int transferItemId,
+    required int quantityReceived,
+    this.quantityRefused = const Value.absent(),
+    this.refusalReason = const Value.absent(),
+    this.refusalResolution = const Value.absent(),
+    required int createdAt,
+  }) : receiptId = Value(receiptId),
+       transferItemId = Value(transferItemId),
+       quantityReceived = Value(quantityReceived),
+       createdAt = Value(createdAt);
+  static Insertable<StockTransferReceiptItem> custom({
+    Expression<int>? id,
+    Expression<int>? receiptId,
+    Expression<int>? transferItemId,
+    Expression<int>? quantityReceived,
+    Expression<int>? quantityRefused,
+    Expression<String>? refusalReason,
+    Expression<String>? refusalResolution,
+    Expression<int>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (receiptId != null) 'receipt_id': receiptId,
+      if (transferItemId != null) 'transfer_item_id': transferItemId,
+      if (quantityReceived != null) 'quantity_received': quantityReceived,
+      if (quantityRefused != null) 'quantity_refused': quantityRefused,
+      if (refusalReason != null) 'refusal_reason': refusalReason,
+      if (refusalResolution != null) 'refusal_resolution': refusalResolution,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  StockTransferReceiptItemsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? receiptId,
+    Value<int>? transferItemId,
+    Value<int>? quantityReceived,
+    Value<int>? quantityRefused,
+    Value<String?>? refusalReason,
+    Value<String?>? refusalResolution,
+    Value<int>? createdAt,
+  }) {
+    return StockTransferReceiptItemsCompanion(
+      id: id ?? this.id,
+      receiptId: receiptId ?? this.receiptId,
+      transferItemId: transferItemId ?? this.transferItemId,
+      quantityReceived: quantityReceived ?? this.quantityReceived,
+      quantityRefused: quantityRefused ?? this.quantityRefused,
+      refusalReason: refusalReason ?? this.refusalReason,
+      refusalResolution: refusalResolution ?? this.refusalResolution,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (receiptId.present) {
+      map['receipt_id'] = Variable<int>(receiptId.value);
+    }
+    if (transferItemId.present) {
+      map['transfer_item_id'] = Variable<int>(transferItemId.value);
+    }
+    if (quantityReceived.present) {
+      map['quantity_received'] = Variable<int>(quantityReceived.value);
+    }
+    if (quantityRefused.present) {
+      map['quantity_refused'] = Variable<int>(quantityRefused.value);
+    }
+    if (refusalReason.present) {
+      map['refusal_reason'] = Variable<String>(refusalReason.value);
+    }
+    if (refusalResolution.present) {
+      map['refusal_resolution'] = Variable<String>(refusalResolution.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('StockTransferReceiptItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('receiptId: $receiptId, ')
+          ..write('transferItemId: $transferItemId, ')
+          ..write('quantityReceived: $quantityReceived, ')
+          ..write('quantityRefused: $quantityRefused, ')
+          ..write('refusalReason: $refusalReason, ')
+          ..write('refusalResolution: $refusalResolution, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxCurrenciesTable extends FxCurrencies
+    with TableInfo<$FxCurrenciesTable, FxCurrency> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxCurrenciesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _symbolMeta = const VerificationMeta('symbol');
+  @override
+  late final GeneratedColumn<String> symbol = GeneratedColumn<String>(
+    'symbol',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _minorUnitMeta = const VerificationMeta(
+    'minorUnit',
+  );
+  @override
+  late final GeneratedColumn<int> minorUnit = GeneratedColumn<int>(
+    'minor_unit',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    code,
+    label,
+    symbol,
+    minorUnit,
+    sortOrder,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_currencies';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxCurrency> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('symbol')) {
+      context.handle(
+        _symbolMeta,
+        symbol.isAcceptableOrUnknown(data['symbol']!, _symbolMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_symbolMeta);
+    }
+    if (data.containsKey('minor_unit')) {
+      context.handle(
+        _minorUnitMeta,
+        minorUnit.isAcceptableOrUnknown(data['minor_unit']!, _minorUnitMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {code};
+  @override
+  FxCurrency map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxCurrency(
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      symbol: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}symbol'],
+      )!,
+      minorUnit: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}minor_unit'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $FxCurrenciesTable createAlias(String alias) {
+    return $FxCurrenciesTable(attachedDatabase, alias);
+  }
+}
+
+class FxCurrency extends DataClass implements Insertable<FxCurrency> {
+  final String code;
+  final String label;
+  final String symbol;
+  final int minorUnit;
+  final int sortOrder;
+  const FxCurrency({
+    required this.code,
+    required this.label,
+    required this.symbol,
+    required this.minorUnit,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['code'] = Variable<String>(code);
+    map['label'] = Variable<String>(label);
+    map['symbol'] = Variable<String>(symbol);
+    map['minor_unit'] = Variable<int>(minorUnit);
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  FxCurrenciesCompanion toCompanion(bool nullToAbsent) {
+    return FxCurrenciesCompanion(
+      code: Value(code),
+      label: Value(label),
+      symbol: Value(symbol),
+      minorUnit: Value(minorUnit),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory FxCurrency.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxCurrency(
+      code: serializer.fromJson<String>(json['code']),
+      label: serializer.fromJson<String>(json['label']),
+      symbol: serializer.fromJson<String>(json['symbol']),
+      minorUnit: serializer.fromJson<int>(json['minorUnit']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'code': serializer.toJson<String>(code),
+      'label': serializer.toJson<String>(label),
+      'symbol': serializer.toJson<String>(symbol),
+      'minorUnit': serializer.toJson<int>(minorUnit),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  FxCurrency copyWith({
+    String? code,
+    String? label,
+    String? symbol,
+    int? minorUnit,
+    int? sortOrder,
+  }) => FxCurrency(
+    code: code ?? this.code,
+    label: label ?? this.label,
+    symbol: symbol ?? this.symbol,
+    minorUnit: minorUnit ?? this.minorUnit,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  FxCurrency copyWithCompanion(FxCurrenciesCompanion data) {
+    return FxCurrency(
+      code: data.code.present ? data.code.value : this.code,
+      label: data.label.present ? data.label.value : this.label,
+      symbol: data.symbol.present ? data.symbol.value : this.symbol,
+      minorUnit: data.minorUnit.present ? data.minorUnit.value : this.minorUnit,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxCurrency(')
+          ..write('code: $code, ')
+          ..write('label: $label, ')
+          ..write('symbol: $symbol, ')
+          ..write('minorUnit: $minorUnit, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(code, label, symbol, minorUnit, sortOrder);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxCurrency &&
+          other.code == this.code &&
+          other.label == this.label &&
+          other.symbol == this.symbol &&
+          other.minorUnit == this.minorUnit &&
+          other.sortOrder == this.sortOrder);
+}
+
+class FxCurrenciesCompanion extends UpdateCompanion<FxCurrency> {
+  final Value<String> code;
+  final Value<String> label;
+  final Value<String> symbol;
+  final Value<int> minorUnit;
+  final Value<int> sortOrder;
+  final Value<int> rowid;
+  const FxCurrenciesCompanion({
+    this.code = const Value.absent(),
+    this.label = const Value.absent(),
+    this.symbol = const Value.absent(),
+    this.minorUnit = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FxCurrenciesCompanion.insert({
+    required String code,
+    required String label,
+    required String symbol,
+    this.minorUnit = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : code = Value(code),
+       label = Value(label),
+       symbol = Value(symbol);
+  static Insertable<FxCurrency> custom({
+    Expression<String>? code,
+    Expression<String>? label,
+    Expression<String>? symbol,
+    Expression<int>? minorUnit,
+    Expression<int>? sortOrder,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (code != null) 'code': code,
+      if (label != null) 'label': label,
+      if (symbol != null) 'symbol': symbol,
+      if (minorUnit != null) 'minor_unit': minorUnit,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FxCurrenciesCompanion copyWith({
+    Value<String>? code,
+    Value<String>? label,
+    Value<String>? symbol,
+    Value<int>? minorUnit,
+    Value<int>? sortOrder,
+    Value<int>? rowid,
+  }) {
+    return FxCurrenciesCompanion(
+      code: code ?? this.code,
+      label: label ?? this.label,
+      symbol: symbol ?? this.symbol,
+      minorUnit: minorUnit ?? this.minorUnit,
+      sortOrder: sortOrder ?? this.sortOrder,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (symbol.present) {
+      map['symbol'] = Variable<String>(symbol.value);
+    }
+    if (minorUnit.present) {
+      map['minor_unit'] = Variable<int>(minorUnit.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxCurrenciesCompanion(')
+          ..write('code: $code, ')
+          ..write('label: $label, ')
+          ..write('symbol: $symbol, ')
+          ..write('minorUnit: $minorUnit, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxShopCurrenciesTable extends FxShopCurrencies
+    with TableInfo<$FxShopCurrenciesTable, FxShopCurrency> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxShopCurrenciesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _enabledMeta = const VerificationMeta(
+    'enabled',
+  );
+  @override
+  late final GeneratedColumn<bool> enabled = GeneratedColumn<bool>(
+    'enabled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("enabled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    currencyCode,
+    enabled,
+    sortOrder,
+    createdAt,
+    updatedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_shop_currencies';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxShopCurrency> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyCodeMeta);
+    }
+    if (data.containsKey('enabled')) {
+      context.handle(
+        _enabledMeta,
+        enabled.isAcceptableOrUnknown(data['enabled']!, _enabledMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxShopCurrency map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxShopCurrency(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      enabled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}enabled'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxShopCurrenciesTable createAlias(String alias) {
+    return $FxShopCurrenciesTable(attachedDatabase, alias);
+  }
+}
+
+class FxShopCurrency extends DataClass implements Insertable<FxShopCurrency> {
+  final int id;
+  final int shopId;
+  final String currencyCode;
+  final bool enabled;
+  final int sortOrder;
+  final int createdAt;
+  final int updatedAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxShopCurrency({
+    required this.id,
+    required this.shopId,
+    required this.currencyCode,
+    required this.enabled,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['enabled'] = Variable<bool>(enabled);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxShopCurrenciesCompanion toCompanion(bool nullToAbsent) {
+    return FxShopCurrenciesCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      currencyCode: Value(currencyCode),
+      enabled: Value(enabled),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxShopCurrency.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxShopCurrency(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      enabled: serializer.fromJson<bool>(json['enabled']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'enabled': serializer.toJson<bool>(enabled),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxShopCurrency copyWith({
+    int? id,
+    int? shopId,
+    String? currencyCode,
+    bool? enabled,
+    int? sortOrder,
+    int? createdAt,
+    int? updatedAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxShopCurrency(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    currencyCode: currencyCode ?? this.currencyCode,
+    enabled: enabled ?? this.enabled,
+    sortOrder: sortOrder ?? this.sortOrder,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxShopCurrency copyWithCompanion(FxShopCurrenciesCompanion data) {
+    return FxShopCurrency(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      enabled: data.enabled.present ? data.enabled.value : this.enabled,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxShopCurrency(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('enabled: $enabled, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    currencyCode,
+    enabled,
+    sortOrder,
+    createdAt,
+    updatedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxShopCurrency &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.currencyCode == this.currencyCode &&
+          other.enabled == this.enabled &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxShopCurrenciesCompanion extends UpdateCompanion<FxShopCurrency> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<String> currencyCode;
+  final Value<bool> enabled;
+  final Value<int> sortOrder;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxShopCurrenciesCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.enabled = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxShopCurrenciesCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required String currencyCode,
+    this.enabled = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       currencyCode = Value(currencyCode),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<FxShopCurrency> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<String>? currencyCode,
+    Expression<bool>? enabled,
+    Expression<int>? sortOrder,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (enabled != null) 'enabled': enabled,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxShopCurrenciesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<String>? currencyCode,
+    Value<bool>? enabled,
+    Value<int>? sortOrder,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxShopCurrenciesCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      currencyCode: currencyCode ?? this.currencyCode,
+      enabled: enabled ?? this.enabled,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (enabled.present) {
+      map['enabled'] = Variable<bool>(enabled.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxShopCurrenciesCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('enabled: $enabled, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxRateSnapshotsTable extends FxRateSnapshots
+    with TableInfo<$FxRateSnapshotsTable, FxRateSnapshot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxRateSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _baseCurrencyMeta = const VerificationMeta(
+    'baseCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> baseCurrency = GeneratedColumn<String>(
+    'base_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('XOF'),
+  );
+  static const VerificationMeta _quoteCurrencyMeta = const VerificationMeta(
+    'quoteCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> quoteCurrency = GeneratedColumn<String>(
+    'quote_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _buyRateNumeratorMeta = const VerificationMeta(
+    'buyRateNumerator',
+  );
+  @override
+  late final GeneratedColumn<int> buyRateNumerator = GeneratedColumn<int>(
+    'buy_rate_numerator',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _buyRateDenominatorMeta =
+      const VerificationMeta('buyRateDenominator');
+  @override
+  late final GeneratedColumn<int> buyRateDenominator = GeneratedColumn<int>(
+    'buy_rate_denominator',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sellRateNumeratorMeta = const VerificationMeta(
+    'sellRateNumerator',
+  );
+  @override
+  late final GeneratedColumn<int> sellRateNumerator = GeneratedColumn<int>(
+    'sell_rate_numerator',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sellRateDenominatorMeta =
+      const VerificationMeta('sellRateDenominator');
+  @override
+  late final GeneratedColumn<int> sellRateDenominator = GeneratedColumn<int>(
+    'sell_rate_denominator',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _effectiveAtMeta = const VerificationMeta(
+    'effectiveAt',
+  );
+  @override
+  late final GeneratedColumn<int> effectiveAt = GeneratedColumn<int>(
+    'effective_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    baseCurrency,
+    quoteCurrency,
+    buyRateNumerator,
+    buyRateDenominator,
+    sellRateNumerator,
+    sellRateDenominator,
+    effectiveAt,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_rate_snapshots';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxRateSnapshot> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('base_currency')) {
+      context.handle(
+        _baseCurrencyMeta,
+        baseCurrency.isAcceptableOrUnknown(
+          data['base_currency']!,
+          _baseCurrencyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('quote_currency')) {
+      context.handle(
+        _quoteCurrencyMeta,
+        quoteCurrency.isAcceptableOrUnknown(
+          data['quote_currency']!,
+          _quoteCurrencyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_quoteCurrencyMeta);
+    }
+    if (data.containsKey('buy_rate_numerator')) {
+      context.handle(
+        _buyRateNumeratorMeta,
+        buyRateNumerator.isAcceptableOrUnknown(
+          data['buy_rate_numerator']!,
+          _buyRateNumeratorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_buyRateNumeratorMeta);
+    }
+    if (data.containsKey('buy_rate_denominator')) {
+      context.handle(
+        _buyRateDenominatorMeta,
+        buyRateDenominator.isAcceptableOrUnknown(
+          data['buy_rate_denominator']!,
+          _buyRateDenominatorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_buyRateDenominatorMeta);
+    }
+    if (data.containsKey('sell_rate_numerator')) {
+      context.handle(
+        _sellRateNumeratorMeta,
+        sellRateNumerator.isAcceptableOrUnknown(
+          data['sell_rate_numerator']!,
+          _sellRateNumeratorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sellRateNumeratorMeta);
+    }
+    if (data.containsKey('sell_rate_denominator')) {
+      context.handle(
+        _sellRateDenominatorMeta,
+        sellRateDenominator.isAcceptableOrUnknown(
+          data['sell_rate_denominator']!,
+          _sellRateDenominatorMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sellRateDenominatorMeta);
+    }
+    if (data.containsKey('effective_at')) {
+      context.handle(
+        _effectiveAtMeta,
+        effectiveAt.isAcceptableOrUnknown(
+          data['effective_at']!,
+          _effectiveAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_effectiveAtMeta);
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxRateSnapshot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxRateSnapshot(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      baseCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}base_currency'],
+      )!,
+      quoteCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quote_currency'],
+      )!,
+      buyRateNumerator: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}buy_rate_numerator'],
+      )!,
+      buyRateDenominator: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}buy_rate_denominator'],
+      )!,
+      sellRateNumerator: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sell_rate_numerator'],
+      )!,
+      sellRateDenominator: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sell_rate_denominator'],
+      )!,
+      effectiveAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}effective_at'],
+      )!,
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxRateSnapshotsTable createAlias(String alias) {
+    return $FxRateSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class FxRateSnapshot extends DataClass implements Insertable<FxRateSnapshot> {
+  final int id;
+  final int shopId;
+  final String baseCurrency;
+  final String quoteCurrency;
+  final int buyRateNumerator;
+  final int buyRateDenominator;
+  final int sellRateNumerator;
+  final int sellRateDenominator;
+  final int effectiveAt;
+  final int createdBy;
+  final int createdAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxRateSnapshot({
+    required this.id,
+    required this.shopId,
+    required this.baseCurrency,
+    required this.quoteCurrency,
+    required this.buyRateNumerator,
+    required this.buyRateDenominator,
+    required this.sellRateNumerator,
+    required this.sellRateDenominator,
+    required this.effectiveAt,
+    required this.createdBy,
+    required this.createdAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['base_currency'] = Variable<String>(baseCurrency);
+    map['quote_currency'] = Variable<String>(quoteCurrency);
+    map['buy_rate_numerator'] = Variable<int>(buyRateNumerator);
+    map['buy_rate_denominator'] = Variable<int>(buyRateDenominator);
+    map['sell_rate_numerator'] = Variable<int>(sellRateNumerator);
+    map['sell_rate_denominator'] = Variable<int>(sellRateDenominator);
+    map['effective_at'] = Variable<int>(effectiveAt);
+    map['created_by'] = Variable<int>(createdBy);
+    map['created_at'] = Variable<int>(createdAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxRateSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return FxRateSnapshotsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      baseCurrency: Value(baseCurrency),
+      quoteCurrency: Value(quoteCurrency),
+      buyRateNumerator: Value(buyRateNumerator),
+      buyRateDenominator: Value(buyRateDenominator),
+      sellRateNumerator: Value(sellRateNumerator),
+      sellRateDenominator: Value(sellRateDenominator),
+      effectiveAt: Value(effectiveAt),
+      createdBy: Value(createdBy),
+      createdAt: Value(createdAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxRateSnapshot.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxRateSnapshot(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      baseCurrency: serializer.fromJson<String>(json['baseCurrency']),
+      quoteCurrency: serializer.fromJson<String>(json['quoteCurrency']),
+      buyRateNumerator: serializer.fromJson<int>(json['buyRateNumerator']),
+      buyRateDenominator: serializer.fromJson<int>(json['buyRateDenominator']),
+      sellRateNumerator: serializer.fromJson<int>(json['sellRateNumerator']),
+      sellRateDenominator: serializer.fromJson<int>(
+        json['sellRateDenominator'],
+      ),
+      effectiveAt: serializer.fromJson<int>(json['effectiveAt']),
+      createdBy: serializer.fromJson<int>(json['createdBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'baseCurrency': serializer.toJson<String>(baseCurrency),
+      'quoteCurrency': serializer.toJson<String>(quoteCurrency),
+      'buyRateNumerator': serializer.toJson<int>(buyRateNumerator),
+      'buyRateDenominator': serializer.toJson<int>(buyRateDenominator),
+      'sellRateNumerator': serializer.toJson<int>(sellRateNumerator),
+      'sellRateDenominator': serializer.toJson<int>(sellRateDenominator),
+      'effectiveAt': serializer.toJson<int>(effectiveAt),
+      'createdBy': serializer.toJson<int>(createdBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxRateSnapshot copyWith({
+    int? id,
+    int? shopId,
+    String? baseCurrency,
+    String? quoteCurrency,
+    int? buyRateNumerator,
+    int? buyRateDenominator,
+    int? sellRateNumerator,
+    int? sellRateDenominator,
+    int? effectiveAt,
+    int? createdBy,
+    int? createdAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxRateSnapshot(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    baseCurrency: baseCurrency ?? this.baseCurrency,
+    quoteCurrency: quoteCurrency ?? this.quoteCurrency,
+    buyRateNumerator: buyRateNumerator ?? this.buyRateNumerator,
+    buyRateDenominator: buyRateDenominator ?? this.buyRateDenominator,
+    sellRateNumerator: sellRateNumerator ?? this.sellRateNumerator,
+    sellRateDenominator: sellRateDenominator ?? this.sellRateDenominator,
+    effectiveAt: effectiveAt ?? this.effectiveAt,
+    createdBy: createdBy ?? this.createdBy,
+    createdAt: createdAt ?? this.createdAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxRateSnapshot copyWithCompanion(FxRateSnapshotsCompanion data) {
+    return FxRateSnapshot(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      baseCurrency: data.baseCurrency.present
+          ? data.baseCurrency.value
+          : this.baseCurrency,
+      quoteCurrency: data.quoteCurrency.present
+          ? data.quoteCurrency.value
+          : this.quoteCurrency,
+      buyRateNumerator: data.buyRateNumerator.present
+          ? data.buyRateNumerator.value
+          : this.buyRateNumerator,
+      buyRateDenominator: data.buyRateDenominator.present
+          ? data.buyRateDenominator.value
+          : this.buyRateDenominator,
+      sellRateNumerator: data.sellRateNumerator.present
+          ? data.sellRateNumerator.value
+          : this.sellRateNumerator,
+      sellRateDenominator: data.sellRateDenominator.present
+          ? data.sellRateDenominator.value
+          : this.sellRateDenominator,
+      effectiveAt: data.effectiveAt.present
+          ? data.effectiveAt.value
+          : this.effectiveAt,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxRateSnapshot(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('baseCurrency: $baseCurrency, ')
+          ..write('quoteCurrency: $quoteCurrency, ')
+          ..write('buyRateNumerator: $buyRateNumerator, ')
+          ..write('buyRateDenominator: $buyRateDenominator, ')
+          ..write('sellRateNumerator: $sellRateNumerator, ')
+          ..write('sellRateDenominator: $sellRateDenominator, ')
+          ..write('effectiveAt: $effectiveAt, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    baseCurrency,
+    quoteCurrency,
+    buyRateNumerator,
+    buyRateDenominator,
+    sellRateNumerator,
+    sellRateDenominator,
+    effectiveAt,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxRateSnapshot &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.baseCurrency == this.baseCurrency &&
+          other.quoteCurrency == this.quoteCurrency &&
+          other.buyRateNumerator == this.buyRateNumerator &&
+          other.buyRateDenominator == this.buyRateDenominator &&
+          other.sellRateNumerator == this.sellRateNumerator &&
+          other.sellRateDenominator == this.sellRateDenominator &&
+          other.effectiveAt == this.effectiveAt &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxRateSnapshotsCompanion extends UpdateCompanion<FxRateSnapshot> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<String> baseCurrency;
+  final Value<String> quoteCurrency;
+  final Value<int> buyRateNumerator;
+  final Value<int> buyRateDenominator;
+  final Value<int> sellRateNumerator;
+  final Value<int> sellRateDenominator;
+  final Value<int> effectiveAt;
+  final Value<int> createdBy;
+  final Value<int> createdAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxRateSnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.baseCurrency = const Value.absent(),
+    this.quoteCurrency = const Value.absent(),
+    this.buyRateNumerator = const Value.absent(),
+    this.buyRateDenominator = const Value.absent(),
+    this.sellRateNumerator = const Value.absent(),
+    this.sellRateDenominator = const Value.absent(),
+    this.effectiveAt = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxRateSnapshotsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    this.baseCurrency = const Value.absent(),
+    required String quoteCurrency,
+    required int buyRateNumerator,
+    required int buyRateDenominator,
+    required int sellRateNumerator,
+    required int sellRateDenominator,
+    required int effectiveAt,
+    required int createdBy,
+    required int createdAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       quoteCurrency = Value(quoteCurrency),
+       buyRateNumerator = Value(buyRateNumerator),
+       buyRateDenominator = Value(buyRateDenominator),
+       sellRateNumerator = Value(sellRateNumerator),
+       sellRateDenominator = Value(sellRateDenominator),
+       effectiveAt = Value(effectiveAt),
+       createdBy = Value(createdBy),
+       createdAt = Value(createdAt);
+  static Insertable<FxRateSnapshot> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<String>? baseCurrency,
+    Expression<String>? quoteCurrency,
+    Expression<int>? buyRateNumerator,
+    Expression<int>? buyRateDenominator,
+    Expression<int>? sellRateNumerator,
+    Expression<int>? sellRateDenominator,
+    Expression<int>? effectiveAt,
+    Expression<int>? createdBy,
+    Expression<int>? createdAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (baseCurrency != null) 'base_currency': baseCurrency,
+      if (quoteCurrency != null) 'quote_currency': quoteCurrency,
+      if (buyRateNumerator != null) 'buy_rate_numerator': buyRateNumerator,
+      if (buyRateDenominator != null)
+        'buy_rate_denominator': buyRateDenominator,
+      if (sellRateNumerator != null) 'sell_rate_numerator': sellRateNumerator,
+      if (sellRateDenominator != null)
+        'sell_rate_denominator': sellRateDenominator,
+      if (effectiveAt != null) 'effective_at': effectiveAt,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxRateSnapshotsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<String>? baseCurrency,
+    Value<String>? quoteCurrency,
+    Value<int>? buyRateNumerator,
+    Value<int>? buyRateDenominator,
+    Value<int>? sellRateNumerator,
+    Value<int>? sellRateDenominator,
+    Value<int>? effectiveAt,
+    Value<int>? createdBy,
+    Value<int>? createdAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxRateSnapshotsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      baseCurrency: baseCurrency ?? this.baseCurrency,
+      quoteCurrency: quoteCurrency ?? this.quoteCurrency,
+      buyRateNumerator: buyRateNumerator ?? this.buyRateNumerator,
+      buyRateDenominator: buyRateDenominator ?? this.buyRateDenominator,
+      sellRateNumerator: sellRateNumerator ?? this.sellRateNumerator,
+      sellRateDenominator: sellRateDenominator ?? this.sellRateDenominator,
+      effectiveAt: effectiveAt ?? this.effectiveAt,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (baseCurrency.present) {
+      map['base_currency'] = Variable<String>(baseCurrency.value);
+    }
+    if (quoteCurrency.present) {
+      map['quote_currency'] = Variable<String>(quoteCurrency.value);
+    }
+    if (buyRateNumerator.present) {
+      map['buy_rate_numerator'] = Variable<int>(buyRateNumerator.value);
+    }
+    if (buyRateDenominator.present) {
+      map['buy_rate_denominator'] = Variable<int>(buyRateDenominator.value);
+    }
+    if (sellRateNumerator.present) {
+      map['sell_rate_numerator'] = Variable<int>(sellRateNumerator.value);
+    }
+    if (sellRateDenominator.present) {
+      map['sell_rate_denominator'] = Variable<int>(sellRateDenominator.value);
+    }
+    if (effectiveAt.present) {
+      map['effective_at'] = Variable<int>(effectiveAt.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxRateSnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('baseCurrency: $baseCurrency, ')
+          ..write('quoteCurrency: $quoteCurrency, ')
+          ..write('buyRateNumerator: $buyRateNumerator, ')
+          ..write('buyRateDenominator: $buyRateDenominator, ')
+          ..write('sellRateNumerator: $sellRateNumerator, ')
+          ..write('sellRateDenominator: $sellRateDenominator, ')
+          ..write('effectiveAt: $effectiveAt, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxSessionsTable extends FxSessions
+    with TableInfo<$FxSessionsTable, FxSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _openedByMeta = const VerificationMeta(
+    'openedBy',
+  );
+  @override
+  late final GeneratedColumn<int> openedBy = GeneratedColumn<int>(
+    'opened_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _closedByMeta = const VerificationMeta(
+    'closedBy',
+  );
+  @override
+  late final GeneratedColumn<int> closedBy = GeneratedColumn<int>(
+    'closed_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _openedAtMeta = const VerificationMeta(
+    'openedAt',
+  );
+  @override
+  late final GeneratedColumn<int> openedAt = GeneratedColumn<int>(
+    'opened_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _closedAtMeta = const VerificationMeta(
+    'closedAt',
+  );
+  @override
+  late final GeneratedColumn<int> closedAt = GeneratedColumn<int>(
+    'closed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('open'),
+  );
+  static const VerificationMeta _closingNoteMeta = const VerificationMeta(
+    'closingNote',
+  );
+  @override
+  late final GeneratedColumn<String> closingNote = GeneratedColumn<String>(
+    'closing_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalMarginFcfaMeta = const VerificationMeta(
+    'totalMarginFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> totalMarginFcfa = GeneratedColumn<int>(
+    'total_margin_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _operationCountMeta = const VerificationMeta(
+    'operationCount',
+  );
+  @override
+  late final GeneratedColumn<int> operationCount = GeneratedColumn<int>(
+    'operation_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    openedBy,
+    closedBy,
+    openedAt,
+    closedAt,
+    status,
+    closingNote,
+    totalMarginFcfa,
+    operationCount,
+    createdAt,
+    updatedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('opened_by')) {
+      context.handle(
+        _openedByMeta,
+        openedBy.isAcceptableOrUnknown(data['opened_by']!, _openedByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_openedByMeta);
+    }
+    if (data.containsKey('closed_by')) {
+      context.handle(
+        _closedByMeta,
+        closedBy.isAcceptableOrUnknown(data['closed_by']!, _closedByMeta),
+      );
+    }
+    if (data.containsKey('opened_at')) {
+      context.handle(
+        _openedAtMeta,
+        openedAt.isAcceptableOrUnknown(data['opened_at']!, _openedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_openedAtMeta);
+    }
+    if (data.containsKey('closed_at')) {
+      context.handle(
+        _closedAtMeta,
+        closedAt.isAcceptableOrUnknown(data['closed_at']!, _closedAtMeta),
+      );
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('closing_note')) {
+      context.handle(
+        _closingNoteMeta,
+        closingNote.isAcceptableOrUnknown(
+          data['closing_note']!,
+          _closingNoteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_margin_fcfa')) {
+      context.handle(
+        _totalMarginFcfaMeta,
+        totalMarginFcfa.isAcceptableOrUnknown(
+          data['total_margin_fcfa']!,
+          _totalMarginFcfaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('operation_count')) {
+      context.handle(
+        _operationCountMeta,
+        operationCount.isAcceptableOrUnknown(
+          data['operation_count']!,
+          _operationCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      openedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opened_by'],
+      )!,
+      closedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_by'],
+      ),
+      openedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opened_at'],
+      )!,
+      closedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closed_at'],
+      ),
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      closingNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}closing_note'],
+      ),
+      totalMarginFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_margin_fcfa'],
+      )!,
+      operationCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}operation_count'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxSessionsTable createAlias(String alias) {
+    return $FxSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class FxSession extends DataClass implements Insertable<FxSession> {
+  final int id;
+  final int shopId;
+  final int openedBy;
+  final int? closedBy;
+  final int openedAt;
+  final int? closedAt;
+  final String status;
+  final String? closingNote;
+  final int totalMarginFcfa;
+  final int operationCount;
+  final int createdAt;
+  final int updatedAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxSession({
+    required this.id,
+    required this.shopId,
+    required this.openedBy,
+    this.closedBy,
+    required this.openedAt,
+    this.closedAt,
+    required this.status,
+    this.closingNote,
+    required this.totalMarginFcfa,
+    required this.operationCount,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['opened_by'] = Variable<int>(openedBy);
+    if (!nullToAbsent || closedBy != null) {
+      map['closed_by'] = Variable<int>(closedBy);
+    }
+    map['opened_at'] = Variable<int>(openedAt);
+    if (!nullToAbsent || closedAt != null) {
+      map['closed_at'] = Variable<int>(closedAt);
+    }
+    map['status'] = Variable<String>(status);
+    if (!nullToAbsent || closingNote != null) {
+      map['closing_note'] = Variable<String>(closingNote);
+    }
+    map['total_margin_fcfa'] = Variable<int>(totalMarginFcfa);
+    map['operation_count'] = Variable<int>(operationCount);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxSessionsCompanion toCompanion(bool nullToAbsent) {
+    return FxSessionsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      openedBy: Value(openedBy),
+      closedBy: closedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedBy),
+      openedAt: Value(openedAt),
+      closedAt: closedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedAt),
+      status: Value(status),
+      closingNote: closingNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closingNote),
+      totalMarginFcfa: Value(totalMarginFcfa),
+      operationCount: Value(operationCount),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxSession(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      openedBy: serializer.fromJson<int>(json['openedBy']),
+      closedBy: serializer.fromJson<int?>(json['closedBy']),
+      openedAt: serializer.fromJson<int>(json['openedAt']),
+      closedAt: serializer.fromJson<int?>(json['closedAt']),
+      status: serializer.fromJson<String>(json['status']),
+      closingNote: serializer.fromJson<String?>(json['closingNote']),
+      totalMarginFcfa: serializer.fromJson<int>(json['totalMarginFcfa']),
+      operationCount: serializer.fromJson<int>(json['operationCount']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'openedBy': serializer.toJson<int>(openedBy),
+      'closedBy': serializer.toJson<int?>(closedBy),
+      'openedAt': serializer.toJson<int>(openedAt),
+      'closedAt': serializer.toJson<int?>(closedAt),
+      'status': serializer.toJson<String>(status),
+      'closingNote': serializer.toJson<String?>(closingNote),
+      'totalMarginFcfa': serializer.toJson<int>(totalMarginFcfa),
+      'operationCount': serializer.toJson<int>(operationCount),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxSession copyWith({
+    int? id,
+    int? shopId,
+    int? openedBy,
+    Value<int?> closedBy = const Value.absent(),
+    int? openedAt,
+    Value<int?> closedAt = const Value.absent(),
+    String? status,
+    Value<String?> closingNote = const Value.absent(),
+    int? totalMarginFcfa,
+    int? operationCount,
+    int? createdAt,
+    int? updatedAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxSession(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    openedBy: openedBy ?? this.openedBy,
+    closedBy: closedBy.present ? closedBy.value : this.closedBy,
+    openedAt: openedAt ?? this.openedAt,
+    closedAt: closedAt.present ? closedAt.value : this.closedAt,
+    status: status ?? this.status,
+    closingNote: closingNote.present ? closingNote.value : this.closingNote,
+    totalMarginFcfa: totalMarginFcfa ?? this.totalMarginFcfa,
+    operationCount: operationCount ?? this.operationCount,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxSession copyWithCompanion(FxSessionsCompanion data) {
+    return FxSession(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      openedBy: data.openedBy.present ? data.openedBy.value : this.openedBy,
+      closedBy: data.closedBy.present ? data.closedBy.value : this.closedBy,
+      openedAt: data.openedAt.present ? data.openedAt.value : this.openedAt,
+      closedAt: data.closedAt.present ? data.closedAt.value : this.closedAt,
+      status: data.status.present ? data.status.value : this.status,
+      closingNote: data.closingNote.present
+          ? data.closingNote.value
+          : this.closingNote,
+      totalMarginFcfa: data.totalMarginFcfa.present
+          ? data.totalMarginFcfa.value
+          : this.totalMarginFcfa,
+      operationCount: data.operationCount.present
+          ? data.operationCount.value
+          : this.operationCount,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxSession(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('openedBy: $openedBy, ')
+          ..write('closedBy: $closedBy, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('status: $status, ')
+          ..write('closingNote: $closingNote, ')
+          ..write('totalMarginFcfa: $totalMarginFcfa, ')
+          ..write('operationCount: $operationCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    openedBy,
+    closedBy,
+    openedAt,
+    closedAt,
+    status,
+    closingNote,
+    totalMarginFcfa,
+    operationCount,
+    createdAt,
+    updatedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxSession &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.openedBy == this.openedBy &&
+          other.closedBy == this.closedBy &&
+          other.openedAt == this.openedAt &&
+          other.closedAt == this.closedAt &&
+          other.status == this.status &&
+          other.closingNote == this.closingNote &&
+          other.totalMarginFcfa == this.totalMarginFcfa &&
+          other.operationCount == this.operationCount &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxSessionsCompanion extends UpdateCompanion<FxSession> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> openedBy;
+  final Value<int?> closedBy;
+  final Value<int> openedAt;
+  final Value<int?> closedAt;
+  final Value<String> status;
+  final Value<String?> closingNote;
+  final Value<int> totalMarginFcfa;
+  final Value<int> operationCount;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxSessionsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.openedBy = const Value.absent(),
+    this.closedBy = const Value.absent(),
+    this.openedAt = const Value.absent(),
+    this.closedAt = const Value.absent(),
+    this.status = const Value.absent(),
+    this.closingNote = const Value.absent(),
+    this.totalMarginFcfa = const Value.absent(),
+    this.operationCount = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxSessionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int openedBy,
+    this.closedBy = const Value.absent(),
+    required int openedAt,
+    this.closedAt = const Value.absent(),
+    this.status = const Value.absent(),
+    this.closingNote = const Value.absent(),
+    this.totalMarginFcfa = const Value.absent(),
+    this.operationCount = const Value.absent(),
+    required int createdAt,
+    required int updatedAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       openedBy = Value(openedBy),
+       openedAt = Value(openedAt),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<FxSession> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? openedBy,
+    Expression<int>? closedBy,
+    Expression<int>? openedAt,
+    Expression<int>? closedAt,
+    Expression<String>? status,
+    Expression<String>? closingNote,
+    Expression<int>? totalMarginFcfa,
+    Expression<int>? operationCount,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (openedBy != null) 'opened_by': openedBy,
+      if (closedBy != null) 'closed_by': closedBy,
+      if (openedAt != null) 'opened_at': openedAt,
+      if (closedAt != null) 'closed_at': closedAt,
+      if (status != null) 'status': status,
+      if (closingNote != null) 'closing_note': closingNote,
+      if (totalMarginFcfa != null) 'total_margin_fcfa': totalMarginFcfa,
+      if (operationCount != null) 'operation_count': operationCount,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxSessionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? openedBy,
+    Value<int?>? closedBy,
+    Value<int>? openedAt,
+    Value<int?>? closedAt,
+    Value<String>? status,
+    Value<String?>? closingNote,
+    Value<int>? totalMarginFcfa,
+    Value<int>? operationCount,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxSessionsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      openedBy: openedBy ?? this.openedBy,
+      closedBy: closedBy ?? this.closedBy,
+      openedAt: openedAt ?? this.openedAt,
+      closedAt: closedAt ?? this.closedAt,
+      status: status ?? this.status,
+      closingNote: closingNote ?? this.closingNote,
+      totalMarginFcfa: totalMarginFcfa ?? this.totalMarginFcfa,
+      operationCount: operationCount ?? this.operationCount,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (openedBy.present) {
+      map['opened_by'] = Variable<int>(openedBy.value);
+    }
+    if (closedBy.present) {
+      map['closed_by'] = Variable<int>(closedBy.value);
+    }
+    if (openedAt.present) {
+      map['opened_at'] = Variable<int>(openedAt.value);
+    }
+    if (closedAt.present) {
+      map['closed_at'] = Variable<int>(closedAt.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (closingNote.present) {
+      map['closing_note'] = Variable<String>(closingNote.value);
+    }
+    if (totalMarginFcfa.present) {
+      map['total_margin_fcfa'] = Variable<int>(totalMarginFcfa.value);
+    }
+    if (operationCount.present) {
+      map['operation_count'] = Variable<int>(operationCount.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('openedBy: $openedBy, ')
+          ..write('closedBy: $closedBy, ')
+          ..write('openedAt: $openedAt, ')
+          ..write('closedAt: $closedAt, ')
+          ..write('status: $status, ')
+          ..write('closingNote: $closingNote, ')
+          ..write('totalMarginFcfa: $totalMarginFcfa, ')
+          ..write('operationCount: $operationCount, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxSessionBalancesTable extends FxSessionBalances
+    with TableInfo<$FxSessionBalancesTable, FxSessionBalance> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxSessionBalancesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<int> sessionId = GeneratedColumn<int>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES fx_sessions (id)',
+    ),
+  );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _openingBalanceMeta = const VerificationMeta(
+    'openingBalance',
+  );
+  @override
+  late final GeneratedColumn<int> openingBalance = GeneratedColumn<int>(
+    'opening_balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _expectedBalanceMeta = const VerificationMeta(
+    'expectedBalance',
+  );
+  @override
+  late final GeneratedColumn<int> expectedBalance = GeneratedColumn<int>(
+    'expected_balance',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _countedBalanceMeta = const VerificationMeta(
+    'countedBalance',
+  );
+  @override
+  late final GeneratedColumn<int> countedBalance = GeneratedColumn<int>(
+    'counted_balance',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _differenceMeta = const VerificationMeta(
+    'difference',
+  );
+  @override
+  late final GeneratedColumn<int> difference = GeneratedColumn<int>(
+    'difference',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    sessionId,
+    currencyCode,
+    openingBalance,
+    expectedBalance,
+    countedBalance,
+    difference,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_session_balances';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxSessionBalance> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyCodeMeta);
+    }
+    if (data.containsKey('opening_balance')) {
+      context.handle(
+        _openingBalanceMeta,
+        openingBalance.isAcceptableOrUnknown(
+          data['opening_balance']!,
+          _openingBalanceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('expected_balance')) {
+      context.handle(
+        _expectedBalanceMeta,
+        expectedBalance.isAcceptableOrUnknown(
+          data['expected_balance']!,
+          _expectedBalanceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('counted_balance')) {
+      context.handle(
+        _countedBalanceMeta,
+        countedBalance.isAcceptableOrUnknown(
+          data['counted_balance']!,
+          _countedBalanceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('difference')) {
+      context.handle(
+        _differenceMeta,
+        difference.isAcceptableOrUnknown(data['difference']!, _differenceMeta),
+      );
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxSessionBalance map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxSessionBalance(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_id'],
+      )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      openingBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}opening_balance'],
+      )!,
+      expectedBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}expected_balance'],
+      ),
+      countedBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}counted_balance'],
+      ),
+      difference: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}difference'],
+      ),
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxSessionBalancesTable createAlias(String alias) {
+    return $FxSessionBalancesTable(attachedDatabase, alias);
+  }
+}
+
+class FxSessionBalance extends DataClass
+    implements Insertable<FxSessionBalance> {
+  final int id;
+  final int shopId;
+  final int sessionId;
+  final String currencyCode;
+  final int openingBalance;
+  final int? expectedBalance;
+  final int? countedBalance;
+  final int? difference;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxSessionBalance({
+    required this.id,
+    required this.shopId,
+    required this.sessionId,
+    required this.currencyCode,
+    required this.openingBalance,
+    this.expectedBalance,
+    this.countedBalance,
+    this.difference,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['session_id'] = Variable<int>(sessionId);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['opening_balance'] = Variable<int>(openingBalance);
+    if (!nullToAbsent || expectedBalance != null) {
+      map['expected_balance'] = Variable<int>(expectedBalance);
+    }
+    if (!nullToAbsent || countedBalance != null) {
+      map['counted_balance'] = Variable<int>(countedBalance);
+    }
+    if (!nullToAbsent || difference != null) {
+      map['difference'] = Variable<int>(difference);
+    }
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxSessionBalancesCompanion toCompanion(bool nullToAbsent) {
+    return FxSessionBalancesCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      sessionId: Value(sessionId),
+      currencyCode: Value(currencyCode),
+      openingBalance: Value(openingBalance),
+      expectedBalance: expectedBalance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(expectedBalance),
+      countedBalance: countedBalance == null && nullToAbsent
+          ? const Value.absent()
+          : Value(countedBalance),
+      difference: difference == null && nullToAbsent
+          ? const Value.absent()
+          : Value(difference),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxSessionBalance.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxSessionBalance(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      sessionId: serializer.fromJson<int>(json['sessionId']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      openingBalance: serializer.fromJson<int>(json['openingBalance']),
+      expectedBalance: serializer.fromJson<int?>(json['expectedBalance']),
+      countedBalance: serializer.fromJson<int?>(json['countedBalance']),
+      difference: serializer.fromJson<int?>(json['difference']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'sessionId': serializer.toJson<int>(sessionId),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'openingBalance': serializer.toJson<int>(openingBalance),
+      'expectedBalance': serializer.toJson<int?>(expectedBalance),
+      'countedBalance': serializer.toJson<int?>(countedBalance),
+      'difference': serializer.toJson<int?>(difference),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxSessionBalance copyWith({
+    int? id,
+    int? shopId,
+    int? sessionId,
+    String? currencyCode,
+    int? openingBalance,
+    Value<int?> expectedBalance = const Value.absent(),
+    Value<int?> countedBalance = const Value.absent(),
+    Value<int?> difference = const Value.absent(),
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxSessionBalance(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    sessionId: sessionId ?? this.sessionId,
+    currencyCode: currencyCode ?? this.currencyCode,
+    openingBalance: openingBalance ?? this.openingBalance,
+    expectedBalance: expectedBalance.present
+        ? expectedBalance.value
+        : this.expectedBalance,
+    countedBalance: countedBalance.present
+        ? countedBalance.value
+        : this.countedBalance,
+    difference: difference.present ? difference.value : this.difference,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxSessionBalance copyWithCompanion(FxSessionBalancesCompanion data) {
+    return FxSessionBalance(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      openingBalance: data.openingBalance.present
+          ? data.openingBalance.value
+          : this.openingBalance,
+      expectedBalance: data.expectedBalance.present
+          ? data.expectedBalance.value
+          : this.expectedBalance,
+      countedBalance: data.countedBalance.present
+          ? data.countedBalance.value
+          : this.countedBalance,
+      difference: data.difference.present
+          ? data.difference.value
+          : this.difference,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxSessionBalance(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('openingBalance: $openingBalance, ')
+          ..write('expectedBalance: $expectedBalance, ')
+          ..write('countedBalance: $countedBalance, ')
+          ..write('difference: $difference, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    sessionId,
+    currencyCode,
+    openingBalance,
+    expectedBalance,
+    countedBalance,
+    difference,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxSessionBalance &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.sessionId == this.sessionId &&
+          other.currencyCode == this.currencyCode &&
+          other.openingBalance == this.openingBalance &&
+          other.expectedBalance == this.expectedBalance &&
+          other.countedBalance == this.countedBalance &&
+          other.difference == this.difference &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxSessionBalancesCompanion extends UpdateCompanion<FxSessionBalance> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> sessionId;
+  final Value<String> currencyCode;
+  final Value<int> openingBalance;
+  final Value<int?> expectedBalance;
+  final Value<int?> countedBalance;
+  final Value<int?> difference;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxSessionBalancesCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.openingBalance = const Value.absent(),
+    this.expectedBalance = const Value.absent(),
+    this.countedBalance = const Value.absent(),
+    this.difference = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxSessionBalancesCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int sessionId,
+    required String currencyCode,
+    this.openingBalance = const Value.absent(),
+    this.expectedBalance = const Value.absent(),
+    this.countedBalance = const Value.absent(),
+    this.difference = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       sessionId = Value(sessionId),
+       currencyCode = Value(currencyCode);
+  static Insertable<FxSessionBalance> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? sessionId,
+    Expression<String>? currencyCode,
+    Expression<int>? openingBalance,
+    Expression<int>? expectedBalance,
+    Expression<int>? countedBalance,
+    Expression<int>? difference,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (openingBalance != null) 'opening_balance': openingBalance,
+      if (expectedBalance != null) 'expected_balance': expectedBalance,
+      if (countedBalance != null) 'counted_balance': countedBalance,
+      if (difference != null) 'difference': difference,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxSessionBalancesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? sessionId,
+    Value<String>? currencyCode,
+    Value<int>? openingBalance,
+    Value<int?>? expectedBalance,
+    Value<int?>? countedBalance,
+    Value<int?>? difference,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxSessionBalancesCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      sessionId: sessionId ?? this.sessionId,
+      currencyCode: currencyCode ?? this.currencyCode,
+      openingBalance: openingBalance ?? this.openingBalance,
+      expectedBalance: expectedBalance ?? this.expectedBalance,
+      countedBalance: countedBalance ?? this.countedBalance,
+      difference: difference ?? this.difference,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<int>(sessionId.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (openingBalance.present) {
+      map['opening_balance'] = Variable<int>(openingBalance.value);
+    }
+    if (expectedBalance.present) {
+      map['expected_balance'] = Variable<int>(expectedBalance.value);
+    }
+    if (countedBalance.present) {
+      map['counted_balance'] = Variable<int>(countedBalance.value);
+    }
+    if (difference.present) {
+      map['difference'] = Variable<int>(difference.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxSessionBalancesCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('openingBalance: $openingBalance, ')
+          ..write('expectedBalance: $expectedBalance, ')
+          ..write('countedBalance: $countedBalance, ')
+          ..write('difference: $difference, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxOperationsTable extends FxOperations
+    with TableInfo<$FxOperationsTable, FxOperation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxOperationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<int> sessionId = GeneratedColumn<int>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES fx_sessions (id)',
+    ),
+  );
+  static const VerificationMeta _operationTypeMeta = const VerificationMeta(
+    'operationType',
+  );
+  @override
+  late final GeneratedColumn<String> operationType = GeneratedColumn<String>(
+    'operation_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fromCurrencyMeta = const VerificationMeta(
+    'fromCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> fromCurrency = GeneratedColumn<String>(
+    'from_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fromAmountMeta = const VerificationMeta(
+    'fromAmount',
+  );
+  @override
+  late final GeneratedColumn<int> fromAmount = GeneratedColumn<int>(
+    'from_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toCurrencyMeta = const VerificationMeta(
+    'toCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> toCurrency = GeneratedColumn<String>(
+    'to_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _toAmountMeta = const VerificationMeta(
+    'toAmount',
+  );
+  @override
+  late final GeneratedColumn<int> toAmount = GeneratedColumn<int>(
+    'to_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rateSnapshotIdMeta = const VerificationMeta(
+    'rateSnapshotId',
+  );
+  @override
+  late final GeneratedColumn<int> rateSnapshotId = GeneratedColumn<int>(
+    'rate_snapshot_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _marginFcfaMeta = const VerificationMeta(
+    'marginFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> marginFcfa = GeneratedColumn<int>(
+    'margin_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    sessionId,
+    operationType,
+    fromCurrency,
+    fromAmount,
+    toCurrency,
+    toAmount,
+    rateSnapshotId,
+    marginFcfa,
+    note,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_operations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxOperation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('operation_type')) {
+      context.handle(
+        _operationTypeMeta,
+        operationType.isAcceptableOrUnknown(
+          data['operation_type']!,
+          _operationTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_operationTypeMeta);
+    }
+    if (data.containsKey('from_currency')) {
+      context.handle(
+        _fromCurrencyMeta,
+        fromCurrency.isAcceptableOrUnknown(
+          data['from_currency']!,
+          _fromCurrencyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fromCurrencyMeta);
+    }
+    if (data.containsKey('from_amount')) {
+      context.handle(
+        _fromAmountMeta,
+        fromAmount.isAcceptableOrUnknown(data['from_amount']!, _fromAmountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fromAmountMeta);
+    }
+    if (data.containsKey('to_currency')) {
+      context.handle(
+        _toCurrencyMeta,
+        toCurrency.isAcceptableOrUnknown(data['to_currency']!, _toCurrencyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toCurrencyMeta);
+    }
+    if (data.containsKey('to_amount')) {
+      context.handle(
+        _toAmountMeta,
+        toAmount.isAcceptableOrUnknown(data['to_amount']!, _toAmountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_toAmountMeta);
+    }
+    if (data.containsKey('rate_snapshot_id')) {
+      context.handle(
+        _rateSnapshotIdMeta,
+        rateSnapshotId.isAcceptableOrUnknown(
+          data['rate_snapshot_id']!,
+          _rateSnapshotIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('margin_fcfa')) {
+      context.handle(
+        _marginFcfaMeta,
+        marginFcfa.isAcceptableOrUnknown(data['margin_fcfa']!, _marginFcfaMeta),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxOperation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxOperation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_id'],
+      )!,
+      operationType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}operation_type'],
+      )!,
+      fromCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}from_currency'],
+      )!,
+      fromAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_amount'],
+      )!,
+      toCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}to_currency'],
+      )!,
+      toAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}to_amount'],
+      )!,
+      rateSnapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rate_snapshot_id'],
+      ),
+      marginFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}margin_fcfa'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxOperationsTable createAlias(String alias) {
+    return $FxOperationsTable(attachedDatabase, alias);
+  }
+}
+
+class FxOperation extends DataClass implements Insertable<FxOperation> {
+  final int id;
+  final int shopId;
+  final int sessionId;
+  final String operationType;
+  final String fromCurrency;
+  final int fromAmount;
+  final String toCurrency;
+  final int toAmount;
+  final int? rateSnapshotId;
+  final int marginFcfa;
+  final String? note;
+  final int createdBy;
+  final int createdAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxOperation({
+    required this.id,
+    required this.shopId,
+    required this.sessionId,
+    required this.operationType,
+    required this.fromCurrency,
+    required this.fromAmount,
+    required this.toCurrency,
+    required this.toAmount,
+    this.rateSnapshotId,
+    required this.marginFcfa,
+    this.note,
+    required this.createdBy,
+    required this.createdAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['session_id'] = Variable<int>(sessionId);
+    map['operation_type'] = Variable<String>(operationType);
+    map['from_currency'] = Variable<String>(fromCurrency);
+    map['from_amount'] = Variable<int>(fromAmount);
+    map['to_currency'] = Variable<String>(toCurrency);
+    map['to_amount'] = Variable<int>(toAmount);
+    if (!nullToAbsent || rateSnapshotId != null) {
+      map['rate_snapshot_id'] = Variable<int>(rateSnapshotId);
+    }
+    map['margin_fcfa'] = Variable<int>(marginFcfa);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_by'] = Variable<int>(createdBy);
+    map['created_at'] = Variable<int>(createdAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxOperationsCompanion toCompanion(bool nullToAbsent) {
+    return FxOperationsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      sessionId: Value(sessionId),
+      operationType: Value(operationType),
+      fromCurrency: Value(fromCurrency),
+      fromAmount: Value(fromAmount),
+      toCurrency: Value(toCurrency),
+      toAmount: Value(toAmount),
+      rateSnapshotId: rateSnapshotId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rateSnapshotId),
+      marginFcfa: Value(marginFcfa),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdBy: Value(createdBy),
+      createdAt: Value(createdAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxOperation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxOperation(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      sessionId: serializer.fromJson<int>(json['sessionId']),
+      operationType: serializer.fromJson<String>(json['operationType']),
+      fromCurrency: serializer.fromJson<String>(json['fromCurrency']),
+      fromAmount: serializer.fromJson<int>(json['fromAmount']),
+      toCurrency: serializer.fromJson<String>(json['toCurrency']),
+      toAmount: serializer.fromJson<int>(json['toAmount']),
+      rateSnapshotId: serializer.fromJson<int?>(json['rateSnapshotId']),
+      marginFcfa: serializer.fromJson<int>(json['marginFcfa']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdBy: serializer.fromJson<int>(json['createdBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'sessionId': serializer.toJson<int>(sessionId),
+      'operationType': serializer.toJson<String>(operationType),
+      'fromCurrency': serializer.toJson<String>(fromCurrency),
+      'fromAmount': serializer.toJson<int>(fromAmount),
+      'toCurrency': serializer.toJson<String>(toCurrency),
+      'toAmount': serializer.toJson<int>(toAmount),
+      'rateSnapshotId': serializer.toJson<int?>(rateSnapshotId),
+      'marginFcfa': serializer.toJson<int>(marginFcfa),
+      'note': serializer.toJson<String?>(note),
+      'createdBy': serializer.toJson<int>(createdBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxOperation copyWith({
+    int? id,
+    int? shopId,
+    int? sessionId,
+    String? operationType,
+    String? fromCurrency,
+    int? fromAmount,
+    String? toCurrency,
+    int? toAmount,
+    Value<int?> rateSnapshotId = const Value.absent(),
+    int? marginFcfa,
+    Value<String?> note = const Value.absent(),
+    int? createdBy,
+    int? createdAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxOperation(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    sessionId: sessionId ?? this.sessionId,
+    operationType: operationType ?? this.operationType,
+    fromCurrency: fromCurrency ?? this.fromCurrency,
+    fromAmount: fromAmount ?? this.fromAmount,
+    toCurrency: toCurrency ?? this.toCurrency,
+    toAmount: toAmount ?? this.toAmount,
+    rateSnapshotId: rateSnapshotId.present
+        ? rateSnapshotId.value
+        : this.rateSnapshotId,
+    marginFcfa: marginFcfa ?? this.marginFcfa,
+    note: note.present ? note.value : this.note,
+    createdBy: createdBy ?? this.createdBy,
+    createdAt: createdAt ?? this.createdAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxOperation copyWithCompanion(FxOperationsCompanion data) {
+    return FxOperation(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      operationType: data.operationType.present
+          ? data.operationType.value
+          : this.operationType,
+      fromCurrency: data.fromCurrency.present
+          ? data.fromCurrency.value
+          : this.fromCurrency,
+      fromAmount: data.fromAmount.present
+          ? data.fromAmount.value
+          : this.fromAmount,
+      toCurrency: data.toCurrency.present
+          ? data.toCurrency.value
+          : this.toCurrency,
+      toAmount: data.toAmount.present ? data.toAmount.value : this.toAmount,
+      rateSnapshotId: data.rateSnapshotId.present
+          ? data.rateSnapshotId.value
+          : this.rateSnapshotId,
+      marginFcfa: data.marginFcfa.present
+          ? data.marginFcfa.value
+          : this.marginFcfa,
+      note: data.note.present ? data.note.value : this.note,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxOperation(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('operationType: $operationType, ')
+          ..write('fromCurrency: $fromCurrency, ')
+          ..write('fromAmount: $fromAmount, ')
+          ..write('toCurrency: $toCurrency, ')
+          ..write('toAmount: $toAmount, ')
+          ..write('rateSnapshotId: $rateSnapshotId, ')
+          ..write('marginFcfa: $marginFcfa, ')
+          ..write('note: $note, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    sessionId,
+    operationType,
+    fromCurrency,
+    fromAmount,
+    toCurrency,
+    toAmount,
+    rateSnapshotId,
+    marginFcfa,
+    note,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxOperation &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.sessionId == this.sessionId &&
+          other.operationType == this.operationType &&
+          other.fromCurrency == this.fromCurrency &&
+          other.fromAmount == this.fromAmount &&
+          other.toCurrency == this.toCurrency &&
+          other.toAmount == this.toAmount &&
+          other.rateSnapshotId == this.rateSnapshotId &&
+          other.marginFcfa == this.marginFcfa &&
+          other.note == this.note &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> sessionId;
+  final Value<String> operationType;
+  final Value<String> fromCurrency;
+  final Value<int> fromAmount;
+  final Value<String> toCurrency;
+  final Value<int> toAmount;
+  final Value<int?> rateSnapshotId;
+  final Value<int> marginFcfa;
+  final Value<String?> note;
+  final Value<int> createdBy;
+  final Value<int> createdAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxOperationsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.operationType = const Value.absent(),
+    this.fromCurrency = const Value.absent(),
+    this.fromAmount = const Value.absent(),
+    this.toCurrency = const Value.absent(),
+    this.toAmount = const Value.absent(),
+    this.rateSnapshotId = const Value.absent(),
+    this.marginFcfa = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxOperationsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int sessionId,
+    required String operationType,
+    required String fromCurrency,
+    required int fromAmount,
+    required String toCurrency,
+    required int toAmount,
+    this.rateSnapshotId = const Value.absent(),
+    this.marginFcfa = const Value.absent(),
+    this.note = const Value.absent(),
+    required int createdBy,
+    required int createdAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       sessionId = Value(sessionId),
+       operationType = Value(operationType),
+       fromCurrency = Value(fromCurrency),
+       fromAmount = Value(fromAmount),
+       toCurrency = Value(toCurrency),
+       toAmount = Value(toAmount),
+       createdBy = Value(createdBy),
+       createdAt = Value(createdAt);
+  static Insertable<FxOperation> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? sessionId,
+    Expression<String>? operationType,
+    Expression<String>? fromCurrency,
+    Expression<int>? fromAmount,
+    Expression<String>? toCurrency,
+    Expression<int>? toAmount,
+    Expression<int>? rateSnapshotId,
+    Expression<int>? marginFcfa,
+    Expression<String>? note,
+    Expression<int>? createdBy,
+    Expression<int>? createdAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (operationType != null) 'operation_type': operationType,
+      if (fromCurrency != null) 'from_currency': fromCurrency,
+      if (fromAmount != null) 'from_amount': fromAmount,
+      if (toCurrency != null) 'to_currency': toCurrency,
+      if (toAmount != null) 'to_amount': toAmount,
+      if (rateSnapshotId != null) 'rate_snapshot_id': rateSnapshotId,
+      if (marginFcfa != null) 'margin_fcfa': marginFcfa,
+      if (note != null) 'note': note,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxOperationsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? sessionId,
+    Value<String>? operationType,
+    Value<String>? fromCurrency,
+    Value<int>? fromAmount,
+    Value<String>? toCurrency,
+    Value<int>? toAmount,
+    Value<int?>? rateSnapshotId,
+    Value<int>? marginFcfa,
+    Value<String?>? note,
+    Value<int>? createdBy,
+    Value<int>? createdAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxOperationsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      sessionId: sessionId ?? this.sessionId,
+      operationType: operationType ?? this.operationType,
+      fromCurrency: fromCurrency ?? this.fromCurrency,
+      fromAmount: fromAmount ?? this.fromAmount,
+      toCurrency: toCurrency ?? this.toCurrency,
+      toAmount: toAmount ?? this.toAmount,
+      rateSnapshotId: rateSnapshotId ?? this.rateSnapshotId,
+      marginFcfa: marginFcfa ?? this.marginFcfa,
+      note: note ?? this.note,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<int>(sessionId.value);
+    }
+    if (operationType.present) {
+      map['operation_type'] = Variable<String>(operationType.value);
+    }
+    if (fromCurrency.present) {
+      map['from_currency'] = Variable<String>(fromCurrency.value);
+    }
+    if (fromAmount.present) {
+      map['from_amount'] = Variable<int>(fromAmount.value);
+    }
+    if (toCurrency.present) {
+      map['to_currency'] = Variable<String>(toCurrency.value);
+    }
+    if (toAmount.present) {
+      map['to_amount'] = Variable<int>(toAmount.value);
+    }
+    if (rateSnapshotId.present) {
+      map['rate_snapshot_id'] = Variable<int>(rateSnapshotId.value);
+    }
+    if (marginFcfa.present) {
+      map['margin_fcfa'] = Variable<int>(marginFcfa.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxOperationsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('operationType: $operationType, ')
+          ..write('fromCurrency: $fromCurrency, ')
+          ..write('fromAmount: $fromAmount, ')
+          ..write('toCurrency: $toCurrency, ')
+          ..write('toAmount: $toAmount, ')
+          ..write('rateSnapshotId: $rateSnapshotId, ')
+          ..write('marginFcfa: $marginFcfa, ')
+          ..write('note: $note, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $FxMovementsTable extends FxMovements
+    with TableInfo<$FxMovementsTable, FxMovement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxMovementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<int> sessionId = GeneratedColumn<int>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES fx_sessions (id)',
+    ),
+  );
+  static const VerificationMeta _currencyCodeMeta = const VerificationMeta(
+    'currencyCode',
+  );
+  @override
+  late final GeneratedColumn<String> currencyCode = GeneratedColumn<String>(
+    'currency_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _movementTypeMeta = const VerificationMeta(
+    'movementType',
+  );
+  @override
+  late final GeneratedColumn<String> movementType = GeneratedColumn<String>(
+    'movement_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<int> amount = GeneratedColumn<int>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdByMeta = const VerificationMeta(
+    'createdBy',
+  );
+  @override
+  late final GeneratedColumn<int> createdBy = GeneratedColumn<int>(
+    'created_by',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    sessionId,
+    currencyCode,
+    movementType,
+    amount,
+    note,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_movements';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxMovement> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('currency_code')) {
+      context.handle(
+        _currencyCodeMeta,
+        currencyCode.isAcceptableOrUnknown(
+          data['currency_code']!,
+          _currencyCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyCodeMeta);
+    }
+    if (data.containsKey('movement_type')) {
+      context.handle(
+        _movementTypeMeta,
+        movementType.isAcceptableOrUnknown(
+          data['movement_type']!,
+          _movementTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_movementTypeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_by')) {
+      context.handle(
+        _createdByMeta,
+        createdBy.isAcceptableOrUnknown(data['created_by']!, _createdByMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxMovement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxMovement(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_id'],
+      )!,
+      currencyCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency_code'],
+      )!,
+      movementType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}movement_type'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount'],
+      )!,
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_by'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxMovementsTable createAlias(String alias) {
+    return $FxMovementsTable(attachedDatabase, alias);
+  }
+}
+
+class FxMovement extends DataClass implements Insertable<FxMovement> {
+  final int id;
+  final int shopId;
+  final int sessionId;
+  final String currencyCode;
+  final String movementType;
+  final int amount;
+  final String? note;
+  final int createdBy;
+  final int createdAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxMovement({
+    required this.id,
+    required this.shopId,
+    required this.sessionId,
+    required this.currencyCode,
+    required this.movementType,
+    required this.amount,
+    this.note,
+    required this.createdBy,
+    required this.createdAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['session_id'] = Variable<int>(sessionId);
+    map['currency_code'] = Variable<String>(currencyCode);
+    map['movement_type'] = Variable<String>(movementType);
+    map['amount'] = Variable<int>(amount);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_by'] = Variable<int>(createdBy);
+    map['created_at'] = Variable<int>(createdAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxMovementsCompanion toCompanion(bool nullToAbsent) {
+    return FxMovementsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      sessionId: Value(sessionId),
+      currencyCode: Value(currencyCode),
+      movementType: Value(movementType),
+      amount: Value(amount),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdBy: Value(createdBy),
+      createdAt: Value(createdAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxMovement.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxMovement(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      sessionId: serializer.fromJson<int>(json['sessionId']),
+      currencyCode: serializer.fromJson<String>(json['currencyCode']),
+      movementType: serializer.fromJson<String>(json['movementType']),
+      amount: serializer.fromJson<int>(json['amount']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdBy: serializer.fromJson<int>(json['createdBy']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'sessionId': serializer.toJson<int>(sessionId),
+      'currencyCode': serializer.toJson<String>(currencyCode),
+      'movementType': serializer.toJson<String>(movementType),
+      'amount': serializer.toJson<int>(amount),
+      'note': serializer.toJson<String?>(note),
+      'createdBy': serializer.toJson<int>(createdBy),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxMovement copyWith({
+    int? id,
+    int? shopId,
+    int? sessionId,
+    String? currencyCode,
+    String? movementType,
+    int? amount,
+    Value<String?> note = const Value.absent(),
+    int? createdBy,
+    int? createdAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxMovement(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    sessionId: sessionId ?? this.sessionId,
+    currencyCode: currencyCode ?? this.currencyCode,
+    movementType: movementType ?? this.movementType,
+    amount: amount ?? this.amount,
+    note: note.present ? note.value : this.note,
+    createdBy: createdBy ?? this.createdBy,
+    createdAt: createdAt ?? this.createdAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxMovement copyWithCompanion(FxMovementsCompanion data) {
+    return FxMovement(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      currencyCode: data.currencyCode.present
+          ? data.currencyCode.value
+          : this.currencyCode,
+      movementType: data.movementType.present
+          ? data.movementType.value
+          : this.movementType,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      note: data.note.present ? data.note.value : this.note,
+      createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxMovement(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('movementType: $movementType, ')
+          ..write('amount: $amount, ')
+          ..write('note: $note, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    sessionId,
+    currencyCode,
+    movementType,
+    amount,
+    note,
+    createdBy,
+    createdAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxMovement &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.sessionId == this.sessionId &&
+          other.currencyCode == this.currencyCode &&
+          other.movementType == this.movementType &&
+          other.amount == this.amount &&
+          other.note == this.note &&
+          other.createdBy == this.createdBy &&
+          other.createdAt == this.createdAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxMovementsCompanion extends UpdateCompanion<FxMovement> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> sessionId;
+  final Value<String> currencyCode;
+  final Value<String> movementType;
+  final Value<int> amount;
+  final Value<String?> note;
+  final Value<int> createdBy;
+  final Value<int> createdAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxMovementsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.currencyCode = const Value.absent(),
+    this.movementType = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdBy = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxMovementsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int sessionId,
+    required String currencyCode,
+    required String movementType,
+    required int amount,
+    this.note = const Value.absent(),
+    required int createdBy,
+    required int createdAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       sessionId = Value(sessionId),
+       currencyCode = Value(currencyCode),
+       movementType = Value(movementType),
+       amount = Value(amount),
+       createdBy = Value(createdBy),
+       createdAt = Value(createdAt);
+  static Insertable<FxMovement> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? sessionId,
+    Expression<String>? currencyCode,
+    Expression<String>? movementType,
+    Expression<int>? amount,
+    Expression<String>? note,
+    Expression<int>? createdBy,
+    Expression<int>? createdAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (currencyCode != null) 'currency_code': currencyCode,
+      if (movementType != null) 'movement_type': movementType,
+      if (amount != null) 'amount': amount,
+      if (note != null) 'note': note,
+      if (createdBy != null) 'created_by': createdBy,
+      if (createdAt != null) 'created_at': createdAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxMovementsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? sessionId,
+    Value<String>? currencyCode,
+    Value<String>? movementType,
+    Value<int>? amount,
+    Value<String?>? note,
+    Value<int>? createdBy,
+    Value<int>? createdAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxMovementsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      sessionId: sessionId ?? this.sessionId,
+      currencyCode: currencyCode ?? this.currencyCode,
+      movementType: movementType ?? this.movementType,
+      amount: amount ?? this.amount,
+      note: note ?? this.note,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<int>(sessionId.value);
+    }
+    if (currencyCode.present) {
+      map['currency_code'] = Variable<String>(currencyCode.value);
+    }
+    if (movementType.present) {
+      map['movement_type'] = Variable<String>(movementType.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<int>(amount.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdBy.present) {
+      map['created_by'] = Variable<int>(createdBy.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxMovementsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('currencyCode: $currencyCode, ')
+          ..write('movementType: $movementType, ')
+          ..write('amount: $amount, ')
+          ..write('note: $note, ')
+          ..write('createdBy: $createdBy, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -27650,6 +38965,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $AuthSessionsTable authSessions = $AuthSessionsTable(this);
   late final $AuditLogsTable auditLogs = $AuditLogsTable(this);
+  late final $IdentitySnapshotsTable identitySnapshots =
+      $IdentitySnapshotsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $ProductsTable products = $ProductsTable(this);
   late final $CustomersTable customers = $CustomersTable(this);
@@ -27704,6 +39021,35 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $SaleItemLotAllocationsTable(this);
   late final $ProductPriceHistoryTable productPriceHistory =
       $ProductPriceHistoryTable(this);
+  late final $StockTransfersTable stockTransfers = $StockTransfersTable(this);
+  late final $StockTransferItemsTable stockTransferItems =
+      $StockTransferItemsTable(this);
+  late final $StockTransferShipmentsTable stockTransferShipments =
+      $StockTransferShipmentsTable(this);
+  late final $StockTransferLotReservationsTable stockTransferLotReservations =
+      $StockTransferLotReservationsTable(this);
+  late final $StockTransferLotLinesTable stockTransferLotLines =
+      $StockTransferLotLinesTable(this);
+  late final $StockTransferEventsTable stockTransferEvents =
+      $StockTransferEventsTable(this);
+  late final $StockTransferDiscrepanciesTable stockTransferDiscrepancies =
+      $StockTransferDiscrepanciesTable(this);
+  late final $StockTransferReceiptsTable stockTransferReceipts =
+      $StockTransferReceiptsTable(this);
+  late final $StockTransferReceiptItemsTable stockTransferReceiptItems =
+      $StockTransferReceiptItemsTable(this);
+  late final $FxCurrenciesTable fxCurrencies = $FxCurrenciesTable(this);
+  late final $FxShopCurrenciesTable fxShopCurrencies = $FxShopCurrenciesTable(
+    this,
+  );
+  late final $FxRateSnapshotsTable fxRateSnapshots = $FxRateSnapshotsTable(
+    this,
+  );
+  late final $FxSessionsTable fxSessions = $FxSessionsTable(this);
+  late final $FxSessionBalancesTable fxSessionBalances =
+      $FxSessionBalancesTable(this);
+  late final $FxOperationsTable fxOperations = $FxOperationsTable(this);
+  late final $FxMovementsTable fxMovements = $FxMovementsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -27714,6 +39060,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     settings,
     authSessions,
     auditLogs,
+    identitySnapshots,
     categories,
     products,
     customers,
@@ -27746,6 +39093,22 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     inventoryLots,
     saleItemLotAllocations,
     productPriceHistory,
+    stockTransfers,
+    stockTransferItems,
+    stockTransferShipments,
+    stockTransferLotReservations,
+    stockTransferLotLines,
+    stockTransferEvents,
+    stockTransferDiscrepancies,
+    stockTransferReceipts,
+    stockTransferReceiptItems,
+    fxCurrencies,
+    fxShopCurrencies,
+    fxRateSnapshots,
+    fxSessions,
+    fxSessionBalances,
+    fxOperations,
+    fxMovements,
   ];
 }
 
@@ -28528,6 +39891,145 @@ final class $$ShopsTableReferences
     final cache = $_typedResult.readTableOrNull(
       _productPriceHistoryRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferEventsTable,
+    List<StockTransferEvent>
+  >
+  _stockTransferEventsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferEvents,
+        aliasName: 'shops__id__stock_transfer_events__shop_id',
+      );
+
+  $$StockTransferEventsTableProcessedTableManager get stockTransferEventsRefs {
+    final manager = $$StockTransferEventsTableTableManager(
+      $_db,
+      $_db.stockTransferEvents,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferEventsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxShopCurrenciesTable, List<FxShopCurrency>>
+  _fxShopCurrenciesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxShopCurrencies,
+    aliasName: 'shops__id__fx_shop_currencies__shop_id',
+  );
+
+  $$FxShopCurrenciesTableProcessedTableManager get fxShopCurrenciesRefs {
+    final manager = $$FxShopCurrenciesTableTableManager(
+      $_db,
+      $_db.fxShopCurrencies,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _fxShopCurrenciesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxRateSnapshotsTable, List<FxRateSnapshot>>
+  _fxRateSnapshotsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxRateSnapshots,
+    aliasName: 'shops__id__fx_rate_snapshots__shop_id',
+  );
+
+  $$FxRateSnapshotsTableProcessedTableManager get fxRateSnapshotsRefs {
+    final manager = $$FxRateSnapshotsTableTableManager(
+      $_db,
+      $_db.fxRateSnapshots,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _fxRateSnapshotsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxSessionsTable, List<FxSession>>
+  _fxSessionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxSessions,
+    aliasName: 'shops__id__fx_sessions__shop_id',
+  );
+
+  $$FxSessionsTableProcessedTableManager get fxSessionsRefs {
+    final manager = $$FxSessionsTableTableManager(
+      $_db,
+      $_db.fxSessions,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxSessionsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxSessionBalancesTable, List<FxSessionBalance>>
+  _fxSessionBalancesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.fxSessionBalances,
+        aliasName: 'shops__id__fx_session_balances__shop_id',
+      );
+
+  $$FxSessionBalancesTableProcessedTableManager get fxSessionBalancesRefs {
+    final manager = $$FxSessionBalancesTableTableManager(
+      $_db,
+      $_db.fxSessionBalances,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _fxSessionBalancesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxOperationsTable, List<FxOperation>>
+  _fxOperationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxOperations,
+    aliasName: 'shops__id__fx_operations__shop_id',
+  );
+
+  $$FxOperationsTableProcessedTableManager get fxOperationsRefs {
+    final manager = $$FxOperationsTableTableManager(
+      $_db,
+      $_db.fxOperations,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxOperationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxMovementsTable, List<FxMovement>>
+  _fxMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxMovements,
+    aliasName: 'shops__id__fx_movements__shop_id',
+  );
+
+  $$FxMovementsTableProcessedTableManager get fxMovementsRefs {
+    final manager = $$FxMovementsTableTableManager(
+      $_db,
+      $_db.fxMovements,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxMovementsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -29515,6 +41017,181 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
           }) => $$ProductPriceHistoryTableFilterComposer(
             $db: $db,
             $table: $db.productPriceHistory,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferEventsRefs(
+    Expression<bool> Function($$StockTransferEventsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stockTransferEvents,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxShopCurrenciesRefs(
+    Expression<bool> Function($$FxShopCurrenciesTableFilterComposer f) f,
+  ) {
+    final $$FxShopCurrenciesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxShopCurrencies,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxShopCurrenciesTableFilterComposer(
+            $db: $db,
+            $table: $db.fxShopCurrencies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxRateSnapshotsRefs(
+    Expression<bool> Function($$FxRateSnapshotsTableFilterComposer f) f,
+  ) {
+    final $$FxRateSnapshotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxSessionsRefs(
+    Expression<bool> Function($$FxSessionsTableFilterComposer f) f,
+  ) {
+    final $$FxSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxSessionBalancesRefs(
+    Expression<bool> Function($$FxSessionBalancesTableFilterComposer f) f,
+  ) {
+    final $$FxSessionBalancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionBalances,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionBalancesTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessionBalances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxOperationsRefs(
+    Expression<bool> Function($$FxOperationsTableFilterComposer f) f,
+  ) {
+    final $$FxOperationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxOperations,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxOperationsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxOperations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxMovementsRefs(
+    Expression<bool> Function($$FxMovementsTableFilterComposer f) f,
+  ) {
+    final $$FxMovementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxMovements,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxMovementsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxMovements,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -30587,6 +42264,183 @@ class $$ShopsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> stockTransferEventsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferEventsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferEventsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferEvents,
+          getReferencedColumn: (t) => t.shopId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferEventsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferEvents,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> fxShopCurrenciesRefs<T extends Object>(
+    Expression<T> Function($$FxShopCurrenciesTableAnnotationComposer a) f,
+  ) {
+    final $$FxShopCurrenciesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxShopCurrencies,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxShopCurrenciesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxShopCurrencies,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxRateSnapshotsRefs<T extends Object>(
+    Expression<T> Function($$FxRateSnapshotsTableAnnotationComposer a) f,
+  ) {
+    final $$FxRateSnapshotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxSessionsRefs<T extends Object>(
+    Expression<T> Function($$FxSessionsTableAnnotationComposer a) f,
+  ) {
+    final $$FxSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxSessionBalancesRefs<T extends Object>(
+    Expression<T> Function($$FxSessionBalancesTableAnnotationComposer a) f,
+  ) {
+    final $$FxSessionBalancesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.fxSessionBalances,
+          getReferencedColumn: (t) => t.shopId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$FxSessionBalancesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.fxSessionBalances,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> fxOperationsRefs<T extends Object>(
+    Expression<T> Function($$FxOperationsTableAnnotationComposer a) f,
+  ) {
+    final $$FxOperationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxOperations,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxOperationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxOperations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxMovementsRefs<T extends Object>(
+    Expression<T> Function($$FxMovementsTableAnnotationComposer a) f,
+  ) {
+    final $$FxMovementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxMovements,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxMovementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShopsTableTableManager
@@ -30640,6 +42494,13 @@ class $$ShopsTableTableManager
             bool inventoryLotsRefs,
             bool saleItemLotAllocationsRefs,
             bool productPriceHistoryRefs,
+            bool stockTransferEventsRefs,
+            bool fxShopCurrenciesRefs,
+            bool fxRateSnapshotsRefs,
+            bool fxSessionsRefs,
+            bool fxSessionBalancesRefs,
+            bool fxOperationsRefs,
+            bool fxMovementsRefs,
           })
         > {
   $$ShopsTableTableManager(_$AppDatabase db, $ShopsTable table)
@@ -30750,6 +42611,13 @@ class $$ShopsTableTableManager
                 inventoryLotsRefs = false,
                 saleItemLotAllocationsRefs = false,
                 productPriceHistoryRefs = false,
+                stockTransferEventsRefs = false,
+                fxShopCurrenciesRefs = false,
+                fxRateSnapshotsRefs = false,
+                fxSessionsRefs = false,
+                fxSessionBalancesRefs = false,
+                fxOperationsRefs = false,
+                fxMovementsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -30791,6 +42659,13 @@ class $$ShopsTableTableManager
                     if (inventoryLotsRefs) db.inventoryLots,
                     if (saleItemLotAllocationsRefs) db.saleItemLotAllocations,
                     if (productPriceHistoryRefs) db.productPriceHistory,
+                    if (stockTransferEventsRefs) db.stockTransferEvents,
+                    if (fxShopCurrenciesRefs) db.fxShopCurrencies,
+                    if (fxRateSnapshotsRefs) db.fxRateSnapshots,
+                    if (fxSessionsRefs) db.fxSessions,
+                    if (fxSessionBalancesRefs) db.fxSessionBalances,
+                    if (fxOperationsRefs) db.fxOperations,
+                    if (fxMovementsRefs) db.fxMovements,
                   ],
                   addJoins:
                       <
@@ -31526,6 +43401,149 @@ class $$ShopsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (stockTransferEventsRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          StockTransferEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._stockTransferEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxShopCurrenciesRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          FxShopCurrency
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxShopCurrenciesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxShopCurrenciesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxRateSnapshotsRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          FxRateSnapshot
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxRateSnapshotsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxRateSnapshotsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxSessionsRefs)
+                        await $_getPrefetchedData<Shop, $ShopsTable, FxSession>(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxSessionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxSessionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxSessionBalancesRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          FxSessionBalance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxSessionBalancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxSessionBalancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxOperationsRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          FxOperation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxOperationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxOperationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxMovementsRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          FxMovement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxMovementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxMovementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -31584,6 +43602,13 @@ typedef $$ShopsTableProcessedTableManager =
         bool inventoryLotsRefs,
         bool saleItemLotAllocationsRefs,
         bool productPriceHistoryRefs,
+        bool stockTransferEventsRefs,
+        bool fxShopCurrenciesRefs,
+        bool fxRateSnapshotsRefs,
+        bool fxSessionsRefs,
+        bool fxSessionBalancesRefs,
+        bool fxOperationsRefs,
+        bool fxMovementsRefs,
       })
     >;
 typedef $$UsersTableCreateCompanionBuilder =
@@ -31852,6 +43877,161 @@ final class $$UsersTableReferences
     final cache = $_typedResult.readTableOrNull(
       _purchaseOrderHistoryEntriesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferShipmentsTable,
+    List<StockTransferShipment>
+  >
+  _stockTransferShipmentsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferShipments,
+        aliasName: 'users__id__stock_transfer_shipments__shipped_by',
+      );
+
+  $$StockTransferShipmentsTableProcessedTableManager
+  get stockTransferShipmentsRefs {
+    final manager = $$StockTransferShipmentsTableTableManager(
+      $_db,
+      $_db.stockTransferShipments,
+    ).filter((f) => f.shippedBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferShipmentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferEventsTable,
+    List<StockTransferEvent>
+  >
+  _stockTransferEventsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferEvents,
+        aliasName: 'users__id__stock_transfer_events__actor_user_id',
+      );
+
+  $$StockTransferEventsTableProcessedTableManager get stockTransferEventsRefs {
+    final manager = $$StockTransferEventsTableTableManager(
+      $_db,
+      $_db.stockTransferEvents,
+    ).filter((f) => f.actorUserId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferEventsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferDiscrepanciesTable,
+    List<StockTransferDiscrepancy>
+  >
+  _stockTransferDiscrepanciesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferDiscrepancies,
+        aliasName: 'users__id__stock_transfer_discrepancies__resolved_by',
+      );
+
+  $$StockTransferDiscrepanciesTableProcessedTableManager
+  get stockTransferDiscrepanciesRefs {
+    final manager = $$StockTransferDiscrepanciesTableTableManager(
+      $_db,
+      $_db.stockTransferDiscrepancies,
+    ).filter((f) => f.resolvedBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferDiscrepanciesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferReceiptsTable,
+    List<StockTransferReceipt>
+  >
+  _stockTransferReceiptsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferReceipts,
+        aliasName: 'users__id__stock_transfer_receipts__received_by',
+      );
+
+  $$StockTransferReceiptsTableProcessedTableManager
+  get stockTransferReceiptsRefs {
+    final manager = $$StockTransferReceiptsTableTableManager(
+      $_db,
+      $_db.stockTransferReceipts,
+    ).filter((f) => f.receivedBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferReceiptsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxRateSnapshotsTable, List<FxRateSnapshot>>
+  _fxRateSnapshotsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxRateSnapshots,
+    aliasName: 'users__id__fx_rate_snapshots__created_by',
+  );
+
+  $$FxRateSnapshotsTableProcessedTableManager get fxRateSnapshotsRefs {
+    final manager = $$FxRateSnapshotsTableTableManager(
+      $_db,
+      $_db.fxRateSnapshots,
+    ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _fxRateSnapshotsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxOperationsTable, List<FxOperation>>
+  _fxOperationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxOperations,
+    aliasName: 'users__id__fx_operations__created_by',
+  );
+
+  $$FxOperationsTableProcessedTableManager get fxOperationsRefs {
+    final manager = $$FxOperationsTableTableManager(
+      $_db,
+      $_db.fxOperations,
+    ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxOperationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxMovementsTable, List<FxMovement>>
+  _fxMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxMovements,
+    aliasName: 'users__id__fx_movements__created_by',
+  );
+
+  $$FxMovementsTableProcessedTableManager get fxMovementsRefs {
+    final manager = $$FxMovementsTableTableManager(
+      $_db,
+      $_db.fxMovements,
+    ).filter((f) => f.createdBy.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxMovementsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -32236,6 +44416,185 @@ class $$UsersTableFilterComposer extends Composer<_$AppDatabase, $UsersTable> {
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferShipmentsRefs(
+    Expression<bool> Function($$StockTransferShipmentsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferShipmentsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.shippedBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferEventsRefs(
+    Expression<bool> Function($$StockTransferEventsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stockTransferEvents,
+      getReferencedColumn: (t) => t.actorUserId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferDiscrepanciesRefs(
+    Expression<bool> Function($$StockTransferDiscrepanciesTableFilterComposer f)
+    f,
+  ) {
+    final $$StockTransferDiscrepanciesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferDiscrepancies,
+          getReferencedColumn: (t) => t.resolvedBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferDiscrepanciesTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferDiscrepancies,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferReceiptsRefs(
+    Expression<bool> Function($$StockTransferReceiptsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferReceiptsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.receivedBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> fxRateSnapshotsRefs(
+    Expression<bool> Function($$FxRateSnapshotsTableFilterComposer f) f,
+  ) {
+    final $$FxRateSnapshotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxOperationsRefs(
+    Expression<bool> Function($$FxOperationsTableFilterComposer f) f,
+  ) {
+    final $$FxOperationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxOperations,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxOperationsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxOperations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxMovementsRefs(
+    Expression<bool> Function($$FxMovementsTableFilterComposer f) f,
+  ) {
+    final $$FxMovementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxMovements,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxMovementsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -32730,6 +45089,188 @@ class $$UsersTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> stockTransferShipmentsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferShipmentsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferShipmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.shippedBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferEventsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferEventsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferEventsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferEvents,
+          getReferencedColumn: (t) => t.actorUserId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferEventsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferEvents,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferDiscrepanciesRefs<T extends Object>(
+    Expression<T> Function(
+      $$StockTransferDiscrepanciesTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$StockTransferDiscrepanciesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferDiscrepancies,
+          getReferencedColumn: (t) => t.resolvedBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferDiscrepanciesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferDiscrepancies,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferReceiptsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferReceiptsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferReceiptsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.receivedBy,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> fxRateSnapshotsRefs<T extends Object>(
+    Expression<T> Function($$FxRateSnapshotsTableAnnotationComposer a) f,
+  ) {
+    final $$FxRateSnapshotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxOperationsRefs<T extends Object>(
+    Expression<T> Function($$FxOperationsTableAnnotationComposer a) f,
+  ) {
+    final $$FxOperationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxOperations,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxOperationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxOperations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxMovementsRefs<T extends Object>(
+    Expression<T> Function($$FxMovementsTableAnnotationComposer a) f,
+  ) {
+    final $$FxMovementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxMovements,
+      getReferencedColumn: (t) => t.createdBy,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxMovementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$UsersTableTableManager
@@ -32757,6 +45298,13 @@ class $$UsersTableTableManager
             bool purchaseOrdersRefs,
             bool purchaseReceiptsRefs,
             bool purchaseOrderHistoryEntriesRefs,
+            bool stockTransferShipmentsRefs,
+            bool stockTransferEventsRefs,
+            bool stockTransferDiscrepanciesRefs,
+            bool stockTransferReceiptsRefs,
+            bool fxRateSnapshotsRefs,
+            bool fxOperationsRefs,
+            bool fxMovementsRefs,
           })
         > {
   $$UsersTableTableManager(_$AppDatabase db, $UsersTable table)
@@ -32877,6 +45425,13 @@ class $$UsersTableTableManager
                 purchaseOrdersRefs = false,
                 purchaseReceiptsRefs = false,
                 purchaseOrderHistoryEntriesRefs = false,
+                stockTransferShipmentsRefs = false,
+                stockTransferEventsRefs = false,
+                stockTransferDiscrepanciesRefs = false,
+                stockTransferReceiptsRefs = false,
+                fxRateSnapshotsRefs = false,
+                fxOperationsRefs = false,
+                fxMovementsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -32892,6 +45447,14 @@ class $$UsersTableTableManager
                     if (purchaseReceiptsRefs) db.purchaseReceipts,
                     if (purchaseOrderHistoryEntriesRefs)
                       db.purchaseOrderHistoryEntries,
+                    if (stockTransferShipmentsRefs) db.stockTransferShipments,
+                    if (stockTransferEventsRefs) db.stockTransferEvents,
+                    if (stockTransferDiscrepanciesRefs)
+                      db.stockTransferDiscrepancies,
+                    if (stockTransferReceiptsRefs) db.stockTransferReceipts,
+                    if (fxRateSnapshotsRefs) db.fxRateSnapshots,
+                    if (fxOperationsRefs) db.fxOperations,
+                    if (fxMovementsRefs) db.fxMovements,
                   ],
                   addJoins:
                       <
@@ -33129,6 +45692,153 @@ class $$UsersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (stockTransferShipmentsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          StockTransferShipment
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._stockTransferShipmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferShipmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shippedBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferEventsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          StockTransferEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._stockTransferEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.actorUserId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferDiscrepanciesRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          StockTransferDiscrepancy
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._stockTransferDiscrepanciesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferDiscrepanciesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.resolvedBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferReceiptsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          StockTransferReceipt
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._stockTransferReceiptsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferReceiptsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.receivedBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxRateSnapshotsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          FxRateSnapshot
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._fxRateSnapshotsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxRateSnapshotsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.createdBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxOperationsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          FxOperation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._fxOperationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxOperationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.createdBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxMovementsRefs)
+                        await $_getPrefetchedData<
+                          User,
+                          $UsersTable,
+                          FxMovement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$UsersTableReferences
+                              ._fxMovementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$UsersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxMovementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.createdBy == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -33161,6 +45871,13 @@ typedef $$UsersTableProcessedTableManager =
         bool purchaseOrdersRefs,
         bool purchaseReceiptsRefs,
         bool purchaseOrderHistoryEntriesRefs,
+        bool stockTransferShipmentsRefs,
+        bool stockTransferEventsRefs,
+        bool stockTransferDiscrepanciesRefs,
+        bool stockTransferReceiptsRefs,
+        bool fxRateSnapshotsRefs,
+        bool fxOperationsRefs,
+        bool fxMovementsRefs,
       })
     >;
 typedef $$SettingsTableCreateCompanionBuilder =
@@ -34866,6 +47583,198 @@ typedef $$AuditLogsTableProcessedTableManager =
       (AuditLog, $$AuditLogsTableReferences),
       AuditLog,
       PrefetchHooks Function({bool shopId, bool userId})
+    >;
+typedef $$IdentitySnapshotsTableCreateCompanionBuilder =
+    IdentitySnapshotsCompanion Function({
+      Value<int> id,
+      required int userServerId,
+      required String payloadJson,
+      required int updatedAt,
+    });
+typedef $$IdentitySnapshotsTableUpdateCompanionBuilder =
+    IdentitySnapshotsCompanion Function({
+      Value<int> id,
+      Value<int> userServerId,
+      Value<String> payloadJson,
+      Value<int> updatedAt,
+    });
+
+class $$IdentitySnapshotsTableFilterComposer
+    extends Composer<_$AppDatabase, $IdentitySnapshotsTable> {
+  $$IdentitySnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get userServerId => $composableBuilder(
+    column: $table.userServerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$IdentitySnapshotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $IdentitySnapshotsTable> {
+  $$IdentitySnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get userServerId => $composableBuilder(
+    column: $table.userServerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$IdentitySnapshotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $IdentitySnapshotsTable> {
+  $$IdentitySnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get userServerId => $composableBuilder(
+    column: $table.userServerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$IdentitySnapshotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $IdentitySnapshotsTable,
+          IdentitySnapshot,
+          $$IdentitySnapshotsTableFilterComposer,
+          $$IdentitySnapshotsTableOrderingComposer,
+          $$IdentitySnapshotsTableAnnotationComposer,
+          $$IdentitySnapshotsTableCreateCompanionBuilder,
+          $$IdentitySnapshotsTableUpdateCompanionBuilder,
+          (
+            IdentitySnapshot,
+            BaseReferences<
+              _$AppDatabase,
+              $IdentitySnapshotsTable,
+              IdentitySnapshot
+            >,
+          ),
+          IdentitySnapshot,
+          PrefetchHooks Function()
+        > {
+  $$IdentitySnapshotsTableTableManager(
+    _$AppDatabase db,
+    $IdentitySnapshotsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$IdentitySnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$IdentitySnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$IdentitySnapshotsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> userServerId = const Value.absent(),
+                Value<String> payloadJson = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+              }) => IdentitySnapshotsCompanion(
+                id: id,
+                userServerId: userServerId,
+                payloadJson: payloadJson,
+                updatedAt: updatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int userServerId,
+                required String payloadJson,
+                required int updatedAt,
+              }) => IdentitySnapshotsCompanion.insert(
+                id: id,
+                userServerId: userServerId,
+                payloadJson: payloadJson,
+                updatedAt: updatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$IdentitySnapshotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $IdentitySnapshotsTable,
+      IdentitySnapshot,
+      $$IdentitySnapshotsTableFilterComposer,
+      $$IdentitySnapshotsTableOrderingComposer,
+      $$IdentitySnapshotsTableAnnotationComposer,
+      $$IdentitySnapshotsTableCreateCompanionBuilder,
+      $$IdentitySnapshotsTableUpdateCompanionBuilder,
+      (
+        IdentitySnapshot,
+        BaseReferences<
+          _$AppDatabase,
+          $IdentitySnapshotsTable,
+          IdentitySnapshot
+        >,
+      ),
+      IdentitySnapshot,
+      PrefetchHooks Function()
     >;
 typedef $$CategoriesTableCreateCompanionBuilder =
     CategoriesCompanion Function({
@@ -55354,6 +68263,7 @@ typedef $$InventoryLotsTableCreateCompanionBuilder =
       required int unitCost,
       required int quantityReceived,
       required int quantityRemaining,
+      Value<int> quantityReserved,
       Value<String?> batchNumber,
       Value<int?> expiryDate,
       required int receivedAt,
@@ -55375,6 +68285,7 @@ typedef $$InventoryLotsTableUpdateCompanionBuilder =
       Value<int> unitCost,
       Value<int> quantityReceived,
       Value<int> quantityRemaining,
+      Value<int> quantityReserved,
       Value<String?> batchNumber,
       Value<int?> expiryDate,
       Value<int> receivedAt,
@@ -55491,6 +68402,32 @@ final class $$InventoryLotsTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<
+    $StockTransferLotReservationsTable,
+    List<StockTransferLotReservation>
+  >
+  _stockTransferLotReservationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferLotReservations,
+        aliasName:
+            'inventory_lots__id__stock_transfer_lot_reservations__lot_id',
+      );
+
+  $$StockTransferLotReservationsTableProcessedTableManager
+  get stockTransferLotReservationsRefs {
+    final manager = $$StockTransferLotReservationsTableTableManager(
+      $_db,
+      $_db.stockTransferLotReservations,
+    ).filter((f) => f.lotId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferLotReservationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$InventoryLotsTableFilterComposer
@@ -55529,6 +68466,11 @@ class $$InventoryLotsTableFilterComposer
 
   ColumnFilters<int> get quantityRemaining => $composableBuilder(
     column: $table.quantityRemaining,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityReserved => $composableBuilder(
+    column: $table.quantityReserved,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -55689,6 +68631,35 @@ class $$InventoryLotsTableFilterComposer
         );
     return f(composer);
   }
+
+  Expression<bool> stockTransferLotReservationsRefs(
+    Expression<bool> Function(
+      $$StockTransferLotReservationsTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$StockTransferLotReservationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotReservations,
+          getReferencedColumn: (t) => t.lotId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotReservationsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferLotReservations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$InventoryLotsTableOrderingComposer
@@ -55727,6 +68698,11 @@ class $$InventoryLotsTableOrderingComposer
 
   ColumnOrderings<int> get quantityRemaining => $composableBuilder(
     column: $table.quantityRemaining,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityReserved => $composableBuilder(
+    column: $table.quantityReserved,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -55897,6 +68873,11 @@ class $$InventoryLotsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get quantityReserved => $composableBuilder(
+    column: $table.quantityReserved,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get batchNumber => $composableBuilder(
     column: $table.batchNumber,
     builder: (column) => column,
@@ -56047,6 +69028,35 @@ class $$InventoryLotsTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> stockTransferLotReservationsRefs<T extends Object>(
+    Expression<T> Function(
+      $$StockTransferLotReservationsTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$StockTransferLotReservationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotReservations,
+          getReferencedColumn: (t) => t.lotId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotReservationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferLotReservations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$InventoryLotsTableTableManager
@@ -56068,6 +69078,7 @@ class $$InventoryLotsTableTableManager
             bool purchaseReceiptItemId,
             bool supplierId,
             bool saleItemLotAllocationsRefs,
+            bool stockTransferLotReservationsRefs,
           })
         > {
   $$InventoryLotsTableTableManager(_$AppDatabase db, $InventoryLotsTable table)
@@ -56093,6 +69104,7 @@ class $$InventoryLotsTableTableManager
                 Value<int> unitCost = const Value.absent(),
                 Value<int> quantityReceived = const Value.absent(),
                 Value<int> quantityRemaining = const Value.absent(),
+                Value<int> quantityReserved = const Value.absent(),
                 Value<String?> batchNumber = const Value.absent(),
                 Value<int?> expiryDate = const Value.absent(),
                 Value<int> receivedAt = const Value.absent(),
@@ -56112,6 +69124,7 @@ class $$InventoryLotsTableTableManager
                 unitCost: unitCost,
                 quantityReceived: quantityReceived,
                 quantityRemaining: quantityRemaining,
+                quantityReserved: quantityReserved,
                 batchNumber: batchNumber,
                 expiryDate: expiryDate,
                 receivedAt: receivedAt,
@@ -56133,6 +69146,7 @@ class $$InventoryLotsTableTableManager
                 required int unitCost,
                 required int quantityReceived,
                 required int quantityRemaining,
+                Value<int> quantityReserved = const Value.absent(),
                 Value<String?> batchNumber = const Value.absent(),
                 Value<int?> expiryDate = const Value.absent(),
                 required int receivedAt,
@@ -56152,6 +69166,7 @@ class $$InventoryLotsTableTableManager
                 unitCost: unitCost,
                 quantityReceived: quantityReceived,
                 quantityRemaining: quantityRemaining,
+                quantityReserved: quantityReserved,
                 batchNumber: batchNumber,
                 expiryDate: expiryDate,
                 receivedAt: receivedAt,
@@ -56176,11 +69191,14 @@ class $$InventoryLotsTableTableManager
                 purchaseReceiptItemId = false,
                 supplierId = false,
                 saleItemLotAllocationsRefs = false,
+                stockTransferLotReservationsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (saleItemLotAllocationsRefs) db.saleItemLotAllocations,
+                    if (stockTransferLotReservationsRefs)
+                      db.stockTransferLotReservations,
                   ],
                   addJoins:
                       <
@@ -56284,6 +69302,27 @@ class $$InventoryLotsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (stockTransferLotReservationsRefs)
+                        await $_getPrefetchedData<
+                          InventoryLot,
+                          $InventoryLotsTable,
+                          StockTransferLotReservation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$InventoryLotsTableReferences
+                              ._stockTransferLotReservationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$InventoryLotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferLotReservationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.lotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -56310,6 +69349,7 @@ typedef $$InventoryLotsTableProcessedTableManager =
         bool purchaseReceiptItemId,
         bool supplierId,
         bool saleItemLotAllocationsRefs,
+        bool stockTransferLotReservationsRefs,
       })
     >;
 typedef $$SaleItemLotAllocationsTableCreateCompanionBuilder =
@@ -57345,6 +70385,11345 @@ typedef $$ProductPriceHistoryTableProcessedTableManager =
       ProductPriceHistoryData,
       PrefetchHooks Function({bool shopId, bool productId})
     >;
+typedef $$StockTransfersTableCreateCompanionBuilder =
+    StockTransfersCompanion Function({
+      Value<int> id,
+      required String reference,
+      required int sourceShopId,
+      required int destinationShopId,
+      Value<String?> sourceShopName,
+      Value<String?> destinationShopName,
+      Value<String> status,
+      Value<String> transferType,
+      Value<int?> parentTransferId,
+      Value<String?> notes,
+      required int createdBy,
+      Value<int?> validatedBy,
+      Value<int?> shippedBy,
+      Value<int?> receivedBy,
+      Value<int?> closedBy,
+      required int createdAt,
+      required int updatedAt,
+      Value<int?> validatedAt,
+      Value<int?> shippedAt,
+      Value<int?> receivedAt,
+      Value<int?> closedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$StockTransfersTableUpdateCompanionBuilder =
+    StockTransfersCompanion Function({
+      Value<int> id,
+      Value<String> reference,
+      Value<int> sourceShopId,
+      Value<int> destinationShopId,
+      Value<String?> sourceShopName,
+      Value<String?> destinationShopName,
+      Value<String> status,
+      Value<String> transferType,
+      Value<int?> parentTransferId,
+      Value<String?> notes,
+      Value<int> createdBy,
+      Value<int?> validatedBy,
+      Value<int?> shippedBy,
+      Value<int?> receivedBy,
+      Value<int?> closedBy,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int?> validatedAt,
+      Value<int?> shippedAt,
+      Value<int?> receivedAt,
+      Value<int?> closedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$StockTransfersTableReferences
+    extends BaseReferences<_$AppDatabase, $StockTransfersTable, StockTransfer> {
+  $$StockTransfersTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _sourceShopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('stock_transfers__source_shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get sourceShopId {
+    final $_column = $_itemColumn<int>('source_shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceShopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ShopsTable _destinationShopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('stock_transfers__destination_shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get destinationShopId {
+    final $_column = $_itemColumn<int>('destination_shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_destinationShopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $StockTransfersTable _parentTransferIdTable(_$AppDatabase db) => db
+      .stockTransfers
+      .createAlias('stock_transfers__parent_transfer_id__stock_transfers__id');
+
+  $$StockTransfersTableProcessedTableManager? get parentTransferId {
+    final $_column = $_itemColumn<int>('parent_transfer_id');
+    if ($_column == null) return null;
+    final manager = $$StockTransfersTableTableManager(
+      $_db,
+      $_db.stockTransfers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentTransferIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _createdByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfers__created_by__users__id');
+
+  $$UsersTableProcessedTableManager get createdBy {
+    final $_column = $_itemColumn<int>('created_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _validatedByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfers__validated_by__users__id');
+
+  $$UsersTableProcessedTableManager? get validatedBy {
+    final $_column = $_itemColumn<int>('validated_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_validatedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _shippedByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfers__shipped_by__users__id');
+
+  $$UsersTableProcessedTableManager? get shippedBy {
+    final $_column = $_itemColumn<int>('shipped_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shippedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _receivedByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfers__received_by__users__id');
+
+  $$UsersTableProcessedTableManager? get receivedBy {
+    final $_column = $_itemColumn<int>('received_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_receivedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _closedByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfers__closed_by__users__id');
+
+  $$UsersTableProcessedTableManager? get closedBy {
+    final $_column = $_itemColumn<int>('closed_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_closedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$StockTransferItemsTable, List<StockTransferItem>>
+  _stockTransferItemsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferItems,
+        aliasName: 'stock_transfers__id__stock_transfer_items__transfer_id',
+      );
+
+  $$StockTransferItemsTableProcessedTableManager get stockTransferItemsRefs {
+    final manager = $$StockTransferItemsTableTableManager(
+      $_db,
+      $_db.stockTransferItems,
+    ).filter((f) => f.transferId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferItemsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferShipmentsTable,
+    List<StockTransferShipment>
+  >
+  _stockTransferShipmentsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferShipments,
+        aliasName: 'stock_transfers__id__stock_transfer_shipments__transfer_id',
+      );
+
+  $$StockTransferShipmentsTableProcessedTableManager
+  get stockTransferShipmentsRefs {
+    final manager = $$StockTransferShipmentsTableTableManager(
+      $_db,
+      $_db.stockTransferShipments,
+    ).filter((f) => f.transferId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferShipmentsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferEventsTable,
+    List<StockTransferEvent>
+  >
+  _stockTransferEventsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferEvents,
+        aliasName: 'stock_transfers__id__stock_transfer_events__transfer_id',
+      );
+
+  $$StockTransferEventsTableProcessedTableManager get stockTransferEventsRefs {
+    final manager = $$StockTransferEventsTableTableManager(
+      $_db,
+      $_db.stockTransferEvents,
+    ).filter((f) => f.transferId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferEventsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferDiscrepanciesTable,
+    List<StockTransferDiscrepancy>
+  >
+  _stockTransferDiscrepanciesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferDiscrepancies,
+        aliasName:
+            'stock_transfers__id__stock_transfer_discrepancies__transfer_id',
+      );
+
+  $$StockTransferDiscrepanciesTableProcessedTableManager
+  get stockTransferDiscrepanciesRefs {
+    final manager = $$StockTransferDiscrepanciesTableTableManager(
+      $_db,
+      $_db.stockTransferDiscrepancies,
+    ).filter((f) => f.transferId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferDiscrepanciesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferReceiptsTable,
+    List<StockTransferReceipt>
+  >
+  _stockTransferReceiptsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.stockTransferReceipts,
+        aliasName: 'stock_transfers__id__stock_transfer_receipts__transfer_id',
+      );
+
+  $$StockTransferReceiptsTableProcessedTableManager
+  get stockTransferReceiptsRefs {
+    final manager = $$StockTransferReceiptsTableTableManager(
+      $_db,
+      $_db.stockTransferReceipts,
+    ).filter((f) => f.transferId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferReceiptsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StockTransfersTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransfersTable> {
+  $$StockTransfersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceShopName => $composableBuilder(
+    column: $table.sourceShopName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get destinationShopName => $composableBuilder(
+    column: $table.destinationShopName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get transferType => $composableBuilder(
+    column: $table.transferType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get validatedAt => $composableBuilder(
+    column: $table.validatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get shippedAt => $composableBuilder(
+    column: $table.shippedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get sourceShopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShopsTableFilterComposer get destinationShopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransfersTableFilterComposer get parentTransferId {
+    final $$StockTransfersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentTransferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get createdBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get validatedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.validatedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get shippedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shippedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get receivedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.receivedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get closedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> stockTransferItemsRefs(
+    Expression<bool> Function($$StockTransferItemsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.transferId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferShipmentsRefs(
+    Expression<bool> Function($$StockTransferShipmentsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferShipmentsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferEventsRefs(
+    Expression<bool> Function($$StockTransferEventsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.stockTransferEvents,
+      getReferencedColumn: (t) => t.transferId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferDiscrepanciesRefs(
+    Expression<bool> Function($$StockTransferDiscrepanciesTableFilterComposer f)
+    f,
+  ) {
+    final $$StockTransferDiscrepanciesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferDiscrepancies,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferDiscrepanciesTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferDiscrepancies,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferReceiptsRefs(
+    Expression<bool> Function($$StockTransferReceiptsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferReceiptsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransfersTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransfersTable> {
+  $$StockTransfersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceShopName => $composableBuilder(
+    column: $table.sourceShopName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get destinationShopName => $composableBuilder(
+    column: $table.destinationShopName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get transferType => $composableBuilder(
+    column: $table.transferType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get validatedAt => $composableBuilder(
+    column: $table.validatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get shippedAt => $composableBuilder(
+    column: $table.shippedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get sourceShopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShopsTableOrderingComposer get destinationShopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransfersTableOrderingComposer get parentTransferId {
+    final $$StockTransfersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentTransferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get createdBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get validatedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.validatedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get shippedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shippedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get receivedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.receivedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get closedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransfersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransfersTable> {
+  $$StockTransfersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get reference =>
+      $composableBuilder(column: $table.reference, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceShopName => $composableBuilder(
+    column: $table.sourceShopName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get destinationShopName => $composableBuilder(
+    column: $table.destinationShopName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get transferType => $composableBuilder(
+    column: $table.transferType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get validatedAt => $composableBuilder(
+    column: $table.validatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get shippedAt =>
+      $composableBuilder(column: $table.shippedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get sourceShopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShopsTableAnnotationComposer get destinationShopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationShopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransfersTableAnnotationComposer get parentTransferId {
+    final $$StockTransfersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentTransferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get createdBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get validatedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.validatedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get shippedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shippedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get receivedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.receivedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get closedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> stockTransferItemsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferItemsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferItems,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferShipmentsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferShipmentsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferShipmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferEventsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferEventsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferEventsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferEvents,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferEventsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferEvents,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferDiscrepanciesRefs<T extends Object>(
+    Expression<T> Function(
+      $$StockTransferDiscrepanciesTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$StockTransferDiscrepanciesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferDiscrepancies,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferDiscrepanciesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferDiscrepancies,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferReceiptsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferReceiptsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferReceiptsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.transferId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransfersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransfersTable,
+          StockTransfer,
+          $$StockTransfersTableFilterComposer,
+          $$StockTransfersTableOrderingComposer,
+          $$StockTransfersTableAnnotationComposer,
+          $$StockTransfersTableCreateCompanionBuilder,
+          $$StockTransfersTableUpdateCompanionBuilder,
+          (StockTransfer, $$StockTransfersTableReferences),
+          StockTransfer,
+          PrefetchHooks Function({
+            bool sourceShopId,
+            bool destinationShopId,
+            bool parentTransferId,
+            bool createdBy,
+            bool validatedBy,
+            bool shippedBy,
+            bool receivedBy,
+            bool closedBy,
+            bool stockTransferItemsRefs,
+            bool stockTransferShipmentsRefs,
+            bool stockTransferEventsRefs,
+            bool stockTransferDiscrepanciesRefs,
+            bool stockTransferReceiptsRefs,
+          })
+        > {
+  $$StockTransfersTableTableManager(
+    _$AppDatabase db,
+    $StockTransfersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransfersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StockTransfersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StockTransfersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> reference = const Value.absent(),
+                Value<int> sourceShopId = const Value.absent(),
+                Value<int> destinationShopId = const Value.absent(),
+                Value<String?> sourceShopName = const Value.absent(),
+                Value<String?> destinationShopName = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String> transferType = const Value.absent(),
+                Value<int?> parentTransferId = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> createdBy = const Value.absent(),
+                Value<int?> validatedBy = const Value.absent(),
+                Value<int?> shippedBy = const Value.absent(),
+                Value<int?> receivedBy = const Value.absent(),
+                Value<int?> closedBy = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int?> validatedAt = const Value.absent(),
+                Value<int?> shippedAt = const Value.absent(),
+                Value<int?> receivedAt = const Value.absent(),
+                Value<int?> closedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => StockTransfersCompanion(
+                id: id,
+                reference: reference,
+                sourceShopId: sourceShopId,
+                destinationShopId: destinationShopId,
+                sourceShopName: sourceShopName,
+                destinationShopName: destinationShopName,
+                status: status,
+                transferType: transferType,
+                parentTransferId: parentTransferId,
+                notes: notes,
+                createdBy: createdBy,
+                validatedBy: validatedBy,
+                shippedBy: shippedBy,
+                receivedBy: receivedBy,
+                closedBy: closedBy,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                validatedAt: validatedAt,
+                shippedAt: shippedAt,
+                receivedAt: receivedAt,
+                closedAt: closedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String reference,
+                required int sourceShopId,
+                required int destinationShopId,
+                Value<String?> sourceShopName = const Value.absent(),
+                Value<String?> destinationShopName = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String> transferType = const Value.absent(),
+                Value<int?> parentTransferId = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                required int createdBy,
+                Value<int?> validatedBy = const Value.absent(),
+                Value<int?> shippedBy = const Value.absent(),
+                Value<int?> receivedBy = const Value.absent(),
+                Value<int?> closedBy = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+                Value<int?> validatedAt = const Value.absent(),
+                Value<int?> shippedAt = const Value.absent(),
+                Value<int?> receivedAt = const Value.absent(),
+                Value<int?> closedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => StockTransfersCompanion.insert(
+                id: id,
+                reference: reference,
+                sourceShopId: sourceShopId,
+                destinationShopId: destinationShopId,
+                sourceShopName: sourceShopName,
+                destinationShopName: destinationShopName,
+                status: status,
+                transferType: transferType,
+                parentTransferId: parentTransferId,
+                notes: notes,
+                createdBy: createdBy,
+                validatedBy: validatedBy,
+                shippedBy: shippedBy,
+                receivedBy: receivedBy,
+                closedBy: closedBy,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                validatedAt: validatedAt,
+                shippedAt: shippedAt,
+                receivedAt: receivedAt,
+                closedAt: closedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransfersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                sourceShopId = false,
+                destinationShopId = false,
+                parentTransferId = false,
+                createdBy = false,
+                validatedBy = false,
+                shippedBy = false,
+                receivedBy = false,
+                closedBy = false,
+                stockTransferItemsRefs = false,
+                stockTransferShipmentsRefs = false,
+                stockTransferEventsRefs = false,
+                stockTransferDiscrepanciesRefs = false,
+                stockTransferReceiptsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (stockTransferItemsRefs) db.stockTransferItems,
+                    if (stockTransferShipmentsRefs) db.stockTransferShipments,
+                    if (stockTransferEventsRefs) db.stockTransferEvents,
+                    if (stockTransferDiscrepanciesRefs)
+                      db.stockTransferDiscrepancies,
+                    if (stockTransferReceiptsRefs) db.stockTransferReceipts,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (sourceShopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sourceShopId,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._sourceShopIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._sourceShopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (destinationShopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.destinationShopId,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._destinationShopIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._destinationShopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (parentTransferId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentTransferId,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._parentTransferIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._parentTransferIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (createdBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdBy,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._createdByTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._createdByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (validatedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.validatedBy,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._validatedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._validatedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (shippedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shippedBy,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._shippedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._shippedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (receivedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.receivedBy,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._receivedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._receivedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (closedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.closedBy,
+                                    referencedTable:
+                                        $$StockTransfersTableReferences
+                                            ._closedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransfersTableReferences
+                                            ._closedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (stockTransferItemsRefs)
+                        await $_getPrefetchedData<
+                          StockTransfer,
+                          $StockTransfersTable,
+                          StockTransferItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransfersTableReferences
+                              ._stockTransferItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransfersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferShipmentsRefs)
+                        await $_getPrefetchedData<
+                          StockTransfer,
+                          $StockTransfersTable,
+                          StockTransferShipment
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransfersTableReferences
+                              ._stockTransferShipmentsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransfersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferShipmentsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferEventsRefs)
+                        await $_getPrefetchedData<
+                          StockTransfer,
+                          $StockTransfersTable,
+                          StockTransferEvent
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransfersTableReferences
+                              ._stockTransferEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransfersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferDiscrepanciesRefs)
+                        await $_getPrefetchedData<
+                          StockTransfer,
+                          $StockTransfersTable,
+                          StockTransferDiscrepancy
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransfersTableReferences
+                              ._stockTransferDiscrepanciesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransfersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferDiscrepanciesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferReceiptsRefs)
+                        await $_getPrefetchedData<
+                          StockTransfer,
+                          $StockTransfersTable,
+                          StockTransferReceipt
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransfersTableReferences
+                              ._stockTransferReceiptsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransfersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferReceiptsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransfersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransfersTable,
+      StockTransfer,
+      $$StockTransfersTableFilterComposer,
+      $$StockTransfersTableOrderingComposer,
+      $$StockTransfersTableAnnotationComposer,
+      $$StockTransfersTableCreateCompanionBuilder,
+      $$StockTransfersTableUpdateCompanionBuilder,
+      (StockTransfer, $$StockTransfersTableReferences),
+      StockTransfer,
+      PrefetchHooks Function({
+        bool sourceShopId,
+        bool destinationShopId,
+        bool parentTransferId,
+        bool createdBy,
+        bool validatedBy,
+        bool shippedBy,
+        bool receivedBy,
+        bool closedBy,
+        bool stockTransferItemsRefs,
+        bool stockTransferShipmentsRefs,
+        bool stockTransferEventsRefs,
+        bool stockTransferDiscrepanciesRefs,
+        bool stockTransferReceiptsRefs,
+      })
+    >;
+typedef $$StockTransferItemsTableCreateCompanionBuilder =
+    StockTransferItemsCompanion Function({
+      Value<int> id,
+      required int transferId,
+      required int sourceProductId,
+      Value<int?> destinationProductId,
+      Value<String?> productServerId,
+      required int quantityRequested,
+      Value<int> quantityShipped,
+      Value<int> quantityReceived,
+    });
+typedef $$StockTransferItemsTableUpdateCompanionBuilder =
+    StockTransferItemsCompanion Function({
+      Value<int> id,
+      Value<int> transferId,
+      Value<int> sourceProductId,
+      Value<int?> destinationProductId,
+      Value<String?> productServerId,
+      Value<int> quantityRequested,
+      Value<int> quantityShipped,
+      Value<int> quantityReceived,
+    });
+
+final class $$StockTransferItemsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferItemsTable,
+          StockTransferItem
+        > {
+  $$StockTransferItemsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransfersTable _transferIdTable(_$AppDatabase db) => db
+      .stockTransfers
+      .createAlias('stock_transfer_items__transfer_id__stock_transfers__id');
+
+  $$StockTransfersTableProcessedTableManager get transferId {
+    final $_column = $_itemColumn<int>('transfer_id')!;
+
+    final manager = $$StockTransfersTableTableManager(
+      $_db,
+      $_db.stockTransfers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ProductsTable _sourceProductIdTable(_$AppDatabase db) => db.products
+      .createAlias('stock_transfer_items__source_product_id__products__id');
+
+  $$ProductsTableProcessedTableManager get sourceProductId {
+    final $_column = $_itemColumn<int>('source_product_id')!;
+
+    final manager = $$ProductsTableTableManager(
+      $_db,
+      $_db.products,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceProductIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ProductsTable _destinationProductIdTable(_$AppDatabase db) =>
+      db.products.createAlias(
+        'stock_transfer_items__destination_product_id__products__id',
+      );
+
+  $$ProductsTableProcessedTableManager? get destinationProductId {
+    final $_column = $_itemColumn<int>('destination_product_id');
+    if ($_column == null) return null;
+    final manager = $$ProductsTableTableManager(
+      $_db,
+      $_db.products,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _destinationProductIdTable($_db),
+    );
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferLotReservationsTable,
+    List<StockTransferLotReservation>
+  >
+  _stockTransferLotReservationsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferLotReservations,
+    aliasName:
+        'stock_transfer_items__id__stock_transfer_lot_reservations__transfer_item_id',
+  );
+
+  $$StockTransferLotReservationsTableProcessedTableManager
+  get stockTransferLotReservationsRefs {
+    final manager = $$StockTransferLotReservationsTableTableManager(
+      $_db,
+      $_db.stockTransferLotReservations,
+    ).filter((f) => f.transferItemId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferLotReservationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferLotLinesTable,
+    List<StockTransferLotLine>
+  >
+  _stockTransferLotLinesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferLotLines,
+    aliasName:
+        'stock_transfer_items__id__stock_transfer_lot_lines__transfer_item_id',
+  );
+
+  $$StockTransferLotLinesTableProcessedTableManager
+  get stockTransferLotLinesRefs {
+    final manager = $$StockTransferLotLinesTableTableManager(
+      $_db,
+      $_db.stockTransferLotLines,
+    ).filter((f) => f.transferItemId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferLotLinesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferDiscrepanciesTable,
+    List<StockTransferDiscrepancy>
+  >
+  _stockTransferDiscrepanciesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferDiscrepancies,
+    aliasName:
+        'stock_transfer_items__id__stock_transfer_discrepancies__transfer_item_id',
+  );
+
+  $$StockTransferDiscrepanciesTableProcessedTableManager
+  get stockTransferDiscrepanciesRefs {
+    final manager = $$StockTransferDiscrepanciesTableTableManager(
+      $_db,
+      $_db.stockTransferDiscrepancies,
+    ).filter((f) => f.transferItemId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferDiscrepanciesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferReceiptItemsTable,
+    List<StockTransferReceiptItem>
+  >
+  _stockTransferReceiptItemsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferReceiptItems,
+    aliasName:
+        'stock_transfer_items__id__stock_transfer_receipt_items__transfer_item_id',
+  );
+
+  $$StockTransferReceiptItemsTableProcessedTableManager
+  get stockTransferReceiptItemsRefs {
+    final manager = $$StockTransferReceiptItemsTableTableManager(
+      $_db,
+      $_db.stockTransferReceiptItems,
+    ).filter((f) => f.transferItemId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferReceiptItemsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StockTransferItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferItemsTable> {
+  $$StockTransferItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get productServerId => $composableBuilder(
+    column: $table.productServerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityRequested => $composableBuilder(
+    column: $table.quantityRequested,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityShipped => $composableBuilder(
+    column: $table.quantityShipped,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransfersTableFilterComposer get transferId {
+    final $$StockTransfersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableFilterComposer get sourceProductId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceProductId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableFilterComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableFilterComposer get destinationProductId {
+    final $$ProductsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationProductId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableFilterComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> stockTransferLotReservationsRefs(
+    Expression<bool> Function(
+      $$StockTransferLotReservationsTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$StockTransferLotReservationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotReservations,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotReservationsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferLotReservations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferLotLinesRefs(
+    Expression<bool> Function($$StockTransferLotLinesTableFilterComposer f) f,
+  ) {
+    final $$StockTransferLotLinesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotLines,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotLinesTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferLotLines,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferDiscrepanciesRefs(
+    Expression<bool> Function($$StockTransferDiscrepanciesTableFilterComposer f)
+    f,
+  ) {
+    final $$StockTransferDiscrepanciesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferDiscrepancies,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferDiscrepanciesTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferDiscrepancies,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferReceiptItemsRefs(
+    Expression<bool> Function($$StockTransferReceiptItemsTableFilterComposer f)
+    f,
+  ) {
+    final $$StockTransferReceiptItemsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceiptItems,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptItemsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferReceiptItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransferItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferItemsTable> {
+  $$StockTransferItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get productServerId => $composableBuilder(
+    column: $table.productServerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityRequested => $composableBuilder(
+    column: $table.quantityRequested,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityShipped => $composableBuilder(
+    column: $table.quantityShipped,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransfersTableOrderingComposer get transferId {
+    final $$StockTransfersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableOrderingComposer get sourceProductId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceProductId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableOrderingComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableOrderingComposer get destinationProductId {
+    final $$ProductsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationProductId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableOrderingComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferItemsTable> {
+  $$StockTransferItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get productServerId => $composableBuilder(
+    column: $table.productServerId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantityRequested => $composableBuilder(
+    column: $table.quantityRequested,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantityShipped => $composableBuilder(
+    column: $table.quantityShipped,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => column,
+  );
+
+  $$StockTransfersTableAnnotationComposer get transferId {
+    final $$StockTransfersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableAnnotationComposer get sourceProductId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceProductId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ProductsTableAnnotationComposer get destinationProductId {
+    final $$ProductsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationProductId,
+      referencedTable: $db.products,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ProductsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.products,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> stockTransferLotReservationsRefs<T extends Object>(
+    Expression<T> Function(
+      $$StockTransferLotReservationsTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$StockTransferLotReservationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotReservations,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotReservationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferLotReservations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferLotLinesRefs<T extends Object>(
+    Expression<T> Function($$StockTransferLotLinesTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferLotLinesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotLines,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotLinesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferLotLines,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferDiscrepanciesRefs<T extends Object>(
+    Expression<T> Function(
+      $$StockTransferDiscrepanciesTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$StockTransferDiscrepanciesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferDiscrepancies,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferDiscrepanciesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferDiscrepancies,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferReceiptItemsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferReceiptItemsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$StockTransferReceiptItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceiptItems,
+          getReferencedColumn: (t) => t.transferItemId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferReceiptItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransferItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferItemsTable,
+          StockTransferItem,
+          $$StockTransferItemsTableFilterComposer,
+          $$StockTransferItemsTableOrderingComposer,
+          $$StockTransferItemsTableAnnotationComposer,
+          $$StockTransferItemsTableCreateCompanionBuilder,
+          $$StockTransferItemsTableUpdateCompanionBuilder,
+          (StockTransferItem, $$StockTransferItemsTableReferences),
+          StockTransferItem,
+          PrefetchHooks Function({
+            bool transferId,
+            bool sourceProductId,
+            bool destinationProductId,
+            bool stockTransferLotReservationsRefs,
+            bool stockTransferLotLinesRefs,
+            bool stockTransferDiscrepanciesRefs,
+            bool stockTransferReceiptItemsRefs,
+          })
+        > {
+  $$StockTransferItemsTableTableManager(
+    _$AppDatabase db,
+    $StockTransferItemsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StockTransferItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$StockTransferItemsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferId = const Value.absent(),
+                Value<int> sourceProductId = const Value.absent(),
+                Value<int?> destinationProductId = const Value.absent(),
+                Value<String?> productServerId = const Value.absent(),
+                Value<int> quantityRequested = const Value.absent(),
+                Value<int> quantityShipped = const Value.absent(),
+                Value<int> quantityReceived = const Value.absent(),
+              }) => StockTransferItemsCompanion(
+                id: id,
+                transferId: transferId,
+                sourceProductId: sourceProductId,
+                destinationProductId: destinationProductId,
+                productServerId: productServerId,
+                quantityRequested: quantityRequested,
+                quantityShipped: quantityShipped,
+                quantityReceived: quantityReceived,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferId,
+                required int sourceProductId,
+                Value<int?> destinationProductId = const Value.absent(),
+                Value<String?> productServerId = const Value.absent(),
+                required int quantityRequested,
+                Value<int> quantityShipped = const Value.absent(),
+                Value<int> quantityReceived = const Value.absent(),
+              }) => StockTransferItemsCompanion.insert(
+                id: id,
+                transferId: transferId,
+                sourceProductId: sourceProductId,
+                destinationProductId: destinationProductId,
+                productServerId: productServerId,
+                quantityRequested: quantityRequested,
+                quantityShipped: quantityShipped,
+                quantityReceived: quantityReceived,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferItemsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                transferId = false,
+                sourceProductId = false,
+                destinationProductId = false,
+                stockTransferLotReservationsRefs = false,
+                stockTransferLotLinesRefs = false,
+                stockTransferDiscrepanciesRefs = false,
+                stockTransferReceiptItemsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (stockTransferLotReservationsRefs)
+                      db.stockTransferLotReservations,
+                    if (stockTransferLotLinesRefs) db.stockTransferLotLines,
+                    if (stockTransferDiscrepanciesRefs)
+                      db.stockTransferDiscrepancies,
+                    if (stockTransferReceiptItemsRefs)
+                      db.stockTransferReceiptItems,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (transferId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferId,
+                                    referencedTable:
+                                        $$StockTransferItemsTableReferences
+                                            ._transferIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferItemsTableReferences
+                                            ._transferIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sourceProductId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sourceProductId,
+                                    referencedTable:
+                                        $$StockTransferItemsTableReferences
+                                            ._sourceProductIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferItemsTableReferences
+                                            ._sourceProductIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (destinationProductId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.destinationProductId,
+                                    referencedTable:
+                                        $$StockTransferItemsTableReferences
+                                            ._destinationProductIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferItemsTableReferences
+                                            ._destinationProductIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (stockTransferLotReservationsRefs)
+                        await $_getPrefetchedData<
+                          StockTransferItem,
+                          $StockTransferItemsTable,
+                          StockTransferLotReservation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransferItemsTableReferences
+                              ._stockTransferLotReservationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferItemsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferLotReservationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferLotLinesRefs)
+                        await $_getPrefetchedData<
+                          StockTransferItem,
+                          $StockTransferItemsTable,
+                          StockTransferLotLine
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransferItemsTableReferences
+                              ._stockTransferLotLinesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferItemsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferLotLinesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferDiscrepanciesRefs)
+                        await $_getPrefetchedData<
+                          StockTransferItem,
+                          $StockTransferItemsTable,
+                          StockTransferDiscrepancy
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransferItemsTableReferences
+                              ._stockTransferDiscrepanciesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferItemsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferDiscrepanciesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferReceiptItemsRefs)
+                        await $_getPrefetchedData<
+                          StockTransferItem,
+                          $StockTransferItemsTable,
+                          StockTransferReceiptItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$StockTransferItemsTableReferences
+                              ._stockTransferReceiptItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferItemsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferReceiptItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.transferItemId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransferItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferItemsTable,
+      StockTransferItem,
+      $$StockTransferItemsTableFilterComposer,
+      $$StockTransferItemsTableOrderingComposer,
+      $$StockTransferItemsTableAnnotationComposer,
+      $$StockTransferItemsTableCreateCompanionBuilder,
+      $$StockTransferItemsTableUpdateCompanionBuilder,
+      (StockTransferItem, $$StockTransferItemsTableReferences),
+      StockTransferItem,
+      PrefetchHooks Function({
+        bool transferId,
+        bool sourceProductId,
+        bool destinationProductId,
+        bool stockTransferLotReservationsRefs,
+        bool stockTransferLotLinesRefs,
+        bool stockTransferDiscrepanciesRefs,
+        bool stockTransferReceiptItemsRefs,
+      })
+    >;
+typedef $$StockTransferShipmentsTableCreateCompanionBuilder =
+    StockTransferShipmentsCompanion Function({
+      Value<int> id,
+      required int transferId,
+      Value<String> reference,
+      required String label,
+      Value<String?> notes,
+      Value<String?> driverName,
+      Value<String?> vehiclePlate,
+      required int shippedBy,
+      required int shippedAt,
+    });
+typedef $$StockTransferShipmentsTableUpdateCompanionBuilder =
+    StockTransferShipmentsCompanion Function({
+      Value<int> id,
+      Value<int> transferId,
+      Value<String> reference,
+      Value<String> label,
+      Value<String?> notes,
+      Value<String?> driverName,
+      Value<String?> vehiclePlate,
+      Value<int> shippedBy,
+      Value<int> shippedAt,
+    });
+
+final class $$StockTransferShipmentsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferShipmentsTable,
+          StockTransferShipment
+        > {
+  $$StockTransferShipmentsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransfersTable _transferIdTable(_$AppDatabase db) =>
+      db.stockTransfers.createAlias(
+        'stock_transfer_shipments__transfer_id__stock_transfers__id',
+      );
+
+  $$StockTransfersTableProcessedTableManager get transferId {
+    final $_column = $_itemColumn<int>('transfer_id')!;
+
+    final manager = $$StockTransfersTableTableManager(
+      $_db,
+      $_db.stockTransfers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _shippedByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfer_shipments__shipped_by__users__id');
+
+  $$UsersTableProcessedTableManager get shippedBy {
+    final $_column = $_itemColumn<int>('shipped_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shippedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferLotLinesTable,
+    List<StockTransferLotLine>
+  >
+  _stockTransferLotLinesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferLotLines,
+    aliasName:
+        'stock_transfer_shipments__id__stock_transfer_lot_lines__shipment_id',
+  );
+
+  $$StockTransferLotLinesTableProcessedTableManager
+  get stockTransferLotLinesRefs {
+    final manager = $$StockTransferLotLinesTableTableManager(
+      $_db,
+      $_db.stockTransferLotLines,
+    ).filter((f) => f.shipmentId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferLotLinesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferReceiptsTable,
+    List<StockTransferReceipt>
+  >
+  _stockTransferReceiptsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferReceipts,
+    aliasName:
+        'stock_transfer_shipments__id__stock_transfer_receipts__shipment_id',
+  );
+
+  $$StockTransferReceiptsTableProcessedTableManager
+  get stockTransferReceiptsRefs {
+    final manager = $$StockTransferReceiptsTableTableManager(
+      $_db,
+      $_db.stockTransferReceipts,
+    ).filter((f) => f.shipmentId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferReceiptsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StockTransferShipmentsTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferShipmentsTable> {
+  $$StockTransferShipmentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get driverName => $composableBuilder(
+    column: $table.driverName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get vehiclePlate => $composableBuilder(
+    column: $table.vehiclePlate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get shippedAt => $composableBuilder(
+    column: $table.shippedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransfersTableFilterComposer get transferId {
+    final $$StockTransfersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get shippedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shippedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> stockTransferLotLinesRefs(
+    Expression<bool> Function($$StockTransferLotLinesTableFilterComposer f) f,
+  ) {
+    final $$StockTransferLotLinesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotLines,
+          getReferencedColumn: (t) => t.shipmentId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotLinesTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferLotLines,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> stockTransferReceiptsRefs(
+    Expression<bool> Function($$StockTransferReceiptsTableFilterComposer f) f,
+  ) {
+    final $$StockTransferReceiptsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.shipmentId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransferShipmentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferShipmentsTable> {
+  $$StockTransferShipmentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get driverName => $composableBuilder(
+    column: $table.driverName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get vehiclePlate => $composableBuilder(
+    column: $table.vehiclePlate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get shippedAt => $composableBuilder(
+    column: $table.shippedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransfersTableOrderingComposer get transferId {
+    final $$StockTransfersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get shippedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shippedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferShipmentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferShipmentsTable> {
+  $$StockTransferShipmentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get reference =>
+      $composableBuilder(column: $table.reference, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get driverName => $composableBuilder(
+    column: $table.driverName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get vehiclePlate => $composableBuilder(
+    column: $table.vehiclePlate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get shippedAt =>
+      $composableBuilder(column: $table.shippedAt, builder: (column) => column);
+
+  $$StockTransfersTableAnnotationComposer get transferId {
+    final $$StockTransfersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get shippedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shippedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> stockTransferLotLinesRefs<T extends Object>(
+    Expression<T> Function($$StockTransferLotLinesTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferLotLinesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferLotLines,
+          getReferencedColumn: (t) => t.shipmentId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferLotLinesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferLotLines,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> stockTransferReceiptsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferReceiptsTableAnnotationComposer a) f,
+  ) {
+    final $$StockTransferReceiptsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.shipmentId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransferShipmentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferShipmentsTable,
+          StockTransferShipment,
+          $$StockTransferShipmentsTableFilterComposer,
+          $$StockTransferShipmentsTableOrderingComposer,
+          $$StockTransferShipmentsTableAnnotationComposer,
+          $$StockTransferShipmentsTableCreateCompanionBuilder,
+          $$StockTransferShipmentsTableUpdateCompanionBuilder,
+          (StockTransferShipment, $$StockTransferShipmentsTableReferences),
+          StockTransferShipment,
+          PrefetchHooks Function({
+            bool transferId,
+            bool shippedBy,
+            bool stockTransferLotLinesRefs,
+            bool stockTransferReceiptsRefs,
+          })
+        > {
+  $$StockTransferShipmentsTableTableManager(
+    _$AppDatabase db,
+    $StockTransferShipmentsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferShipmentsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$StockTransferShipmentsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferShipmentsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferId = const Value.absent(),
+                Value<String> reference = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String?> driverName = const Value.absent(),
+                Value<String?> vehiclePlate = const Value.absent(),
+                Value<int> shippedBy = const Value.absent(),
+                Value<int> shippedAt = const Value.absent(),
+              }) => StockTransferShipmentsCompanion(
+                id: id,
+                transferId: transferId,
+                reference: reference,
+                label: label,
+                notes: notes,
+                driverName: driverName,
+                vehiclePlate: vehiclePlate,
+                shippedBy: shippedBy,
+                shippedAt: shippedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferId,
+                Value<String> reference = const Value.absent(),
+                required String label,
+                Value<String?> notes = const Value.absent(),
+                Value<String?> driverName = const Value.absent(),
+                Value<String?> vehiclePlate = const Value.absent(),
+                required int shippedBy,
+                required int shippedAt,
+              }) => StockTransferShipmentsCompanion.insert(
+                id: id,
+                transferId: transferId,
+                reference: reference,
+                label: label,
+                notes: notes,
+                driverName: driverName,
+                vehiclePlate: vehiclePlate,
+                shippedBy: shippedBy,
+                shippedAt: shippedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferShipmentsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                transferId = false,
+                shippedBy = false,
+                stockTransferLotLinesRefs = false,
+                stockTransferReceiptsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (stockTransferLotLinesRefs) db.stockTransferLotLines,
+                    if (stockTransferReceiptsRefs) db.stockTransferReceipts,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (transferId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferId,
+                                    referencedTable:
+                                        $$StockTransferShipmentsTableReferences
+                                            ._transferIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferShipmentsTableReferences
+                                            ._transferIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (shippedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shippedBy,
+                                    referencedTable:
+                                        $$StockTransferShipmentsTableReferences
+                                            ._shippedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransferShipmentsTableReferences
+                                            ._shippedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (stockTransferLotLinesRefs)
+                        await $_getPrefetchedData<
+                          StockTransferShipment,
+                          $StockTransferShipmentsTable,
+                          StockTransferLotLine
+                        >(
+                          currentTable: table,
+                          referencedTable:
+                              $$StockTransferShipmentsTableReferences
+                                  ._stockTransferLotLinesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferShipmentsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferLotLinesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shipmentId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (stockTransferReceiptsRefs)
+                        await $_getPrefetchedData<
+                          StockTransferShipment,
+                          $StockTransferShipmentsTable,
+                          StockTransferReceipt
+                        >(
+                          currentTable: table,
+                          referencedTable:
+                              $$StockTransferShipmentsTableReferences
+                                  ._stockTransferReceiptsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferShipmentsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferReceiptsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shipmentId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransferShipmentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferShipmentsTable,
+      StockTransferShipment,
+      $$StockTransferShipmentsTableFilterComposer,
+      $$StockTransferShipmentsTableOrderingComposer,
+      $$StockTransferShipmentsTableAnnotationComposer,
+      $$StockTransferShipmentsTableCreateCompanionBuilder,
+      $$StockTransferShipmentsTableUpdateCompanionBuilder,
+      (StockTransferShipment, $$StockTransferShipmentsTableReferences),
+      StockTransferShipment,
+      PrefetchHooks Function({
+        bool transferId,
+        bool shippedBy,
+        bool stockTransferLotLinesRefs,
+        bool stockTransferReceiptsRefs,
+      })
+    >;
+typedef $$StockTransferLotReservationsTableCreateCompanionBuilder =
+    StockTransferLotReservationsCompanion Function({
+      Value<int> id,
+      required int transferItemId,
+      required int lotId,
+      required int quantity,
+      Value<int> quantityShipped,
+      required int unitCost,
+    });
+typedef $$StockTransferLotReservationsTableUpdateCompanionBuilder =
+    StockTransferLotReservationsCompanion Function({
+      Value<int> id,
+      Value<int> transferItemId,
+      Value<int> lotId,
+      Value<int> quantity,
+      Value<int> quantityShipped,
+      Value<int> unitCost,
+    });
+
+final class $$StockTransferLotReservationsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferLotReservationsTable,
+          StockTransferLotReservation
+        > {
+  $$StockTransferLotReservationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransferItemsTable _transferItemIdTable(
+    _$AppDatabase db,
+  ) => db.stockTransferItems.createAlias(
+    'stock_transfer_lot_reservations__transfer_item_id__stock_transfer_items__id',
+  );
+
+  $$StockTransferItemsTableProcessedTableManager get transferItemId {
+    final $_column = $_itemColumn<int>('transfer_item_id')!;
+
+    final manager = $$StockTransferItemsTableTableManager(
+      $_db,
+      $_db.stockTransferItems,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $InventoryLotsTable _lotIdTable(_$AppDatabase db) =>
+      db.inventoryLots.createAlias(
+        'stock_transfer_lot_reservations__lot_id__inventory_lots__id',
+      );
+
+  $$InventoryLotsTableProcessedTableManager get lotId {
+    final $_column = $_itemColumn<int>('lot_id')!;
+
+    final manager = $$InventoryLotsTableTableManager(
+      $_db,
+      $_db.inventoryLots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_lotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StockTransferLotReservationsTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferLotReservationsTable> {
+  $$StockTransferLotReservationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityShipped => $composableBuilder(
+    column: $table.quantityShipped,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransferItemsTableFilterComposer get transferItemId {
+    final $$StockTransferItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InventoryLotsTableFilterComposer get lotId {
+    final $$InventoryLotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableFilterComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferLotReservationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferLotReservationsTable> {
+  $$StockTransferLotReservationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityShipped => $composableBuilder(
+    column: $table.quantityShipped,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransferItemsTableOrderingComposer get transferItemId {
+    final $$StockTransferItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InventoryLotsTableOrderingComposer get lotId {
+    final $$InventoryLotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferLotReservationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferLotReservationsTable> {
+  $$StockTransferLotReservationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<int> get quantityShipped => $composableBuilder(
+    column: $table.quantityShipped,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get unitCost =>
+      $composableBuilder(column: $table.unitCost, builder: (column) => column);
+
+  $$StockTransferItemsTableAnnotationComposer get transferItemId {
+    final $$StockTransferItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.transferItemId,
+          referencedTable: $db.stockTransferItems,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$InventoryLotsTableAnnotationComposer get lotId {
+    final $$InventoryLotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.lotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferLotReservationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferLotReservationsTable,
+          StockTransferLotReservation,
+          $$StockTransferLotReservationsTableFilterComposer,
+          $$StockTransferLotReservationsTableOrderingComposer,
+          $$StockTransferLotReservationsTableAnnotationComposer,
+          $$StockTransferLotReservationsTableCreateCompanionBuilder,
+          $$StockTransferLotReservationsTableUpdateCompanionBuilder,
+          (
+            StockTransferLotReservation,
+            $$StockTransferLotReservationsTableReferences,
+          ),
+          StockTransferLotReservation,
+          PrefetchHooks Function({bool transferItemId, bool lotId})
+        > {
+  $$StockTransferLotReservationsTableTableManager(
+    _$AppDatabase db,
+    $StockTransferLotReservationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferLotReservationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$StockTransferLotReservationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferLotReservationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferItemId = const Value.absent(),
+                Value<int> lotId = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<int> quantityShipped = const Value.absent(),
+                Value<int> unitCost = const Value.absent(),
+              }) => StockTransferLotReservationsCompanion(
+                id: id,
+                transferItemId: transferItemId,
+                lotId: lotId,
+                quantity: quantity,
+                quantityShipped: quantityShipped,
+                unitCost: unitCost,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferItemId,
+                required int lotId,
+                required int quantity,
+                Value<int> quantityShipped = const Value.absent(),
+                required int unitCost,
+              }) => StockTransferLotReservationsCompanion.insert(
+                id: id,
+                transferItemId: transferItemId,
+                lotId: lotId,
+                quantity: quantity,
+                quantityShipped: quantityShipped,
+                unitCost: unitCost,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferLotReservationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({transferItemId = false, lotId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (transferItemId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.transferItemId,
+                                referencedTable:
+                                    $$StockTransferLotReservationsTableReferences
+                                        ._transferItemIdTable(db),
+                                referencedColumn:
+                                    $$StockTransferLotReservationsTableReferences
+                                        ._transferItemIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (lotId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.lotId,
+                                referencedTable:
+                                    $$StockTransferLotReservationsTableReferences
+                                        ._lotIdTable(db),
+                                referencedColumn:
+                                    $$StockTransferLotReservationsTableReferences
+                                        ._lotIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StockTransferLotReservationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferLotReservationsTable,
+      StockTransferLotReservation,
+      $$StockTransferLotReservationsTableFilterComposer,
+      $$StockTransferLotReservationsTableOrderingComposer,
+      $$StockTransferLotReservationsTableAnnotationComposer,
+      $$StockTransferLotReservationsTableCreateCompanionBuilder,
+      $$StockTransferLotReservationsTableUpdateCompanionBuilder,
+      (
+        StockTransferLotReservation,
+        $$StockTransferLotReservationsTableReferences,
+      ),
+      StockTransferLotReservation,
+      PrefetchHooks Function({bool transferItemId, bool lotId})
+    >;
+typedef $$StockTransferLotLinesTableCreateCompanionBuilder =
+    StockTransferLotLinesCompanion Function({
+      Value<int> id,
+      required int transferItemId,
+      Value<int?> shipmentId,
+      Value<int?> sourceLotId,
+      Value<int?> destinationLotId,
+      required int quantity,
+      Value<int> quantityReceived,
+      required int unitCost,
+    });
+typedef $$StockTransferLotLinesTableUpdateCompanionBuilder =
+    StockTransferLotLinesCompanion Function({
+      Value<int> id,
+      Value<int> transferItemId,
+      Value<int?> shipmentId,
+      Value<int?> sourceLotId,
+      Value<int?> destinationLotId,
+      Value<int> quantity,
+      Value<int> quantityReceived,
+      Value<int> unitCost,
+    });
+
+final class $$StockTransferLotLinesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferLotLinesTable,
+          StockTransferLotLine
+        > {
+  $$StockTransferLotLinesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransferItemsTable _transferItemIdTable(_$AppDatabase db) =>
+      db.stockTransferItems.createAlias(
+        'stock_transfer_lot_lines__transfer_item_id__stock_transfer_items__id',
+      );
+
+  $$StockTransferItemsTableProcessedTableManager get transferItemId {
+    final $_column = $_itemColumn<int>('transfer_item_id')!;
+
+    final manager = $$StockTransferItemsTableTableManager(
+      $_db,
+      $_db.stockTransferItems,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $StockTransferShipmentsTable _shipmentIdTable(_$AppDatabase db) =>
+      db.stockTransferShipments.createAlias(
+        'stock_transfer_lot_lines__shipment_id__stock_transfer_shipments__id',
+      );
+
+  $$StockTransferShipmentsTableProcessedTableManager? get shipmentId {
+    final $_column = $_itemColumn<int>('shipment_id');
+    if ($_column == null) return null;
+    final manager = $$StockTransferShipmentsTableTableManager(
+      $_db,
+      $_db.stockTransferShipments,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shipmentIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $InventoryLotsTable _sourceLotIdTable(_$AppDatabase db) =>
+      db.inventoryLots.createAlias(
+        'stock_transfer_lot_lines__source_lot_id__inventory_lots__id',
+      );
+
+  $$InventoryLotsTableProcessedTableManager? get sourceLotId {
+    final $_column = $_itemColumn<int>('source_lot_id');
+    if ($_column == null) return null;
+    final manager = $$InventoryLotsTableTableManager(
+      $_db,
+      $_db.inventoryLots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sourceLotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $InventoryLotsTable _destinationLotIdTable(_$AppDatabase db) =>
+      db.inventoryLots.createAlias(
+        'stock_transfer_lot_lines__destination_lot_id__inventory_lots__id',
+      );
+
+  $$InventoryLotsTableProcessedTableManager? get destinationLotId {
+    final $_column = $_itemColumn<int>('destination_lot_id');
+    if ($_column == null) return null;
+    final manager = $$InventoryLotsTableTableManager(
+      $_db,
+      $_db.inventoryLots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_destinationLotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StockTransferLotLinesTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferLotLinesTable> {
+  $$StockTransferLotLinesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransferItemsTableFilterComposer get transferItemId {
+    final $$StockTransferItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferShipmentsTableFilterComposer get shipmentId {
+    final $$StockTransferShipmentsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shipmentId,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$InventoryLotsTableFilterComposer get sourceLotId {
+    final $$InventoryLotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceLotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableFilterComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InventoryLotsTableFilterComposer get destinationLotId {
+    final $$InventoryLotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationLotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableFilterComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferLotLinesTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferLotLinesTable> {
+  $$StockTransferLotLinesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get unitCost => $composableBuilder(
+    column: $table.unitCost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransferItemsTableOrderingComposer get transferItemId {
+    final $$StockTransferItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferShipmentsTableOrderingComposer get shipmentId {
+    final $$StockTransferShipmentsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shipmentId,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableOrderingComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$InventoryLotsTableOrderingComposer get sourceLotId {
+    final $$InventoryLotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceLotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InventoryLotsTableOrderingComposer get destinationLotId {
+    final $$InventoryLotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationLotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferLotLinesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferLotLinesTable> {
+  $$StockTransferLotLinesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get unitCost =>
+      $composableBuilder(column: $table.unitCost, builder: (column) => column);
+
+  $$StockTransferItemsTableAnnotationComposer get transferItemId {
+    final $$StockTransferItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.transferItemId,
+          referencedTable: $db.stockTransferItems,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$StockTransferShipmentsTableAnnotationComposer get shipmentId {
+    final $$StockTransferShipmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shipmentId,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$InventoryLotsTableAnnotationComposer get sourceLotId {
+    final $$InventoryLotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sourceLotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$InventoryLotsTableAnnotationComposer get destinationLotId {
+    final $$InventoryLotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.destinationLotId,
+      referencedTable: $db.inventoryLots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$InventoryLotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.inventoryLots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferLotLinesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferLotLinesTable,
+          StockTransferLotLine,
+          $$StockTransferLotLinesTableFilterComposer,
+          $$StockTransferLotLinesTableOrderingComposer,
+          $$StockTransferLotLinesTableAnnotationComposer,
+          $$StockTransferLotLinesTableCreateCompanionBuilder,
+          $$StockTransferLotLinesTableUpdateCompanionBuilder,
+          (StockTransferLotLine, $$StockTransferLotLinesTableReferences),
+          StockTransferLotLine,
+          PrefetchHooks Function({
+            bool transferItemId,
+            bool shipmentId,
+            bool sourceLotId,
+            bool destinationLotId,
+          })
+        > {
+  $$StockTransferLotLinesTableTableManager(
+    _$AppDatabase db,
+    $StockTransferLotLinesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferLotLinesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$StockTransferLotLinesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferLotLinesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferItemId = const Value.absent(),
+                Value<int?> shipmentId = const Value.absent(),
+                Value<int?> sourceLotId = const Value.absent(),
+                Value<int?> destinationLotId = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<int> quantityReceived = const Value.absent(),
+                Value<int> unitCost = const Value.absent(),
+              }) => StockTransferLotLinesCompanion(
+                id: id,
+                transferItemId: transferItemId,
+                shipmentId: shipmentId,
+                sourceLotId: sourceLotId,
+                destinationLotId: destinationLotId,
+                quantity: quantity,
+                quantityReceived: quantityReceived,
+                unitCost: unitCost,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferItemId,
+                Value<int?> shipmentId = const Value.absent(),
+                Value<int?> sourceLotId = const Value.absent(),
+                Value<int?> destinationLotId = const Value.absent(),
+                required int quantity,
+                Value<int> quantityReceived = const Value.absent(),
+                required int unitCost,
+              }) => StockTransferLotLinesCompanion.insert(
+                id: id,
+                transferItemId: transferItemId,
+                shipmentId: shipmentId,
+                sourceLotId: sourceLotId,
+                destinationLotId: destinationLotId,
+                quantity: quantity,
+                quantityReceived: quantityReceived,
+                unitCost: unitCost,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferLotLinesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                transferItemId = false,
+                shipmentId = false,
+                sourceLotId = false,
+                destinationLotId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (transferItemId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferItemId,
+                                    referencedTable:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._transferItemIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._transferItemIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (shipmentId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shipmentId,
+                                    referencedTable:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._shipmentIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._shipmentIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sourceLotId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sourceLotId,
+                                    referencedTable:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._sourceLotIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._sourceLotIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (destinationLotId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.destinationLotId,
+                                    referencedTable:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._destinationLotIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferLotLinesTableReferences
+                                            ._destinationLotIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransferLotLinesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferLotLinesTable,
+      StockTransferLotLine,
+      $$StockTransferLotLinesTableFilterComposer,
+      $$StockTransferLotLinesTableOrderingComposer,
+      $$StockTransferLotLinesTableAnnotationComposer,
+      $$StockTransferLotLinesTableCreateCompanionBuilder,
+      $$StockTransferLotLinesTableUpdateCompanionBuilder,
+      (StockTransferLotLine, $$StockTransferLotLinesTableReferences),
+      StockTransferLotLine,
+      PrefetchHooks Function({
+        bool transferItemId,
+        bool shipmentId,
+        bool sourceLotId,
+        bool destinationLotId,
+      })
+    >;
+typedef $$StockTransferEventsTableCreateCompanionBuilder =
+    StockTransferEventsCompanion Function({
+      Value<int> id,
+      required int transferId,
+      required int shopId,
+      required String eventType,
+      required int actorUserId,
+      Value<String?> notes,
+      Value<String?> payloadJson,
+      required int createdAt,
+    });
+typedef $$StockTransferEventsTableUpdateCompanionBuilder =
+    StockTransferEventsCompanion Function({
+      Value<int> id,
+      Value<int> transferId,
+      Value<int> shopId,
+      Value<String> eventType,
+      Value<int> actorUserId,
+      Value<String?> notes,
+      Value<String?> payloadJson,
+      Value<int> createdAt,
+    });
+
+final class $$StockTransferEventsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferEventsTable,
+          StockTransferEvent
+        > {
+  $$StockTransferEventsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransfersTable _transferIdTable(_$AppDatabase db) => db
+      .stockTransfers
+      .createAlias('stock_transfer_events__transfer_id__stock_transfers__id');
+
+  $$StockTransfersTableProcessedTableManager get transferId {
+    final $_column = $_itemColumn<int>('transfer_id')!;
+
+    final manager = $$StockTransfersTableTableManager(
+      $_db,
+      $_db.stockTransfers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('stock_transfer_events__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _actorUserIdTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfer_events__actor_user_id__users__id');
+
+  $$UsersTableProcessedTableManager get actorUserId {
+    final $_column = $_itemColumn<int>('actor_user_id')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_actorUserIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StockTransferEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferEventsTable> {
+  $$StockTransferEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventType => $composableBuilder(
+    column: $table.eventType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransfersTableFilterComposer get transferId {
+    final $$StockTransfersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get actorUserId {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.actorUserId,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferEventsTable> {
+  $$StockTransferEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventType => $composableBuilder(
+    column: $table.eventType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransfersTableOrderingComposer get transferId {
+    final $$StockTransfersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get actorUserId {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.actorUserId,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferEventsTable> {
+  $$StockTransferEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get eventType =>
+      $composableBuilder(column: $table.eventType, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$StockTransfersTableAnnotationComposer get transferId {
+    final $$StockTransfersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get actorUserId {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.actorUserId,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferEventsTable,
+          StockTransferEvent,
+          $$StockTransferEventsTableFilterComposer,
+          $$StockTransferEventsTableOrderingComposer,
+          $$StockTransferEventsTableAnnotationComposer,
+          $$StockTransferEventsTableCreateCompanionBuilder,
+          $$StockTransferEventsTableUpdateCompanionBuilder,
+          (StockTransferEvent, $$StockTransferEventsTableReferences),
+          StockTransferEvent,
+          PrefetchHooks Function({
+            bool transferId,
+            bool shopId,
+            bool actorUserId,
+          })
+        > {
+  $$StockTransferEventsTableTableManager(
+    _$AppDatabase db,
+    $StockTransferEventsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$StockTransferEventsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferEventsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferId = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<String> eventType = const Value.absent(),
+                Value<int> actorUserId = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => StockTransferEventsCompanion(
+                id: id,
+                transferId: transferId,
+                shopId: shopId,
+                eventType: eventType,
+                actorUserId: actorUserId,
+                notes: notes,
+                payloadJson: payloadJson,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferId,
+                required int shopId,
+                required String eventType,
+                required int actorUserId,
+                Value<String?> notes = const Value.absent(),
+                Value<String?> payloadJson = const Value.absent(),
+                required int createdAt,
+              }) => StockTransferEventsCompanion.insert(
+                id: id,
+                transferId: transferId,
+                shopId: shopId,
+                eventType: eventType,
+                actorUserId: actorUserId,
+                notes: notes,
+                payloadJson: payloadJson,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferEventsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({transferId = false, shopId = false, actorUserId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (transferId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferId,
+                                    referencedTable:
+                                        $$StockTransferEventsTableReferences
+                                            ._transferIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferEventsTableReferences
+                                            ._transferIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$StockTransferEventsTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferEventsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (actorUserId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.actorUserId,
+                                    referencedTable:
+                                        $$StockTransferEventsTableReferences
+                                            ._actorUserIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferEventsTableReferences
+                                            ._actorUserIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransferEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferEventsTable,
+      StockTransferEvent,
+      $$StockTransferEventsTableFilterComposer,
+      $$StockTransferEventsTableOrderingComposer,
+      $$StockTransferEventsTableAnnotationComposer,
+      $$StockTransferEventsTableCreateCompanionBuilder,
+      $$StockTransferEventsTableUpdateCompanionBuilder,
+      (StockTransferEvent, $$StockTransferEventsTableReferences),
+      StockTransferEvent,
+      PrefetchHooks Function({bool transferId, bool shopId, bool actorUserId})
+    >;
+typedef $$StockTransferDiscrepanciesTableCreateCompanionBuilder =
+    StockTransferDiscrepanciesCompanion Function({
+      Value<int> id,
+      required int transferId,
+      required int transferItemId,
+      required int quantity,
+      required String reason,
+      required String resolution,
+      Value<String?> notes,
+      required int resolvedBy,
+      required int resolvedAt,
+      required int createdAt,
+    });
+typedef $$StockTransferDiscrepanciesTableUpdateCompanionBuilder =
+    StockTransferDiscrepanciesCompanion Function({
+      Value<int> id,
+      Value<int> transferId,
+      Value<int> transferItemId,
+      Value<int> quantity,
+      Value<String> reason,
+      Value<String> resolution,
+      Value<String?> notes,
+      Value<int> resolvedBy,
+      Value<int> resolvedAt,
+      Value<int> createdAt,
+    });
+
+final class $$StockTransferDiscrepanciesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferDiscrepanciesTable,
+          StockTransferDiscrepancy
+        > {
+  $$StockTransferDiscrepanciesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransfersTable _transferIdTable(_$AppDatabase db) =>
+      db.stockTransfers.createAlias(
+        'stock_transfer_discrepancies__transfer_id__stock_transfers__id',
+      );
+
+  $$StockTransfersTableProcessedTableManager get transferId {
+    final $_column = $_itemColumn<int>('transfer_id')!;
+
+    final manager = $$StockTransfersTableTableManager(
+      $_db,
+      $_db.stockTransfers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $StockTransferItemsTable _transferItemIdTable(
+    _$AppDatabase db,
+  ) => db.stockTransferItems.createAlias(
+    'stock_transfer_discrepancies__transfer_item_id__stock_transfer_items__id',
+  );
+
+  $$StockTransferItemsTableProcessedTableManager get transferItemId {
+    final $_column = $_itemColumn<int>('transfer_item_id')!;
+
+    final manager = $$StockTransferItemsTableTableManager(
+      $_db,
+      $_db.stockTransferItems,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _resolvedByTable(_$AppDatabase db) => db.users.createAlias(
+    'stock_transfer_discrepancies__resolved_by__users__id',
+  );
+
+  $$UsersTableProcessedTableManager get resolvedBy {
+    final $_column = $_itemColumn<int>('resolved_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_resolvedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StockTransferDiscrepanciesTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferDiscrepanciesTable> {
+  $$StockTransferDiscrepanciesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resolution => $composableBuilder(
+    column: $table.resolution,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransfersTableFilterComposer get transferId {
+    final $$StockTransfersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferItemsTableFilterComposer get transferItemId {
+    final $$StockTransferItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get resolvedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.resolvedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferDiscrepanciesTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferDiscrepanciesTable> {
+  $$StockTransferDiscrepanciesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantity => $composableBuilder(
+    column: $table.quantity,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resolution => $composableBuilder(
+    column: $table.resolution,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransfersTableOrderingComposer get transferId {
+    final $$StockTransfersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferItemsTableOrderingComposer get transferItemId {
+    final $$StockTransferItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get resolvedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.resolvedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferDiscrepanciesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferDiscrepanciesTable> {
+  $$StockTransferDiscrepanciesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get quantity =>
+      $composableBuilder(column: $table.quantity, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<String> get resolution => $composableBuilder(
+    column: $table.resolution,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get resolvedAt => $composableBuilder(
+    column: $table.resolvedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$StockTransfersTableAnnotationComposer get transferId {
+    final $$StockTransfersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferItemsTableAnnotationComposer get transferItemId {
+    final $$StockTransferItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.transferItemId,
+          referencedTable: $db.stockTransferItems,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get resolvedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.resolvedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferDiscrepanciesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferDiscrepanciesTable,
+          StockTransferDiscrepancy,
+          $$StockTransferDiscrepanciesTableFilterComposer,
+          $$StockTransferDiscrepanciesTableOrderingComposer,
+          $$StockTransferDiscrepanciesTableAnnotationComposer,
+          $$StockTransferDiscrepanciesTableCreateCompanionBuilder,
+          $$StockTransferDiscrepanciesTableUpdateCompanionBuilder,
+          (
+            StockTransferDiscrepancy,
+            $$StockTransferDiscrepanciesTableReferences,
+          ),
+          StockTransferDiscrepancy,
+          PrefetchHooks Function({
+            bool transferId,
+            bool transferItemId,
+            bool resolvedBy,
+          })
+        > {
+  $$StockTransferDiscrepanciesTableTableManager(
+    _$AppDatabase db,
+    $StockTransferDiscrepanciesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferDiscrepanciesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$StockTransferDiscrepanciesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferDiscrepanciesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferId = const Value.absent(),
+                Value<int> transferItemId = const Value.absent(),
+                Value<int> quantity = const Value.absent(),
+                Value<String> reason = const Value.absent(),
+                Value<String> resolution = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> resolvedBy = const Value.absent(),
+                Value<int> resolvedAt = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => StockTransferDiscrepanciesCompanion(
+                id: id,
+                transferId: transferId,
+                transferItemId: transferItemId,
+                quantity: quantity,
+                reason: reason,
+                resolution: resolution,
+                notes: notes,
+                resolvedBy: resolvedBy,
+                resolvedAt: resolvedAt,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferId,
+                required int transferItemId,
+                required int quantity,
+                required String reason,
+                required String resolution,
+                Value<String?> notes = const Value.absent(),
+                required int resolvedBy,
+                required int resolvedAt,
+                required int createdAt,
+              }) => StockTransferDiscrepanciesCompanion.insert(
+                id: id,
+                transferId: transferId,
+                transferItemId: transferItemId,
+                quantity: quantity,
+                reason: reason,
+                resolution: resolution,
+                notes: notes,
+                resolvedBy: resolvedBy,
+                resolvedAt: resolvedAt,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferDiscrepanciesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                transferId = false,
+                transferItemId = false,
+                resolvedBy = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (transferId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferId,
+                                    referencedTable:
+                                        $$StockTransferDiscrepanciesTableReferences
+                                            ._transferIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferDiscrepanciesTableReferences
+                                            ._transferIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (transferItemId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferItemId,
+                                    referencedTable:
+                                        $$StockTransferDiscrepanciesTableReferences
+                                            ._transferItemIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferDiscrepanciesTableReferences
+                                            ._transferItemIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (resolvedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.resolvedBy,
+                                    referencedTable:
+                                        $$StockTransferDiscrepanciesTableReferences
+                                            ._resolvedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransferDiscrepanciesTableReferences
+                                            ._resolvedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransferDiscrepanciesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferDiscrepanciesTable,
+      StockTransferDiscrepancy,
+      $$StockTransferDiscrepanciesTableFilterComposer,
+      $$StockTransferDiscrepanciesTableOrderingComposer,
+      $$StockTransferDiscrepanciesTableAnnotationComposer,
+      $$StockTransferDiscrepanciesTableCreateCompanionBuilder,
+      $$StockTransferDiscrepanciesTableUpdateCompanionBuilder,
+      (StockTransferDiscrepancy, $$StockTransferDiscrepanciesTableReferences),
+      StockTransferDiscrepancy,
+      PrefetchHooks Function({
+        bool transferId,
+        bool transferItemId,
+        bool resolvedBy,
+      })
+    >;
+typedef $$StockTransferReceiptsTableCreateCompanionBuilder =
+    StockTransferReceiptsCompanion Function({
+      Value<int> id,
+      required int transferId,
+      Value<int?> shipmentId,
+      required String reference,
+      Value<String?> notes,
+      required int receivedBy,
+      required int receivedAt,
+      required int createdAt,
+    });
+typedef $$StockTransferReceiptsTableUpdateCompanionBuilder =
+    StockTransferReceiptsCompanion Function({
+      Value<int> id,
+      Value<int> transferId,
+      Value<int?> shipmentId,
+      Value<String> reference,
+      Value<String?> notes,
+      Value<int> receivedBy,
+      Value<int> receivedAt,
+      Value<int> createdAt,
+    });
+
+final class $$StockTransferReceiptsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferReceiptsTable,
+          StockTransferReceipt
+        > {
+  $$StockTransferReceiptsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransfersTable _transferIdTable(_$AppDatabase db) => db
+      .stockTransfers
+      .createAlias('stock_transfer_receipts__transfer_id__stock_transfers__id');
+
+  $$StockTransfersTableProcessedTableManager get transferId {
+    final $_column = $_itemColumn<int>('transfer_id')!;
+
+    final manager = $$StockTransfersTableTableManager(
+      $_db,
+      $_db.stockTransfers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $StockTransferShipmentsTable _shipmentIdTable(_$AppDatabase db) =>
+      db.stockTransferShipments.createAlias(
+        'stock_transfer_receipts__shipment_id__stock_transfer_shipments__id',
+      );
+
+  $$StockTransferShipmentsTableProcessedTableManager? get shipmentId {
+    final $_column = $_itemColumn<int>('shipment_id');
+    if ($_column == null) return null;
+    final manager = $$StockTransferShipmentsTableTableManager(
+      $_db,
+      $_db.stockTransferShipments,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shipmentIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _receivedByTable(_$AppDatabase db) =>
+      db.users.createAlias('stock_transfer_receipts__received_by__users__id');
+
+  $$UsersTableProcessedTableManager get receivedBy {
+    final $_column = $_itemColumn<int>('received_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_receivedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $StockTransferReceiptItemsTable,
+    List<StockTransferReceiptItem>
+  >
+  _stockTransferReceiptItemsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.stockTransferReceiptItems,
+    aliasName:
+        'stock_transfer_receipts__id__stock_transfer_receipt_items__receipt_id',
+  );
+
+  $$StockTransferReceiptItemsTableProcessedTableManager
+  get stockTransferReceiptItemsRefs {
+    final manager = $$StockTransferReceiptItemsTableTableManager(
+      $_db,
+      $_db.stockTransferReceiptItems,
+    ).filter((f) => f.receiptId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _stockTransferReceiptItemsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$StockTransferReceiptsTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferReceiptsTable> {
+  $$StockTransferReceiptsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransfersTableFilterComposer get transferId {
+    final $$StockTransfersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferShipmentsTableFilterComposer get shipmentId {
+    final $$StockTransferShipmentsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shipmentId,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get receivedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.receivedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> stockTransferReceiptItemsRefs(
+    Expression<bool> Function($$StockTransferReceiptItemsTableFilterComposer f)
+    f,
+  ) {
+    final $$StockTransferReceiptItemsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceiptItems,
+          getReferencedColumn: (t) => t.receiptId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptItemsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferReceiptItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransferReceiptsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferReceiptsTable> {
+  $$StockTransferReceiptsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reference => $composableBuilder(
+    column: $table.reference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransfersTableOrderingComposer get transferId {
+    final $$StockTransfersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferShipmentsTableOrderingComposer get shipmentId {
+    final $$StockTransferShipmentsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shipmentId,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableOrderingComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get receivedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.receivedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferReceiptsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferReceiptsTable> {
+  $$StockTransferReceiptsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get reference =>
+      $composableBuilder(column: $table.reference, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get receivedAt => $composableBuilder(
+    column: $table.receivedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$StockTransfersTableAnnotationComposer get transferId {
+    final $$StockTransfersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferId,
+      referencedTable: $db.stockTransfers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransfersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.stockTransfers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$StockTransferShipmentsTableAnnotationComposer get shipmentId {
+    final $$StockTransferShipmentsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.shipmentId,
+          referencedTable: $db.stockTransferShipments,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferShipmentsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferShipments,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get receivedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.receivedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> stockTransferReceiptItemsRefs<T extends Object>(
+    Expression<T> Function($$StockTransferReceiptItemsTableAnnotationComposer a)
+    f,
+  ) {
+    final $$StockTransferReceiptItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.stockTransferReceiptItems,
+          getReferencedColumn: (t) => t.receiptId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferReceiptItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$StockTransferReceiptsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferReceiptsTable,
+          StockTransferReceipt,
+          $$StockTransferReceiptsTableFilterComposer,
+          $$StockTransferReceiptsTableOrderingComposer,
+          $$StockTransferReceiptsTableAnnotationComposer,
+          $$StockTransferReceiptsTableCreateCompanionBuilder,
+          $$StockTransferReceiptsTableUpdateCompanionBuilder,
+          (StockTransferReceipt, $$StockTransferReceiptsTableReferences),
+          StockTransferReceipt,
+          PrefetchHooks Function({
+            bool transferId,
+            bool shipmentId,
+            bool receivedBy,
+            bool stockTransferReceiptItemsRefs,
+          })
+        > {
+  $$StockTransferReceiptsTableTableManager(
+    _$AppDatabase db,
+    $StockTransferReceiptsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferReceiptsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$StockTransferReceiptsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferReceiptsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> transferId = const Value.absent(),
+                Value<int?> shipmentId = const Value.absent(),
+                Value<String> reference = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> receivedBy = const Value.absent(),
+                Value<int> receivedAt = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => StockTransferReceiptsCompanion(
+                id: id,
+                transferId: transferId,
+                shipmentId: shipmentId,
+                reference: reference,
+                notes: notes,
+                receivedBy: receivedBy,
+                receivedAt: receivedAt,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int transferId,
+                Value<int?> shipmentId = const Value.absent(),
+                required String reference,
+                Value<String?> notes = const Value.absent(),
+                required int receivedBy,
+                required int receivedAt,
+                required int createdAt,
+              }) => StockTransferReceiptsCompanion.insert(
+                id: id,
+                transferId: transferId,
+                shipmentId: shipmentId,
+                reference: reference,
+                notes: notes,
+                receivedBy: receivedBy,
+                receivedAt: receivedAt,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferReceiptsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                transferId = false,
+                shipmentId = false,
+                receivedBy = false,
+                stockTransferReceiptItemsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (stockTransferReceiptItemsRefs)
+                      db.stockTransferReceiptItems,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (transferId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.transferId,
+                                    referencedTable:
+                                        $$StockTransferReceiptsTableReferences
+                                            ._transferIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferReceiptsTableReferences
+                                            ._transferIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (shipmentId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shipmentId,
+                                    referencedTable:
+                                        $$StockTransferReceiptsTableReferences
+                                            ._shipmentIdTable(db),
+                                    referencedColumn:
+                                        $$StockTransferReceiptsTableReferences
+                                            ._shipmentIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (receivedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.receivedBy,
+                                    referencedTable:
+                                        $$StockTransferReceiptsTableReferences
+                                            ._receivedByTable(db),
+                                    referencedColumn:
+                                        $$StockTransferReceiptsTableReferences
+                                            ._receivedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (stockTransferReceiptItemsRefs)
+                        await $_getPrefetchedData<
+                          StockTransferReceipt,
+                          $StockTransferReceiptsTable,
+                          StockTransferReceiptItem
+                        >(
+                          currentTable: table,
+                          referencedTable:
+                              $$StockTransferReceiptsTableReferences
+                                  ._stockTransferReceiptItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$StockTransferReceiptsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).stockTransferReceiptItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.receiptId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$StockTransferReceiptsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferReceiptsTable,
+      StockTransferReceipt,
+      $$StockTransferReceiptsTableFilterComposer,
+      $$StockTransferReceiptsTableOrderingComposer,
+      $$StockTransferReceiptsTableAnnotationComposer,
+      $$StockTransferReceiptsTableCreateCompanionBuilder,
+      $$StockTransferReceiptsTableUpdateCompanionBuilder,
+      (StockTransferReceipt, $$StockTransferReceiptsTableReferences),
+      StockTransferReceipt,
+      PrefetchHooks Function({
+        bool transferId,
+        bool shipmentId,
+        bool receivedBy,
+        bool stockTransferReceiptItemsRefs,
+      })
+    >;
+typedef $$StockTransferReceiptItemsTableCreateCompanionBuilder =
+    StockTransferReceiptItemsCompanion Function({
+      Value<int> id,
+      required int receiptId,
+      required int transferItemId,
+      required int quantityReceived,
+      Value<int> quantityRefused,
+      Value<String?> refusalReason,
+      Value<String?> refusalResolution,
+      required int createdAt,
+    });
+typedef $$StockTransferReceiptItemsTableUpdateCompanionBuilder =
+    StockTransferReceiptItemsCompanion Function({
+      Value<int> id,
+      Value<int> receiptId,
+      Value<int> transferItemId,
+      Value<int> quantityReceived,
+      Value<int> quantityRefused,
+      Value<String?> refusalReason,
+      Value<String?> refusalResolution,
+      Value<int> createdAt,
+    });
+
+final class $$StockTransferReceiptItemsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $StockTransferReceiptItemsTable,
+          StockTransferReceiptItem
+        > {
+  $$StockTransferReceiptItemsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $StockTransferReceiptsTable _receiptIdTable(_$AppDatabase db) =>
+      db.stockTransferReceipts.createAlias(
+        'stock_transfer_receipt_items__receipt_id__stock_transfer_receipts__id',
+      );
+
+  $$StockTransferReceiptsTableProcessedTableManager get receiptId {
+    final $_column = $_itemColumn<int>('receipt_id')!;
+
+    final manager = $$StockTransferReceiptsTableTableManager(
+      $_db,
+      $_db.stockTransferReceipts,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_receiptIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $StockTransferItemsTable _transferItemIdTable(
+    _$AppDatabase db,
+  ) => db.stockTransferItems.createAlias(
+    'stock_transfer_receipt_items__transfer_item_id__stock_transfer_items__id',
+  );
+
+  $$StockTransferItemsTableProcessedTableManager get transferItemId {
+    final $_column = $_itemColumn<int>('transfer_item_id')!;
+
+    final manager = $$StockTransferItemsTableTableManager(
+      $_db,
+      $_db.stockTransferItems,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_transferItemIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$StockTransferReceiptItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $StockTransferReceiptItemsTable> {
+  $$StockTransferReceiptItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get quantityRefused => $composableBuilder(
+    column: $table.quantityRefused,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refusalReason => $composableBuilder(
+    column: $table.refusalReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get refusalResolution => $composableBuilder(
+    column: $table.refusalResolution,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$StockTransferReceiptsTableFilterComposer get receiptId {
+    final $$StockTransferReceiptsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.receiptId,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableFilterComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$StockTransferItemsTableFilterComposer get transferItemId {
+    final $$StockTransferItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferReceiptItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $StockTransferReceiptItemsTable> {
+  $$StockTransferReceiptItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quantityRefused => $composableBuilder(
+    column: $table.quantityRefused,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refusalReason => $composableBuilder(
+    column: $table.refusalReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get refusalResolution => $composableBuilder(
+    column: $table.refusalResolution,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$StockTransferReceiptsTableOrderingComposer get receiptId {
+    final $$StockTransferReceiptsTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.receiptId,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableOrderingComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$StockTransferItemsTableOrderingComposer get transferItemId {
+    final $$StockTransferItemsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.transferItemId,
+      referencedTable: $db.stockTransferItems,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$StockTransferItemsTableOrderingComposer(
+            $db: $db,
+            $table: $db.stockTransferItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$StockTransferReceiptItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $StockTransferReceiptItemsTable> {
+  $$StockTransferReceiptItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get quantityReceived => $composableBuilder(
+    column: $table.quantityReceived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get quantityRefused => $composableBuilder(
+    column: $table.quantityRefused,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get refusalReason => $composableBuilder(
+    column: $table.refusalReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get refusalResolution => $composableBuilder(
+    column: $table.refusalResolution,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$StockTransferReceiptsTableAnnotationComposer get receiptId {
+    final $$StockTransferReceiptsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.receiptId,
+          referencedTable: $db.stockTransferReceipts,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferReceiptsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferReceipts,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+
+  $$StockTransferItemsTableAnnotationComposer get transferItemId {
+    final $$StockTransferItemsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.transferItemId,
+          referencedTable: $db.stockTransferItems,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$StockTransferItemsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.stockTransferItems,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
+}
+
+class $$StockTransferReceiptItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $StockTransferReceiptItemsTable,
+          StockTransferReceiptItem,
+          $$StockTransferReceiptItemsTableFilterComposer,
+          $$StockTransferReceiptItemsTableOrderingComposer,
+          $$StockTransferReceiptItemsTableAnnotationComposer,
+          $$StockTransferReceiptItemsTableCreateCompanionBuilder,
+          $$StockTransferReceiptItemsTableUpdateCompanionBuilder,
+          (
+            StockTransferReceiptItem,
+            $$StockTransferReceiptItemsTableReferences,
+          ),
+          StockTransferReceiptItem,
+          PrefetchHooks Function({bool receiptId, bool transferItemId})
+        > {
+  $$StockTransferReceiptItemsTableTableManager(
+    _$AppDatabase db,
+    $StockTransferReceiptItemsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$StockTransferReceiptItemsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$StockTransferReceiptItemsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$StockTransferReceiptItemsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> receiptId = const Value.absent(),
+                Value<int> transferItemId = const Value.absent(),
+                Value<int> quantityReceived = const Value.absent(),
+                Value<int> quantityRefused = const Value.absent(),
+                Value<String?> refusalReason = const Value.absent(),
+                Value<String?> refusalResolution = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+              }) => StockTransferReceiptItemsCompanion(
+                id: id,
+                receiptId: receiptId,
+                transferItemId: transferItemId,
+                quantityReceived: quantityReceived,
+                quantityRefused: quantityRefused,
+                refusalReason: refusalReason,
+                refusalResolution: refusalResolution,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int receiptId,
+                required int transferItemId,
+                required int quantityReceived,
+                Value<int> quantityRefused = const Value.absent(),
+                Value<String?> refusalReason = const Value.absent(),
+                Value<String?> refusalResolution = const Value.absent(),
+                required int createdAt,
+              }) => StockTransferReceiptItemsCompanion.insert(
+                id: id,
+                receiptId: receiptId,
+                transferItemId: transferItemId,
+                quantityReceived: quantityReceived,
+                quantityRefused: quantityRefused,
+                refusalReason: refusalReason,
+                refusalResolution: refusalResolution,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$StockTransferReceiptItemsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({receiptId = false, transferItemId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (receiptId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.receiptId,
+                                referencedTable:
+                                    $$StockTransferReceiptItemsTableReferences
+                                        ._receiptIdTable(db),
+                                referencedColumn:
+                                    $$StockTransferReceiptItemsTableReferences
+                                        ._receiptIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (transferItemId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.transferItemId,
+                                referencedTable:
+                                    $$StockTransferReceiptItemsTableReferences
+                                        ._transferItemIdTable(db),
+                                referencedColumn:
+                                    $$StockTransferReceiptItemsTableReferences
+                                        ._transferItemIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$StockTransferReceiptItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $StockTransferReceiptItemsTable,
+      StockTransferReceiptItem,
+      $$StockTransferReceiptItemsTableFilterComposer,
+      $$StockTransferReceiptItemsTableOrderingComposer,
+      $$StockTransferReceiptItemsTableAnnotationComposer,
+      $$StockTransferReceiptItemsTableCreateCompanionBuilder,
+      $$StockTransferReceiptItemsTableUpdateCompanionBuilder,
+      (StockTransferReceiptItem, $$StockTransferReceiptItemsTableReferences),
+      StockTransferReceiptItem,
+      PrefetchHooks Function({bool receiptId, bool transferItemId})
+    >;
+typedef $$FxCurrenciesTableCreateCompanionBuilder =
+    FxCurrenciesCompanion Function({
+      required String code,
+      required String label,
+      required String symbol,
+      Value<int> minorUnit,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+typedef $$FxCurrenciesTableUpdateCompanionBuilder =
+    FxCurrenciesCompanion Function({
+      Value<String> code,
+      Value<String> label,
+      Value<String> symbol,
+      Value<int> minorUnit,
+      Value<int> sortOrder,
+      Value<int> rowid,
+    });
+
+class $$FxCurrenciesTableFilterComposer
+    extends Composer<_$AppDatabase, $FxCurrenciesTable> {
+  $$FxCurrenciesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get symbol => $composableBuilder(
+    column: $table.symbol,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get minorUnit => $composableBuilder(
+    column: $table.minorUnit,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FxCurrenciesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxCurrenciesTable> {
+  $$FxCurrenciesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get symbol => $composableBuilder(
+    column: $table.symbol,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get minorUnit => $composableBuilder(
+    column: $table.minorUnit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FxCurrenciesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxCurrenciesTable> {
+  $$FxCurrenciesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get symbol =>
+      $composableBuilder(column: $table.symbol, builder: (column) => column);
+
+  GeneratedColumn<int> get minorUnit =>
+      $composableBuilder(column: $table.minorUnit, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+}
+
+class $$FxCurrenciesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxCurrenciesTable,
+          FxCurrency,
+          $$FxCurrenciesTableFilterComposer,
+          $$FxCurrenciesTableOrderingComposer,
+          $$FxCurrenciesTableAnnotationComposer,
+          $$FxCurrenciesTableCreateCompanionBuilder,
+          $$FxCurrenciesTableUpdateCompanionBuilder,
+          (
+            FxCurrency,
+            BaseReferences<_$AppDatabase, $FxCurrenciesTable, FxCurrency>,
+          ),
+          FxCurrency,
+          PrefetchHooks Function()
+        > {
+  $$FxCurrenciesTableTableManager(_$AppDatabase db, $FxCurrenciesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxCurrenciesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxCurrenciesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxCurrenciesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> code = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> symbol = const Value.absent(),
+                Value<int> minorUnit = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FxCurrenciesCompanion(
+                code: code,
+                label: label,
+                symbol: symbol,
+                minorUnit: minorUnit,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String code,
+                required String label,
+                required String symbol,
+                Value<int> minorUnit = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FxCurrenciesCompanion.insert(
+                code: code,
+                label: label,
+                symbol: symbol,
+                minorUnit: minorUnit,
+                sortOrder: sortOrder,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FxCurrenciesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxCurrenciesTable,
+      FxCurrency,
+      $$FxCurrenciesTableFilterComposer,
+      $$FxCurrenciesTableOrderingComposer,
+      $$FxCurrenciesTableAnnotationComposer,
+      $$FxCurrenciesTableCreateCompanionBuilder,
+      $$FxCurrenciesTableUpdateCompanionBuilder,
+      (
+        FxCurrency,
+        BaseReferences<_$AppDatabase, $FxCurrenciesTable, FxCurrency>,
+      ),
+      FxCurrency,
+      PrefetchHooks Function()
+    >;
+typedef $$FxShopCurrenciesTableCreateCompanionBuilder =
+    FxShopCurrenciesCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required String currencyCode,
+      Value<bool> enabled,
+      Value<int> sortOrder,
+      required int createdAt,
+      required int updatedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxShopCurrenciesTableUpdateCompanionBuilder =
+    FxShopCurrenciesCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<String> currencyCode,
+      Value<bool> enabled,
+      Value<int> sortOrder,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxShopCurrenciesTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $FxShopCurrenciesTable, FxShopCurrency> {
+  $$FxShopCurrenciesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_shop_currencies__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FxShopCurrenciesTableFilterComposer
+    extends Composer<_$AppDatabase, $FxShopCurrenciesTable> {
+  $$FxShopCurrenciesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxShopCurrenciesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxShopCurrenciesTable> {
+  $$FxShopCurrenciesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get enabled => $composableBuilder(
+    column: $table.enabled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxShopCurrenciesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxShopCurrenciesTable> {
+  $$FxShopCurrenciesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get enabled =>
+      $composableBuilder(column: $table.enabled, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxShopCurrenciesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxShopCurrenciesTable,
+          FxShopCurrency,
+          $$FxShopCurrenciesTableFilterComposer,
+          $$FxShopCurrenciesTableOrderingComposer,
+          $$FxShopCurrenciesTableAnnotationComposer,
+          $$FxShopCurrenciesTableCreateCompanionBuilder,
+          $$FxShopCurrenciesTableUpdateCompanionBuilder,
+          (FxShopCurrency, $$FxShopCurrenciesTableReferences),
+          FxShopCurrency,
+          PrefetchHooks Function({bool shopId})
+        > {
+  $$FxShopCurrenciesTableTableManager(
+    _$AppDatabase db,
+    $FxShopCurrenciesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxShopCurrenciesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxShopCurrenciesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxShopCurrenciesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<bool> enabled = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxShopCurrenciesCompanion(
+                id: id,
+                shopId: shopId,
+                currencyCode: currencyCode,
+                enabled: enabled,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required String currencyCode,
+                Value<bool> enabled = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxShopCurrenciesCompanion.insert(
+                id: id,
+                shopId: shopId,
+                currencyCode: currencyCode,
+                enabled: enabled,
+                sortOrder: sortOrder,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxShopCurrenciesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable:
+                                    $$FxShopCurrenciesTableReferences
+                                        ._shopIdTable(db),
+                                referencedColumn:
+                                    $$FxShopCurrenciesTableReferences
+                                        ._shopIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FxShopCurrenciesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxShopCurrenciesTable,
+      FxShopCurrency,
+      $$FxShopCurrenciesTableFilterComposer,
+      $$FxShopCurrenciesTableOrderingComposer,
+      $$FxShopCurrenciesTableAnnotationComposer,
+      $$FxShopCurrenciesTableCreateCompanionBuilder,
+      $$FxShopCurrenciesTableUpdateCompanionBuilder,
+      (FxShopCurrency, $$FxShopCurrenciesTableReferences),
+      FxShopCurrency,
+      PrefetchHooks Function({bool shopId})
+    >;
+typedef $$FxRateSnapshotsTableCreateCompanionBuilder =
+    FxRateSnapshotsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      Value<String> baseCurrency,
+      required String quoteCurrency,
+      required int buyRateNumerator,
+      required int buyRateDenominator,
+      required int sellRateNumerator,
+      required int sellRateDenominator,
+      required int effectiveAt,
+      required int createdBy,
+      required int createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxRateSnapshotsTableUpdateCompanionBuilder =
+    FxRateSnapshotsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<String> baseCurrency,
+      Value<String> quoteCurrency,
+      Value<int> buyRateNumerator,
+      Value<int> buyRateDenominator,
+      Value<int> sellRateNumerator,
+      Value<int> sellRateDenominator,
+      Value<int> effectiveAt,
+      Value<int> createdBy,
+      Value<int> createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxRateSnapshotsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $FxRateSnapshotsTable, FxRateSnapshot> {
+  $$FxRateSnapshotsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_rate_snapshots__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _createdByTable(_$AppDatabase db) =>
+      db.users.createAlias('fx_rate_snapshots__created_by__users__id');
+
+  $$UsersTableProcessedTableManager get createdBy {
+    final $_column = $_itemColumn<int>('created_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FxRateSnapshotsTableFilterComposer
+    extends Composer<_$AppDatabase, $FxRateSnapshotsTable> {
+  $$FxRateSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get baseCurrency => $composableBuilder(
+    column: $table.baseCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quoteCurrency => $composableBuilder(
+    column: $table.quoteCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get buyRateNumerator => $composableBuilder(
+    column: $table.buyRateNumerator,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get buyRateDenominator => $composableBuilder(
+    column: $table.buyRateDenominator,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sellRateNumerator => $composableBuilder(
+    column: $table.sellRateNumerator,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sellRateDenominator => $composableBuilder(
+    column: $table.sellRateDenominator,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get effectiveAt => $composableBuilder(
+    column: $table.effectiveAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get createdBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxRateSnapshotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxRateSnapshotsTable> {
+  $$FxRateSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get baseCurrency => $composableBuilder(
+    column: $table.baseCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quoteCurrency => $composableBuilder(
+    column: $table.quoteCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get buyRateNumerator => $composableBuilder(
+    column: $table.buyRateNumerator,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get buyRateDenominator => $composableBuilder(
+    column: $table.buyRateDenominator,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sellRateNumerator => $composableBuilder(
+    column: $table.sellRateNumerator,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sellRateDenominator => $composableBuilder(
+    column: $table.sellRateDenominator,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get effectiveAt => $composableBuilder(
+    column: $table.effectiveAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get createdBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxRateSnapshotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxRateSnapshotsTable> {
+  $$FxRateSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get baseCurrency => $composableBuilder(
+    column: $table.baseCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get quoteCurrency => $composableBuilder(
+    column: $table.quoteCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get buyRateNumerator => $composableBuilder(
+    column: $table.buyRateNumerator,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get buyRateDenominator => $composableBuilder(
+    column: $table.buyRateDenominator,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sellRateNumerator => $composableBuilder(
+    column: $table.sellRateNumerator,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sellRateDenominator => $composableBuilder(
+    column: $table.sellRateDenominator,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get effectiveAt => $composableBuilder(
+    column: $table.effectiveAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get createdBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxRateSnapshotsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxRateSnapshotsTable,
+          FxRateSnapshot,
+          $$FxRateSnapshotsTableFilterComposer,
+          $$FxRateSnapshotsTableOrderingComposer,
+          $$FxRateSnapshotsTableAnnotationComposer,
+          $$FxRateSnapshotsTableCreateCompanionBuilder,
+          $$FxRateSnapshotsTableUpdateCompanionBuilder,
+          (FxRateSnapshot, $$FxRateSnapshotsTableReferences),
+          FxRateSnapshot,
+          PrefetchHooks Function({bool shopId, bool createdBy})
+        > {
+  $$FxRateSnapshotsTableTableManager(
+    _$AppDatabase db,
+    $FxRateSnapshotsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxRateSnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxRateSnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxRateSnapshotsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<String> baseCurrency = const Value.absent(),
+                Value<String> quoteCurrency = const Value.absent(),
+                Value<int> buyRateNumerator = const Value.absent(),
+                Value<int> buyRateDenominator = const Value.absent(),
+                Value<int> sellRateNumerator = const Value.absent(),
+                Value<int> sellRateDenominator = const Value.absent(),
+                Value<int> effectiveAt = const Value.absent(),
+                Value<int> createdBy = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxRateSnapshotsCompanion(
+                id: id,
+                shopId: shopId,
+                baseCurrency: baseCurrency,
+                quoteCurrency: quoteCurrency,
+                buyRateNumerator: buyRateNumerator,
+                buyRateDenominator: buyRateDenominator,
+                sellRateNumerator: sellRateNumerator,
+                sellRateDenominator: sellRateDenominator,
+                effectiveAt: effectiveAt,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                Value<String> baseCurrency = const Value.absent(),
+                required String quoteCurrency,
+                required int buyRateNumerator,
+                required int buyRateDenominator,
+                required int sellRateNumerator,
+                required int sellRateDenominator,
+                required int effectiveAt,
+                required int createdBy,
+                required int createdAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxRateSnapshotsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                baseCurrency: baseCurrency,
+                quoteCurrency: quoteCurrency,
+                buyRateNumerator: buyRateNumerator,
+                buyRateDenominator: buyRateDenominator,
+                sellRateNumerator: sellRateNumerator,
+                sellRateDenominator: sellRateDenominator,
+                effectiveAt: effectiveAt,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxRateSnapshotsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false, createdBy = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable:
+                                    $$FxRateSnapshotsTableReferences
+                                        ._shopIdTable(db),
+                                referencedColumn:
+                                    $$FxRateSnapshotsTableReferences
+                                        ._shopIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (createdBy) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.createdBy,
+                                referencedTable:
+                                    $$FxRateSnapshotsTableReferences
+                                        ._createdByTable(db),
+                                referencedColumn:
+                                    $$FxRateSnapshotsTableReferences
+                                        ._createdByTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FxRateSnapshotsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxRateSnapshotsTable,
+      FxRateSnapshot,
+      $$FxRateSnapshotsTableFilterComposer,
+      $$FxRateSnapshotsTableOrderingComposer,
+      $$FxRateSnapshotsTableAnnotationComposer,
+      $$FxRateSnapshotsTableCreateCompanionBuilder,
+      $$FxRateSnapshotsTableUpdateCompanionBuilder,
+      (FxRateSnapshot, $$FxRateSnapshotsTableReferences),
+      FxRateSnapshot,
+      PrefetchHooks Function({bool shopId, bool createdBy})
+    >;
+typedef $$FxSessionsTableCreateCompanionBuilder =
+    FxSessionsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int openedBy,
+      Value<int?> closedBy,
+      required int openedAt,
+      Value<int?> closedAt,
+      Value<String> status,
+      Value<String?> closingNote,
+      Value<int> totalMarginFcfa,
+      Value<int> operationCount,
+      required int createdAt,
+      required int updatedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxSessionsTableUpdateCompanionBuilder =
+    FxSessionsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> openedBy,
+      Value<int?> closedBy,
+      Value<int> openedAt,
+      Value<int?> closedAt,
+      Value<String> status,
+      Value<String?> closingNote,
+      Value<int> totalMarginFcfa,
+      Value<int> operationCount,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxSessionsTableReferences
+    extends BaseReferences<_$AppDatabase, $FxSessionsTable, FxSession> {
+  $$FxSessionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_sessions__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _openedByTable(_$AppDatabase db) =>
+      db.users.createAlias('fx_sessions__opened_by__users__id');
+
+  $$UsersTableProcessedTableManager get openedBy {
+    final $_column = $_itemColumn<int>('opened_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_openedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _closedByTable(_$AppDatabase db) =>
+      db.users.createAlias('fx_sessions__closed_by__users__id');
+
+  $$UsersTableProcessedTableManager? get closedBy {
+    final $_column = $_itemColumn<int>('closed_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_closedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$FxSessionBalancesTable, List<FxSessionBalance>>
+  _fxSessionBalancesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.fxSessionBalances,
+        aliasName: 'fx_sessions__id__fx_session_balances__session_id',
+      );
+
+  $$FxSessionBalancesTableProcessedTableManager get fxSessionBalancesRefs {
+    final manager = $$FxSessionBalancesTableTableManager(
+      $_db,
+      $_db.fxSessionBalances,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _fxSessionBalancesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxOperationsTable, List<FxOperation>>
+  _fxOperationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxOperations,
+    aliasName: 'fx_sessions__id__fx_operations__session_id',
+  );
+
+  $$FxOperationsTableProcessedTableManager get fxOperationsRefs {
+    final manager = $$FxOperationsTableTableManager(
+      $_db,
+      $_db.fxOperations,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxOperationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxMovementsTable, List<FxMovement>>
+  _fxMovementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxMovements,
+    aliasName: 'fx_sessions__id__fx_movements__session_id',
+  );
+
+  $$FxMovementsTableProcessedTableManager get fxMovementsRefs {
+    final manager = $$FxMovementsTableTableManager(
+      $_db,
+      $_db.fxMovements,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxMovementsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$FxSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $FxSessionsTable> {
+  $$FxSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get closingNote => $composableBuilder(
+    column: $table.closingNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalMarginFcfa => $composableBuilder(
+    column: $table.totalMarginFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get operationCount => $composableBuilder(
+    column: $table.operationCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get openedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.openedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get closedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> fxSessionBalancesRefs(
+    Expression<bool> Function($$FxSessionBalancesTableFilterComposer f) f,
+  ) {
+    final $$FxSessionBalancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionBalances,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionBalancesTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessionBalances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxOperationsRefs(
+    Expression<bool> Function($$FxOperationsTableFilterComposer f) f,
+  ) {
+    final $$FxOperationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxOperations,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxOperationsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxOperations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxMovementsRefs(
+    Expression<bool> Function($$FxMovementsTableFilterComposer f) f,
+  ) {
+    final $$FxMovementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxMovements,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxMovementsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FxSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxSessionsTable> {
+  $$FxSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get openedAt => $composableBuilder(
+    column: $table.openedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get closedAt => $composableBuilder(
+    column: $table.closedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get closingNote => $composableBuilder(
+    column: $table.closingNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get totalMarginFcfa => $composableBuilder(
+    column: $table.totalMarginFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get operationCount => $composableBuilder(
+    column: $table.operationCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get openedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.openedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get closedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxSessionsTable> {
+  $$FxSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get openedAt =>
+      $composableBuilder(column: $table.openedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get closedAt =>
+      $composableBuilder(column: $table.closedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<String> get closingNote => $composableBuilder(
+    column: $table.closingNote,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get totalMarginFcfa => $composableBuilder(
+    column: $table.totalMarginFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get operationCount => $composableBuilder(
+    column: $table.operationCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get openedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.openedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get closedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> fxSessionBalancesRefs<T extends Object>(
+    Expression<T> Function($$FxSessionBalancesTableAnnotationComposer a) f,
+  ) {
+    final $$FxSessionBalancesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.fxSessionBalances,
+          getReferencedColumn: (t) => t.sessionId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$FxSessionBalancesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.fxSessionBalances,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> fxOperationsRefs<T extends Object>(
+    Expression<T> Function($$FxOperationsTableAnnotationComposer a) f,
+  ) {
+    final $$FxOperationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxOperations,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxOperationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxOperations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> fxMovementsRefs<T extends Object>(
+    Expression<T> Function($$FxMovementsTableAnnotationComposer a) f,
+  ) {
+    final $$FxMovementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxMovements,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxMovementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxMovements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$FxSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxSessionsTable,
+          FxSession,
+          $$FxSessionsTableFilterComposer,
+          $$FxSessionsTableOrderingComposer,
+          $$FxSessionsTableAnnotationComposer,
+          $$FxSessionsTableCreateCompanionBuilder,
+          $$FxSessionsTableUpdateCompanionBuilder,
+          (FxSession, $$FxSessionsTableReferences),
+          FxSession,
+          PrefetchHooks Function({
+            bool shopId,
+            bool openedBy,
+            bool closedBy,
+            bool fxSessionBalancesRefs,
+            bool fxOperationsRefs,
+            bool fxMovementsRefs,
+          })
+        > {
+  $$FxSessionsTableTableManager(_$AppDatabase db, $FxSessionsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxSessionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> openedBy = const Value.absent(),
+                Value<int?> closedBy = const Value.absent(),
+                Value<int> openedAt = const Value.absent(),
+                Value<int?> closedAt = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> closingNote = const Value.absent(),
+                Value<int> totalMarginFcfa = const Value.absent(),
+                Value<int> operationCount = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxSessionsCompanion(
+                id: id,
+                shopId: shopId,
+                openedBy: openedBy,
+                closedBy: closedBy,
+                openedAt: openedAt,
+                closedAt: closedAt,
+                status: status,
+                closingNote: closingNote,
+                totalMarginFcfa: totalMarginFcfa,
+                operationCount: operationCount,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int openedBy,
+                Value<int?> closedBy = const Value.absent(),
+                required int openedAt,
+                Value<int?> closedAt = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<String?> closingNote = const Value.absent(),
+                Value<int> totalMarginFcfa = const Value.absent(),
+                Value<int> operationCount = const Value.absent(),
+                required int createdAt,
+                required int updatedAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxSessionsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                openedBy: openedBy,
+                closedBy: closedBy,
+                openedAt: openedAt,
+                closedAt: closedAt,
+                status: status,
+                closingNote: closingNote,
+                totalMarginFcfa: totalMarginFcfa,
+                operationCount: operationCount,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxSessionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                shopId = false,
+                openedBy = false,
+                closedBy = false,
+                fxSessionBalancesRefs = false,
+                fxOperationsRefs = false,
+                fxMovementsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (fxSessionBalancesRefs) db.fxSessionBalances,
+                    if (fxOperationsRefs) db.fxOperations,
+                    if (fxMovementsRefs) db.fxMovements,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable: $$FxSessionsTableReferences
+                                        ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$FxSessionsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (openedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.openedBy,
+                                    referencedTable: $$FxSessionsTableReferences
+                                        ._openedByTable(db),
+                                    referencedColumn:
+                                        $$FxSessionsTableReferences
+                                            ._openedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (closedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.closedBy,
+                                    referencedTable: $$FxSessionsTableReferences
+                                        ._closedByTable(db),
+                                    referencedColumn:
+                                        $$FxSessionsTableReferences
+                                            ._closedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (fxSessionBalancesRefs)
+                        await $_getPrefetchedData<
+                          FxSession,
+                          $FxSessionsTable,
+                          FxSessionBalance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FxSessionsTableReferences
+                              ._fxSessionBalancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FxSessionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxSessionBalancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sessionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxOperationsRefs)
+                        await $_getPrefetchedData<
+                          FxSession,
+                          $FxSessionsTable,
+                          FxOperation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FxSessionsTableReferences
+                              ._fxOperationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FxSessionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxOperationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sessionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (fxMovementsRefs)
+                        await $_getPrefetchedData<
+                          FxSession,
+                          $FxSessionsTable,
+                          FxMovement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FxSessionsTableReferences
+                              ._fxMovementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FxSessionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxMovementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sessionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FxSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxSessionsTable,
+      FxSession,
+      $$FxSessionsTableFilterComposer,
+      $$FxSessionsTableOrderingComposer,
+      $$FxSessionsTableAnnotationComposer,
+      $$FxSessionsTableCreateCompanionBuilder,
+      $$FxSessionsTableUpdateCompanionBuilder,
+      (FxSession, $$FxSessionsTableReferences),
+      FxSession,
+      PrefetchHooks Function({
+        bool shopId,
+        bool openedBy,
+        bool closedBy,
+        bool fxSessionBalancesRefs,
+        bool fxOperationsRefs,
+        bool fxMovementsRefs,
+      })
+    >;
+typedef $$FxSessionBalancesTableCreateCompanionBuilder =
+    FxSessionBalancesCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int sessionId,
+      required String currencyCode,
+      Value<int> openingBalance,
+      Value<int?> expectedBalance,
+      Value<int?> countedBalance,
+      Value<int?> difference,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxSessionBalancesTableUpdateCompanionBuilder =
+    FxSessionBalancesCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> sessionId,
+      Value<String> currencyCode,
+      Value<int> openingBalance,
+      Value<int?> expectedBalance,
+      Value<int?> countedBalance,
+      Value<int?> difference,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxSessionBalancesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $FxSessionBalancesTable,
+          FxSessionBalance
+        > {
+  $$FxSessionBalancesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_session_balances__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FxSessionsTable _sessionIdTable(_$AppDatabase db) => db.fxSessions
+      .createAlias('fx_session_balances__session_id__fx_sessions__id');
+
+  $$FxSessionsTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<int>('session_id')!;
+
+    final manager = $$FxSessionsTableTableManager(
+      $_db,
+      $_db.fxSessions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FxSessionBalancesTableFilterComposer
+    extends Composer<_$AppDatabase, $FxSessionBalancesTable> {
+  $$FxSessionBalancesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get openingBalance => $composableBuilder(
+    column: $table.openingBalance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get expectedBalance => $composableBuilder(
+    column: $table.expectedBalance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get countedBalance => $composableBuilder(
+    column: $table.countedBalance,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get difference => $composableBuilder(
+    column: $table.difference,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableFilterComposer get sessionId {
+    final $$FxSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionBalancesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxSessionBalancesTable> {
+  $$FxSessionBalancesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get openingBalance => $composableBuilder(
+    column: $table.openingBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get expectedBalance => $composableBuilder(
+    column: $table.expectedBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get countedBalance => $composableBuilder(
+    column: $table.countedBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get difference => $composableBuilder(
+    column: $table.difference,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableOrderingComposer get sessionId {
+    final $$FxSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionBalancesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxSessionBalancesTable> {
+  $$FxSessionBalancesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get openingBalance => $composableBuilder(
+    column: $table.openingBalance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get expectedBalance => $composableBuilder(
+    column: $table.expectedBalance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get countedBalance => $composableBuilder(
+    column: $table.countedBalance,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get difference => $composableBuilder(
+    column: $table.difference,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableAnnotationComposer get sessionId {
+    final $$FxSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionBalancesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxSessionBalancesTable,
+          FxSessionBalance,
+          $$FxSessionBalancesTableFilterComposer,
+          $$FxSessionBalancesTableOrderingComposer,
+          $$FxSessionBalancesTableAnnotationComposer,
+          $$FxSessionBalancesTableCreateCompanionBuilder,
+          $$FxSessionBalancesTableUpdateCompanionBuilder,
+          (FxSessionBalance, $$FxSessionBalancesTableReferences),
+          FxSessionBalance,
+          PrefetchHooks Function({bool shopId, bool sessionId})
+        > {
+  $$FxSessionBalancesTableTableManager(
+    _$AppDatabase db,
+    $FxSessionBalancesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxSessionBalancesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxSessionBalancesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxSessionBalancesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> sessionId = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<int> openingBalance = const Value.absent(),
+                Value<int?> expectedBalance = const Value.absent(),
+                Value<int?> countedBalance = const Value.absent(),
+                Value<int?> difference = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxSessionBalancesCompanion(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                currencyCode: currencyCode,
+                openingBalance: openingBalance,
+                expectedBalance: expectedBalance,
+                countedBalance: countedBalance,
+                difference: difference,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int sessionId,
+                required String currencyCode,
+                Value<int> openingBalance = const Value.absent(),
+                Value<int?> expectedBalance = const Value.absent(),
+                Value<int?> countedBalance = const Value.absent(),
+                Value<int?> difference = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxSessionBalancesCompanion.insert(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                currencyCode: currencyCode,
+                openingBalance: openingBalance,
+                expectedBalance: expectedBalance,
+                countedBalance: countedBalance,
+                difference: difference,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxSessionBalancesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false, sessionId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable:
+                                    $$FxSessionBalancesTableReferences
+                                        ._shopIdTable(db),
+                                referencedColumn:
+                                    $$FxSessionBalancesTableReferences
+                                        ._shopIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (sessionId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.sessionId,
+                                referencedTable:
+                                    $$FxSessionBalancesTableReferences
+                                        ._sessionIdTable(db),
+                                referencedColumn:
+                                    $$FxSessionBalancesTableReferences
+                                        ._sessionIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$FxSessionBalancesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxSessionBalancesTable,
+      FxSessionBalance,
+      $$FxSessionBalancesTableFilterComposer,
+      $$FxSessionBalancesTableOrderingComposer,
+      $$FxSessionBalancesTableAnnotationComposer,
+      $$FxSessionBalancesTableCreateCompanionBuilder,
+      $$FxSessionBalancesTableUpdateCompanionBuilder,
+      (FxSessionBalance, $$FxSessionBalancesTableReferences),
+      FxSessionBalance,
+      PrefetchHooks Function({bool shopId, bool sessionId})
+    >;
+typedef $$FxOperationsTableCreateCompanionBuilder =
+    FxOperationsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int sessionId,
+      required String operationType,
+      required String fromCurrency,
+      required int fromAmount,
+      required String toCurrency,
+      required int toAmount,
+      Value<int?> rateSnapshotId,
+      Value<int> marginFcfa,
+      Value<String?> note,
+      required int createdBy,
+      required int createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxOperationsTableUpdateCompanionBuilder =
+    FxOperationsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> sessionId,
+      Value<String> operationType,
+      Value<String> fromCurrency,
+      Value<int> fromAmount,
+      Value<String> toCurrency,
+      Value<int> toAmount,
+      Value<int?> rateSnapshotId,
+      Value<int> marginFcfa,
+      Value<String?> note,
+      Value<int> createdBy,
+      Value<int> createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxOperationsTableReferences
+    extends BaseReferences<_$AppDatabase, $FxOperationsTable, FxOperation> {
+  $$FxOperationsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_operations__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FxSessionsTable _sessionIdTable(_$AppDatabase db) =>
+      db.fxSessions.createAlias('fx_operations__session_id__fx_sessions__id');
+
+  $$FxSessionsTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<int>('session_id')!;
+
+    final manager = $$FxSessionsTableTableManager(
+      $_db,
+      $_db.fxSessions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _createdByTable(_$AppDatabase db) =>
+      db.users.createAlias('fx_operations__created_by__users__id');
+
+  $$UsersTableProcessedTableManager get createdBy {
+    final $_column = $_itemColumn<int>('created_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FxOperationsTableFilterComposer
+    extends Composer<_$AppDatabase, $FxOperationsTable> {
+  $$FxOperationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get operationType => $composableBuilder(
+    column: $table.operationType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fromCurrency => $composableBuilder(
+    column: $table.fromCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fromAmount => $composableBuilder(
+    column: $table.fromAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toCurrency => $composableBuilder(
+    column: $table.toCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get toAmount => $composableBuilder(
+    column: $table.toAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rateSnapshotId => $composableBuilder(
+    column: $table.rateSnapshotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get marginFcfa => $composableBuilder(
+    column: $table.marginFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableFilterComposer get sessionId {
+    final $$FxSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get createdBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxOperationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxOperationsTable> {
+  $$FxOperationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get operationType => $composableBuilder(
+    column: $table.operationType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fromCurrency => $composableBuilder(
+    column: $table.fromCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fromAmount => $composableBuilder(
+    column: $table.fromAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toCurrency => $composableBuilder(
+    column: $table.toCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get toAmount => $composableBuilder(
+    column: $table.toAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get rateSnapshotId => $composableBuilder(
+    column: $table.rateSnapshotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get marginFcfa => $composableBuilder(
+    column: $table.marginFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableOrderingComposer get sessionId {
+    final $$FxSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get createdBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxOperationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxOperationsTable> {
+  $$FxOperationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get operationType => $composableBuilder(
+    column: $table.operationType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fromCurrency => $composableBuilder(
+    column: $table.fromCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get fromAmount => $composableBuilder(
+    column: $table.fromAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get toCurrency => $composableBuilder(
+    column: $table.toCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get toAmount =>
+      $composableBuilder(column: $table.toAmount, builder: (column) => column);
+
+  GeneratedColumn<int> get rateSnapshotId => $composableBuilder(
+    column: $table.rateSnapshotId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get marginFcfa => $composableBuilder(
+    column: $table.marginFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableAnnotationComposer get sessionId {
+    final $$FxSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get createdBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxOperationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxOperationsTable,
+          FxOperation,
+          $$FxOperationsTableFilterComposer,
+          $$FxOperationsTableOrderingComposer,
+          $$FxOperationsTableAnnotationComposer,
+          $$FxOperationsTableCreateCompanionBuilder,
+          $$FxOperationsTableUpdateCompanionBuilder,
+          (FxOperation, $$FxOperationsTableReferences),
+          FxOperation,
+          PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
+        > {
+  $$FxOperationsTableTableManager(_$AppDatabase db, $FxOperationsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxOperationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxOperationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxOperationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> sessionId = const Value.absent(),
+                Value<String> operationType = const Value.absent(),
+                Value<String> fromCurrency = const Value.absent(),
+                Value<int> fromAmount = const Value.absent(),
+                Value<String> toCurrency = const Value.absent(),
+                Value<int> toAmount = const Value.absent(),
+                Value<int?> rateSnapshotId = const Value.absent(),
+                Value<int> marginFcfa = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> createdBy = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxOperationsCompanion(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                operationType: operationType,
+                fromCurrency: fromCurrency,
+                fromAmount: fromAmount,
+                toCurrency: toCurrency,
+                toAmount: toAmount,
+                rateSnapshotId: rateSnapshotId,
+                marginFcfa: marginFcfa,
+                note: note,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int sessionId,
+                required String operationType,
+                required String fromCurrency,
+                required int fromAmount,
+                required String toCurrency,
+                required int toAmount,
+                Value<int?> rateSnapshotId = const Value.absent(),
+                Value<int> marginFcfa = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                required int createdBy,
+                required int createdAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxOperationsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                operationType: operationType,
+                fromCurrency: fromCurrency,
+                fromAmount: fromAmount,
+                toCurrency: toCurrency,
+                toAmount: toAmount,
+                rateSnapshotId: rateSnapshotId,
+                marginFcfa: marginFcfa,
+                note: note,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxOperationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({shopId = false, sessionId = false, createdBy = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$FxOperationsTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$FxOperationsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sessionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sessionId,
+                                    referencedTable:
+                                        $$FxOperationsTableReferences
+                                            ._sessionIdTable(db),
+                                    referencedColumn:
+                                        $$FxOperationsTableReferences
+                                            ._sessionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (createdBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdBy,
+                                    referencedTable:
+                                        $$FxOperationsTableReferences
+                                            ._createdByTable(db),
+                                    referencedColumn:
+                                        $$FxOperationsTableReferences
+                                            ._createdByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FxOperationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxOperationsTable,
+      FxOperation,
+      $$FxOperationsTableFilterComposer,
+      $$FxOperationsTableOrderingComposer,
+      $$FxOperationsTableAnnotationComposer,
+      $$FxOperationsTableCreateCompanionBuilder,
+      $$FxOperationsTableUpdateCompanionBuilder,
+      (FxOperation, $$FxOperationsTableReferences),
+      FxOperation,
+      PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
+    >;
+typedef $$FxMovementsTableCreateCompanionBuilder =
+    FxMovementsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int sessionId,
+      required String currencyCode,
+      required String movementType,
+      required int amount,
+      Value<String?> note,
+      required int createdBy,
+      required int createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxMovementsTableUpdateCompanionBuilder =
+    FxMovementsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> sessionId,
+      Value<String> currencyCode,
+      Value<String> movementType,
+      Value<int> amount,
+      Value<String?> note,
+      Value<int> createdBy,
+      Value<int> createdAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxMovementsTableReferences
+    extends BaseReferences<_$AppDatabase, $FxMovementsTable, FxMovement> {
+  $$FxMovementsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_movements__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FxSessionsTable _sessionIdTable(_$AppDatabase db) =>
+      db.fxSessions.createAlias('fx_movements__session_id__fx_sessions__id');
+
+  $$FxSessionsTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<int>('session_id')!;
+
+    final manager = $$FxSessionsTableTableManager(
+      $_db,
+      $_db.fxSessions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _createdByTable(_$AppDatabase db) =>
+      db.users.createAlias('fx_movements__created_by__users__id');
+
+  $$UsersTableProcessedTableManager get createdBy {
+    final $_column = $_itemColumn<int>('created_by')!;
+
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_createdByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FxMovementsTableFilterComposer
+    extends Composer<_$AppDatabase, $FxMovementsTable> {
+  $$FxMovementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get movementType => $composableBuilder(
+    column: $table.movementType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableFilterComposer get sessionId {
+    final $$FxSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get createdBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxMovementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxMovementsTable> {
+  $$FxMovementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get movementType => $composableBuilder(
+    column: $table.movementType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableOrderingComposer get sessionId {
+    final $$FxSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get createdBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxMovementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxMovementsTable> {
+  $$FxMovementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get currencyCode => $composableBuilder(
+    column: $table.currencyCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get movementType => $composableBuilder(
+    column: $table.movementType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableAnnotationComposer get sessionId {
+    final $$FxSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get createdBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.createdBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxMovementsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxMovementsTable,
+          FxMovement,
+          $$FxMovementsTableFilterComposer,
+          $$FxMovementsTableOrderingComposer,
+          $$FxMovementsTableAnnotationComposer,
+          $$FxMovementsTableCreateCompanionBuilder,
+          $$FxMovementsTableUpdateCompanionBuilder,
+          (FxMovement, $$FxMovementsTableReferences),
+          FxMovement,
+          PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
+        > {
+  $$FxMovementsTableTableManager(_$AppDatabase db, $FxMovementsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxMovementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxMovementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxMovementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> sessionId = const Value.absent(),
+                Value<String> currencyCode = const Value.absent(),
+                Value<String> movementType = const Value.absent(),
+                Value<int> amount = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<int> createdBy = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxMovementsCompanion(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                currencyCode: currencyCode,
+                movementType: movementType,
+                amount: amount,
+                note: note,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int sessionId,
+                required String currencyCode,
+                required String movementType,
+                required int amount,
+                Value<String?> note = const Value.absent(),
+                required int createdBy,
+                required int createdAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxMovementsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                currencyCode: currencyCode,
+                movementType: movementType,
+                amount: amount,
+                note: note,
+                createdBy: createdBy,
+                createdAt: createdAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxMovementsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({shopId = false, sessionId = false, createdBy = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$FxMovementsTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$FxMovementsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sessionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sessionId,
+                                    referencedTable:
+                                        $$FxMovementsTableReferences
+                                            ._sessionIdTable(db),
+                                    referencedColumn:
+                                        $$FxMovementsTableReferences
+                                            ._sessionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (createdBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdBy,
+                                    referencedTable:
+                                        $$FxMovementsTableReferences
+                                            ._createdByTable(db),
+                                    referencedColumn:
+                                        $$FxMovementsTableReferences
+                                            ._createdByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FxMovementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxMovementsTable,
+      FxMovement,
+      $$FxMovementsTableFilterComposer,
+      $$FxMovementsTableOrderingComposer,
+      $$FxMovementsTableAnnotationComposer,
+      $$FxMovementsTableCreateCompanionBuilder,
+      $$FxMovementsTableUpdateCompanionBuilder,
+      (FxMovement, $$FxMovementsTableReferences),
+      FxMovement,
+      PrefetchHooks Function({bool shopId, bool sessionId, bool createdBy})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -57359,6 +81738,8 @@ class $AppDatabaseManager {
       $$AuthSessionsTableTableManager(_db, _db.authSessions);
   $$AuditLogsTableTableManager get auditLogs =>
       $$AuditLogsTableTableManager(_db, _db.auditLogs);
+  $$IdentitySnapshotsTableTableManager get identitySnapshots =>
+      $$IdentitySnapshotsTableTableManager(_db, _db.identitySnapshots);
   $$CategoriesTableTableManager get categories =>
       $$CategoriesTableTableManager(_db, _db.categories);
   $$ProductsTableTableManager get products =>
@@ -57433,4 +81814,50 @@ class $AppDatabaseManager {
       );
   $$ProductPriceHistoryTableTableManager get productPriceHistory =>
       $$ProductPriceHistoryTableTableManager(_db, _db.productPriceHistory);
+  $$StockTransfersTableTableManager get stockTransfers =>
+      $$StockTransfersTableTableManager(_db, _db.stockTransfers);
+  $$StockTransferItemsTableTableManager get stockTransferItems =>
+      $$StockTransferItemsTableTableManager(_db, _db.stockTransferItems);
+  $$StockTransferShipmentsTableTableManager get stockTransferShipments =>
+      $$StockTransferShipmentsTableTableManager(
+        _db,
+        _db.stockTransferShipments,
+      );
+  $$StockTransferLotReservationsTableTableManager
+  get stockTransferLotReservations =>
+      $$StockTransferLotReservationsTableTableManager(
+        _db,
+        _db.stockTransferLotReservations,
+      );
+  $$StockTransferLotLinesTableTableManager get stockTransferLotLines =>
+      $$StockTransferLotLinesTableTableManager(_db, _db.stockTransferLotLines);
+  $$StockTransferEventsTableTableManager get stockTransferEvents =>
+      $$StockTransferEventsTableTableManager(_db, _db.stockTransferEvents);
+  $$StockTransferDiscrepanciesTableTableManager
+  get stockTransferDiscrepancies =>
+      $$StockTransferDiscrepanciesTableTableManager(
+        _db,
+        _db.stockTransferDiscrepancies,
+      );
+  $$StockTransferReceiptsTableTableManager get stockTransferReceipts =>
+      $$StockTransferReceiptsTableTableManager(_db, _db.stockTransferReceipts);
+  $$StockTransferReceiptItemsTableTableManager get stockTransferReceiptItems =>
+      $$StockTransferReceiptItemsTableTableManager(
+        _db,
+        _db.stockTransferReceiptItems,
+      );
+  $$FxCurrenciesTableTableManager get fxCurrencies =>
+      $$FxCurrenciesTableTableManager(_db, _db.fxCurrencies);
+  $$FxShopCurrenciesTableTableManager get fxShopCurrencies =>
+      $$FxShopCurrenciesTableTableManager(_db, _db.fxShopCurrencies);
+  $$FxRateSnapshotsTableTableManager get fxRateSnapshots =>
+      $$FxRateSnapshotsTableTableManager(_db, _db.fxRateSnapshots);
+  $$FxSessionsTableTableManager get fxSessions =>
+      $$FxSessionsTableTableManager(_db, _db.fxSessions);
+  $$FxSessionBalancesTableTableManager get fxSessionBalances =>
+      $$FxSessionBalancesTableTableManager(_db, _db.fxSessionBalances);
+  $$FxOperationsTableTableManager get fxOperations =>
+      $$FxOperationsTableTableManager(_db, _db.fxOperations);
+  $$FxMovementsTableTableManager get fxMovements =>
+      $$FxMovementsTableTableManager(_db, _db.fxMovements);
 }

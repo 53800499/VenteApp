@@ -109,12 +109,13 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
       AuthMembership? membership;
       final targetServerShop = widget.serverShopId ?? widget.shopId;
       for (final candidate in result.memberships) {
-        if (candidate.shopId == targetServerShop &&
-            (widget.serverUserId == null ||
-                candidate.userId == widget.serverUserId)) {
-          membership = candidate;
-          break;
+        if (!candidate.coversServerShop(targetServerShop)) continue;
+        if (widget.serverUserId != null &&
+            candidate.userId != widget.serverUserId) {
+          continue;
         }
+        membership = candidate;
+        break;
       }
       membership ??=
           result.memberships.length == 1 ? result.memberships.first : null;
@@ -127,8 +128,8 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
       if (!mounted) return;
       setState(() {
         _verificationToken = result.verificationToken;
-        _resolvedServerShopId = membership!.shopId;
-        _resolvedServerUserId = membership.userId;
+        _resolvedServerShopId = targetServerShop;
+        _resolvedServerUserId = membership!.userId;
         _step = _ForgotPinStep.newPin;
         _submitting = false;
         _pin = '';
@@ -222,6 +223,7 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('PIN oublié'),
       ),
@@ -229,6 +231,7 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         child: SafeArea(
           child: ResponsivePage(
             maxWidth: 480,
+            expandHeight: true,
             child: switch (_step) {
               _ForgotPinStep.phone => _buildPhoneStep(context),
               _ForgotPinStep.code => _buildCodeStep(context),
@@ -240,9 +243,51 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
     );
   }
 
+  Widget _buildScrollableFormStep({
+    required BuildContext context,
+    required List<Widget> children,
+    required VoidCallback? onSubmit,
+    required String submitLabel,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.lg),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ...children,
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: _submitting ? null : onSubmit,
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(submitLabel),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildPhoneStep(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _buildScrollableFormStep(
+      context: context,
+      onSubmit: _requestOtp,
+      submitLabel: 'Envoyer le code',
       children: [
         const PageHeader(
           icon: Icons.chat_outlined,
@@ -258,29 +303,24 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
             prefixIcon: Icon(Icons.phone_outlined),
           ),
           keyboardType: TextInputType.phone,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) {
+            if (!_submitting) _requestOtp();
+          },
         ),
         if (_error != null) ...[
           const SizedBox(height: AppSpacing.sm),
           ErrorBanner(message: _error!),
         ],
-        const Spacer(),
-        FilledButton(
-          onPressed: _submitting ? null : _requestOtp,
-          child: _submitting
-              ? const SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Envoyer le code'),
-        ),
       ],
     );
   }
 
   Widget _buildCodeStep(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return _buildScrollableFormStep(
+      context: context,
+      onSubmit: _verifyOtp,
+      submitLabel: 'Continuer',
       children: [
         const PageHeader(
           icon: Icons.sms_outlined,
@@ -304,22 +344,15 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
             prefixIcon: Icon(Icons.pin_outlined),
           ),
           keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) {
+            if (!_submitting) _verifyOtp();
+          },
         ),
         if (_error != null) ...[
           const SizedBox(height: AppSpacing.sm),
           ErrorBanner(message: _error!),
         ],
-        const Spacer(),
-        FilledButton(
-          onPressed: _submitting ? null : _verifyOtp,
-          child: _submitting
-              ? const SizedBox(
-                  height: 22,
-                  width: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Continuer'),
-        ),
       ],
     );
   }

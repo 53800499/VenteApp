@@ -194,6 +194,8 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
         );
       } on Failure {
         // Sync cloud optionnelle — conserver le stock local affiché.
+      } catch (_) {
+        // Doublons locaux ou données cloud partielles : ne pas bloquer la liste.
       }
 
       final refreshedCategories =

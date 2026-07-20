@@ -29,6 +29,7 @@ import '../bloc/settings_bloc.dart';
 import '../widgets/settings_feedback.dart';
 import '../../../../core/backup/backup_file_sharer.dart';
 import '../../../../core/backup/google_drive_backup_service.dart';
+import '../../../../core/maintenance/product_dedupe_service.dart';
 import 'change_pin_page.dart';
 import 'connected_devices_page.dart';
 import '../../../auth/data/datasources/local/biometric_local_datasource.dart';
@@ -550,6 +551,24 @@ class _SettingsViewState extends State<_SettingsView> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.lg),
+                        const _SectionTitle(title: 'Maintenance'),
+                        Text(
+                          'Fusionne les produits portant le même nom dans cette '
+                          'boutique (doublons à stock 0 inclus). '
+                          'Les ventes, lots et transferts sont réassignés.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        if (widget.canWrite) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          OutlinedButton.icon(
+                            onPressed: state.isSaving
+                                ? null
+                                : () => _dedupeProducts(context),
+                            icon: const Icon(Icons.merge_type_outlined),
+                            label: const Text('Nettoyer les doublons produits'),
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.lg),
                         const _SectionTitle(title: 'Sauvegarde'),
                         if (config.backup.reminderRecommended)
@@ -1180,6 +1199,99 @@ class _SettingsViewState extends State<_SettingsView> {
       await SettingsFeedback.showErrorDialog(
         context,
         title: 'Restauration impossible',
+        message: friendlyErrorMessage(e),
+      );
+    }
+  }
+
+  Future<void> _dedupeProducts(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nettoyer les doublons produits'),
+        content: const Text(
+          'Cette action fusionne les produits ayant le même nom dans la '
+          'boutique active. Le produit conservé est celui avec un identifiant '
+          'cloud, le plus de stock, ou le plus ancien. Cette opération est '
+          'irréversible localement.\n\n'
+          'Créez une sauvegarde avant de continuer.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Fusionner'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final preview = await ActionFeedback.runWithBlockingLoader(
+        context: context,
+        message: 'Analyse des doublons…',
+        action: () => sl<ProductDedupeService>().dedupeByNameInShop(
+          widget.session.shop.id,
+          dryRun: true,
+        ),
+      );
+      if (preview == null || !context.mounted) return;
+
+      if (!preview.hasChanges) {
+        await SettingsFeedback.showSuccess(
+          context: context,
+          title: 'Aucun doublon trouvé pour cette boutique.',
+        );
+        return;
+      }
+
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmer la fusion'),
+          content: SingleChildScrollView(
+            child: Text(
+              '${preview.groupsProcessed} groupe(s) détecté(s), '
+              '${preview.productsRemoved} produit(s) seront supprimés.\n\n'
+              '${preview.details.join('\n')}',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirmer'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !context.mounted) return;
+
+      final result = await ActionFeedback.runWithBlockingLoader(
+        context: context,
+        message: 'Fusion en cours…',
+        action: () => sl<ProductDedupeService>().dedupeByNameInShop(
+          widget.session.shop.id,
+        ),
+      );
+      if (result == null || !context.mounted) return;
+
+      await SettingsFeedback.showSuccess(
+        context: context,
+        title: result.toString(),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      await SettingsFeedback.showErrorDialog(
+        context,
+        title: 'Nettoyage impossible',
         message: friendlyErrorMessage(e),
       );
     }

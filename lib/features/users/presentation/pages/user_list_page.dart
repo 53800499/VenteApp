@@ -4,20 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/auth/widgets/cloud_session_guard.dart';
-import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
-import '../../../shop/domain/entities/shop_entities.dart';
-import '../../../shop/domain/usecases/shop_usecases.dart';
 import '../../../rbac/presentation/pages/user_permissions_page.dart';
 import '../../domain/entities/user_entities.dart';
 import '../bloc/user_list_bloc.dart';
 import '../widgets/assignable_role_picker.dart';
 import '../widgets/user_feedback.dart';
+import '../pages/user_shop_access_page.dart';
 import 'user_form_page.dart';
 
 class UserListPage extends StatelessWidget {
@@ -254,7 +252,7 @@ class _UserListView extends StatelessWidget {
                           canViewPermissions: canViewPermissions,
                           onChangeRole: () => _changeRole(context, user),
                           onDeactivate: () => _deactivate(context, user),
-                          onAssignShop: () => _assignShop(context, user),
+                          onAssignShop: () => _manageShopAccess(context, user),
                           onViewPermissions: () => _viewPermissions(context, user),
                         );
                       },
@@ -343,73 +341,20 @@ class _UserListView extends StatelessWidget {
     );
   }
 
-  Future<void> _assignShop(BuildContext context, ShopUser user) async {
-    if (!await ensureCloudTrustedOperation(
-      context,
-      actionLabel: 'Réaffecter un membre à une boutique',
-    )) {
-      return;
-    }
-    if (!context.mounted) return;
-    List<ManagedShop>? shops;
-    try {
-      shops = await UserFeedback.runWithBlockingLoader(
-        context: context,
-        message: 'Chargement des boutiques…',
-        action: () async {
-          final result = await sl<ListShops>()();
-          return result.activeShops;
-        },
-      );
-    } catch (error) {
-      if (!context.mounted) return;
-      await UserFeedback.showErrorDialog(
-        context,
-        title: 'Chargement impossible',
-        message: friendlyErrorMessage(error),
-      );
-      return;
-    }
-
-    if (!context.mounted || shops == null) return;
-
-    if (shops.length < 2) {
-      UserFeedback.showInfo(
-        context,
-        'Aucune autre boutique disponible.',
-      );
-      return;
-    }
-
-    final selectedShop = await showDialog<ManagedShop>(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text('Réaffecter ${user.name}'),
-        children: [
-          for (final shop in shops!)
-            SimpleDialogOption(
-              onPressed: () => Navigator.pop(ctx, shop),
-              child: Text(shop.name),
-            ),
-        ],
+  Future<void> _manageShopAccess(BuildContext context, ShopUser user) async {
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => UserShopAccessPage(
+          session: session,
+          userId: user.id,
+          userName: user.name,
+          globalRoleCode: user.roleCode,
+        ),
       ),
     );
-    if (selectedShop == null || !context.mounted) return;
-
-    final confirmed = await UserFeedback.confirm(
-      context: context,
-      title: 'Réaffecter',
-      message:
-          'Réaffecter ${user.name} à la boutique « ${selectedShop.name} » ?',
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    context.read<UserListBloc>().add(
-          UserAssignShopRequested(
-            userId: user.id,
-            shopId: selectedShop.id,
-          ),
-        );
+    if (updated == true && context.mounted) {
+      context.read<UserListBloc>().add(const UserListRefreshRequested());
+    }
   }
 }
 
@@ -508,7 +453,7 @@ class _UserTile extends StatelessWidget {
                   if (canAssignShop)
                     OutlinedButton(
                       onPressed: isBusy ? null : onAssignShop,
-                      child: const Text('Réaffecter'),
+                      child: const Text('Accès boutiques'),
                     ),
                   if (canDeactivate)
                     TextButton(

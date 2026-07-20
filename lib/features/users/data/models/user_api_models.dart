@@ -142,3 +142,78 @@ class UserAssignmentDto {
 }
 
 UserRole roleFromCode(String code) => UserRole.fromCode(code);
+
+class UserShopAccessEntryDto {
+  const UserShopAccessEntryDto({
+    required this.shopId,
+    required this.shopName,
+    this.accessRole,
+    required this.effectiveRole,
+    required this.effectiveRoleLabel,
+  });
+
+  final int shopId;
+  final String shopName;
+  final String? accessRole;
+  final String effectiveRole;
+  final String effectiveRoleLabel;
+
+  factory UserShopAccessEntryDto.fromJson(Map<String, dynamic> json) {
+    return UserShopAccessEntryDto(
+      shopId: json['shopId'] as int,
+      shopName: json['shopName'] as String,
+      accessRole: json['accessRole'] as String?,
+      effectiveRole: json['effectiveRole'] as String,
+      effectiveRoleLabel:
+          json['effectiveRoleLabel'] as String? ?? json['effectiveRole'] as String,
+    );
+  }
+}
+
+class UserShopAccessDto {
+  const UserShopAccessDto({
+    required this.userId,
+    required this.membershipId,
+    required this.role,
+    required this.roleLabel,
+    required this.shops,
+  });
+
+  final int userId;
+  final int membershipId;
+  final String role;
+  final String roleLabel;
+  final List<UserShopAccessEntryDto> shops;
+
+  factory UserShopAccessDto.fromJson(Map<String, dynamic> json) {
+    return UserShopAccessDto(
+      userId: json['userId'] as int,
+      membershipId: json['membershipId'] as int,
+      role: json['role'] as String,
+      roleLabel: json['roleLabel'] as String? ?? json['role'] as String,
+      shops: (json['shops'] as List<dynamic>?)
+              ?.map(
+                (e) => UserShopAccessEntryDto.fromJson(
+                  e as Map<String, dynamic>,
+                ),
+              )
+              .toList() ??
+          const [],
+    );
+  }
+}
+
+class ShopAccessGrantInputDto {
+  const ShopAccessGrantInputDto({
+    required this.shopId,
+    this.accessRole,
+  });
+
+  final int shopId;
+  final String? accessRole;
+
+  Map<String, dynamic> toJson() => {
+        'shopId': shopId,
+        if (accessRole != null) 'accessRole': accessRole,
+      };
+}

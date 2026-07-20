@@ -63,7 +63,16 @@ class ShopSelectionPage extends StatelessWidget {
                     if (state.isSubmitting)
                       const Padding(
                         padding: EdgeInsets.all(AppSpacing.md),
-                        child: Center(child: CircularProgressIndicator()),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: AppSpacing.md),
+                              Text('Changement de boutique en cours…'),
+                            ],
+                          ),
+                        ),
                       ),
                   ],
                 ),

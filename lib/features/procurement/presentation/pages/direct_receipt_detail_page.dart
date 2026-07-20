@@ -72,18 +72,33 @@ class _DirectReceiptDetailPageState extends State<DirectReceiptDetailPage> {
           }
         },
         builder: (context, state) {
-          if (state.status == ProcurementStatus.loading &&
-              state.selectedDirectReceipt == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           final receipt = state.selectedDirectReceipt;
-          if (receipt == null || receipt.id != widget.receiptId) {
-            return const Center(
-              child: Text('Bon de réception introuvable.'),
+          if (receipt?.id == widget.receiptId) {
+            return _buildReceiptContent(
+              context,
+              state,
+              receipt!,
+              canPay,
             );
           }
 
+          if (state.status == ProcurementStatus.failure &&
+              state.errorMessage != null) {
+            return Center(child: Text(state.errorMessage!));
+          }
+
+          return const Center(child: CircularProgressIndicator());
+        },
+      ),
+    );
+  }
+
+  Widget _buildReceiptContent(
+    BuildContext context,
+    ProcurementState state,
+    PurchaseReceipt receipt,
+    bool canPay,
+  ) {
           final invoice = state.selectedDirectReceiptInvoice;
           final total = _receiptTotal(receipt);
           final paid = invoice != null ? _paidAmount(invoice) : 0;
@@ -351,9 +366,6 @@ class _DirectReceiptDetailPageState extends State<DirectReceiptDetailPage> {
               ],
             ],
           );
-        },
-      ),
-    );
   }
 
   String _formatDate(int ms) {

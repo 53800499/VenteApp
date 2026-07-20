@@ -498,13 +498,32 @@ class InventoryLocalDatasource {
     return rows.firstOrNull?.id;
   }
 
+  /// Recherche un produit par nom (insensible à la casse) dans une boutique.
+  Future<int?> findLocalProductIdByName(int shopId, String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+
+    final rows = await (_db.select(_db.products)
+          ..where(
+            (p) =>
+                p.shopId.equals(shopId) &
+                p.name.lower().equals(trimmed.toLowerCase()),
+          )
+          ..orderBy([(p) => OrderingTerm.asc(p.id)])
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.id;
+  }
+
   Future<int?> findLocalReceiptItemIdByServerId(int shopId, String serverId) async {
-    final row = await (_db.select(_db.purchaseReceiptItems)
+    final rows = await (_db.select(_db.purchaseReceiptItems)
           ..where(
             (r) => r.shopId.equals(shopId) & r.serverId.equals(serverId),
-          ))
-        .getSingleOrNull();
-    return row?.id;
+          )
+          ..orderBy([(r) => OrderingTerm.asc(r.id)])
+          ..limit(1))
+        .get();
+    return rows.firstOrNull?.id;
   }
 
   Future<List<Product>> _findPendingLocalProduct({

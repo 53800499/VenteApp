@@ -5,12 +5,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/audit/local_audit_writer.dart';
 import '../../core/backup/google_drive_backup_service.dart';
 import '../../core/backup/shop_backup_service.dart';
+import '../../core/maintenance/product_dedupe_service.dart';
 import '../../core/database/app_database.dart' hide Supplier, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, SupplierInvoice, SupplierPayment;
 import '../../features/procurement/data/datasources/procurement_local_datasource.dart';
 import '../../features/procurement/data/datasources/procurement_remote_datasource.dart';
 import '../../features/procurement/data/repositories/procurement_repository_impl.dart';
+import '../../features/procurement/data/services/procurement_sync_status_service.dart';
 import '../../features/procurement/domain/repositories/procurement_repository.dart';
 import '../../features/procurement/presentation/bloc/procurement_bloc.dart';
+import '../../features/stock_transfer/data/datasources/stock_transfer_local_datasource.dart';
+import '../../features/stock_transfer/data/datasources/stock_transfer_remote_datasource.dart';
+import '../../features/stock_transfer/data/repositories/stock_transfer_repository_impl.dart';
+import '../../features/stock_transfer/domain/repositories/stock_transfer_repository.dart';
+import '../../features/fx_exchange/data/datasources/local/fx_exchange_local_datasource.dart';
+import '../../features/fx_exchange/data/datasources/remote/fx_exchange_remote_datasource.dart';
+import '../../features/fx_exchange/data/repositories/fx_exchange_repository_impl.dart';
+import '../../features/fx_exchange/domain/repositories/fx_exchange_repository.dart';
+import '../../features/fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../core/auth/app_lock_controller.dart';
 import '../../core/auth/cloud_session_coordinator.dart';
 import '../../core/auth/cloud_session_controller.dart';
@@ -335,6 +346,11 @@ void ensureProcurementDependencies() {
   if (!sl.isRegistered<ProcurementRemoteDatasource>()) {
     sl.registerLazySingleton(() => ProcurementRemoteDatasource(sl()));
   }
+  if (!sl.isRegistered<ProcurementSyncStatusService>()) {
+    sl.registerLazySingleton(
+      () => ProcurementSyncStatusService(queue: sl(), local: sl()),
+    );
+  }
   if (!sl.isRegistered<ProcurementRepository>()) {
     sl.registerLazySingleton<ProcurementRepository>(
       () => ProcurementRepositoryImpl(
@@ -343,11 +359,34 @@ void ensureProcurementDependencies() {
         apiGuard: sl(),
         syncPolicy: sl(),
         recorder: sl(),
+        syncStatus: sl(),
       ),
     );
   }
   if (!sl.isRegistered<ProcurementBloc>()) {
     sl.registerFactory(() => ProcurementBloc(repository: sl(), session: sl()));
+  }
+}
+
+/// Enregistre le module Transferts inter-boutiques si absent.
+void ensureStockTransferDependencies() {
+  if (!sl.isRegistered<StockTransferLocalDatasource>()) {
+    sl.registerLazySingleton(() => StockTransferLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<StockTransferRemoteDatasource>()) {
+    sl.registerLazySingleton(() => StockTransferRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<StockTransferRepository>()) {
+    sl.registerLazySingleton<StockTransferRepository>(
+      () => StockTransferRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        syncPolicy: sl(),
+        shopRepository: sl(),
+        recorder: sl(),
+      ),
+    );
   }
 }
 
@@ -403,6 +442,91 @@ void ensureCashSessionDependencies() {
   }
   if (!sl.isRegistered<CashSessionPdfExporter>()) {
     sl.registerLazySingleton(() => const CashSessionPdfExporter());
+  }
+}
+
+/// Enregistre le module Bureau de change si absent.
+void ensureFxExchangeDependencies() {
+  if (!sl.isRegistered<FxExchangeLocalDatasource>()) {
+    sl.registerLazySingleton(() => FxExchangeLocalDatasource(sl()));
+  }
+  if (!sl.isRegistered<FxExchangeRemoteDatasource>()) {
+    sl.registerLazySingleton(() => FxExchangeRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<FxExchangeRepository>()) {
+    sl.registerLazySingleton<FxExchangeRepository>(
+      () => FxExchangeRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        recorder: sl(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<IsFxModuleEnabled>()) {
+    sl.registerLazySingleton(() => IsFxModuleEnabled(sl()));
+  }
+  if (!sl.isRegistered<ToggleFxModule>()) {
+    sl.registerLazySingleton(() => ToggleFxModule(sl()));
+  }
+  if (!sl.isRegistered<ListFxCurrencies>()) {
+    sl.registerLazySingleton(() => ListFxCurrencies(sl()));
+  }
+  if (!sl.isRegistered<ListFxShopCurrencies>()) {
+    sl.registerLazySingleton(() => ListFxShopCurrencies(sl()));
+  }
+  if (!sl.isRegistered<UpsertFxShopCurrencies>()) {
+    sl.registerLazySingleton(() => UpsertFxShopCurrencies(sl()));
+  }
+  if (!sl.isRegistered<CreateFxRate>()) {
+    sl.registerLazySingleton(() => CreateFxRate(sl()));
+  }
+  if (!sl.isRegistered<ListFxLatestRates>()) {
+    sl.registerLazySingleton(() => ListFxLatestRates(sl()));
+  }
+  if (!sl.isRegistered<ListFxRateHistory>()) {
+    sl.registerLazySingleton(() => ListFxRateHistory(sl()));
+  }
+  if (!sl.isRegistered<FindOpenFxSession>()) {
+    sl.registerLazySingleton(() => FindOpenFxSession(sl()));
+  }
+  if (!sl.isRegistered<ListFxSessions>()) {
+    sl.registerLazySingleton(() => ListFxSessions(sl()));
+  }
+  if (!sl.isRegistered<GetFxLiveBalances>()) {
+    sl.registerLazySingleton(() => GetFxLiveBalances(sl()));
+  }
+  if (!sl.isRegistered<OpenFxSession>()) {
+    sl.registerLazySingleton(() => OpenFxSession(sl()));
+  }
+  if (!sl.isRegistered<CloseFxSession>()) {
+    sl.registerLazySingleton(() => CloseFxSession(sl()));
+  }
+  if (!sl.isRegistered<PreviewFxOperation>()) {
+    sl.registerLazySingleton(() => PreviewFxOperation(sl()));
+  }
+  if (!sl.isRegistered<CreateFxOperation>()) {
+    sl.registerLazySingleton(() => CreateFxOperation(sl()));
+  }
+  if (!sl.isRegistered<ListFxOperations>()) {
+    sl.registerLazySingleton(() => ListFxOperations(sl()));
+  }
+  if (!sl.isRegistered<CreateFxMovement>()) {
+    sl.registerLazySingleton(() => CreateFxMovement(sl()));
+  }
+  if (!sl.isRegistered<ListFxMovements>()) {
+    sl.registerLazySingleton(() => ListFxMovements(sl()));
+  }
+  if (!sl.isRegistered<GetFxDailyReport>()) {
+    sl.registerLazySingleton(() => GetFxDailyReport(sl()));
+  }
+  if (!sl.isRegistered<SyncFxExchangeFromRemote>()) {
+    sl.registerLazySingleton(() => SyncFxExchangeFromRemote(sl()));
+  }
+  if (!sl.isRegistered<FxExchangeRemoteSyncAdapter>()) {
+    sl.registerLazySingleton(
+      () => FxExchangeRemoteSyncAdapter(sl<FxExchangeRepository>()),
+    );
   }
 }
 
@@ -473,6 +597,9 @@ void ensureSettingsDependencies() {
   }
   if (!sl.isRegistered<ShopBackupService>()) {
     sl.registerLazySingleton(() => ShopBackupService(sl()));
+  }
+  if (!sl.isRegistered<ProductDedupeService>()) {
+    sl.registerLazySingleton(() => ProductDedupeService(sl()));
   }
   sl.registerLazySingleton(
     () => GetShopConfiguration(sl<SettingsRepository>()),
@@ -703,6 +830,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => WasLoggedOut(sl()));
   sl.registerLazySingleton(() => RestoreSession(sl()));
   sl.registerLazySingleton(() => HasRestorableSession(sl()));
+  sl.registerLazySingleton(() => GetRestorableSessionShopId(sl()));
   sl.registerLazySingleton(() => GetLockScreen(sl()));
   sl.registerLazySingleton(() => LoginWithPin(sl()));
   sl.registerLazySingleton(() => UnlockWithPin(sl()));
@@ -724,6 +852,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => Logout(sl()));
   sl.registerLazySingleton(() => ListOwnedShops(sl()));
   sl.registerLazySingleton(() => SwitchShop(sl()));
+  sl.registerLazySingleton(() => GetIdentityContext(sl()));
+  sl.registerLazySingleton(() => TryResolveServerShopId(sl()));
   sl.registerLazySingleton(() => ListDeviceSessions(sl()));
   sl.registerLazySingleton(() => RevokeDeviceSession(sl()));
 
@@ -755,6 +885,8 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => ChangeUserRole(sl()));
   sl.registerLazySingleton(() => DeactivateShopUser(sl()));
   sl.registerLazySingleton(() => AssignUserShop(sl()));
+  sl.registerLazySingleton(() => GetUserShopAccess(sl()));
+  sl.registerLazySingleton(() => SyncUserShopAccess(sl()));
 
   sl.registerLazySingleton<RbacRepository>(
     () => RbacRepositoryImpl(remote: sl(), apiRunner: sl()),
@@ -782,7 +914,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => DashboardLocalDatasource(sl()));
   ensureExpensesDependencies();
   ensureProcurementDependencies();
+  ensureStockTransferDependencies();
   ensureCashSessionDependencies();
+  ensureFxExchangeDependencies();
   sl.registerLazySingleton<DashboardRepository>(
     () => DashboardRepositoryImpl(
       localDatasource: sl(),
@@ -907,6 +1041,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => ProcurementRemoteSyncAdapter(sl<ProcurementRepository>()),
   );
+  sl.registerLazySingleton(
+    () => StockTransferRemoteSyncAdapter(sl<StockTransferRepository>()),
+  );
   sl.registerLazySingleton(() => SyncPolicy(sl(), sl()));
   sl.registerLazySingleton(() => SyncQueueDatasource(sl()));
   sl.registerLazySingleton(() => LocalAuditWriter(sl()));
@@ -946,6 +1083,8 @@ Future<void> initDependencies() async {
       calculatorsRemote: sl(),
       procurementLocal: sl(),
       procurementRemote: sl(),
+      stockTransferLocal: sl(),
+      stockTransferRemote: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -965,6 +1104,8 @@ Future<void> initDependencies() async {
         sl<CashSessionsRemoteSyncAdapter>(),
         sl<CalculatorsRemoteSyncAdapter>(),
         sl<ProcurementRemoteSyncAdapter>(),
+        sl<StockTransferRemoteSyncAdapter>(),
+        sl<FxExchangeRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
       activeShop: sl(),
@@ -1002,6 +1143,7 @@ Future<void> initDependencies() async {
       isSetupComplete: sl(),
       wasLoggedOut: sl(),
       hasRestorableSession: sl(),
+      getRestorableSessionShopId: sl(),
       restoreSession: sl(),
       getLockScreen: sl(),
       loginWithPin: sl(),
@@ -1014,6 +1156,7 @@ Future<void> initDependencies() async {
       logout: sl(),
       listOwnedShops: sl(),
       switchShop: sl(),
+      tryResolveServerShopId: sl(),
       requestWhatsappOtp: sl(),
       verifyWhatsappOtp: sl(),
       completeWhatsappLogin: sl(),

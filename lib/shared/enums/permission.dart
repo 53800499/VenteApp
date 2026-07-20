@@ -57,7 +57,19 @@ enum Permission {
   procurementUpdate('procurement:update'),
   procurementReceive('procurement:receive'),
   procurementInvoicePay('procurement:invoice_pay'),
-  procurementCancel('procurement:cancel');
+  procurementCancel('procurement:cancel'),
+  inventoryTransferRead('inventory:transfer:read'),
+  inventoryTransferCreate('inventory:transfer:create'),
+  inventoryTransferReceive('inventory:transfer:receive'),
+  inventoryTransferApprove('inventory:transfer:approve'),
+  fxExchangeRead('fx_exchange:read'),
+  fxExchangeOperate('fx_exchange:operate'),
+  fxExchangeRates('fx_exchange:rates'),
+  fxExchangeSessionOpen('fx_exchange:session_open'),
+  fxExchangeSessionClose('fx_exchange:session_close'),
+  fxExchangeAdjust('fx_exchange:adjust'),
+  fxExchangeReport('fx_exchange:report'),
+  fxExchangeConfigure('fx_exchange:configure');
 
   const Permission(this.code);
 
@@ -88,6 +100,12 @@ const _sellerPermissions = <Permission>{
   Permission.calculatorsHistory,
   Permission.procurementRead,
   Permission.procurementReceive,
+  Permission.inventoryTransferRead,
+  Permission.inventoryTransferCreate,
+  Permission.fxExchangeRead,
+  Permission.fxExchangeOperate,
+  Permission.fxExchangeSessionOpen,
+  Permission.fxExchangeSessionClose,
 };
 
 const _viewerPermissions = <Permission>{
@@ -104,6 +122,9 @@ const _viewerPermissions = <Permission>{
   Permission.calculatorsUse,
   Permission.calculatorsHistory,
   Permission.procurementRead,
+  Permission.inventoryTransferRead,
+  Permission.fxExchangeRead,
+  Permission.fxExchangeReport,
 };
 
 Set<Permission> permissionsForRole(UserRole role) {

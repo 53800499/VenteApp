@@ -15,6 +15,8 @@ enum StockMovementType {
   return_,
   initial,
   saleCancel,
+  transferOut,
+  transferIn,
 }
 
 class ProductCategory extends Equatable {

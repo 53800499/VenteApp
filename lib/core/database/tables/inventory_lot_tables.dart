@@ -17,6 +17,8 @@ class InventoryLots extends Table {
   IntColumn get unitCost => integer()();
   IntColumn get quantityReceived => integer()();
   IntColumn get quantityRemaining => integer()();
+  IntColumn get quantityReserved =>
+      integer().withDefault(const Constant(0))();
   TextColumn get batchNumber => text().nullable()();
   IntColumn get expiryDate => integer().nullable()();
   IntColumn get receivedAt => integer()();

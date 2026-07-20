@@ -126,6 +126,30 @@ class NotificationFeedBuilder {
       }
     }
 
+    if (preferences.enableStockAlerts) {
+      final pendingTransfers = await _local.loadPendingStockTransfers(shopId);
+      for (final transfer in pendingTransfers.take(3)) {
+        items.add(
+          NotificationItem(
+            code: NotificationCode.stockTransferIncoming.label,
+            channel: 'stock',
+            title: 'Transfert entrant',
+            body:
+                '${transfer.reference} depuis '
+                '${transfer.sourceShopName ?? 'une autre boutique'} '
+                '(${transfer.pendingUnits} u à recevoir).',
+            deepLink: '/stock-transfers/${transfer.transferId}',
+            configurable: true,
+            alwaysOn: false,
+            payload: {
+              'transferId': transfer.transferId,
+              'pendingUnits': transfer.pendingUnits,
+            },
+          ),
+        );
+      }
+    }
+
     for (final debt in debtCandidates) {
       items.add(
         NotificationItem(

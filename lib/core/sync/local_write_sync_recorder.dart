@@ -488,4 +488,126 @@ class LocalWriteSyncRecorder {
       },
     );
   }
+
+  Future<void> recordStockTransferCreate({
+    required int shopId,
+    required int transferId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.create,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordStockTransferValidate({
+    required int shopId,
+    required int transferId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.validate,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordStockTransferSubmit({
+    required int shopId,
+    required int transferId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.submit,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordStockTransferApprove({
+    required int shopId,
+    required int transferId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.approve,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordStockTransferShip({
+    required int shopId,
+    required int transferId,
+    Map<String, dynamic> payload = const {},
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.send,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordStockTransferReceive({
+    required int shopId,
+    required int transferId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.receive,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordStockTransferCancel({
+    required int shopId,
+    required int transferId,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.cancel,
+      payload: const {},
+    );
+  }
+
+  Future<void> recordStockTransferClose({
+    required int shopId,
+    required int transferId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.close,
+      payload: payload,
+    );
+  }
+
+  Future<void> recordStockTransferResolveDiscrepancy({
+    required int shopId,
+    required int transferId,
+    required Map<String, dynamic> payload,
+  }) {
+    return record(
+      shopId: shopId,
+      entityTable: SyncEntityTable.stockTransfers,
+      recordId: transferId,
+      operation: SyncOperation.resolveDiscrepancy,
+      payload: payload,
+    );
+  }
 }

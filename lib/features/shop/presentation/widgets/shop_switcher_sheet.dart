@@ -16,6 +16,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import '../../../rbac/domain/usecases/refresh_session_permissions.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../shop/domain/usecases/shop_usecases.dart';
 import '../widgets/shop_feedback.dart';
 
 /// Bascule la boutique active côté serveur et met à jour la session locale.
@@ -86,16 +87,38 @@ Future<bool> performShopSwitch(
       if (proceed != true || !context.mounted) return false;
     }
 
-    final session = await sl<SwitchShop>()(shopId: serverShopId);
-    if (!context.mounted) return false;
-    AuthSession refreshed = session;
-    try {
-      final updated = await sl<RefreshSessionPermissions>()();
-      if (updated != null) refreshed = updated;
-    } catch (_) {
-      // Droits du switchShop conservés si /rbac/me échoue.
-    }
-    if (!context.mounted) return false;
+    // Synchroniser le catalogue, basculer côté serveur puis rafraîchir la session.
+    final refreshed = await ShopFeedback.runWithBlockingLoader<AuthSession>(
+      context: context,
+      message: 'Changement de boutique en cours…',
+      action: () async {
+        try {
+          await sl<ListShops>()();
+        } catch (_) {
+          // Best-effort : le switch peut quand même créer la boutique manquante.
+        }
+
+        final session = await sl<SwitchShop>()(shopId: serverShopId);
+        AuthSession result = session;
+
+        try {
+          await sl<ListShops>()();
+        } catch (_) {
+          // Rafraîchir les métadonnées après le switch serveur.
+        }
+
+        try {
+          final updated = await sl<RefreshSessionPermissions>()();
+          if (updated != null) result = updated;
+        } catch (_) {
+          // Droits du switchShop conservés si /rbac/me échoue.
+        }
+
+        return result;
+      },
+    );
+    if (!context.mounted || refreshed == null) return false;
+
     authBloc.add(AuthSessionRefreshed(refreshed));
     await sl<LastShopStorage>().save(refreshed.shop.id);
     syncService.resumeSync(shopId: refreshed.shop.id);
@@ -317,6 +340,24 @@ class _ShopSwitcherSheetState extends State<ShopSwitcherSheet> {
                 ),
               )
             else ...[
+              if (_switchingShopId != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      ShopFeedback.inlineLoader(size: 18),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'Changement de boutique en cours…',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: colorScheme.primary,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Flexible(
                 child: ListView.separated(
                   shrinkWrap: true,

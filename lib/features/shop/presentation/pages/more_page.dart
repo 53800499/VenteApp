@@ -8,6 +8,7 @@ import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/widgets/identity_context_card.dart';
 import '../../../../core/security/production_message_policy.dart';
 import '../../../../app/pages/api_settings_page.dart';
 import '../../../reports/presentation/pages/reports_page.dart';
@@ -24,6 +25,8 @@ import '../../../rbac/presentation/pages/roles_catalog_page.dart';
 import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../procurement/presentation/pages/procurement_page.dart';
+import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
+import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
 import 'shop_list_page.dart';
 
 class MorePage extends StatelessWidget {
@@ -82,6 +85,11 @@ class MorePage extends StatelessWidget {
         Permission.procurementRead,
       );
 
+  bool get _canViewStockTransfer => PermissionGuard.can(
+        session.user.permissions,
+        Permission.inventoryTransferRead,
+      );
+
   bool get _canViewCashSessions => PermissionGuard.can(
         session.user.permissions,
         Permission.cashSessionsRead,
@@ -92,6 +100,11 @@ class MorePage extends StatelessWidget {
   bool get _canUseCalculators => PermissionGuard.can(
         session.user.permissions,
         Permission.calculatorsUse,
+      );
+
+  bool get _canViewFxExchange => PermissionGuard.can(
+        session.user.permissions,
+        Permission.fxExchangeRead,
       );
 
   @override
@@ -108,6 +121,11 @@ class MorePage extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
+              IdentityContextCard(
+                session: activeSession,
+                onChangeIdentity: () => _confirmChangeIdentity(context),
+              ),
+              const SizedBox(height: AppSpacing.md),
               ModuleActionTile(
                 icon: Icons.menu_book_outlined,
                 title: 'Aide & guides',
@@ -196,6 +214,17 @@ class MorePage extends StatelessWidget {
                     ),
                   ),
                 ),
+              if (_canViewStockTransfer)
+                ModuleActionTile(
+                  icon: Icons.swap_horiz_outlined,
+                  title: 'Transferts inter-boutiques',
+                  subtitle: 'Envoyer ou recevoir du stock entre vos boutiques',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const StockTransferPage(),
+                    ),
+                  ),
+                ),
               if (_canViewCashSessions)
                 ModuleActionTile(
                   icon: Icons.point_of_sale_outlined,
@@ -217,6 +246,18 @@ class MorePage extends StatelessWidget {
                     MaterialPageRoute(
                       builder: (_) =>
                           CalculatorsPage(session: activeSession),
+                    ),
+                  ),
+                ),
+              if (_canViewFxExchange)
+                ModuleActionTile(
+                  icon: Icons.currency_exchange,
+                  title: 'Bureau de change',
+                  subtitle: 'Opérations multi-devises, taux et caisses FX',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          FxExchangePage(session: activeSession),
                     ),
                   ),
                 ),
@@ -297,9 +338,9 @@ class MorePage extends StatelessWidget {
               ModuleActionTile(
                 icon: Icons.logout_rounded,
                 title: 'Déconnexion',
-                subtitle: 'Quitter le compte — reconnexion WhatsApp',
+                subtitle: 'Quitter cette identité — reconnexion WhatsApp',
                 destructive: true,
-                onTap: () => _confirmLogout(context, activeSession.shop.name),
+                onTap: () => _confirmLogout(context, activeSession),
               ),
                 ],
               ),
@@ -310,15 +351,44 @@ class MorePage extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmLogout(BuildContext context, String shopName) async {
+  Future<void> _confirmChangeIdentity(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Changer d\'identité'),
+        content: const Text(
+          'Vous allez quitter l\'identité courante.\n\n'
+          'Reconnectez-vous via WhatsApp pour choisir une autre entreprise '
+          'ou un autre rôle.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Continuer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      context.read<AuthBloc>().add(const AuthLogoutRequested());
+    }
+  }
+
+  Future<void> _confirmLogout(BuildContext context, AuthSession session) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Déconnexion'),
         content: Text(
-          'Quitter la boutique « $shopName » ?\n\n'
+          'Quitter l\'identité « ${session.user.name} » sur '
+          '« ${session.shop.name} » ?\n\n'
           'Votre session sera fermée. Reconnectez-vous via WhatsApp pour '
-          'accéder à nouveau à votre compte.',
+          'accéder à nouveau à votre identité.',
         ),
         actions: [
           TextButton(

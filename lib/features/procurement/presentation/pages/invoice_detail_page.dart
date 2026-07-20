@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../data/services/procurement_sync_status_service.dart';
 import '../../domain/entities/procurement.dart';
+import '../../domain/entities/procurement_sync_entities.dart';
 import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
+import '../widgets/procurement_sync_badge.dart';
+import '../widgets/procurement_sync_scope.dart';
 import 'record_supplier_payment_page.dart';
 
 class InvoiceDetailPage extends StatefulWidget {
@@ -20,16 +25,29 @@ class InvoiceDetailPage extends StatefulWidget {
 }
 
 class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
+  ProcurementSyncOverview _syncOverview = const ProcurementSyncOverview();
+
   @override
   void initState() {
     super.initState();
+    ensureProcurementDependencies();
     _refresh();
+  }
+
+  Future<void> _loadSyncOverview() async {
+    try {
+      final shopId = context.read<ProcurementBloc>().shopId;
+      final overview =
+          await sl<ProcurementSyncStatusService>().loadOverview(shopId: shopId);
+      if (mounted) setState(() => _syncOverview = overview);
+    } catch (_) {}
   }
 
   void _refresh() {
     context
         .read<ProcurementBloc>()
         .add(ProcurementInvoiceDetailLoadRequested(widget.invoiceId));
+    _loadSyncOverview();
   }
 
   int _paidAmount(SupplierInvoice invoice) {
@@ -43,7 +61,10 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
     final canPay =
         PermissionGuard.can(permissions, Permission.procurementInvoicePay);
 
-    return Scaffold(
+    return ProcurementSyncScope(
+      overview: _syncOverview,
+      onRefresh: _loadSyncOverview,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Détail facture'),
         actions: [
@@ -64,24 +85,65 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
           }
         },
         builder: (context, state) {
-          if (state.status == ProcurementStatus.loading &&
-              state.selectedInvoice == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
           final invoice = state.selectedInvoice;
-          if (invoice == null || invoice.id != widget.invoiceId) {
-            return const Center(child: Text('Facture introuvable.'));
+          if (invoice?.id == widget.invoiceId) {
+            return _buildInvoiceContent(
+              context,
+              invoice!,
+              canPay,
+            );
           }
 
+          if (state.status == ProcurementStatus.failure &&
+              state.errorMessage != null) {
+            return Center(child: Text(state.errorMessage!));
+          }
+
+          return const Center(child: CircularProgressIndicator());
+        },
+      ),
+    ),
+    );
+  }
+
+  Widget _buildInvoiceContent(
+    BuildContext context,
+    SupplierInvoice invoice,
+    bool canPay,
+  ) {
           final paid = _paidAmount(invoice);
           final remaining = invoice.total - paid;
-          final canRecordPayment =
-              canPay && remaining > 0 && invoice.status != SupplierInvoiceStatus.paid;
+          final invoicePending = _syncOverview.stateFor(
+                kind: ProcurementSyncEntityKind.invoice,
+                localId: invoice.id,
+                serverId: invoice.serverId,
+              ) !=
+              ProcurementCloudSyncState.synced;
+          final paidLocally = invoice.status == SupplierInvoiceStatus.paid;
+          final canRecordPayment = canPay &&
+              remaining > 0 &&
+              !paidLocally &&
+              !invoicePending;
 
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
+              if (paidLocally && invoicePending)
+                Card(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .tertiaryContainer
+                      .withValues(alpha: 0.65),
+                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: Text(
+                      'Facture payée sur cet appareil. '
+                      'Synchronisation cloud en cours — aucun paiement à refaire.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -99,7 +161,17 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
                                   ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
-                          _InvoiceStatusChip(status: invoice.status),
+                          ProcurementInvoiceStatusChip(
+                            invoiceId: invoice.id,
+                            status: invoice.status,
+                            serverId: invoice.serverId,
+                          ),
+                          const SizedBox(width: 4),
+                          ProcurementSyncBadge(
+                            kind: ProcurementSyncEntityKind.invoice,
+                            localId: invoice.id,
+                            serverId: invoice.serverId,
+                          ),
                         ],
                       ),
                       const Divider(height: AppSpacing.lg),
@@ -211,9 +283,6 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
                 ),
             ],
           );
-        },
-      ),
-    );
   }
 
   String _formatDate(int ms) {
@@ -261,34 +330,6 @@ class _InfoLine extends StatelessWidget {
           Expanded(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
           Text(value, style: style),
         ],
-      ),
-    );
-  }
-}
-
-class _InvoiceStatusChip extends StatelessWidget {
-  const _InvoiceStatusChip({required this.status});
-
-  final SupplierInvoiceStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final (bg, fg) = switch (status) {
-      SupplierInvoiceStatus.unpaid => (Colors.red.shade100, Colors.red.shade800),
-      SupplierInvoiceStatus.partiallyPaid =>
-        (Colors.orange.shade100, Colors.orange.shade800),
-      SupplierInvoiceStatus.paid => (Colors.green.shade100, Colors.green.shade800),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(color: fg, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }

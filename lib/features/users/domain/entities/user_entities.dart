@@ -72,3 +72,45 @@ class AssignableRole {
   final String code;
   final String label;
 }
+
+class ShopAccessGrant {
+  const ShopAccessGrant({
+    required this.shopId,
+    this.accessRole,
+  });
+
+  final int shopId;
+  final String? accessRole;
+}
+
+class UserShopAccessEntry {
+  const UserShopAccessEntry({
+    required this.shopId,
+    required this.shopName,
+    this.accessRole,
+    required this.effectiveRole,
+    required this.effectiveRoleLabel,
+  });
+
+  final int shopId;
+  final String shopName;
+  final String? accessRole;
+  final String effectiveRole;
+  final String effectiveRoleLabel;
+}
+
+class UserShopAccess {
+  const UserShopAccess({
+    required this.userId,
+    required this.membershipId,
+    required this.roleCode,
+    required this.roleLabel,
+    required this.shops,
+  });
+
+  final int userId;
+  final int membershipId;
+  final String roleCode;
+  final String roleLabel;
+  final List<UserShopAccessEntry> shops;
+}

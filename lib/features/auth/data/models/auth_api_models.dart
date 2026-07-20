@@ -252,6 +252,82 @@ class SwitchShopTargetDto {
   }
 }
 
+class IdentityContextDto {
+  const IdentityContextDto({
+    required this.membershipId,
+    this.identityId,
+    required this.organizationId,
+    required this.organizationName,
+    required this.role,
+    required this.roleLabel,
+    required this.effectiveRole,
+    required this.effectiveRoleLabel,
+    required this.activeShopId,
+    required this.activeShopName,
+    required this.accessibleShops,
+  });
+
+  final int membershipId;
+  final int? identityId;
+  final int organizationId;
+  final String organizationName;
+  final String role;
+  final String roleLabel;
+  final String effectiveRole;
+  final String effectiveRoleLabel;
+  final int activeShopId;
+  final String activeShopName;
+  final List<AccessibleShopDto> accessibleShops;
+
+  factory IdentityContextDto.fromJson(Map<String, dynamic> json) {
+    return IdentityContextDto(
+      membershipId: json['membershipId'] as int,
+      identityId: json['identityId'] as int?,
+      organizationId: json['organizationId'] as int,
+      organizationName: json['organizationName'] as String,
+      role: json['role'] as String,
+      roleLabel: json['roleLabel'] as String,
+      effectiveRole: json['effectiveRole'] as String? ?? json['role'] as String,
+      effectiveRoleLabel:
+          json['effectiveRoleLabel'] as String? ?? json['roleLabel'] as String,
+      activeShopId: json['activeShopId'] as int,
+      activeShopName: json['activeShopName'] as String,
+      accessibleShops: (json['accessibleShops'] as List<dynamic>)
+          .map((e) => AccessibleShopDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class AccessibleShopDto {
+  const AccessibleShopDto({
+    required this.id,
+    required this.name,
+    required this.isCurrent,
+    required this.isDefault,
+    this.accessRole,
+    this.roleLabel,
+  });
+
+  final int id;
+  final String name;
+  final bool isCurrent;
+  final bool isDefault;
+  final String? accessRole;
+  final String? roleLabel;
+
+  factory AccessibleShopDto.fromJson(Map<String, dynamic> json) {
+    return AccessibleShopDto(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      isCurrent: json['isCurrent'] as bool? ?? false,
+      isDefault: json['isDefault'] as bool? ?? false,
+      accessRole: json['accessRole'] as String?,
+      roleLabel: json['roleLabel'] as String?,
+    );
+  }
+}
+
 class WhatsappOtpRequestDataDto {
   const WhatsappOtpRequestDataDto({
     required this.maskedPhone,
@@ -289,6 +365,10 @@ class ShopMembershipDto {
     required this.role,
     required this.roleLabel,
     required this.isDefault,
+    this.scopeType = 'shop',
+    this.organizationName,
+    this.shopCount,
+    this.accessibleShopIds = const [],
   });
 
   final int userId;
@@ -297,6 +377,10 @@ class ShopMembershipDto {
   final String role;
   final String roleLabel;
   final bool isDefault;
+  final String scopeType;
+  final String? organizationName;
+  final int? shopCount;
+  final List<int> accessibleShopIds;
 
   factory ShopMembershipDto.fromJson(Map<String, dynamic> json) {
     return ShopMembershipDto(
@@ -306,6 +390,13 @@ class ShopMembershipDto {
       role: json['role'] as String,
       roleLabel: json['roleLabel'] as String? ?? json['role'] as String,
       isDefault: json['isDefault'] as bool? ?? false,
+      scopeType: json['scopeType'] as String? ?? 'shop',
+      organizationName: json['organizationName'] as String?,
+      shopCount: json['shopCount'] as int?,
+      accessibleShopIds: (json['accessibleShopIds'] as List<dynamic>?)
+              ?.map((value) => value as int)
+              .toList() ??
+          const [],
     );
   }
 }

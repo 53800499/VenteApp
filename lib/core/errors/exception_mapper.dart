@@ -124,7 +124,7 @@ String _httpStatusMessage(int? statusCode) {
     401 => 'Session expirée. Saisissez votre PIN de connexion.',
     403 => 'Action non autorisée.',
     404 => 'Boutique ou utilisateur introuvable.',
-    409 => 'Une boutique existe déjà sur le cloud. Utilisez « Se connecter » si vous êtes employé.',
+    409 => 'Conflit avec des données déjà enregistrées sur le cloud.',
     422 => 'Informations incorrectes. Vérifiez votre saisie.',
     429 => 'Trop de tentatives. Patientez avant de réessayer.',
     500 => 'Le service en ligne a rencontré une erreur. Réessayez.',

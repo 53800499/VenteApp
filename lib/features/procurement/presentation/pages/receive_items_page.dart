@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../domain/entities/procurement.dart';
+import '../../domain/repositories/procurement_repository.dart';
 import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
 import '../utils/procurement_price_update_flow.dart';
@@ -28,8 +30,7 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
   @override
   void initState() {
     super.initState();
-    // Default delivery receipt number
-    _receiptNumberController.text = 'BR-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}';
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadNextReceiptNumber());
 
     // Populate lines
     final poItems = widget.po.items ?? [];
@@ -47,6 +48,15 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
           'expiryMs': null,
         });
       }
+    }
+  }
+
+  Future<void> _loadNextReceiptNumber() async {
+    final shopId = context.read<ProcurementBloc>().shopId;
+    final number =
+        await sl<ProcurementRepository>().nextOrderReceiptNumber(shopId: shopId);
+    if (mounted) {
+      setState(() => _receiptNumberController.text = number);
     }
   }
 

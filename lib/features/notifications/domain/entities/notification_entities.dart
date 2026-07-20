@@ -8,7 +8,8 @@ enum NotificationCode {
   goodDay('N-06'),
   syncConflict('N-07'),
   procurementOverdue('N-08'),
-  procurementInvoiceDue('N-09');
+  procurementInvoiceDue('N-09'),
+  stockTransferIncoming('N-10');
 
   const NotificationCode(this.label);
   final String label;

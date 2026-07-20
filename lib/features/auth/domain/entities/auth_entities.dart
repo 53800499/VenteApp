@@ -134,7 +134,13 @@ class OwnedShopList {
       shops.where((shop) => shop.isActive).toList();
 }
 
-/// Accès boutique après vérification WhatsApp (tous rôles).
+/// Portée d'un accès après vérification WhatsApp.
+enum MembershipScopeType {
+  shop,
+  organization,
+}
+
+/// Accès (identité) après vérification WhatsApp.
 class AuthMembership {
   const AuthMembership({
     required this.userId,
@@ -143,14 +149,143 @@ class AuthMembership {
     required this.role,
     required this.roleLabel,
     required this.isDefault,
+    this.scopeType = MembershipScopeType.shop,
+    this.organizationName,
+    this.shopCount,
+    this.accessibleShopIds = const [],
   });
 
   final int userId;
+  /// Boutique d'entrée côté serveur (login initial).
   final int shopId;
   final String shopName;
   final UserRole role;
   final String roleLabel;
   final bool isDefault;
+  final MembershipScopeType scopeType;
+  final String? organizationName;
+  final int? shopCount;
+  final List<int> accessibleShopIds;
+
+  String get displayName =>
+      scopeType == MembershipScopeType.organization
+          ? (organizationName ?? shopName)
+          : shopName;
+
+  String get subtitle {
+    if (scopeType == MembershipScopeType.organization &&
+        (shopCount ?? 0) > 1) {
+      return '$roleLabel · $shopCount boutiques';
+    }
+    return roleLabel;
+  }
+
+  bool coversServerShop(int serverShopId) {
+    if (shopId == serverShopId) return true;
+    return accessibleShopIds.contains(serverShopId);
+  }
+}
+
+class AccessibleShopSummary {
+  const AccessibleShopSummary({
+    required this.id,
+    required this.name,
+    required this.isCurrent,
+    required this.isDefault,
+    this.accessRole,
+    this.roleLabel,
+  });
+
+  final int id;
+  final String name;
+  final bool isCurrent;
+  final bool isDefault;
+  final String? accessRole;
+  final String? roleLabel;
+}
+
+/// Contexte identité persisté (Organization → Membership → ShopAccess).
+class AuthIdentityContext {
+  const AuthIdentityContext({
+    required this.membershipId,
+    this.identityId,
+    required this.organizationId,
+    required this.organizationName,
+    required this.role,
+    required this.roleLabel,
+    required this.effectiveRole,
+    required this.effectiveRoleLabel,
+    required this.activeShopId,
+    required this.activeShopName,
+    required this.accessibleShops,
+  });
+
+  final int membershipId;
+  final int? identityId;
+  final int organizationId;
+  final String organizationName;
+  final String role;
+  final String roleLabel;
+  final String effectiveRole;
+  final String effectiveRoleLabel;
+  final int activeShopId;
+  final String activeShopName;
+  final List<AccessibleShopSummary> accessibleShops;
+
+  int get accessibleShopCount => accessibleShops.length;
+
+  Map<String, dynamic> toJson() => {
+        'membershipId': membershipId,
+        'identityId': identityId,
+        'organizationId': organizationId,
+        'organizationName': organizationName,
+        'role': role,
+        'roleLabel': roleLabel,
+        'effectiveRole': effectiveRole,
+        'effectiveRoleLabel': effectiveRoleLabel,
+        'activeShopId': activeShopId,
+        'activeShopName': activeShopName,
+        'accessibleShops': accessibleShops
+            .map(
+              (shop) => {
+                'id': shop.id,
+                'name': shop.name,
+                'isCurrent': shop.isCurrent,
+                'isDefault': shop.isDefault,
+                'accessRole': shop.accessRole,
+                'roleLabel': shop.roleLabel,
+              },
+            )
+            .toList(),
+      };
+
+  factory AuthIdentityContext.fromJson(Map<String, dynamic> json) {
+    return AuthIdentityContext(
+      membershipId: json['membershipId'] as int? ?? 0,
+      identityId: json['identityId'] as int?,
+      organizationId: json['organizationId'] as int? ?? 0,
+      organizationName: json['organizationName'] as String? ?? '',
+      role: json['role'] as String? ?? 'owner',
+      roleLabel: json['roleLabel'] as String? ?? '',
+      effectiveRole: json['effectiveRole'] as String? ?? json['role'] as String? ?? 'owner',
+      effectiveRoleLabel:
+          json['effectiveRoleLabel'] as String? ?? json['roleLabel'] as String? ?? '',
+      activeShopId: json['activeShopId'] as int? ?? 0,
+      activeShopName: json['activeShopName'] as String? ?? '',
+      accessibleShops: (json['accessibleShops'] as List<dynamic>? ?? [])
+          .map(
+            (entry) => AccessibleShopSummary(
+              id: entry['id'] as int,
+              name: entry['name'] as String,
+              isCurrent: entry['isCurrent'] as bool? ?? false,
+              isDefault: entry['isDefault'] as bool? ?? false,
+              accessRole: entry['accessRole'] as String?,
+              roleLabel: entry['roleLabel'] as String?,
+            ),
+          )
+          .toList(),
+    );
+  }
 }
 
 class WhatsappOtpRequestResult {

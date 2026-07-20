@@ -20,4 +20,11 @@ abstract class UserRepository {
     required int shopId,
     String? reason,
   });
+
+  Future<UserShopAccess> getUserShopAccess(int userId);
+
+  Future<UserShopAccess> syncUserShopAccess({
+    required int userId,
+    required List<ShopAccessGrant> grants,
+  });
 }

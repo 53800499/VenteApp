@@ -451,6 +451,49 @@ class NotificationsLocalDatasource {
         .whereType<ProcurementOverdueInvoice>()
         .toList();
   }
+
+  Future<List<PendingStockTransferRow>> loadPendingStockTransfers(int shopId) async {
+    final rows = await (_database.select(_database.stockTransfers)
+          ..where(
+            (t) =>
+                t.destinationShopId.equals(shopId) &
+                t.status.isIn([
+                  'partially_shipped',
+                  'shipped',
+                  'partially_received',
+                ]),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.shippedAt)]))
+        .get();
+
+    final result = <PendingStockTransferRow>[];
+    for (final row in rows) {
+      final itemRows = await (_database.select(_database.stockTransferItems)
+            ..where((i) => i.transferId.equals(row.id)))
+          .get();
+
+      var pendingUnits = 0;
+      for (final item in itemRows) {
+        final pending = item.quantityShipped - item.quantityReceived;
+        if (pending > 0) pendingUnits += pending;
+      }
+      if (pendingUnits <= 0) continue;
+
+      final sourceShop = await (_database.select(_database.shops)
+            ..where((s) => s.id.equals(row.sourceShopId)))
+          .getSingleOrNull();
+
+      result.add(
+        PendingStockTransferRow(
+          transferId: row.id,
+          reference: row.reference,
+          sourceShopName: sourceShop?.name,
+          pendingUnits: pendingUnits,
+        ),
+      );
+    }
+    return result;
+  }
 }
 
 class ProcurementOverdueOrder {
@@ -475,4 +518,18 @@ class ProcurementOverdueInvoice {
   final int invoiceId;
   final String invoiceNumber;
   final int amountDue;
+}
+
+class PendingStockTransferRow {
+  const PendingStockTransferRow({
+    required this.transferId,
+    required this.reference,
+    required this.pendingUnits,
+    this.sourceShopName,
+  });
+
+  final int transferId;
+  final String reference;
+  final String? sourceShopName;
+  final int pendingUnits;
 }

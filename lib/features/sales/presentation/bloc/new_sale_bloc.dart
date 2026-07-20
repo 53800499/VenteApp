@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../core/utils/commerce_shop_scope.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../../core/storage/form_draft_storage.dart';
@@ -159,17 +158,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     }
   }
 
-  Future<List<Product>> _loadProducts() async {
+  Future<List<Product>> _loadProducts() {
     const filters = ProductListFilters();
-    final shopIds = CommerceShopScope.candidateLocalShopIds(_session);
-
-    for (final shopId in shopIds) {
-      final products = await _listProducts(shopId: shopId, filters: filters);
-      if (products.isNotEmpty) {
-        return products;
-      }
-    }
-
     return _listProducts(shopId: _session.shop.id, filters: filters);
   }
 

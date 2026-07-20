@@ -70,3 +70,24 @@ class AssignUserShop {
         reason: reason,
       );
 }
+
+class GetUserShopAccess {
+  const GetUserShopAccess(this._repository);
+
+  final UserRepository _repository;
+
+  Future<UserShopAccess> call(int userId) =>
+      _repository.getUserShopAccess(userId);
+}
+
+class SyncUserShopAccess {
+  const SyncUserShopAccess(this._repository);
+
+  final UserRepository _repository;
+
+  Future<UserShopAccess> call({
+    required int userId,
+    required List<ShopAccessGrant> grants,
+  }) =>
+      _repository.syncUserShopAccess(userId: userId, grants: grants);
+}

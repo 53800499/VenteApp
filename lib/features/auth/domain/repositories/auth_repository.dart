@@ -75,6 +75,9 @@ abstract class AuthRepository {
   /// Session locale persistée (≠ déconnexion).
   Future<bool> hasRestorableSession();
 
+  /// Boutique locale liée à la session persistée (après changement de boutique).
+  Future<int?> getRestorableSessionShopId();
+
   /// Déverrouille l'app en conservant la session locale existante.
   Future<AuthSession> unlockWithPin({
     required String pin,
@@ -99,6 +102,8 @@ abstract class AuthRepository {
 
   Future<AuthSession> switchShop({required int shopId});
 
+  Future<AuthIdentityContext> getIdentityContext();
+
   Future<WhatsappOtpRequestResult> requestWhatsappOtp({required String phone});
 
   Future<WhatsappOtpVerifyResult> verifyWhatsappOtp({
@@ -111,6 +116,9 @@ abstract class AuthRepository {
     required int shopId,
     required int userId,
   });
+
+  /// Résout l'ID boutique serveur à partir d'un ID local (ou serveur).
+  Future<int?> tryResolveServerShopId(int shopId);
 
   Future<List<DeviceSession>> listDeviceSessions({bool shopScope = false});
 

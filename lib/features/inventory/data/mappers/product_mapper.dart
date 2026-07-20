@@ -65,6 +65,8 @@ class ProductMapper {
       'return' => inv.StockMovementType.return_,
       'initial' => inv.StockMovementType.initial,
       'sale_cancel' => inv.StockMovementType.saleCancel,
+      'transfer_out' => inv.StockMovementType.transferOut,
+      'transfer_in' => inv.StockMovementType.transferIn,
       _ => inv.StockMovementType.adjustment,
     };
   }

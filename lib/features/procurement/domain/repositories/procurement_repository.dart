@@ -100,6 +100,9 @@ abstract class ProcurementRepository {
     String? paymentReference,
   });
   Future<String> nextDirectReceiptNumber({required int shopId});
+  Future<String> nextOrderReceiptNumber({required int shopId});
+  Future<String> nextPurchaseOrderNumber({required int shopId});
+  Future<String> nextSupplierInvoiceNumber({required int shopId});
   Future<List<PurchaseReceipt>> listDirectReceipts({
     required int shopId,
     int? supplierId,

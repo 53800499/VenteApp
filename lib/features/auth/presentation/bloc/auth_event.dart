@@ -199,6 +199,11 @@ class AuthLockScreenBackRequested extends AuthEvent {
   const AuthLockScreenBackRequested();
 }
 
+/// Quitte l'écran PIN (déconnexion) pour revenir aux choix de connexion.
+class AuthLockScreenExitRequested extends AuthEvent {
+  const AuthLockScreenExitRequested();
+}
+
 /// Session locale ouverte après récupération PIN (sans ressaisir le PIN).
 class AuthSessionRestored extends AuthEvent {
   const AuthSessionRestored(this.session);

@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../../core/database/app_database.dart' as db;
+import '../../../../core/shop/shop_hierarchy.dart';
 import '../../../../core/utils/time.dart';
 import '../../../inventory/data/datasources/local/inventory_lot_local_datasource.dart';
 import '../../../inventory/domain/entities/inventory_lot_entities.dart';
@@ -560,16 +561,213 @@ class ProcurementLocalDatasource {
   // ---------------------------------------------------------------------------
   // Receipts (moteur unique : commande ou appro direct)
   // ---------------------------------------------------------------------------
-  Future<String> nextDirectReceiptNumber(int shopId) async {
-    final count = await (_db.select(_db.purchaseReceipts)
+
+  int _maxSequenceFromReferences(List<String> values, RegExp pattern) {
+    var maxSeq = 0;
+    for (final value in values) {
+      final match = pattern.firstMatch(value.trim());
+      if (match == null) continue;
+      final seq = int.tryParse(match.group(1) ?? '') ?? 0;
+      if (seq > maxSeq) maxSeq = seq;
+    }
+    return maxSeq;
+  }
+
+  Future<String> _nextNumberInGroup({
+    required int shopId,
+    required String prefix,
+    required Future<List<String>> Function(List<int> groupIds) loadValues,
+  }) async {
+    final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+    final values = await loadValues(groupIds);
+    final pattern = RegExp(
+      '^${RegExp.escape(prefix)}-(\\d+)\$',
+      caseSensitive: false,
+    );
+    final seq = _maxSequenceFromReferences(values, pattern) + 1;
+    return '$prefix-${seq.toString().padLeft(5, '0')}';
+  }
+
+  Future<bool> isReceiptNumberUsedInGroup({
+    required int shopId,
+    required String receiptNumber,
+    int? excludeLocalId,
+  }) async {
+    final trimmed = receiptNumber.trim();
+    if (trimmed.isEmpty) return false;
+    final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+    final row = await (_db.select(_db.purchaseReceipts)
           ..where(
             (r) =>
-                r.shopId.equals(shopId) &
-                r.receiptType.equals(PurchaseReceiptType.direct),
-          ))
+                r.shopId.isIn(groupIds) &
+                r.receiptNumber.equals(trimmed) &
+                (excludeLocalId != null
+                    ? r.id.isNotValue(excludeLocalId)
+                    : const Constant(true)),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  Future<bool> isPurchaseOrderNumberUsedInGroup({
+    required int shopId,
+    required String number,
+    int? excludeLocalId,
+  }) async {
+    final trimmed = number.trim();
+    if (trimmed.isEmpty) return false;
+    final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+    final row = await (_db.select(_db.purchaseOrders)
+          ..where(
+            (p) =>
+                p.shopId.isIn(groupIds) &
+                p.number.equals(trimmed) &
+                (excludeLocalId != null
+                    ? p.id.isNotValue(excludeLocalId)
+                    : const Constant(true)),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  Future<bool> isInvoiceNumberUsedInGroup({
+    required int shopId,
+    required String invoiceNumber,
+    int? excludeLocalId,
+  }) async {
+    final trimmed = invoiceNumber.trim();
+    if (trimmed.isEmpty) return false;
+    final groupIds = await ShopHierarchy.groupShopIdsFromDb(_db, shopId);
+    final row = await (_db.select(_db.supplierInvoices)
+          ..where(
+            (i) =>
+                i.shopId.isIn(groupIds) &
+                i.invoiceNumber.equals(trimmed) &
+                (excludeLocalId != null
+                    ? i.id.isNotValue(excludeLocalId)
+                    : const Constant(true)),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  Future<String> nextDirectReceiptNumber(int shopId) {
+    return _nextNumberInGroup(
+      shopId: shopId,
+      prefix: 'GR',
+      loadValues: (groupIds) async {
+        final rows = await (_db.select(_db.purchaseReceipts)
+              ..where(
+                (r) =>
+                    r.shopId.isIn(groupIds) &
+                    r.receiptType.equals(PurchaseReceiptType.direct),
+              ))
+            .get();
+        return rows.map((r) => r.receiptNumber).toList();
+      },
+    );
+  }
+
+  Future<String> nextOrderReceiptNumber(int shopId) {
+    return _nextNumberInGroup(
+      shopId: shopId,
+      prefix: 'BR',
+      loadValues: (groupIds) async {
+        final rows = await (_db.select(_db.purchaseReceipts)
+              ..where((r) => r.shopId.isIn(groupIds)))
+            .get();
+        return rows.map((r) => r.receiptNumber).toList();
+      },
+    );
+  }
+
+  Future<String> nextPurchaseOrderNumber(int shopId) {
+    return _nextNumberInGroup(
+      shopId: shopId,
+      prefix: 'PO',
+      loadValues: (groupIds) async {
+        final rows = await (_db.select(_db.purchaseOrders)
+              ..where((p) => p.shopId.isIn(groupIds)))
+            .get();
+        return rows.map((p) => p.number).toList();
+      },
+    );
+  }
+
+  Future<String> nextSupplierInvoiceNumber(int shopId) {
+    return _nextNumberInGroup(
+      shopId: shopId,
+      prefix: 'FAC',
+      loadValues: (groupIds) async {
+        final rows = await (_db.select(_db.supplierInvoices)
+              ..where((i) => i.shopId.isIn(groupIds)))
+            .get();
+        return rows
+            .map((i) => i.invoiceNumber)
+            .where((n) => RegExp(r'^FAC-\d+$', caseSensitive: false).hasMatch(n))
+            .toList();
+      },
+    );
+  }
+
+  Future<PurchaseReceipt?> findReceiptByNumber(int shopId, String receiptNumber) async {
+    final trimmed = receiptNumber.trim();
+    if (trimmed.isEmpty) return null;
+    final row = await (_db.select(_db.purchaseReceipts)
+          ..where(
+            (r) => r.shopId.equals(shopId) & r.receiptNumber.equals(trimmed),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return findReceipt(shopId, row.id);
+  }
+
+  Future<SupplierPayment?> findPayment(int shopId, int id) async {
+    final row = await (_db.select(_db.supplierPayments)
+          ..where((p) => p.shopId.equals(shopId) & p.id.equals(id)))
+        .getSingleOrNull();
+    if (row == null) return null;
+    return SupplierPayment(
+      id: row.id,
+      shopId: row.shopId,
+      invoiceId: row.invoiceId,
+      amount: row.amount,
+      paymentMethod: _parsePaymentMethod(row.paymentMethod),
+      paymentDate: row.paymentDate,
+      reference: row.reference,
+      createdAt: row.createdAt,
+      version: row.version,
+      serverId: row.serverId,
+    );
+  }
+
+  Future<List<SupplierPayment>> listPaymentsForInvoice(
+    int shopId,
+    int invoiceId,
+  ) async {
+    final rows = await (_db.select(_db.supplierPayments)
+          ..where((p) => p.shopId.equals(shopId) & p.invoiceId.equals(invoiceId)))
         .get();
-    final seq = count.length + 1;
-    return 'GR-${seq.toString().padLeft(5, '0')}';
+    return rows
+        .map(
+          (p) => SupplierPayment(
+            id: p.id,
+            shopId: p.shopId,
+            invoiceId: p.invoiceId,
+            amount: p.amount,
+            paymentMethod: _parsePaymentMethod(p.paymentMethod),
+            paymentDate: p.paymentDate,
+            reference: p.reference,
+            createdAt: p.createdAt,
+            version: p.version,
+            serverId: p.serverId,
+          ),
+        )
+        .toList();
   }
 
   Future<PurchaseReceipt> createReceipt(
@@ -1456,6 +1654,18 @@ class ProcurementLocalDatasource {
           ..where((r) => r.shopId.equals(shopId) & r.serverId.equals(remote.id.toString())))
         .getSingleOrNull();
 
+    var targetExisting = existing;
+    if (targetExisting == null) {
+      targetExisting = await (_db.select(_db.purchaseReceipts)
+            ..where(
+              (r) =>
+                  r.shopId.equals(shopId) &
+                  r.receiptNumber.equals(remote.receiptNumber) &
+                  r.serverId.isNull(),
+            ))
+          .getSingleOrNull();
+    }
+
     final companion = db.PurchaseReceiptsCompanion(
       shopId: Value(shopId),
       purchaseOrderId: Value(localPoId),
@@ -1471,12 +1681,12 @@ class ProcurementLocalDatasource {
     );
 
     int receiptId;
-    if (existing == null) {
+    if (targetExisting == null) {
       receiptId = await _db.into(_db.purchaseReceipts).insert(companion);
     } else {
-      await (_db.update(_db.purchaseReceipts)..where((r) => r.id.equals(existing.id)))
+      await (_db.update(_db.purchaseReceipts)..where((r) => r.id.equals(targetExisting!.id)))
           .write(companion);
-      receiptId = existing.id;
+      receiptId = targetExisting.id;
     }
 
     final lotDs = InventoryLotLocalDatasource(_db);
@@ -1568,6 +1778,18 @@ class ProcurementLocalDatasource {
           ..where((i) => i.shopId.equals(shopId) & i.serverId.equals(remote.id.toString())))
         .getSingleOrNull();
 
+    var targetExisting = existing;
+    if (targetExisting == null) {
+      targetExisting = await (_db.select(_db.supplierInvoices)
+            ..where(
+              (i) =>
+                  i.shopId.equals(shopId) &
+                  i.invoiceNumber.equals(remote.invoiceNumber) &
+                  i.serverId.isNull(),
+            ))
+          .getSingleOrNull();
+    }
+
     final timestamp = nowMs();
     final companion = db.SupplierInvoicesCompanion(
       shopId: Value(shopId),
@@ -1586,12 +1808,12 @@ class ProcurementLocalDatasource {
       updatedAt: Value(timestamp),
     );
 
-    if (existing == null) {
+    if (targetExisting == null) {
       await _db.into(_db.supplierInvoices).insert(companion.copyWith(
             createdAt: Value(remote.createdAt),
           ));
     } else {
-      await (_db.update(_db.supplierInvoices)..where((i) => i.id.equals(existing.id)))
+      await (_db.update(_db.supplierInvoices)..where((i) => i.id.equals(targetExisting!.id)))
           .write(companion);
     }
   }
@@ -1607,6 +1829,20 @@ class ProcurementLocalDatasource {
           ..where((p) => p.shopId.equals(shopId) & p.serverId.equals(remote.id.toString())))
         .getSingleOrNull();
 
+    var targetExisting = existing;
+    if (targetExisting == null) {
+      targetExisting = await (_db.select(_db.supplierPayments)
+            ..where(
+              (p) =>
+                  p.shopId.equals(shopId) &
+                  p.invoiceId.equals(localInvoiceId) &
+                  p.amount.equals(remote.amount) &
+                  p.paymentDate.equals(remote.paymentDate) &
+                  p.serverId.isNull(),
+            ))
+          .getSingleOrNull();
+    }
+
     final companion = db.SupplierPaymentsCompanion(
       shopId: Value(shopId),
       invoiceId: Value(localInvoiceId),
@@ -1619,14 +1855,60 @@ class ProcurementLocalDatasource {
       version: Value(remote.version),
     );
 
-    if (existing == null) {
+    if (targetExisting == null) {
       await _db.into(_db.supplierPayments).insert(companion.copyWith(
             createdAt: Value(remote.createdAt),
           ));
     } else {
-      await (_db.update(_db.supplierPayments)..where((p) => p.id.equals(existing.id)))
+      await (_db.update(_db.supplierPayments)..where((p) => p.id.equals(targetExisting!.id)))
           .write(companion);
     }
+  }
+
+  Future<void> linkInvoiceServerSync({
+    required int shopId,
+    required int localId,
+    required String serverId,
+    int version = 1,
+  }) async {
+    await (_db.update(_db.supplierInvoices)
+          ..where((i) => i.shopId.equals(shopId) & i.id.equals(localId)))
+        .write(db.SupplierInvoicesCompanion(
+          serverId: Value(serverId),
+          syncStatus: const Value('synced'),
+          version: Value(version),
+          updatedAt: Value(nowMs()),
+        ));
+  }
+
+  Future<void> linkPaymentServerSync({
+    required int shopId,
+    required int localId,
+    required String serverId,
+    int version = 1,
+  }) async {
+    await (_db.update(_db.supplierPayments)
+          ..where((p) => p.shopId.equals(shopId) & p.id.equals(localId)))
+        .write(db.SupplierPaymentsCompanion(
+          serverId: Value(serverId),
+          syncStatus: const Value('synced'),
+          version: Value(version),
+        ));
+  }
+
+  Future<void> linkReceiptServerSync({
+    required int shopId,
+    required int localId,
+    required String serverId,
+    int version = 1,
+  }) async {
+    await (_db.update(_db.purchaseReceipts)
+          ..where((r) => r.shopId.equals(shopId) & r.id.equals(localId)))
+        .write(db.PurchaseReceiptsCompanion(
+          serverId: Value(serverId),
+          syncStatus: const Value('synced'),
+          version: Value(version),
+        ));
   }
 
   // ---------------------------------------------------------------------------

@@ -30,7 +30,7 @@ class _InvoiceFormPageState extends State<InvoiceFormPage> {
   void initState() {
     super.initState();
     // Prefill from PO
-    _numberController.text = 'INV-${widget.po.number.replaceAll("PO-", "")}';
+    _numberController.text = 'FAC-${widget.po.number}';
     _subtotalController.text = '${widget.po.subtotal - widget.po.discount}'; // Net subtotal
     _taxController.text = '${widget.po.tax}';
     _totalController.text = '${widget.po.total}';

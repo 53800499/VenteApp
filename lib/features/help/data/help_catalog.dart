@@ -21,6 +21,13 @@ abstract final class HelpCatalog {
       color: Color(0xFF1565C0),
     ),
     HelpCategory(
+      id: 'supply',
+      title: 'Approvisionnement & transferts',
+      subtitle: 'Achats fournisseurs et stock entre boutiques',
+      icon: Icons.local_shipping_outlined,
+      color: Color(0xFF546E7A),
+    ),
+    HelpCategory(
       id: 'finance',
       title: 'Finances',
       subtitle: 'Caisse, dépenses, rapports et marges',
@@ -59,7 +66,7 @@ abstract final class HelpCatalog {
             'Ventes : historique et création de nouvelles ventes.',
             'Stock : catalogue produits, catégories et alertes.',
             'Clients : fichier client et suivi des achats.',
-            'Plus : modules avancés (rapports, équipe, paramètres, aide…).',
+            'Plus : modules avancés (rapports, approvisionnement, transferts, équipe, paramètres, aide…).',
           ],
         ),
         HelpSection(
@@ -907,6 +914,367 @@ abstract final class HelpCatalog {
               'pour vos chantiers ou devis, sans quitter ARIKE.',
           tip:
               'Ces calculs n\'impactent pas votre stock — utilisez une vente classique pour facturer.',
+        ),
+      ],
+    ),
+
+    // ── Approvisionnement & transferts ───────────────────────────
+    HelpArticle(
+      id: 'procurement',
+      categoryId: 'supply',
+      title: 'Approvisionnement (achats fournisseurs)',
+      summary:
+          'Fournisseurs, commandes, réceptions, factures, appro direct et rapports — guide complet pas à pas.',
+      icon: Icons.shopping_cart_outlined,
+      color: Color(0xFF546E7A),
+      keywords: [
+        'approvisionnement',
+        'achat',
+        'fournisseur',
+        'commande',
+        'réception',
+        'facture',
+        'stock',
+        'lot',
+      ],
+      sections: [
+        HelpSection(
+          title: 'Où trouver le module',
+          body:
+              'Le module Approvisionnement se trouve dans Plus → Approvisionnement. '
+              'Il sert à enregistrer vos achats auprès des fournisseurs et à '
+              'alimenter votre stock en lots (FIFO).',
+          steps: [
+            'Ouvrez l\'onglet Plus en bas de l\'écran.',
+            'Touchez « Approvisionnement ».',
+            'Vous arrivez sur 5 onglets : Commandes, Appro direct, Fournisseurs, Factures, Rapports.',
+            'Touchez l\'icône livre en haut à droite pour rouvrir ce guide à tout moment.',
+          ],
+        ),
+        HelpSection(
+          title: 'Les 5 onglets — à quoi ils servent',
+          bullets: [
+            'Commandes : bons de commande fournisseur (workflow complet).',
+            'Appro direct : entrée stock immédiate sans passer par une commande.',
+            'Fournisseurs : annuaire de vos fournisseurs.',
+            'Factures : factures fournisseur et paiements.',
+            'Rapports : synthèse des achats et dettes fournisseurs.',
+          ],
+        ),
+        HelpSection(
+          title: 'Créer un fournisseur — pas à pas',
+          steps: [
+            'Plus → Approvisionnement → onglet Fournisseurs.',
+            'Touchez le bouton + (Nouveau fournisseur).',
+            'Saisissez le nom (obligatoire), téléphone, e-mail et adresse.',
+            'Enregistrez : le fournisseur apparaît dans toutes les listes déroulantes.',
+          ],
+          tip:
+              'Créez vos fournisseurs avant la première commande pour gagner du temps.',
+        ),
+        HelpSection(
+          title: 'Commande fournisseur — workflow complet',
+          body:
+              'Une commande passe par plusieurs étapes. Chaque étape a un sens '
+              'métier et met à jour le stock au bon moment.',
+          bullets: [
+            'Brouillon : vous préparez la commande, le stock n\'est pas encore impacté.',
+            'Validée : la commande est figée et prête à être envoyée au fournisseur.',
+            'Envoyée : le fournisseur est informé (traçabilité interne).',
+            'Partiellement reçue / Reçue : les marchandises entrent en stock (lots FIFO).',
+            'Annulée : la commande est abandonnée (si encore possible).',
+          ],
+        ),
+        HelpSection(
+          title: 'Créer une commande — pas à pas',
+          steps: [
+            'Onglet Commandes → touchez + « Nouvel achat » → « Commande fournisseur ».',
+            'Choisissez le fournisseur dans la liste.',
+            'Ajoutez les produits : touchez « Ajouter », sélectionnez l\'article et la quantité.',
+            'Vérifiez les prix d\'achat unitaires (modifiables ligne par ligne).',
+            'Ajoutez une note ou référence interne si besoin.',
+            'Enregistrez : la commande est créée en statut Brouillon.',
+          ],
+        ),
+        HelpSection(
+          title: 'Valider une commande — pas à pas',
+          body:
+              'La validation verrouille les quantités commandées. Faites-le '
+              'uniquement quand la commande est définitive.',
+          steps: [
+            'Ouvrez la commande depuis l\'onglet Commandes.',
+            'Vérifiez les lignes produit et les montants.',
+            'Touchez « Valider la commande » et confirmez.',
+            'Le statut passe à Validée : vous pouvez l\'envoyer au fournisseur.',
+          ],
+        ),
+        HelpSection(
+          title: 'Envoyer la commande au fournisseur — pas à pas',
+          steps: [
+            'Ouvrez une commande au statut Validée.',
+            'Touchez « Envoyer au fournisseur ».',
+            'Confirmez : le statut passe à Envoyée.',
+            'Contactez votre fournisseur par téléphone ou WhatsApp si besoin (hors app).',
+          ],
+        ),
+        HelpSection(
+          title: 'Réceptionner une livraison — pas à pas',
+          body:
+              'C\'est à la réception que le stock augmente. Les produits entrent '
+              'en lots avec leur prix d\'achat (base du calcul FIFO).',
+          steps: [
+            'Ouvrez une commande au statut Envoyée ou Partiellement reçue.',
+            'Touchez « Réceptionner ».',
+            'Pour chaque ligne, saisissez la quantité réellement reçue (≤ quantité restante).',
+            'Validez la réception.',
+            'Le stock est mis à jour et un lot d\'inventaire est créé.',
+            'Répétez si la livraison arrive en plusieurs fois (réception partielle).',
+          ],
+          tip:
+              'En cas d\'écart (moins reçu que commandé), saisissez la quantité réelle : l\'écart reste visible sur la commande.',
+        ),
+        HelpSection(
+          title: 'Approvisionnement direct (sans commande) — pas à pas',
+          body:
+              'Utilisez l\'appro direct pour un achat comptant ou une livraison '
+              'sans bon de commande préalable (marché, dépannage, petit fournisseur).',
+          steps: [
+            'Onglet Appro direct → touchez + « Nouvel appro direct ».',
+            'Choisissez le fournisseur (ou créez-le à la volée).',
+            'Ajoutez les produits reçus avec quantités et prix d\'achat.',
+            'Indiquez le mode de paiement (espèces, mobile money…).',
+            'Validez : le stock entre immédiatement en lots FIFO.',
+          ],
+        ),
+        HelpSection(
+          title: 'Factures et paiements fournisseur — pas à pas',
+          steps: [
+            'Depuis une commande reçue (totalement ou partiellement), touchez « Générer facture ».',
+            'Ou consultez l\'onglet Factures pour voir toutes les factures.',
+            'Ouvrez une facture impayée.',
+            'Touchez « Enregistrer un paiement ».',
+            'Saisissez le montant et le mode de règlement.',
+            'Validez : le solde fournisseur est mis à jour (impayé → partiel → payé).',
+          ],
+        ),
+        HelpSection(
+          title: 'Consulter les rapports d\'achat — pas à pas',
+          steps: [
+            'Onglet Rapports dans Approvisionnement.',
+            'Consultez les totaux d\'achats, dettes fournisseurs et tendances.',
+            'Tirez vers le bas pour actualiser les données.',
+          ],
+        ),
+        HelpSection(
+          title: 'Permissions & rôles',
+          body: 'Les actions sensibles sont protégées par des droits :',
+          bullets: [
+            'Lecture : consulter commandes, fournisseurs et factures.',
+            'Création : créer commandes et fournisseurs.',
+            'Réception : enregistrer les livraisons (impact stock).',
+            'Annulation : annuler une commande encore ouverte.',
+          ],
+          tip:
+              'Un vendeur peut réceptionner si son rôle inclut le droit de réception achats.',
+        ),
+        HelpSection(
+          title: 'Synchronisation cloud',
+          body:
+              'Les achats fonctionnent hors ligne. Les opérations sont mises en '
+              'file d\'attente puis envoyées au cloud dès que la connexion revient.',
+          steps: [
+            'Vérifiez l\'icône nuage en haut de l\'écran (vert = OK, orange = en attente).',
+            'Synchronisez d\'abord les produits et catégories avant les commandes.',
+            'En cas de blocage : touchez le nuage → Relancer la synchronisation.',
+            'Consultez Plus → Aide & guides → Synchronisation pour le détail.',
+          ],
+        ),
+      ],
+    ),
+    HelpArticle(
+      id: 'stock_transfers',
+      categoryId: 'supply',
+      title: 'Transferts inter-boutiques',
+      summary:
+          'Envoyer du stock d\'une boutique à une autre : brouillon, validation, expédition, QR et réception.',
+      icon: Icons.swap_horiz_outlined,
+      color: Color(0xFF37474F),
+      keywords: [
+        'transfert',
+        'boutique',
+        'expédition',
+        'réception',
+        'qr',
+        'fifo',
+        'retour',
+        'camion',
+      ],
+      sections: [
+        HelpSection(
+          title: 'Prérequis importants',
+          body:
+              'Les transferts ne fonctionnent qu\'entre boutiques de votre '
+              'réseau commercial (boutique racine + succursales).',
+          bullets: [
+            'Au moins deux boutiques actives dans votre compte.',
+            'Les produits doivent exister dans la boutique source avec du stock.',
+            'Pour la réception : le même produit doit exister (ou être synchronisé) côté destination.',
+            'Connexion cloud recommandée pour synchroniser les transferts entre appareils.',
+          ],
+          steps: [
+            'Créez vos boutiques dans Plus → Mes boutiques si ce n\'est pas fait.',
+            'Synchronisez le catalogue produits sur chaque boutique.',
+            'Vérifiez que vous êtes connecté à la boutique source pour expédier.',
+          ],
+        ),
+        HelpSection(
+          title: 'Où trouver le module',
+          steps: [
+            'Ouvrez Plus → Transferts inter-boutiques.',
+            'Trois onglets : Sortants (envois), Entrants (réceptions), Rapports (écarts).',
+            'Touchez l\'icône livre en haut à droite pour rouvrir ce guide.',
+          ],
+        ),
+        HelpSection(
+          title: 'Comprendre le workflow',
+          body:
+              'Un transfert suit toujours cette logique, même hors ligne :',
+          bullets: [
+            '1. Brouillon : vous préparez la liste produits + boutique destination.',
+            '2. Validation : le stock est réservé en FIFO dans la boutique source.',
+            '3. Expédition : le stock réservé sort réellement (totale ou partielle).',
+            '4. Réception : la boutique destination entre le stock reçu en lots.',
+            '5. (Optionnel) Retour : renvoi vers la boutique d\'origine.',
+          ],
+          tip:
+              'On ne peut plus expédier directement depuis un brouillon : la validation est obligatoire.',
+        ),
+        HelpSection(
+          title: 'Créer un transfert — pas à pas (boutique source)',
+          steps: [
+            'Plus → Transferts → touchez + « Nouveau transfert ».',
+            'Choisissez la boutique destination dans la liste.',
+            'Vérifiez la référence (ex. TRF-00001) — modifiable si besoin.',
+            'Touchez « Ajouter » pour chaque produit et indiquez la quantité demandée.',
+            'Ajoutez des remarques optionnelles.',
+            'Touchez « Enregistrer le brouillon ».',
+          ],
+        ),
+        HelpSection(
+          title: 'Valider un transfert — pas à pas',
+          body:
+              'La validation réserve le stock en FIFO. Assurez-vous d\'avoir '
+              'assez de quantités disponibles (hors réservations existantes).',
+          steps: [
+            'Onglet Sortants → ouvrez le transfert en statut Brouillon.',
+            'Vérifiez les quantités demandées.',
+            'Touchez « Valider le transfert » et confirmez.',
+            'Le statut passe à Validé : le stock est réservé, prêt à être expédié.',
+          ],
+        ),
+        HelpSection(
+          title: 'Expédier — pas à pas',
+          body:
+              'Deux options selon votre situation :',
+          bullets: [
+            'Expédier tout : envoie toutes les quantités restantes en un clic (cas le plus courant).',
+            'Expédition partielle… : choisissez les quantités ligne par ligne (plusieurs envois possibles).',
+          ],
+          steps: [
+            'Ouvrez un transfert Validé ou Partiellement expédié (boutique source).',
+            'Touchez « Expédier tout » pour un envoi complet.',
+            'Ou touchez « Expédition partielle… » pour ajuster les quantités.',
+            'Confirmez : une expédition est créée (Expédition 1, Expédition 2…).',
+            'Un QR code s\'affiche automatiquement après l\'expédition.',
+          ],
+        ),
+        HelpSection(
+          title: 'Partager le QR au chauffeur — pas à pas',
+          steps: [
+            'Après l\'expédition, le dialogue QR s\'ouvre.',
+            'Touchez « Partager ».',
+            'Choisissez WhatsApp, SMS ou une autre application.',
+            'Le message contient l\'image QR + le détail des articles.',
+            'Le chauffeur transmet le QR au vendeur de la boutique destination.',
+          ],
+          tip:
+              'Vous pouvez aussi rouvrir le QR depuis la fiche transfert → section Expéditions → icône QR ou Partager.',
+        ),
+        HelpSection(
+          title: 'Réceptionner avec le QR — pas à pas (boutique destination)',
+          steps: [
+            'Plus → Transferts → onglet Entrants.',
+            'Touchez le bouton flottant « Scanner QR » (ou ouvrez le transfert puis scannez).',
+            'Autorisez l\'accès à la caméra si demandé.',
+            'Cadrez le QR reçu du chauffeur.',
+            'L\'application ouvre le transfert avec les quantités préremplies.',
+            'Vérifiez les quantités reçues et validez la réception.',
+          ],
+        ),
+        HelpSection(
+          title: 'Réceptionner manuellement — pas à pas',
+          steps: [
+            'Onglet Entrants → touchez le transfert à réceptionner.',
+            'Pour chaque ligne, saisissez la quantité reçue (≤ quantité expédiée restante).',
+            'Touchez « Réceptionner » et confirmez.',
+            'Le stock entre en lots FIFO dans la boutique destination avec le même prix d\'achat.',
+          ],
+        ),
+        HelpSection(
+          title: 'Créer un retour — pas à pas',
+          body:
+              'Après réception complète ou partielle, la boutique destination '
+              'peut renvoyer du stock vers la boutique source.',
+          steps: [
+            'Ouvrez un transfert entrant au statut Reçu ou Partiellement reçu.',
+            'Touchez « Créer un retour ».',
+            'Un brouillon RET-… est créé automatiquement vers la boutique source.',
+            'Validez, expédiez et réceptionnez ce retour comme un transfert normal.',
+          ],
+        ),
+        HelpSection(
+          title: 'Onglet Rapports — écarts expédié / reçu',
+          steps: [
+            'Onglet Rapports dans Transferts.',
+            'Consultez les transferts avec écart entre quantités expédiées et reçues.',
+            'Touchez une ligne pour ouvrir le détail et investiguer.',
+          ],
+          tip:
+              'Un écart peut indiquer une casse, une erreur de saisie ou une livraison incomplète.',
+        ),
+        HelpSection(
+          title: 'Annuler un transfert',
+          body: 'Selon l\'avancement :',
+          bullets: [
+            'Brouillon ou Validé (sans expédition) : annulation simple, réservations libérées.',
+            'Expédié sans réception : annulation avec restock FIFO dans la boutique source.',
+            'Déjà reçu partiellement : annulation limitée — traitez plutôt un retour.',
+          ],
+          steps: [
+            'Ouvrez le transfert côté boutique source.',
+            'Touchez « Annuler » si le bouton est disponible.',
+            'Confirmez l\'action et le motif si demandé.',
+          ],
+        ),
+        HelpSection(
+          title: 'Permissions',
+          bullets: [
+            'Consulter : voir les transferts sortants et entrants.',
+            'Créer / expédier : boutique source (brouillon, validation, expédition).',
+            'Réceptionner : boutique destination (saisie ou scan QR).',
+          ],
+        ),
+        HelpSection(
+          title: 'Synchronisation & dépannage',
+          steps: [
+            'Travaillez hors ligne : les transferts sont enregistrés localement.',
+            'Au retour du réseau, touchez l\'icône nuage pour synchroniser.',
+            'Ordre automatique : création → validation → expédition → réception.',
+            'Si sync bloquée : synchronisez d\'abord produits et boutiques, puis relancez.',
+            'Message « articles non correspondants » : vérifiez que les produits existent des deux côtés avec le même catalogue cloud.',
+          ],
+          tip:
+              'Consultez Plus → Aide & guides → Synchronisation pour les erreurs cloud détaillées.',
         ),
       ],
     ),

@@ -140,6 +140,62 @@ class UserRepositoryImpl implements UserRepository {
     );
   }
 
+  @override
+  Future<UserShopAccess> getUserShopAccess(int userId) async {
+    return _apiRunner.runOnlinePreferredRead(
+      remote: () async {
+        final dto = await _remote.getUserShopAccess(userId);
+        return _mapUserShopAccess(dto);
+      },
+      localFallback: () => throw NetworkFailure(_writeOfflineMessage),
+    );
+  }
+
+  @override
+  Future<UserShopAccess> syncUserShopAccess({
+    required int userId,
+    required List<ShopAccessGrant> grants,
+  }) async {
+    return _apiRunner.runOnlineRequiredWrite(
+      offlineMessage: _writeOfflineMessage,
+      remote: () async {
+        await _remote.syncUserShopAccess(
+          userId: userId,
+          shops: grants
+              .map(
+                (grant) => ShopAccessGrantInputDto(
+                  shopId: grant.shopId,
+                  accessRole: grant.accessRole,
+                ),
+              )
+              .toList(),
+        );
+        final dto = await _remote.getUserShopAccess(userId);
+        return _mapUserShopAccess(dto);
+      },
+    );
+  }
+
+  UserShopAccess _mapUserShopAccess(UserShopAccessDto dto) {
+    return UserShopAccess(
+      userId: dto.userId,
+      membershipId: dto.membershipId,
+      roleCode: dto.role,
+      roleLabel: dto.roleLabel,
+      shops: dto.shops
+          .map(
+            (shop) => UserShopAccessEntry(
+              shopId: shop.shopId,
+              shopName: shop.shopName,
+              accessRole: shop.accessRole,
+              effectiveRole: shop.effectiveRole,
+              effectiveRoleLabel: shop.effectiveRoleLabel,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   ShopUser _mapUser(ShopUserItemDto dto) {
     return ShopUser(
       id: dto.id,

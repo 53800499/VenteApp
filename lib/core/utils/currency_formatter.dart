@@ -1,4 +1,8 @@
 String formatFcfa(int amount) {
+  return formatAmount(amount, 'XOF');
+}
+
+String formatAmount(int amount, String currencyCode) {
   final negative = amount < 0;
   final digits = amount.abs().toString();
   final buffer = StringBuffer();
@@ -10,5 +14,15 @@ String formatFcfa(int amount) {
     }
   }
   final formatted = buffer.toString();
-  return negative ? '-$formatted FCFA' : '$formatted FCFA';
+  final suffix = _currencySuffix(currencyCode);
+  return negative ? '-$formatted $suffix' : '$formatted $suffix';
 }
+
+String _currencySuffix(String currencyCode) => switch (currencyCode) {
+      'XOF' => 'FCFA',
+      'NGN' => 'NGN',
+      'GHS' => 'GHS',
+      'USD' => 'USD',
+      'EUR' => 'EUR',
+      _ => currencyCode,
+    };

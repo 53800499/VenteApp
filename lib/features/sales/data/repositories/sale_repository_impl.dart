@@ -478,12 +478,14 @@ class SaleRepositoryImpl implements SaleRepository {
       if (sale.saleType == 'standard') {
         final serverId = '${sale.id}';
         final needsItems = !await _local.hasSaleItems(shopId, serverId);
+        final needsUnitCostBackfill =
+            !needsItems && await _local.saleItemsNeedUnitCostBackfill(shopId, serverId);
         final needsPayment =
             await _local.saleNeedsPaymentDetail(shopId, serverId);
-        if (needsItems || needsPayment) {
+        if (needsItems || needsUnitCostBackfill || needsPayment) {
           try {
             final detail = await _remote.getSale(sale.id);
-            if (needsItems) {
+            if (needsItems || needsUnitCostBackfill) {
               await _local.upsertSaleItemsFromRemote(
                 shopId: shopId,
                 serverId: serverId,

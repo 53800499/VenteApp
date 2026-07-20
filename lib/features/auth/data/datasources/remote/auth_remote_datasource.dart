@@ -198,6 +198,11 @@ class AuthRemoteDatasource {
     return OwnedShopListDto.fromJson(data);
   }
 
+  Future<IdentityContextDto> getIdentityContext() async {
+    final data = await _getData('/auth/identity');
+    return IdentityContextDto.fromJson(data);
+  }
+
   Future<SwitchShopDataDto> switchShop({required int shopId}) async {
     final data = await _postData(
       '/auth/switch-shop',
