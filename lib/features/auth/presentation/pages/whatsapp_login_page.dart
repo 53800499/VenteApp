@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -179,7 +178,7 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
                                   child: const Text('Modifier le numéro'),
                                 ),
                               ],
-                              if (kDebugMode && state.devCode != null) ...[
+                              if (state.devCode != null) ...[
                                 const SizedBox(height: AppSpacing.md),
                                 _DevOtpCard(code: state.devCode!),
                               ] else if (state.deliveryWarning != null) ...[
