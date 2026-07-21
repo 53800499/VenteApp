@@ -19,6 +19,7 @@ import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../services/report_pdf_exporter.dart';
 import '../bloc/report_bloc.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 bool _canUseConsolidatedView(AuthSession session) =>
     session.user.role == UserRole.owner &&
@@ -98,6 +99,7 @@ class _ReportsView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Statistiques'),
         actions: [
+          const ModuleHelpButton(articleId: 'reports'),
           BlocBuilder<ReportBloc, ReportState>(
             buildWhen: (prev, curr) => prev.status != curr.status,
             builder: (context, state) {

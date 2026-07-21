@@ -70,6 +70,18 @@ class ListFxLatestRates {
       _repository.listLatestRates(shopId: shopId);
 }
 
+class ListFxSessionRates {
+  const ListFxSessionRates(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<List<FxRateSnapshot>> call({
+    required int shopId,
+    required int sessionId,
+  }) =>
+      _repository.listSessionRates(shopId: shopId, sessionId: sessionId);
+}
+
 class ListFxRateHistory {
   const ListFxRateHistory(this._repository);
 
@@ -156,6 +168,38 @@ class CloseFxSession {
       );
 }
 
+class ConfirmFxSessionClose {
+  const ConfirmFxSessionClose(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<FxSession> call({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+  }) =>
+      _repository.confirmCloseSession(
+        shopId: shopId,
+        userId: userId,
+        sessionId: sessionId,
+      );
+}
+
+class CancelFxPendingClose {
+  const CancelFxPendingClose(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<FxSession> call({
+    required int shopId,
+    required int sessionId,
+  }) =>
+      _repository.cancelPendingClose(
+        shopId: shopId,
+        sessionId: sessionId,
+      );
+}
+
 class PreviewFxOperation {
   const PreviewFxOperation(this._repository);
 
@@ -164,8 +208,13 @@ class PreviewFxOperation {
   Future<FxOperationPreview> call({
     required int shopId,
     required CreateFxOperationInput input,
+    int? sessionId,
   }) =>
-      _repository.previewOperation(shopId: shopId, input: input);
+      _repository.previewOperation(
+        shopId: shopId,
+        input: input,
+        sessionId: sessionId,
+      );
 }
 
 class CreateFxOperation {
@@ -187,6 +236,51 @@ class CreateFxOperation {
         input: input,
         allowNegativeBalance: allowNegativeBalance,
       );
+}
+
+class GetFxCustomerRequiredAboveFcfa {
+  const GetFxCustomerRequiredAboveFcfa(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<int> call({required int shopId}) =>
+      _repository.getCustomerRequiredAboveFcfa(shopId: shopId);
+}
+
+class SetFxCustomerRequiredAboveFcfa {
+  const SetFxCustomerRequiredAboveFcfa(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<void> call({
+    required int shopId,
+    required int amountFcfa,
+  }) =>
+      _repository.setCustomerRequiredAboveFcfa(
+        shopId: shopId,
+        amountFcfa: amountFcfa,
+      );
+}
+
+class GetFxPrimaryWorkspace {
+  const GetFxPrimaryWorkspace(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<bool> call({required int shopId}) =>
+      _repository.getPrimaryWorkspace(shopId: shopId);
+}
+
+class SetFxPrimaryWorkspace {
+  const SetFxPrimaryWorkspace(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<void> call({
+    required int shopId,
+    required bool enabled,
+  }) =>
+      _repository.setPrimaryWorkspace(shopId: shopId, enabled: enabled);
 }
 
 class ListFxOperations {
@@ -246,11 +340,28 @@ class GetFxDailyReport {
       _repository.getDailyReport(shopId: shopId, sessionId: sessionId);
 }
 
+class GetFxPeriodReport {
+  const GetFxPeriodReport(this._repository);
+
+  final FxExchangeRepository _repository;
+
+  Future<FxPeriodReport> call({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+  }) =>
+      _repository.getPeriodReport(
+        shopId: shopId,
+        fromMs: fromMs,
+        toMs: toMs,
+      );
+}
+
 class SyncFxExchangeFromRemote {
   const SyncFxExchangeFromRemote(this._repository);
 
   final FxExchangeRepository _repository;
 
-  Future<void> call({required int shopId}) =>
-      _repository.syncFromRemote(shopId: shopId);
+  Future<void> call({required int shopId, bool force = false}) =>
+      _repository.syncFromRemote(shopId: shopId, force: force);
 }

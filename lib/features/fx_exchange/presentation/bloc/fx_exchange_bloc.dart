@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/usecases/fx_exchange_usecases.dart';
+import '../fx_workspace_mode_controller.dart';
 
 enum FxExchangeStatus { initial, loading, ready, failure }
 
@@ -53,6 +54,14 @@ class FxCloseSessionRequested extends FxExchangeEvent {
   List<Object?> get props => [countedBalances, closingNote];
 }
 
+class FxConfirmCloseSessionRequested extends FxExchangeEvent {
+  const FxConfirmCloseSessionRequested();
+}
+
+class FxCancelPendingCloseRequested extends FxExchangeEvent {
+  const FxCancelPendingCloseRequested();
+}
+
 class FxCreateRateRequested extends FxExchangeEvent {
   const FxCreateRateRequested({required this.input});
 
@@ -97,6 +106,24 @@ class FxSaveCurrenciesRequested extends FxExchangeEvent {
   List<Object?> get props => [items];
 }
 
+class FxSaveCustomerThresholdRequested extends FxExchangeEvent {
+  const FxSaveCustomerThresholdRequested({required this.amountFcfa});
+
+  final int amountFcfa;
+
+  @override
+  List<Object?> get props => [amountFcfa];
+}
+
+class FxPrimaryWorkspaceSaveRequested extends FxExchangeEvent {
+  const FxPrimaryWorkspaceSaveRequested({required this.enabled});
+
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class FxExchangeState extends Equatable {
   const FxExchangeState({
     this.status = FxExchangeStatus.initial,
@@ -109,6 +136,8 @@ class FxExchangeState extends Equatable {
     this.history = const [],
     this.operations = const [],
     this.movements = const [],
+    this.customerRequiredAboveFcfa = 0,
+    this.primaryWorkspace = false,
     this.isRefreshing = false,
     this.isSubmitting = false,
     this.errorMessage,
@@ -125,6 +154,8 @@ class FxExchangeState extends Equatable {
   final List<FxSessionListRow> history;
   final List<FxOperation> operations;
   final List<FxMovement> movements;
+  final int customerRequiredAboveFcfa;
+  final bool primaryWorkspace;
   final bool isRefreshing;
   final bool isSubmitting;
   final String? errorMessage;
@@ -142,6 +173,8 @@ class FxExchangeState extends Equatable {
     List<FxSessionListRow>? history,
     List<FxOperation>? operations,
     List<FxMovement>? movements,
+    int? customerRequiredAboveFcfa,
+    bool? primaryWorkspace,
     bool? isRefreshing,
     bool? isSubmitting,
     String? errorMessage,
@@ -159,6 +192,9 @@ class FxExchangeState extends Equatable {
       history: history ?? this.history,
       operations: operations ?? this.operations,
       movements: movements ?? this.movements,
+      customerRequiredAboveFcfa:
+          customerRequiredAboveFcfa ?? this.customerRequiredAboveFcfa,
+      primaryWorkspace: primaryWorkspace ?? this.primaryWorkspace,
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearMessages ? null : (errorMessage ?? this.errorMessage),
@@ -179,6 +215,8 @@ class FxExchangeState extends Equatable {
         history,
         operations,
         movements,
+        customerRequiredAboveFcfa,
+        primaryWorkspace,
         isRefreshing,
         isSubmitting,
         errorMessage,
@@ -196,15 +234,23 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
     required UpsertFxShopCurrencies upsertShopCurrencies,
     required CreateFxRate createRate,
     required ListFxLatestRates listLatestRates,
+    required ListFxSessionRates listSessionRates,
     required FindOpenFxSession findOpenSession,
     required ListFxSessions listSessions,
     required GetFxLiveBalances getLiveBalances,
     required OpenFxSession openSession,
     required CloseFxSession closeSession,
+    required ConfirmFxSessionClose confirmCloseSession,
+    required CancelFxPendingClose cancelPendingClose,
     required CreateFxOperation createOperation,
     required CreateFxMovement createMovement,
     required ListFxOperations listOperations,
     required ListFxMovements listMovements,
+    required GetFxCustomerRequiredAboveFcfa getCustomerRequiredAboveFcfa,
+    required SetFxCustomerRequiredAboveFcfa setCustomerRequiredAboveFcfa,
+    required GetFxPrimaryWorkspace getPrimaryWorkspace,
+    required SetFxPrimaryWorkspace setPrimaryWorkspace,
+    required FxWorkspaceModeController workspaceMode,
     required SyncFxExchangeFromRemote syncFromRemote,
   })  : _session = session,
         _isModuleEnabled = isModuleEnabled,
@@ -214,15 +260,23 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
         _upsertShopCurrencies = upsertShopCurrencies,
         _createRate = createRate,
         _listLatestRates = listLatestRates,
+        _listSessionRates = listSessionRates,
         _findOpenSession = findOpenSession,
         _listSessions = listSessions,
         _getLiveBalances = getLiveBalances,
         _openSession = openSession,
         _closeSession = closeSession,
+        _confirmCloseSession = confirmCloseSession,
+        _cancelPendingClose = cancelPendingClose,
         _createOperation = createOperation,
         _createMovement = createMovement,
         _listOperations = listOperations,
         _listMovements = listMovements,
+        _getCustomerRequiredAboveFcfa = getCustomerRequiredAboveFcfa,
+        _setCustomerRequiredAboveFcfa = setCustomerRequiredAboveFcfa,
+        _getPrimaryWorkspace = getPrimaryWorkspace,
+        _setPrimaryWorkspace = setPrimaryWorkspace,
+        _workspaceMode = workspaceMode,
         _syncFromRemote = syncFromRemote,
         super(const FxExchangeState()) {
     on<FxExchangeLoadRequested>(_onLoad);
@@ -230,10 +284,14 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
     on<FxModuleToggleRequested>(_onToggleModule);
     on<FxOpenSessionRequested>(_onOpenSession);
     on<FxCloseSessionRequested>(_onCloseSession);
+    on<FxConfirmCloseSessionRequested>(_onConfirmCloseSession);
+    on<FxCancelPendingCloseRequested>(_onCancelPendingClose);
     on<FxCreateRateRequested>(_onCreateRate);
     on<FxCreateOperationRequested>(_onCreateOperation);
     on<FxCreateMovementRequested>(_onCreateMovement);
     on<FxSaveCurrenciesRequested>(_onSaveCurrencies);
+    on<FxSaveCustomerThresholdRequested>(_onSaveCustomerThreshold);
+    on<FxPrimaryWorkspaceSaveRequested>(_onSavePrimaryWorkspace);
   }
 
   final AuthSession _session;
@@ -244,15 +302,23 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
   final UpsertFxShopCurrencies _upsertShopCurrencies;
   final CreateFxRate _createRate;
   final ListFxLatestRates _listLatestRates;
+  final ListFxSessionRates _listSessionRates;
   final FindOpenFxSession _findOpenSession;
   final ListFxSessions _listSessions;
   final GetFxLiveBalances _getLiveBalances;
   final OpenFxSession _openSession;
   final CloseFxSession _closeSession;
+  final ConfirmFxSessionClose _confirmCloseSession;
+  final CancelFxPendingClose _cancelPendingClose;
   final CreateFxOperation _createOperation;
   final CreateFxMovement _createMovement;
   final ListFxOperations _listOperations;
   final ListFxMovements _listMovements;
+  final GetFxCustomerRequiredAboveFcfa _getCustomerRequiredAboveFcfa;
+  final SetFxCustomerRequiredAboveFcfa _setCustomerRequiredAboveFcfa;
+  final GetFxPrimaryWorkspace _getPrimaryWorkspace;
+  final SetFxPrimaryWorkspace _setPrimaryWorkspace;
+  final FxWorkspaceModeController _workspaceMode;
   final SyncFxExchangeFromRemote _syncFromRemote;
 
   AuthSession get session => _session;
@@ -306,9 +372,14 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
           history: snapshot.history,
           operations: snapshot.operations,
           movements: snapshot.movements,
+          customerRequiredAboveFcfa: snapshot.customerRequiredAboveFcfa,
+          primaryWorkspace: snapshot.primaryWorkspace,
         ),
       );
-
+      _workspaceMode.apply(
+        primary: snapshot.primaryWorkspace,
+        moduleEnabled: snapshot.enabled,
+      );
       if (!refreshRemote || !snapshot.enabled) return;
 
       emit(state.copyWith(isRefreshing: true));
@@ -333,7 +404,13 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
           history: refreshed.history,
           operations: refreshed.operations,
           movements: refreshed.movements,
+          customerRequiredAboveFcfa: refreshed.customerRequiredAboveFcfa,
+          primaryWorkspace: refreshed.primaryWorkspace,
         ),
+      );
+      _workspaceMode.apply(
+        primary: refreshed.primaryWorkspace,
+        moduleEnabled: refreshed.enabled,
       );
     } catch (error) {
       emit(
@@ -350,35 +427,66 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
 
   Future<_FxLocalSnapshot> _readLocalSnapshot() async {
     final enabled = await _isModuleEnabled(shopId: shopId);
-    final currencies = await _listCurrencies();
-    final shopCurrencies = enabled
-        ? await _listShopCurrencies(shopId: shopId)
-        : <FxShopCurrency>[];
-    final latestRates =
-        enabled ? await _listLatestRates(shopId: shopId) : <FxRateSnapshot>[];
-    final history =
-        enabled ? await _listSessions(shopId: shopId) : <FxSessionListRow>[];
+    List<FxCurrency> currencies = const [];
+    try {
+      currencies = await _listCurrencies();
+    } catch (_) {}
 
+    List<FxShopCurrency> shopCurrencies = const [];
+    try {
+      shopCurrencies = await _listShopCurrencies(shopId: shopId);
+    } catch (_) {}
+
+    final history =
+        enabled ? await _safeListSessions() : <FxSessionListRow>[];
+    var customerRequiredAboveFcfa = 0;
+    try {
+      customerRequiredAboveFcfa =
+          await _getCustomerRequiredAboveFcfa(shopId: shopId);
+    } catch (_) {
+      customerRequiredAboveFcfa = 0;
+    }
+    var primaryWorkspace = false;
+    try {
+      primaryWorkspace = await _getPrimaryWorkspace(shopId: shopId);
+    } catch (_) {
+      primaryWorkspace = false;
+    }
     FxSession? openSession;
     Map<String, int> liveBalances = {};
     List<FxOperation> operations = [];
     List<FxMovement> movements = [];
+    List<FxRateSnapshot> latestRates = [];
 
     if (enabled) {
-      openSession = await _findOpenSession(shopId: shopId);
-      if (openSession != null) {
-        liveBalances = await _getLiveBalances(
-          shopId: shopId,
-          sessionId: openSession.id,
-        );
-        operations = await _listOperations(
-          shopId: shopId,
-          sessionId: openSession.id,
-        );
-        movements = await _listMovements(
-          shopId: shopId,
-          sessionId: openSession.id,
-        );
+      try {
+        openSession = await _findOpenSession(shopId: shopId);
+        if (openSession != null) {
+          // Pendant une session : afficher les taux gelés (pas le dernier snapshot global).
+          latestRates = await _listSessionRates(
+            shopId: shopId,
+            sessionId: openSession.id,
+          );
+          liveBalances = await _getLiveBalances(
+            shopId: shopId,
+            sessionId: openSession.id,
+          );
+          operations = await _listOperations(
+            shopId: shopId,
+            sessionId: openSession.id,
+          );
+          movements = await _listMovements(
+            shopId: shopId,
+            sessionId: openSession.id,
+          );
+        } else {
+          latestRates = await _listLatestRates(shopId: shopId);
+        }
+      } catch (_) {
+        // Module actif : on affiche quand même l'écran même si une sous-lecture échoue.
+        try {
+          latestRates = await _listLatestRates(shopId: shopId);
+        } catch (_) {}
       }
     }
 
@@ -392,7 +500,17 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
       history: history,
       operations: operations,
       movements: movements,
+      customerRequiredAboveFcfa: customerRequiredAboveFcfa,
+      primaryWorkspace: primaryWorkspace,
     );
+  }
+
+  Future<List<FxSessionListRow>> _safeListSessions() async {
+    try {
+      return await _listSessions(shopId: shopId);
+    } catch (_) {
+      return const [];
+    }
   }
 
   Future<void> _onToggleModule(
@@ -402,6 +520,10 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
     emit(state.copyWith(isSubmitting: true, clearMessages: true));
     try {
       await _toggleModule(shopId: shopId, enabled: event.enabled);
+      _workspaceMode.apply(
+        primary: state.primaryWorkspace,
+        moduleEnabled: event.enabled,
+      );
       await _loadCore(
         emit,
         refreshRemote: false,
@@ -476,7 +598,68 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
       emit(
         state.copyWith(
           isSubmitting: false,
+          successMessage: 'Comptage soumis — en attente de validation.',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onConfirmCloseSession(
+    FxConfirmCloseSessionRequested event,
+    Emitter<FxExchangeState> emit,
+  ) async {
+    final session = state.openSession;
+    if (session == null) return;
+
+    emit(state.copyWith(isSubmitting: true, clearMessages: true));
+    try {
+      await _confirmCloseSession(
+        shopId: shopId,
+        userId: _session.user.id,
+        sessionId: session.id,
+      );
+      add(const FxExchangeLoadRequested());
+      emit(
+        state.copyWith(
+          isSubmitting: false,
           successMessage: 'Session FX clôturée.',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onCancelPendingClose(
+    FxCancelPendingCloseRequested event,
+    Emitter<FxExchangeState> emit,
+  ) async {
+    final session = state.openSession;
+    if (session == null) return;
+
+    emit(state.copyWith(isSubmitting: true, clearMessages: true));
+    try {
+      await _cancelPendingClose(
+        shopId: shopId,
+        sessionId: session.id,
+      );
+      add(const FxExchangeLoadRequested());
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          successMessage: 'Clôture annulée — session rouverte.',
         ),
       );
     } catch (error) {
@@ -501,10 +684,13 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
         input: event.input,
       );
       add(const FxExchangeLoadRequested());
+      final appliedNow = event.input.applyMode == FxRateApplyMode.now;
       emit(
         state.copyWith(
           isSubmitting: false,
-          successMessage: 'Taux enregistré.',
+          successMessage: appliedNow
+              ? 'Taux enregistré et appliqué à la session.'
+              : 'Taux enregistré (prochaine session).',
         ),
       );
     } catch (error) {
@@ -606,6 +792,68 @@ class FxExchangeBloc extends Bloc<FxExchangeEvent, FxExchangeState> {
       );
     }
   }
+
+  Future<void> _onSaveCustomerThreshold(
+    FxSaveCustomerThresholdRequested event,
+    Emitter<FxExchangeState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, clearMessages: true));
+    try {
+      await _setCustomerRequiredAboveFcfa(
+        shopId: shopId,
+        amountFcfa: event.amountFcfa,
+      );
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          customerRequiredAboveFcfa: event.amountFcfa,
+          successMessage: 'Seuil client mis à jour.',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onSavePrimaryWorkspace(
+    FxPrimaryWorkspaceSaveRequested event,
+    Emitter<FxExchangeState> emit,
+  ) async {
+    emit(state.copyWith(isSubmitting: true, clearMessages: true));
+    try {
+      if (event.enabled && !state.moduleEnabled) {
+        await _toggleModule(shopId: shopId, enabled: true);
+      }
+      await _setPrimaryWorkspace(shopId: shopId, enabled: event.enabled);
+      final moduleEnabled = event.enabled ? true : state.moduleEnabled;
+      _workspaceMode.apply(
+        primary: event.enabled,
+        moduleEnabled: moduleEnabled,
+      );
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          moduleEnabled: moduleEnabled,
+          primaryWorkspace: event.enabled,
+          successMessage: event.enabled
+              ? 'Change est maintenant l’écran d’accueil.'
+              : 'Navigation classique rétablie.',
+        ),
+      );
+    } catch (error) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: error.toString(),
+        ),
+      );
+    }
+  }
 }
 
 class _FxLocalSnapshot {
@@ -619,6 +867,8 @@ class _FxLocalSnapshot {
     required this.history,
     required this.operations,
     required this.movements,
+    required this.customerRequiredAboveFcfa,
+    required this.primaryWorkspace,
   });
 
   final bool enabled;
@@ -630,4 +880,6 @@ class _FxLocalSnapshot {
   final List<FxSessionListRow> history;
   final List<FxOperation> operations;
   final List<FxMovement> movements;
+  final int customerRequiredAboveFcfa;
+  final bool primaryWorkspace;
 }

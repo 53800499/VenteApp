@@ -26,6 +26,12 @@ class FxExchangeRemoteDatasource {
     return _get('/fx-exchange/currencies');
   }
 
+  Future<Map<String, dynamic>> upsertShopCurrencies(
+    List<Map<String, dynamic>> currencies,
+  ) async {
+    return _put('/fx-exchange/currencies', {'currencies': currencies});
+  }
+
   Future<List<FxRateSnapshotDto>> fetchRates() async {
     final data = await _getList('/fx-exchange/rates');
     return data
@@ -75,6 +81,22 @@ class FxExchangeRemoteDatasource {
     final data = await _post(
       '/fx-exchange/sessions/$sessionId/close',
       body.toJson(),
+    );
+    return FxSessionDto.fromJson(data);
+  }
+
+  Future<FxSessionDto> confirmCloseSession(int sessionId) async {
+    final data = await _post(
+      '/fx-exchange/sessions/$sessionId/confirm-close',
+      const {},
+    );
+    return FxSessionDto.fromJson(data);
+  }
+
+  Future<FxSessionDto> cancelPendingClose(int sessionId) async {
+    final data = await _post(
+      '/fx-exchange/sessions/$sessionId/cancel-close',
+      const {},
     );
     return FxSessionDto.fromJson(data);
   }
@@ -168,6 +190,18 @@ class FxExchangeRemoteDatasource {
   ) async {
     try {
       final response = await _client.post<dynamic>(path, data: body);
+      return _unwrapMap(response.data);
+    } on DioException catch (error) {
+      throw mapDioException(error);
+    }
+  }
+
+  Future<Map<String, dynamic>> _put(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _client.put<dynamic>(path, data: body);
       return _unwrapMap(response.data);
     } on DioException catch (error) {
       throw mapDioException(error);

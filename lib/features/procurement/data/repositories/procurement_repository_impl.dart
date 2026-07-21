@@ -1101,11 +1101,26 @@ class ProcurementRepositoryImpl implements ProcurementRepository {
       await _local.upsertSupplierFromRemote(shopId: shopId, remote: dto);
     }
 
-    // 2. Pull commandes (détail complet : lignes + réceptions)
+    // 2. Pull commandes (détail seulement si version locale en retard / sans lignes)
     final rawOrders = await _remote.fetchPurchaseOrders();
     for (final raw in rawOrders) {
       final serverPoId = (raw['id'] as num?)?.toInt();
       if (serverPoId == null) continue;
+
+      final remoteVersion = (raw['version'] as num?)?.toInt() ?? 1;
+      final remoteStatus = raw['status'] as String? ?? '';
+      final localMeta = await _local.findPurchaseOrderSyncMeta(
+        shopId,
+        '$serverPoId',
+      );
+      // Skip détail seulement si statut aligné + version à jour.
+      // (Le BE incrémente désormais version à chaque changement de statut.)
+      if (localMeta != null &&
+          localMeta.hasItems &&
+          localMeta.status == remoteStatus &&
+          localMeta.version >= remoteVersion) {
+        continue;
+      }
 
       Map<String, dynamic> detail;
       try {

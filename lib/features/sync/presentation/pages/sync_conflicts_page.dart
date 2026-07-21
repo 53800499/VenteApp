@@ -11,6 +11,7 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 /// ECR-20 — Résolution des conflits de synchronisation.
 class SyncConflictsPage extends StatefulWidget {
@@ -61,7 +62,10 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
   Widget build(BuildContext context) {
     if (widget.session.user.role != UserRole.owner) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Conflits de synchronisation')),
+        appBar: AppBar(
+          title: const Text('Conflits de synchronisation'),
+          actions: const [ModuleHelpButton(articleId: 'sync_offline')],
+        ),
         body: const Center(
           child: Padding(
             padding: EdgeInsets.all(AppSpacing.lg),
@@ -75,7 +79,10 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Conflits de synchronisation')),
+      appBar: AppBar(
+        title: const Text('Conflits de synchronisation'),
+        actions: const [ModuleHelpButton(articleId: 'sync_offline')],
+      ),
       body: _buildBody(),
     );
   }

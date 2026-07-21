@@ -77,6 +77,12 @@ class Settings extends Table {
   IntColumn get autoLockMinutes => integer().withDefault(const Constant(5))();
   BoolColumn get pricingTiersEnabled =>
       boolean().withDefault(const Constant(false))();
+  /// Seuil FCFA au-delà duquel un client est obligatoire sur une op FX (0 = jamais).
+  IntColumn get fxCustomerRequiredAboveFcfa =>
+      integer().withDefault(const Constant(0))();
+  /// Accès direct : onglet Change en racine (usage cambiste).
+  BoolColumn get fxPrimaryWorkspace =>
+      boolean().withDefault(const Constant(false))();
   IntColumn get updatedAt => integer()();
 }
 

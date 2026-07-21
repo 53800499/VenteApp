@@ -1546,6 +1546,35 @@ class ProcurementLocalDatasource {
   // ---------------------------------------------------------------------------
   // Resolution Helpers
   // ---------------------------------------------------------------------------
+
+  /// Métadonnées pour éviter un GET détail si la commande locale est à jour.
+  Future<({int version, int updatedAt, String status, bool hasItems})?>
+      findPurchaseOrderSyncMeta(
+    int shopId,
+    String serverId,
+  ) async {
+    final row = await (_db.select(_db.purchaseOrders)
+          ..where(
+            (p) => p.shopId.equals(shopId) & p.serverId.equals(serverId),
+          )
+          ..orderBy([(p) => OrderingTerm.asc(p.id)])
+          ..limit(1))
+        .getSingleOrNull();
+    if (row == null) return null;
+
+    final item = await (_db.select(_db.purchaseOrderItems)
+          ..where((i) => i.purchaseOrderId.equals(row.id))
+          ..limit(1))
+        .getSingleOrNull();
+
+    return (
+      version: row.version,
+      updatedAt: row.updatedAt,
+      status: row.status,
+      hasItems: item != null,
+    );
+  }
+
   Future<int?> resolveDefaultUserId(int shopId) async {
     final user = await (_db.select(_db.users)
           ..where((u) => u.shopId.equals(shopId) & u.isActive.equals(true))

@@ -14,6 +14,7 @@ import '../../domain/usecases/debt_usecases.dart';
 import 'debt_detail_page.dart';
 import 'forgiven_debts_page.dart';
 import 'paid_debts_page.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 class CustomerDebtsPage extends StatefulWidget {
   const CustomerDebtsPage({
@@ -88,6 +89,7 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
     return Scaffold(
       appBar: AppBar(
         title: Text('Dettes — ${widget.customerName}'),
+        actions: const [ModuleHelpButton(articleId: 'debts')],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [

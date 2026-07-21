@@ -15,6 +15,7 @@ import '../../../auth/presentation/widgets/pin_pad.dart';
 import '../../domain/entities/cash_session_entities.dart';
 import '../../domain/usecases/cash_session_usecases.dart';
 import '../bloc/cash_sessions_bloc.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'cash_session_detail_page.dart';
 
 class CashSessionsPage extends StatelessWidget {
@@ -62,6 +63,7 @@ class _CashSessionsView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Gestion de caisse'),
         actions: [
+          const ModuleHelpButton(articleId: 'cash_sessions'),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => context

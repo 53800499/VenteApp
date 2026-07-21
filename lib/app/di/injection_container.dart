@@ -22,6 +22,7 @@ import '../../features/fx_exchange/data/datasources/remote/fx_exchange_remote_da
 import '../../features/fx_exchange/data/repositories/fx_exchange_repository_impl.dart';
 import '../../features/fx_exchange/domain/repositories/fx_exchange_repository.dart';
 import '../../features/fx_exchange/domain/usecases/fx_exchange_usecases.dart';
+import '../../features/fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../core/auth/app_lock_controller.dart';
 import '../../core/auth/cloud_session_coordinator.dart';
 import '../../core/auth/cloud_session_controller.dart';
@@ -460,6 +461,7 @@ void ensureFxExchangeDependencies() {
         remote: sl(),
         apiGuard: sl(),
         recorder: sl(),
+        syncPolicy: sl(),
       ),
     );
   }
@@ -484,6 +486,9 @@ void ensureFxExchangeDependencies() {
   if (!sl.isRegistered<ListFxLatestRates>()) {
     sl.registerLazySingleton(() => ListFxLatestRates(sl()));
   }
+  if (!sl.isRegistered<ListFxSessionRates>()) {
+    sl.registerLazySingleton(() => ListFxSessionRates(sl()));
+  }
   if (!sl.isRegistered<ListFxRateHistory>()) {
     sl.registerLazySingleton(() => ListFxRateHistory(sl()));
   }
@@ -502,11 +507,32 @@ void ensureFxExchangeDependencies() {
   if (!sl.isRegistered<CloseFxSession>()) {
     sl.registerLazySingleton(() => CloseFxSession(sl()));
   }
+  if (!sl.isRegistered<ConfirmFxSessionClose>()) {
+    sl.registerLazySingleton(() => ConfirmFxSessionClose(sl()));
+  }
+  if (!sl.isRegistered<CancelFxPendingClose>()) {
+    sl.registerLazySingleton(() => CancelFxPendingClose(sl()));
+  }
   if (!sl.isRegistered<PreviewFxOperation>()) {
     sl.registerLazySingleton(() => PreviewFxOperation(sl()));
   }
   if (!sl.isRegistered<CreateFxOperation>()) {
     sl.registerLazySingleton(() => CreateFxOperation(sl()));
+  }
+  if (!sl.isRegistered<GetFxCustomerRequiredAboveFcfa>()) {
+    sl.registerLazySingleton(() => GetFxCustomerRequiredAboveFcfa(sl()));
+  }
+  if (!sl.isRegistered<SetFxCustomerRequiredAboveFcfa>()) {
+    sl.registerLazySingleton(() => SetFxCustomerRequiredAboveFcfa(sl()));
+  }
+  if (!sl.isRegistered<GetFxPrimaryWorkspace>()) {
+    sl.registerLazySingleton(() => GetFxPrimaryWorkspace(sl()));
+  }
+  if (!sl.isRegistered<SetFxPrimaryWorkspace>()) {
+    sl.registerLazySingleton(() => SetFxPrimaryWorkspace(sl()));
+  }
+  if (!sl.isRegistered<FxWorkspaceModeController>()) {
+    sl.registerLazySingleton(FxWorkspaceModeController.new);
   }
   if (!sl.isRegistered<ListFxOperations>()) {
     sl.registerLazySingleton(() => ListFxOperations(sl()));
@@ -519,6 +545,9 @@ void ensureFxExchangeDependencies() {
   }
   if (!sl.isRegistered<GetFxDailyReport>()) {
     sl.registerLazySingleton(() => GetFxDailyReport(sl()));
+  }
+  if (!sl.isRegistered<GetFxPeriodReport>()) {
+    sl.registerLazySingleton(() => GetFxPeriodReport(sl()));
   }
   if (!sl.isRegistered<SyncFxExchangeFromRemote>()) {
     sl.registerLazySingleton(() => SyncFxExchangeFromRemote(sl()));
@@ -1085,6 +1114,8 @@ Future<void> initDependencies() async {
       procurementRemote: sl(),
       stockTransferLocal: sl(),
       stockTransferRemote: sl(),
+      fxExchangeLocal: sl(),
+      fxExchangeRemote: sl(),
     ),
   );
   sl.registerLazySingleton(

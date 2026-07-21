@@ -48,7 +48,7 @@ class CalculatorsRepositoryImpl implements CalculatorsRepository {
         entityTable: SyncEntityTable.tenantModules,
         recordId: 1, // dummy record ID for module activation singleton per shop
         operation: SyncOperation.update,
-        payload: {'enabled': enabled},
+        payload: {'moduleCode': 'CALCULATORS', 'enabled': enabled},
       );
     }
   }

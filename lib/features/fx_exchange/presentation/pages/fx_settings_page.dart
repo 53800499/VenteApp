@@ -16,25 +16,34 @@ class _FxSettingsPageState extends State<FxSettingsPage> {
   Map<String, bool> _enabled = {};
   Map<String, int> _sortOrder = {};
   bool _localStateReady = false;
+  int _syncedCatalogCount = -1;
+  final _thresholdCtrl = TextEditingController();
+  bool _thresholdSynced = false;
+
+  @override
+  void dispose() {
+    _thresholdCtrl.dispose();
+    super.dispose();
+  }
 
   void _syncFromState(FxExchangeState state) {
-    if (state.shopCurrencies.isNotEmpty) {
-      _enabled = {
-        for (final sc in state.shopCurrencies) sc.currencyCode: sc.enabled,
-      };
-      _sortOrder = {
-        for (final sc in state.shopCurrencies) sc.currencyCode: sc.sortOrder,
-      };
-    } else {
-      // Défauts boutique : FCFA + NGN actifs.
-      _enabled = {
-        for (final c in state.currencies)
-          c.code: c.code == fxBaseCurrency || c.code == 'NGN',
-      };
-      _sortOrder = {
-        for (final c in state.currencies) c.code: c.sortOrder,
-      };
+    // Base = catalogue ; overlay = préférences boutique.
+    _enabled = {
+      for (final c in state.currencies)
+        c.code: c.code == fxBaseCurrency || c.code == 'NGN',
+    };
+    _sortOrder = {
+      for (final c in state.currencies) c.code: c.sortOrder,
+    };
+    for (final sc in state.shopCurrencies) {
+      _enabled[sc.currencyCode] = sc.enabled;
+      _sortOrder[sc.currencyCode] = sc.sortOrder;
     }
+    if (!_thresholdSynced) {
+      _thresholdCtrl.text = '${state.customerRequiredAboveFcfa}';
+      _thresholdSynced = true;
+    }
+    _syncedCatalogCount = state.currencies.length;
     _localStateReady = true;
   }
 
@@ -43,9 +52,15 @@ class _FxSettingsPageState extends State<FxSettingsPage> {
     final bloc = context.watch<FxExchangeBloc>();
     final state = bloc.state;
 
-    if (!_localStateReady &&
-        (state.shopCurrencies.isNotEmpty || state.currencies.isNotEmpty)) {
-      _syncFromState(state);
+    if (state.currencies.isNotEmpty &&
+        _syncedCatalogCount != state.currencies.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _syncFromState(state));
+      });
+    } else if (!_thresholdSynced && state.status == FxExchangeStatus.ready) {
+      _thresholdCtrl.text = '${state.customerRequiredAboveFcfa}';
+      _thresholdSynced = true;
     }
 
     return Scaffold(
@@ -64,17 +79,43 @@ class _FxSettingsPageState extends State<FxSettingsPage> {
                     bloc.add(FxModuleToggleRequested(enabled: value));
                   },
           ),
+          SwitchListTile(
+            title: const Text('Change en écran d’accueil'),
+            subtitle: const Text(
+              'Onglet Change en racine (idéal si vous n’utilisez que ce module). '
+              'Clients et Plus restent accessibles.',
+            ),
+            value: state.primaryWorkspace,
+            onChanged: state.isSubmitting
+                ? null
+                : (value) {
+                    if (value == state.primaryWorkspace) return;
+                    bloc.add(
+                      FxPrimaryWorkspaceSaveRequested(enabled: value),
+                    );
+                  },
+          ),
           const Divider(),
           Text(
             'Devises actives',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           if (state.currencies.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Text(
-                'Aucune devise disponible. Fermez puis rouvrez cet écran, '
-                'ou appuyez sur Actualiser sur le tableau de bord.',
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Aucune devise disponible pour le moment.'),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    onPressed: state.isRefreshing
+                        ? null
+                        : () => bloc.add(const FxExchangeRefreshRequested()),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Actualiser'),
+                  ),
+                ],
               ),
             )
           else
@@ -89,6 +130,22 @@ class _FxSettingsPageState extends State<FxSettingsPage> {
                         setState(() => _enabled[currency.code] = value),
               );
             }),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Client obligatoire',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _thresholdCtrl,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Seuil FCFA',
+              helperText:
+                  'Client obligatoire si montant FCFA ≥ ce seuil. 0 = jamais.',
+              border: OutlineInputBorder(),
+            ),
+          ),
           const SizedBox(height: AppSpacing.lg),
           FilledButton(
             onPressed: state.isSubmitting || state.currencies.isEmpty
@@ -106,6 +163,18 @@ class _FxSettingsPageState extends State<FxSettingsPage> {
                         )
                         .toList();
                     bloc.add(FxSaveCurrenciesRequested(items: items));
+
+                    final threshold = int.tryParse(
+                          _thresholdCtrl.text.replaceAll(' ', ''),
+                        ) ??
+                        0;
+                    if (threshold != state.customerRequiredAboveFcfa) {
+                      bloc.add(
+                        FxSaveCustomerThresholdRequested(
+                          amountFcfa: threshold < 0 ? 0 : threshold,
+                        ),
+                      );
+                    }
                     Navigator.pop(context);
                   },
             child: const Text('Enregistrer'),

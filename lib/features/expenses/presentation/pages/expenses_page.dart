@@ -15,6 +15,7 @@ import 'expense_categories_page.dart';
 import 'expense_detail_page.dart';
 import 'expense_form_page.dart';
 import '../services/expense_pdf_exporter.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 class ExpensesPage extends StatelessWidget {
   const ExpensesPage({super.key, required this.session});
@@ -55,6 +56,7 @@ class _ExpensesView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Dépenses'),
         actions: [
+          const ModuleHelpButton(articleId: 'expenses'),
           IconButton(
             icon: const Icon(Icons.category_outlined),
             tooltip: 'Catégories & budgets',

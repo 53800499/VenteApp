@@ -79,6 +79,21 @@ class FxSessionBalances extends Table {
   TextColumn get syncStatus => text().nullable()();
 }
 
+/// Taux figés pour une session (politique : gel à l'ouverture, MAJ contrôlée).
+class FxSessionRates extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get shopId => integer().references(Shops, #id)();
+  IntColumn get sessionId => integer().references(FxSessions, #id)();
+  TextColumn get quoteCurrency => text()();
+  IntColumn get rateSnapshotId =>
+      integer().references(FxRateSnapshots, #id)();
+  IntColumn get appliedAt => integer()();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  TextColumn get serverId => text().nullable()();
+  IntColumn get syncedAt => integer().nullable()();
+  TextColumn get syncStatus => text().nullable()();
+}
+
 class FxOperations extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get shopId => integer().references(Shops, #id)();
@@ -90,6 +105,7 @@ class FxOperations extends Table {
   IntColumn get toAmount => integer()();
   IntColumn get rateSnapshotId => integer().nullable()();
   IntColumn get marginFcfa => integer().withDefault(const Constant(0))();
+  IntColumn get customerId => integer().nullable()();
   TextColumn get note => text().nullable()();
   IntColumn get createdBy => integer().references(Users, #id)();
   IntColumn get createdAt => integer()();

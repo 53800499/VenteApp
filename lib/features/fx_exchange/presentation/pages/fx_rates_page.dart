@@ -38,8 +38,22 @@ class _FxRatesPageState extends State<FxRatesPage> {
         .toSet();
 
     if (enabledCodes.isNotEmpty) {
-      return state.currencies
+      final fromCatalog = state.currencies
           .where((c) => enabledCodes.contains(c.code))
+          .toList();
+      if (fromCatalog.isNotEmpty) return fromCatalog;
+
+      // Catalogue local vide / désync : afficher quand même les codes actifs.
+      return enabledCodes
+          .map(
+            (code) => FxCurrency(
+              code: code,
+              label: code,
+              symbol: code,
+              minorUnit: 0,
+              sortOrder: 0,
+            ),
+          )
           .toList();
     }
 
@@ -71,11 +85,77 @@ class _FxRatesPageState extends State<FxRatesPage> {
     _sellDen.text = '${rate.sellRateDenominator}';
   }
 
+  Future<void> _submit(BuildContext context, String selectedQuote) async {
+    final bloc = context.read<FxExchangeBloc>();
+    final sessionOpen = bloc.state.openSession != null;
+
+    var applyMode = FxRateApplyMode.nextSession;
+    if (sessionOpen) {
+      final open = bloc.state.openSession!;
+      if (open.isPendingClose) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Clôture en attente : le taux sera pour la prochaine session.',
+            ),
+          ),
+        );
+        applyMode = FxRateApplyMode.nextSession;
+      } else {
+      final choice = await showDialog<FxRateApplyMode>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Nouveau taux disponible'),
+          content: const Text(
+            'Une session est ouverte.\n\n'
+            'Appliquer maintenant : les prochaines opérations utilisent ce taux '
+            '(les opérations déjà saisies gardent l’ancien).\n\n'
+            'Prochaine session : la journée continue avec les taux actuels ; '
+            'ce taux servira à la prochaine ouverture.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(ctx, FxRateApplyMode.nextSession),
+              child: const Text('Prochaine session'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, FxRateApplyMode.now),
+              child: const Text('Appliquer maintenant'),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !context.mounted) return;
+      applyMode = choice;
+      }
+    }
+
+    bloc.add(
+      FxCreateRateRequested(
+        input: CreateFxRateInput(
+          quoteCurrency: selectedQuote,
+          buyRateNumerator: int.parse(_buyNum.text.trim()),
+          buyRateDenominator: int.parse(_buyDen.text.trim()),
+          sellRateNumerator: int.parse(_sellNum.text.trim()),
+          sellRateDenominator: int.parse(_sellDen.text.trim()),
+          applyMode: applyMode,
+        ),
+      ),
+    );
+    if (context.mounted) Navigator.pop(context);
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = context.watch<FxExchangeBloc>().state;
     final options = _quoteOptions(state);
     final selectedQuote = _resolveSelectedQuote(options);
+    final sessionOpen = state.openSession != null;
 
     if (!_selectionInitialized && selectedQuote != null) {
       _quoteCurrency = selectedQuote;
@@ -88,6 +168,28 @@ class _FxRatesPageState extends State<FxRatesPage> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
+          if (sessionOpen)
+            Card(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              child: const Padding(
+                padding: EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline),
+                    SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Session ouverte : les opérations utilisent les taux '
+                        'gelés. Un nouveau taux peut s’appliquer maintenant '
+                        'ou à la prochaine session.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (sessionOpen) const SizedBox(height: AppSpacing.md),
           if (options.isEmpty)
             Card(
               child: Padding(
@@ -95,9 +197,9 @@ class _FxRatesPageState extends State<FxRatesPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Aucune devise étrangère active.',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                    Text(
+                      'Aucune devise étrangère active',
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     const Text(
@@ -105,22 +207,31 @@ class _FxRatesPageState extends State<FxRatesPage> {
                       'dans la configuration du module.',
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    FilledButton(
+                    FilledButton.icon(
                       onPressed: () => openFxSubPage(
                         context,
                         const FxSettingsPage(),
                       ),
-                      child: const Text('Configurer les devises'),
+                      icon: const Icon(Icons.settings_outlined),
+                      label: const Text('Configurer les devises'),
                     ),
                   ],
                 ),
               ),
             )
           else ...[
+            Text(
+              'Devise cotée',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String>(
               key: ValueKey(selectedQuote),
               initialValue: selectedQuote,
-              decoration: const InputDecoration(labelText: 'Devise cotée'),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.currency_exchange),
+              ),
               items: options
                   .map(
                     (c) => DropdownMenuItem(
@@ -137,37 +248,68 @@ class _FxRatesPageState extends State<FxRatesPage> {
                 });
               },
             ),
-            const SizedBox(height: AppSpacing.md),
-            const Text('Taux achat (client vend la devise)'),
-            _rateRow(_buyDen, _buyNum),
-            const SizedBox(height: AppSpacing.md),
-            const Text('Taux vente (client achète la devise)'),
-            _rateRow(_sellDen, _sellNum),
             const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: state.isSubmitting || selectedQuote == null
-                  ? null
-                  : () {
-                      context.read<FxExchangeBloc>().add(
-                            FxCreateRateRequested(
-                              input: CreateFxRateInput(
-                                quoteCurrency: selectedQuote,
-                                buyRateNumerator:
-                                    int.parse(_buyNum.text.trim()),
-                                buyRateDenominator:
-                                    int.parse(_buyDen.text.trim()),
-                                sellRateNumerator:
-                                    int.parse(_sellNum.text.trim()),
-                                sellRateDenominator:
-                                    int.parse(_sellDen.text.trim()),
-                              ),
-                            ),
-                          );
-                      Navigator.pop(context);
-                    },
-              child: state.isSubmitting
-                  ? const CircularProgressIndicator()
-                  : const Text('Enregistrer le taux'),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Taux achat',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    Text(
+                      'Client vend la devise à la boutique',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _rateRow(_buyDen, _buyNum),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Taux vente',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    Text(
+                      'Client achète la devise à la boutique',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _rateRow(_sellDen, _sellNum),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              height: AppSizes.controlHeight,
+              child: FilledButton(
+                onPressed: state.isSubmitting || selectedQuote == null
+                    ? null
+                    : () => _submit(context, selectedQuote),
+                child: state.isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        sessionOpen
+                            ? 'Nouveau taux…'
+                            : 'Enregistrer le taux',
+                      ),
+              ),
             ),
           ],
         ],
@@ -185,18 +327,24 @@ class _FxRatesPageState extends State<FxRatesPage> {
           child: TextField(
             controller: denominatorCtrl,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Unités devise'),
+            decoration: const InputDecoration(
+              labelText: 'Quantité devise',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
+          padding: EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           child: Text('='),
         ),
         Expanded(
           child: TextField(
             controller: numeratorCtrl,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'FCFA'),
+            decoration: const InputDecoration(
+              labelText: 'FCFA',
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
       ],

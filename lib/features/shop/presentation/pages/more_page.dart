@@ -26,6 +26,8 @@ import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../procurement/presentation/pages/procurement_page.dart';
 import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
+import '../../../../app/di/injection_container.dart';
+import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
 import 'shop_list_page.dart';
 
@@ -249,7 +251,8 @@ class MorePage extends StatelessWidget {
                     ),
                   ),
                 ),
-              if (_canViewFxExchange)
+              if (_canViewFxExchange &&
+                  !sl<FxWorkspaceModeController>().useFxPrimaryShell)
                 ModuleActionTile(
                   icon: Icons.currency_exchange,
                   title: 'Bureau de change',

@@ -15,6 +15,7 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../bloc/new_sale_bloc.dart';
 import '../widgets/sale_feedback.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'sale_receipt_page.dart';
 
 /// Page de création d'une vente.
@@ -171,6 +172,7 @@ class _NewSalePageState extends State<NewSalePage>
                             ? 'Vente depuis calculateur'
                             : (_step == 0 ? 'Nouvelle vente' : 'Paiement'),
                   ),
+                  actions: const [ModuleHelpButton(articleId: 'sales')],
                 ),
                 body: _buildBody(context, state),
               );

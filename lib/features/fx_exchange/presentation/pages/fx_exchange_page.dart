@@ -11,20 +11,30 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/services/fx_calculation_service.dart';
 import '../../domain/usecases/fx_exchange_usecases.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import '../fx_exchange_navigation.dart';
 import '../bloc/fx_exchange_bloc.dart';
+import '../fx_workspace_mode_controller.dart';
 import 'fx_close_session_page.dart';
 import 'fx_movement_page.dart';
 import 'fx_new_operation_page.dart';
 import 'fx_rates_history_page.dart';
 import 'fx_rates_page.dart';
+import 'fx_period_reports_page.dart';
 import 'fx_report_page.dart';
 import 'fx_settings_page.dart';
+import '../widgets/fx_history_tiles.dart';
 
 class FxExchangePage extends StatelessWidget {
-  const FxExchangePage({super.key, required this.session});
+  const FxExchangePage({
+    super.key,
+    required this.session,
+    this.embeddedInShell = false,
+  });
 
   final AuthSession session;
+  /// True quand l'écran est l'onglet racine (pas de push Navigator).
+  final bool embeddedInShell;
 
   @override
   Widget build(BuildContext context) {
@@ -40,24 +50,34 @@ class FxExchangePage extends StatelessWidget {
         upsertShopCurrencies: sl<UpsertFxShopCurrencies>(),
         createRate: sl<CreateFxRate>(),
         listLatestRates: sl<ListFxLatestRates>(),
+        listSessionRates: sl<ListFxSessionRates>(),
         findOpenSession: sl<FindOpenFxSession>(),
         listSessions: sl<ListFxSessions>(),
         getLiveBalances: sl<GetFxLiveBalances>(),
         openSession: sl<OpenFxSession>(),
         closeSession: sl<CloseFxSession>(),
+        confirmCloseSession: sl<ConfirmFxSessionClose>(),
+        cancelPendingClose: sl<CancelFxPendingClose>(),
         createOperation: sl<CreateFxOperation>(),
         createMovement: sl<CreateFxMovement>(),
         listOperations: sl<ListFxOperations>(),
         listMovements: sl<ListFxMovements>(),
+        getCustomerRequiredAboveFcfa: sl<GetFxCustomerRequiredAboveFcfa>(),
+        setCustomerRequiredAboveFcfa: sl<SetFxCustomerRequiredAboveFcfa>(),
+        getPrimaryWorkspace: sl<GetFxPrimaryWorkspace>(),
+        setPrimaryWorkspace: sl<SetFxPrimaryWorkspace>(),
+        workspaceMode: sl<FxWorkspaceModeController>(),
         syncFromRemote: sl<SyncFxExchangeFromRemote>(),
       )..add(const FxExchangeLoadRequested()),
-      child: const _FxExchangeView(),
+      child: _FxExchangeView(embeddedInShell: embeddedInShell),
     );
   }
 }
 
 class _FxExchangeView extends StatelessWidget {
-  const _FxExchangeView();
+  const _FxExchangeView({required this.embeddedInShell});
+
+  final bool embeddedInShell;
 
   @override
   Widget build(BuildContext context) {
@@ -76,23 +96,107 @@ class _FxExchangeView extends StatelessWidget {
         PermissionGuard.can(perms, Permission.fxExchangeReport);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Bureau de change'),
-        actions: [
-          if (canConfigure)
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () => openFxSubPage(context, const FxSettingsPage()),
+      appBar: embeddedInShell
+          ? null
+          : AppBar(
+              title: const Text('Bureau de change'),
+              actions: [
+                const ModuleHelpButton(articleId: 'fx_exchange'),
+                if (canReport)
+                  IconButton(
+                    tooltip: 'Rapports',
+                    icon: const Icon(Icons.assessment_outlined),
+                    onPressed: () =>
+                        openFxSubPage(context, const FxPeriodReportsPage()),
+                  ),
+                if (canConfigure)
+                  IconButton(
+                    tooltip: 'Configuration',
+                    icon: const Icon(Icons.settings_outlined),
+                    onPressed: () =>
+                        openFxSubPage(context, const FxSettingsPage()),
+                  ),
+                IconButton(
+                  tooltip: 'Actualiser',
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () => context
+                      .read<FxExchangeBloc>()
+                      .add(const FxExchangeRefreshRequested()),
+                ),
+              ],
             ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => context
-                .read<FxExchangeBloc>()
-                .add(const FxExchangeRefreshRequested()),
-          ),
-        ],
+      floatingActionButton: BlocBuilder<FxExchangeBloc, FxExchangeState>(
+        buildWhen: (p, c) =>
+            p.openSession != c.openSession ||
+            p.moduleEnabled != c.moduleEnabled,
+        builder: (context, state) {
+          final session = state.openSession;
+          if (!state.moduleEnabled ||
+              session == null ||
+              session.isPendingClose ||
+              !canOperate) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton.extended(
+            onPressed: () =>
+                openFxSubPage(context, const FxNewOperationPage()),
+            icon: const Icon(Icons.swap_horiz),
+            label: const Text('Opération'),
+          );
+        },
       ),
-      body: BlocConsumer<FxExchangeBloc, FxExchangeState>(
+      body: Column(
+        children: [
+          if (embeddedInShell)
+            Material(
+              color: Theme.of(context).colorScheme.surface,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.sm,
+                  AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Bureau de change',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    const ModuleHelpButton(articleId: 'fx_exchange'),
+                    if (canReport)
+                      IconButton(
+                        tooltip: 'Rapports',
+                        icon: const Icon(Icons.assessment_outlined),
+                        onPressed: () => openFxSubPage(
+                          context,
+                          const FxPeriodReportsPage(),
+                        ),
+                      ),
+                    if (canConfigure)
+                      IconButton(
+                        tooltip: 'Configuration',
+                        icon: const Icon(Icons.settings_outlined),
+                        onPressed: () => openFxSubPage(
+                          context,
+                          const FxSettingsPage(),
+                        ),
+                      ),
+                    IconButton(
+                      tooltip: 'Actualiser',
+                      icon: const Icon(Icons.refresh),
+                      onPressed: () => context
+                          .read<FxExchangeBloc>()
+                          .add(const FxExchangeRefreshRequested()),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(
+            child: BlocConsumer<FxExchangeBloc, FxExchangeState>(
         listenWhen: (p, c) =>
             c.errorMessage != p.errorMessage ||
             c.successMessage != p.successMessage,
@@ -138,7 +242,12 @@ class _FxExchangeView extends StatelessWidget {
                   );
             },
             child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                96,
+              ),
               children: [
                 if (state.isRefreshing)
                   const LinearProgressIndicator(minHeight: 2),
@@ -150,6 +259,7 @@ class _FxExchangeView extends StatelessWidget {
                 if (state.openSession == null)
                   _OpenSessionCard(
                     canOpen: canOpen,
+                    canRates: canRates,
                     shopCurrencies: state.shopCurrencies,
                     latestRates: state.latestRates,
                   )
@@ -164,28 +274,35 @@ class _FxExchangeView extends StatelessWidget {
                     canReport: canReport,
                   ),
                 const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'Historique des sessions',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Historique',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    if (canReport)
+                      TextButton.icon(
+                        onPressed: () => openFxSubPage(
+                          context,
+                          const FxPeriodReportsPage(),
+                        ),
+                        icon: const Icon(Icons.assessment_outlined, size: 18),
+                        label: const Text('Rapports'),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 if (state.history.isEmpty)
-                  const Text('Aucune session clôturée.')
+                  const _EmptyHint(
+                    icon: Icons.history,
+                    message: 'Aucune session clôturée pour l’instant.',
+                  )
                 else
                   ...state.history.map(
-                    (row) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        DateFormat('dd/MM/yyyy HH:mm').format(
-                          DateTime.fromMillisecondsSinceEpoch(row.openedAt),
-                        ),
-                      ),
-                      subtitle: Text(
-                        '${row.operationCount} op. · Marge ${formatFcfa(row.totalMarginFcfa)}',
-                      ),
-                      trailing: Chip(
-                        label: Text(row.status.label),
-                      ),
+                    (row) => _HistoryTile(
+                      row: row,
                       onTap: canReport
                           ? () => openFxSubPage(
                                 context,
@@ -198,6 +315,9 @@ class _FxExchangeView extends StatelessWidget {
             ),
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }
@@ -214,33 +334,56 @@ class _ModuleDisabledView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.currency_exchange, size: 64),
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: scheme.primaryContainer,
+              child: Icon(
+                Icons.currency_exchange,
+                size: 36,
+                color: scheme.onPrimaryContainer,
+              ),
+            ),
             const SizedBox(height: AppSpacing.md),
-            const Text(
-              'Le module Bureau de change n\'est pas activé.',
+            Text(
+              'Bureau de change',
+              style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Activez le module pour gérer les taux, les caisses devises '
+              'et les opérations d’achat / vente.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: AppSizes.lineHeightBody,
+                  ),
             ),
             if (canConfigure) ...[
               const SizedBox(height: AppSpacing.lg),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: isSubmitting
                     ? null
                     : () => context.read<FxExchangeBloc>().add(
                           const FxModuleToggleRequested(enabled: true),
                         ),
-                child: isSubmitting
+                icon: isSubmitting
                     ? const SizedBox(
-                        width: 20,
-                        height: 20,
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Activer le module'),
+                    : const Icon(Icons.power_settings_new),
+                label: Text(
+                  isSubmitting ? 'Activation…' : 'Activer le module',
+                ),
               ),
             ],
           ],
@@ -262,6 +405,8 @@ class _RatesSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -270,6 +415,8 @@ class _RatesSummaryCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                Icon(Icons.trending_up, color: scheme.primary),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     'Taux du jour',
@@ -277,29 +424,86 @@ class _RatesSummaryCard extends StatelessWidget {
                   ),
                 ),
                 if (canEdit)
-                  TextButton(
+                  IconButton(
+                    tooltip: 'Modifier',
                     onPressed: () =>
                         openFxSubPage(context, const FxRatesPage()),
-                    child: const Text('Modifier'),
+                    icon: const Icon(Icons.edit_outlined),
                   ),
-                TextButton(
+                IconButton(
+                  tooltip: 'Historique',
                   onPressed: () =>
                       openFxSubPage(context, const FxRatesHistoryPage()),
-                  child: const Text('Historique'),
+                  icon: const Icon(Icons.history),
                 ),
               ],
             ),
             if (rates.isEmpty)
-              const Text('Aucun taux défini. Saisissez les taux avant d\'ouvrir.')
-            else
-              ...rates.map(
-                (rate) => Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text(
-                    '${rate.quoteCurrency} · Achat ${_calc.formatRateLabel(rate.quoteCurrency, FxRateFraction(numerator: rate.buyRateNumerator, denominator: rate.buyRateDenominator))} · Vente ${_calc.formatRateLabel(rate.quoteCurrency, FxRateFraction(numerator: rate.sellRateNumerator, denominator: rate.sellRateDenominator))}',
-                  ),
+              const Padding(
+                padding: EdgeInsets.only(top: AppSpacing.sm),
+                child: _EmptyHint(
+                  icon: Icons.price_change_outlined,
+                  message:
+                      'Aucun taux défini. Saisissez les taux avant d’ouvrir.',
                 ),
-              ),
+              )
+            else
+              ...rates.map((rate) {
+                final buy = _calc.formatRateLabel(
+                  rate.quoteCurrency,
+                  FxRateFraction(
+                    numerator: rate.buyRateNumerator,
+                    denominator: rate.buyRateDenominator,
+                  ),
+                );
+                final sell = _calc.formatRateLabel(
+                  rate.quoteCurrency,
+                  FxRateFraction(
+                    numerator: rate.sellRateNumerator,
+                    denominator: rate.sellRateDenominator,
+                  ),
+                );
+                return Container(
+                  margin: const EdgeInsets.only(top: AppSpacing.sm),
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: scheme.secondaryContainer,
+                        child: Text(
+                          rate.quoteCurrency,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSecondaryContainer,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Achat · $buy',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Text(
+                              'Vente · $sell',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
           ],
         ),
       ),
@@ -310,11 +514,13 @@ class _RatesSummaryCard extends StatelessWidget {
 class _OpenSessionCard extends StatelessWidget {
   const _OpenSessionCard({
     required this.canOpen,
+    required this.canRates,
     required this.shopCurrencies,
     required this.latestRates,
   });
 
   final bool canOpen;
+  final bool canRates;
   final List<FxShopCurrency> shopCurrencies;
   final List<FxRateSnapshot> latestRates;
 
@@ -323,32 +529,57 @@ class _OpenSessionCard extends StatelessWidget {
     final foreignEnabled = shopCurrencies
         .where((c) => c.enabled && c.currencyCode != fxBaseCurrency)
         .length;
-    final ratesReady = latestRates.length >= foreignEnabled && foreignEnabled > 0;
+    final ratesReady =
+        latestRates.length >= foreignEnabled && foreignEnabled > 0;
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               'Démarrer la journée',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              ratesReady
-                  ? 'Saisissez les soldes initiaux par devise.'
-                  : 'Définissez d\'abord les taux du jour pour toutes les devises actives.',
+            _ChecklistRow(
+              done: foreignEnabled > 0,
+              label: foreignEnabled > 0
+                  ? '$foreignEnabled devise(s) étrangère(s) active(s)'
+                  : 'Activez au moins une devise étrangère',
+            ),
+            _ChecklistRow(
+              done: ratesReady,
+              label: ratesReady
+                  ? 'Taux du jour prêts'
+                  : 'Définir les taux pour chaque devise active',
             ),
             const SizedBox(height: AppSpacing.md),
+            if (!ratesReady && canRates)
+              OutlinedButton.icon(
+                onPressed: () => openFxSubPage(context, const FxRatesPage()),
+                icon: const Icon(Icons.price_change_outlined),
+                label: const Text('Saisir les taux'),
+              ),
+            if (!ratesReady && canRates) const SizedBox(height: AppSpacing.sm),
             FilledButton.icon(
-              onPressed: canOpen && ratesReady
-                  ? () => _showOpenDialog(context)
-                  : null,
-              icon: const Icon(Icons.play_arrow),
+              onPressed:
+                  canOpen && ratesReady ? () => _showOpenDialog(context) : null,
+              icon: const Icon(Icons.play_arrow_rounded),
               label: const Text('Ouvrir la session FX'),
             ),
+            if (!ratesReady)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  'La session s’ouvre une fois les taux renseignés.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
           ],
         ),
       ),
@@ -372,11 +603,15 @@ class _OpenSessionCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: controllers.entries
                 .map(
-                  (e) => TextField(
-                    controller: e.value,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Solde initial ${e.key}',
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: TextField(
+                      controller: e.value,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Solde initial ${e.key}',
+                        border: const OutlineInputBorder(),
+                      ),
                     ),
                   ),
                 )
@@ -429,52 +664,140 @@ class _ActiveSessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final pending = session.isPendingClose;
+    final bloc = context.watch<FxExchangeBloc>();
+    final scheme = Theme.of(context).colorScheme;
+    final openedAt = DateFormat('dd/MM HH:mm').format(
+      DateTime.fromMillisecondsSinceEpoch(session.openedAt),
+    );
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Session en cours',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    pending ? 'Clôture à valider' : 'Session en cours',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Chip(
+                  visualDensity: VisualDensity.compact,
+                  backgroundColor: pending
+                      ? scheme.tertiaryContainer
+                      : scheme.primaryContainer,
+                  label: Text(
+                    pending ? 'À valider' : 'Ouverte',
+                    style: TextStyle(
+                      color: pending
+                          ? scheme.onTertiaryContainer
+                          : scheme.onPrimaryContainer,
+                    ),
+                  ),
+                ),
+              ],
             ),
             Text(
-              'Ouverte le ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.fromMillisecondsSinceEpoch(session.openedAt))}',
+              'Depuis $openedAt · ${session.operationCount} op. · '
+              'Marge ${formatFcfa(session.totalMarginFcfa)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text('Marge cumulée : ${formatFcfa(session.totalMarginFcfa)}'),
-            Text('Opérations : ${session.operationCount}'),
             const SizedBox(height: AppSpacing.md),
-            Text('Soldes live', style: Theme.of(context).textTheme.titleSmall),
-            ...liveBalances.entries.map(
-              (e) => Text('${e.key} : ${formatAmount(e.value, e.key)}'),
-            ),
+            if (pending) ...[
+              Text(
+                'Écarts de caisse',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: session.balances.map((b) {
+                  final expected = b.expectedBalance ?? 0;
+                  final counted = b.countedBalance ?? 0;
+                  final diff = b.difference ?? (counted - expected);
+                  final ok = diff == 0;
+                  return _BalanceTile(
+                    code: b.currencyCode,
+                    amountLabel: formatAmount(counted, b.currencyCode),
+                    subtitle: ok
+                        ? 'Écart OK'
+                        : 'Écart ${diff > 0 ? '+' : ''}${formatAmount(diff, b.currencyCode)}',
+                    highlight: !ok,
+                  );
+                }).toList(),
+              ),
+              if (session.closingNote != null &&
+                  session.closingNote!.trim().isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'Note : ${session.closingNote}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ] else ...[
+              Text(
+                'Soldes live',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: liveBalances.entries
+                    .map(
+                      (e) => _BalanceTile(
+                        code: e.key,
+                        amountLabel: formatAmount(e.value, e.key),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                if (canOperate)
-                  FilledButton.icon(
-                    onPressed: () =>
-                        openFxSubPage(context, const FxNewOperationPage()),
-                    icon: const Icon(Icons.swap_horiz),
-                    label: const Text('Opération'),
-                  ),
-                if (canOperate)
+                if (!pending && canOperate)
                   OutlinedButton.icon(
                     onPressed: () =>
                         openFxSubPage(context, const FxMovementPage()),
                     icon: const Icon(Icons.sync_alt),
                     label: const Text('Mouvement'),
                   ),
-                if (canClose)
+                if (!pending && canClose)
                   OutlinedButton.icon(
                     onPressed: () =>
                         openFxSubPage(context, const FxCloseSessionPage()),
                     icon: const Icon(Icons.lock_outline),
                     label: const Text('Clôturer'),
+                  ),
+                if (pending && canClose)
+                  FilledButton.icon(
+                    onPressed: bloc.state.isSubmitting
+                        ? null
+                        : () => context.read<FxExchangeBloc>().add(
+                              const FxConfirmCloseSessionRequested(),
+                            ),
+                    icon: const Icon(Icons.check),
+                    label: const Text('Valider la clôture'),
+                  ),
+                if (pending && canClose)
+                  OutlinedButton.icon(
+                    onPressed: bloc.state.isSubmitting
+                        ? null
+                        : () => context.read<FxExchangeBloc>().add(
+                              const FxCancelPendingCloseRequested(),
+                            ),
+                    icon: const Icon(Icons.undo),
+                    label: const Text('Reprendre'),
                   ),
                 if (canReport)
                   OutlinedButton.icon(
@@ -487,40 +810,189 @@ class _ActiveSessionCard extends StatelessWidget {
                   ),
               ],
             ),
-            if (operations.isNotEmpty) ...[
+            if (!pending && operations.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
-              Text('Dernières opérations',
-                  style: Theme.of(context).textTheme.titleSmall),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Dernières ventes et achats',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               ...operations.take(5).map(
-                    (op) => ListTile(
-                      contentPadding: EdgeInsets.zero,
+                    (op) => FxOperationHistoryTile(
+                      operation: op,
                       dense: true,
-                      title: Text(
-                        '${op.operationType.label} · ${formatAmount(op.fromAmount, op.fromCurrency)} → ${formatAmount(op.toAmount, op.toCurrency)}',
-                      ),
-                      subtitle: Text(
-                        'Marge ${formatFcfa(op.marginFcfa)} · ${DateFormat('HH:mm').format(DateTime.fromMillisecondsSinceEpoch(op.createdAt))}',
-                      ),
+                      asCard: false,
+                      contentPadding: EdgeInsets.zero,
+                      showFullDateTime: true,
                     ),
                   ),
             ],
-            if (movements.isNotEmpty) ...[
+            if (!pending && movements.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text('Derniers mouvements',
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                'Derniers mouvements',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               ...movements.take(3).map(
-                    (mv) => ListTile(
-                      contentPadding: EdgeInsets.zero,
+                    (mv) => FxMovementHistoryTile(
+                      movement: mv,
                       dense: true,
-                      title: Text(
-                        '${mv.movementType.label} ${formatAmount(mv.amount, mv.currencyCode)}',
-                      ),
+                      asCard: false,
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BalanceTile extends StatelessWidget {
+  const _BalanceTile({
+    required this.code,
+    required this.amountLabel,
+    this.subtitle,
+    this.highlight = false,
+  });
+
+  final String code;
+  final String amountLabel;
+  final String? subtitle;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 148,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: highlight
+            ? scheme.errorContainer.withValues(alpha: 0.55)
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            code,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            amountLabel,
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          if (subtitle != null)
+            Text(
+              subtitle!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: highlight ? scheme.error : scheme.onSurfaceVariant,
+                  ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistRow extends StatelessWidget {
+  const _ChecklistRow({required this.done, required this.label});
+
+  final bool done;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: AppSizes.iconSm,
+            color: done ? scheme.primary : scheme.outline,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: done ? null : scheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryTile extends StatelessWidget {
+  const _HistoryTile({required this.row, this.onTap});
+
+  final FxSessionListRow row;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: ListTile(
+        onTap: onTap,
+        leading: CircleAvatar(
+          backgroundColor: scheme.surfaceContainerHighest,
+          child: const Icon(Icons.receipt_long_outlined, size: 20),
+        ),
+        title: Text(
+          DateFormat('dd/MM/yyyy HH:mm').format(
+            DateTime.fromMillisecondsSinceEpoch(row.openedAt),
+          ),
+        ),
+        subtitle: Text(
+          '${row.operationCount} op. · Marge ${formatFcfa(row.totalMarginFcfa)}',
+        ),
+        trailing: Chip(
+          visualDensity: VisualDensity.compact,
+          label: Text(row.status.label),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyHint extends StatelessWidget {
+  const _EmptyHint({required this.icon, required this.message});
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: AppSizes.iconMd, color: scheme.outline),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  height: AppSizes.lineHeightBody,
+                ),
+          ),
+        ),
+      ],
     );
   }
 }

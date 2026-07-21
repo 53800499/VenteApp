@@ -21,6 +21,7 @@ abstract final class SyncEntityTable {
   static const fxOperations = 'fx_operations';
   static const fxMovements = 'fx_movements';
   static const fxRateSnapshots = 'fx_rate_snapshots';
+  static const fxShopCurrencies = 'fx_shop_currencies';
 }
 
 /// Opérations poussées vers le cloud (FIFO).
@@ -45,6 +46,8 @@ abstract final class SyncOperation {
   static const resolveDiscrepancy = 'resolve_discrepancy';
   static const fxSessionOpen = 'fx_session_open';
   static const fxSessionClose = 'fx_session_close';
+  static const fxSessionConfirmClose = 'fx_session_confirm_close';
+  static const fxSessionCancelClose = 'fx_session_cancel_close';
   static const fxOperationCreate = 'fx_operation_create';
   static const fxMovementCreate = 'fx_movement_create';
 }

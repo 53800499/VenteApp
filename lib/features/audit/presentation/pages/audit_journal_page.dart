@@ -13,6 +13,7 @@ import '../../domain/entities/audit_entities.dart';
 import '../bloc/audit_journal_bloc.dart';
 import '../services/audit_pdf_exporter.dart';
 import '../widgets/audit_feedback.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'audit_detail_page.dart';
 
 class AuditJournalPage extends StatelessWidget {
@@ -53,6 +54,7 @@ class _AuditJournalView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Journal d\'audit'),
         actions: [
+          const ModuleHelpButton(articleId: 'audit'),
           if (canExport)
             BlocBuilder<AuditJournalBloc, AuditJournalState>(
               buildWhen: (p, c) => p.isExporting != c.isExporting,

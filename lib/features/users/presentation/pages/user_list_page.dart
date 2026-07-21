@@ -16,6 +16,7 @@ import '../bloc/user_list_bloc.dart';
 import '../widgets/assignable_role_picker.dart';
 import '../widgets/user_feedback.dart';
 import '../pages/user_shop_access_page.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'user_form_page.dart';
 
 class UserListPage extends StatelessWidget {
@@ -46,7 +47,10 @@ class UserListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!_canRead) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Équipe')),
+        appBar: AppBar(
+          title: const Text('Équipe'),
+          actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+        ),
         body: const Center(
           child: Text('Vous n\'avez pas accès à la gestion de l\'équipe.'),
         ),
@@ -95,7 +99,10 @@ class _UserListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Équipe')),
+      appBar: AppBar(
+        title: const Text('Équipe'),
+        actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+      ),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
               onPressed: () => _openCreateForm(context),

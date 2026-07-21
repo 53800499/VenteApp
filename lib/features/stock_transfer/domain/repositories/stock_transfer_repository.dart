@@ -123,4 +123,11 @@ abstract class StockTransferRepository {
     bool force = false,
     int? importUserId,
   });
+
+  /// Force le rechargement cloud d'un transfert (ouverture détail destinataire).
+  Future<StockTransfer?> refreshTransferFromRemote({
+    required int shopId,
+    required int transferId,
+    int? importUserId,
+  });
 }

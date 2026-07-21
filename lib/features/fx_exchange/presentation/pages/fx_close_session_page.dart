@@ -46,14 +46,32 @@ class _FxCloseSessionPageState extends State<FxCloseSessionPage> {
       );
     }
 
+    if (session.isPendingClose) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Validation clôture FX')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Text(
+              'Le comptage est déjà soumis. Validez ou reprenez depuis l’écran principal.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
+
     _initControllers(state);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Clôture session FX')),
+      appBar: AppBar(title: const Text('Comptage session FX')),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [
-          const Text('Comptez chaque caisse et saisissez le montant physique.'),
+          const Text(
+            'Étape 1/2 — Comptez chaque caisse et saisissez le montant physique. '
+            'La session passera en attente de validation (plus d’opérations).',
+          ),
           const SizedBox(height: AppSpacing.md),
           ...state.liveBalances.entries.map((entry) {
             final expected = entry.value;
@@ -106,7 +124,7 @@ class _FxCloseSessionPageState extends State<FxCloseSessionPage> {
                     );
                     Navigator.pop(context);
                   },
-            child: const Text('Clôturer la session'),
+            child: const Text('Soumettre le comptage'),
           ),
         ],
       ),

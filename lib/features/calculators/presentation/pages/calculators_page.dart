@@ -14,6 +14,7 @@ import '../models/calculation_intent.dart';
 import 'tile_calculator_page.dart';
 import 'paint_calculator_page.dart';
 import 'concrete_calculator_page.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 class CalculatorsPage extends StatelessWidget {
   const CalculatorsPage({super.key, required this.session});
@@ -43,6 +44,7 @@ class _CalculatorsView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Calculateurs Métiers'),
         actions: [
+          const ModuleHelpButton(articleId: 'calculators'),
           if (isOwner)
             BlocBuilder<CalculatorsBloc, CalculatorsState>(
               builder: (context, state) {

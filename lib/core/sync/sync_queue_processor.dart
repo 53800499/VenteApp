@@ -44,6 +44,10 @@ import '../../features/stock_transfer/data/datasources/stock_transfer_remote_dat
 import '../../features/stock_transfer/data/utils/stock_transfer_cloud_sync_helper.dart';
 import '../../features/stock_transfer/data/utils/stock_transfer_remote_payloads.dart';
 import '../../features/stock_transfer/domain/entities/stock_transfer.dart';
+import '../../features/fx_exchange/data/datasources/local/fx_exchange_local_datasource.dart';
+import '../../features/fx_exchange/data/datasources/remote/fx_exchange_remote_datasource.dart';
+import '../../features/fx_exchange/data/models/fx_exchange_api_models.dart';
+import '../../features/fx_exchange/domain/entities/fx_exchange_entities.dart';
 
 /// Pousse les éléments `sync_queue` vers l'API (couche 2 → 3).
 class SyncQueueProcessor {
@@ -68,6 +72,8 @@ class SyncQueueProcessor {
     required ProcurementRemoteDatasource procurementRemote,
     required StockTransferLocalDatasource stockTransferLocal,
     required StockTransferRemoteDatasource stockTransferRemote,
+    required FxExchangeLocalDatasource fxExchangeLocal,
+    required FxExchangeRemoteDatasource fxExchangeRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -87,7 +93,9 @@ class SyncQueueProcessor {
         _procurementLocal = procurementLocal,
         _procurementRemote = procurementRemote,
         _stockTransferLocal = stockTransferLocal,
-        _stockTransferRemote = stockTransferRemote;
+        _stockTransferRemote = stockTransferRemote,
+        _fxExchangeLocal = fxExchangeLocal,
+        _fxExchangeRemote = fxExchangeRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -109,6 +117,8 @@ class SyncQueueProcessor {
   final ProcurementRemoteDatasource _procurementRemote;
   final StockTransferLocalDatasource _stockTransferLocal;
   final StockTransferRemoteDatasource _stockTransferRemote;
+  final FxExchangeLocalDatasource _fxExchangeLocal;
+  final FxExchangeRemoteDatasource _fxExchangeRemote;
 
   StockTransferCloudSyncHelper get _stockTransferCloudSync =>
       StockTransferCloudSyncHelper(
@@ -138,22 +148,69 @@ class SyncQueueProcessor {
           return a.createdAt.compareTo(b.createdAt);
         });
 
+      // Groupes par priorité d'entité : parallèle limité à l'intérieur,
+      // séquentiel entre groupes (clients → produits → ventes…).
+      final groups = <int, List<SyncQueueData>>{};
       for (final item in sorted) {
-        try {
-          final done = await _processItem(shopId: shopId, item: item);
-          if (done) {
-            await _queue.markProcessed(item.id);
-            processed++;
-          } else {
-            deferred++;
+        final key = _entityPriority(item.entityTable);
+        groups.putIfAbsent(key, () => []).add(item);
+      }
+      final orderedKeys = groups.keys.toList()..sort();
+
+      for (final key in orderedKeys) {
+        final group = groups[key]!;
+        // Concurrence entre enregistrements distincts uniquement :
+        // create → validate → send d'un même record restent séquentiels.
+        final byRecord = <String, List<SyncQueueData>>{};
+        for (final item in group) {
+          final recordKey = '${item.entityTable}:${item.recordId}';
+          byRecord.putIfAbsent(recordKey, () => []).add(item);
+        }
+        final chains = byRecord.values.toList();
+
+        final chainResults = await _mapWithConcurrency<
+            List<SyncQueueData>, List<_QueueItemOutcome>>(
+          chains,
+          maxConcurrent: 3,
+          mapper: (chain) async {
+            final outcomes = <_QueueItemOutcome>[];
+            for (final item in chain) {
+              try {
+                final done = await _processItem(shopId: shopId, item: item);
+                if (done) {
+                  await _queue.markProcessed(item.id);
+                  outcomes.add(_QueueItemOutcome.processed);
+                } else {
+                  outcomes.add(_QueueItemOutcome.deferred);
+                }
+              } on ConflictFailure catch (error) {
+                await _queue.markConflict(item.id, error.message);
+                outcomes.add(_QueueItemOutcome.conflict);
+              } on Failure catch (error) {
+                await _queue.markFailed(item.id, error.message);
+                outcomes.add(_QueueItemOutcome.failed);
+              } catch (error) {
+                await _queue.markFailed(item.id, error.toString());
+                outcomes.add(_QueueItemOutcome.failed);
+              }
+            }
+            return outcomes;
+          },
+        );
+
+        for (final outcomes in chainResults) {
+          for (final outcome in outcomes) {
+            switch (outcome) {
+              case _QueueItemOutcome.processed:
+                processed++;
+              case _QueueItemOutcome.deferred:
+                deferred++;
+              case _QueueItemOutcome.conflict:
+                conflicts++;
+              case _QueueItemOutcome.failed:
+                break;
+            }
           }
-        } on ConflictFailure catch (error) {
-          await _queue.markConflict(item.id, error.message);
-          conflicts++;
-        } on Failure catch (error) {
-          await _queue.markFailed(item.id, error.message);
-        } catch (error) {
-          await _queue.markFailed(item.id, error.toString());
         }
       }
 
@@ -185,6 +242,11 @@ class SyncQueueProcessor {
         SyncEntityTable.supplierInvoices => 14,
         SyncEntityTable.supplierPayments => 15,
         SyncEntityTable.stockTransfers => 16,
+        SyncEntityTable.fxRateSnapshots => 17,
+        SyncEntityTable.fxShopCurrencies => 18,
+        SyncEntityTable.fxSessions => 19,
+        SyncEntityTable.fxOperations => 20,
+        SyncEntityTable.fxMovements => 21,
         _ => 99,
       };
 
@@ -192,19 +254,27 @@ class SyncQueueProcessor {
         SyncOperation.create => 0,
         SyncOperation.update => 1,
         SyncOperation.validate => 2,
-        SyncOperation.send => 3,
-        SyncOperation.receive => 4,
-        SyncOperation.resolveDiscrepancy => 5,
-        SyncOperation.cancel => 6,
-        SyncOperation.close => 7,
-        SyncOperation.archive => 8,
-        SyncOperation.stockAdjust => 9,
-        SyncOperation.payment => 10,
-        SyncOperation.forgive => 11,
-        SyncOperation.saleQuick => 12,
-        SyncOperation.cashSessionOpen => 13,
-        SyncOperation.cashSessionClose => 14,
-        SyncOperation.cashMovementCreate => 15,
+        SyncOperation.submit => 3,
+        SyncOperation.approve => 4,
+        SyncOperation.send => 5,
+        SyncOperation.receive => 6,
+        SyncOperation.resolveDiscrepancy => 7,
+        SyncOperation.cancel => 8,
+        SyncOperation.close => 9,
+        SyncOperation.archive => 10,
+        SyncOperation.stockAdjust => 11,
+        SyncOperation.payment => 12,
+        SyncOperation.forgive => 13,
+        SyncOperation.saleQuick => 14,
+        SyncOperation.cashSessionOpen => 15,
+        SyncOperation.cashSessionClose => 16,
+        SyncOperation.cashMovementCreate => 17,
+        SyncOperation.fxSessionOpen => 18,
+        SyncOperation.fxSessionClose => 19,
+        SyncOperation.fxSessionConfirmClose => 20,
+        SyncOperation.fxSessionCancelClose => 21,
+        SyncOperation.fxOperationCreate => 22,
+        SyncOperation.fxMovementCreate => 23,
         _ => 50,
       };
 
@@ -249,6 +319,16 @@ class SyncQueueProcessor {
         return _processSupplierPayment(shopId, item, payload);
       case SyncEntityTable.stockTransfers:
         return _processStockTransfer(shopId, item, payload);
+      case SyncEntityTable.fxRateSnapshots:
+        return _processFxRate(shopId, item, payload);
+      case SyncEntityTable.fxShopCurrencies:
+        return _processFxShopCurrencies(shopId, item, payload);
+      case SyncEntityTable.fxSessions:
+        return _processFxSession(shopId, item, payload);
+      case SyncEntityTable.fxOperations:
+        return _processFxOperation(shopId, item, payload);
+      case SyncEntityTable.fxMovements:
+        return _processFxMovement(shopId, item, payload);
       default:
         await _queue.markFailed(item.id, 'Table inconnue : ${item.entityTable}');
         return true;
@@ -826,6 +906,337 @@ class SyncQueueProcessor {
     }
   }
 
+  Future<bool> _processFxRate(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final existingServerId =
+        await _fxExchangeLocal.findRateServerId(shopId, item.recordId);
+    if (existingServerId != null) return true;
+
+    if (item.operation != SyncOperation.create) {
+      throw ValidationFailure('Opération taux FX inconnue : ${item.operation}');
+    }
+
+    final created = await _fxExchangeRemote.createRate(
+      CreateFxRateRequest(
+        quoteCurrency: payload['quoteCurrency'] as String,
+        buyRateNumerator: (payload['buyRateNumerator'] as num).toInt(),
+        buyRateDenominator: (payload['buyRateDenominator'] as num).toInt(),
+        sellRateNumerator: (payload['sellRateNumerator'] as num).toInt(),
+        sellRateDenominator: (payload['sellRateDenominator'] as num).toInt(),
+        applyMode: payload['applyMode'] as String? ?? 'next_session',
+      ),
+    );
+    await _fxExchangeLocal.updateRateServerSync(
+      rateId: item.recordId,
+      serverId: '${created.id}',
+    );
+    return true;
+  }
+
+  Future<bool> _processFxShopCurrencies(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final currencies = payload['currencies'];
+    if (currencies is! List) return true;
+
+    await _fxExchangeRemote.upsertShopCurrencies(
+      currencies
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(),
+    );
+    return true;
+  }
+
+  Future<bool> _processFxSession(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final session =
+        await _fxExchangeLocal.findSessionForSync(shopId, item.recordId);
+    if (session == null) return true;
+
+    var serverId =
+        await _fxExchangeLocal.findSessionServerId(shopId, item.recordId);
+
+    switch (item.operation) {
+      case SyncOperation.fxSessionOpen:
+        if (serverId != null) return true;
+        try {
+          final openingBalances =
+              (payload['openingBalances'] as List<dynamic>? ?? const [])
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList();
+          final opened = await _fxExchangeRemote.openSession(
+            OpenFxSessionRequest(openingBalances: openingBalances),
+          );
+          await _fxExchangeLocal.updateSessionServerSync(
+            sessionId: session.id,
+            serverId: '${opened.id}',
+          );
+          return true;
+        } on ConflictFailure catch (error) {
+          if (!_isFxSessionAlreadyOpen(error)) rethrow;
+          serverId = await _linkOpenFxServerSession(
+            shopId: shopId,
+            localSessionId: session.id,
+          );
+          return serverId != null;
+        }
+
+      case SyncOperation.fxSessionClose:
+        serverId ??= await _linkOpenFxServerSession(
+          shopId: shopId,
+          localSessionId: session.id,
+        );
+        if (serverId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Session FX non synchronisée (ouverture en attente).',
+          );
+          return false;
+        }
+        try {
+          final countedBalances =
+              (payload['countedBalances'] as List<dynamic>? ?? const [])
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList();
+          await _fxExchangeRemote.closeSession(
+            int.parse(serverId),
+            CloseFxSessionRequest(
+              countedBalances: countedBalances,
+              closingNote: payload['closingNote'] as String?,
+            ),
+          );
+        } on ConflictFailure catch (error) {
+          if (!_isFxSessionAlreadyPendingOrClosed(error)) rethrow;
+        }
+        await _fxExchangeLocal.updateSessionServerSync(
+          sessionId: session.id,
+          serverId: serverId,
+        );
+        return true;
+
+      case SyncOperation.fxSessionConfirmClose:
+        serverId ??= await _linkOpenFxServerSession(
+          shopId: shopId,
+          localSessionId: session.id,
+        );
+        if (serverId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Session FX non synchronisée.',
+          );
+          return false;
+        }
+        try {
+          await _fxExchangeRemote.confirmCloseSession(int.parse(serverId));
+        } on ConflictFailure catch (error) {
+          if (!_isFxSessionAlreadyClosed(error)) rethrow;
+        }
+        await _fxExchangeLocal.updateSessionServerSync(
+          sessionId: session.id,
+          serverId: serverId,
+        );
+        return true;
+
+      case SyncOperation.fxSessionCancelClose:
+        serverId ??= await _linkOpenFxServerSession(
+          shopId: shopId,
+          localSessionId: session.id,
+        );
+        if (serverId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Session FX non synchronisée.',
+          );
+          return false;
+        }
+        try {
+          await _fxExchangeRemote.cancelPendingClose(int.parse(serverId));
+        } on ConflictFailure catch (_) {
+          // Déjà rouverte ou absente : on considère OK.
+        }
+        await _fxExchangeLocal.updateSessionServerSync(
+          sessionId: session.id,
+          serverId: serverId,
+        );
+        return true;
+
+      default:
+        throw ValidationFailure(
+          'Opération session FX inconnue : ${item.operation}',
+        );
+    }
+  }
+
+  Future<String?> _linkOpenFxServerSession({
+    required int shopId,
+    required int localSessionId,
+  }) async {
+    try {
+      final open = await _fxExchangeRemote.fetchOpenSession();
+      final remote = open.session;
+      if (remote == null) return null;
+      final serverId = '${remote.id}';
+      await _fxExchangeLocal.updateSessionServerSync(
+        sessionId: localSessionId,
+        serverId: serverId,
+      );
+      return serverId;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _isFxSessionAlreadyOpen(ConflictFailure error) {
+    final message = error.message.toLowerCase();
+    return message.contains('déjà ouverte') ||
+        message.contains('deja ouverte') ||
+        message.contains('already open');
+  }
+
+  bool _isFxSessionAlreadyClosed(ConflictFailure error) {
+    final message = error.message.toLowerCase();
+    return message.contains('déjà clôturée') ||
+        message.contains('deja cloturee') ||
+        message.contains('déjà cloturée') ||
+        message.contains('already closed');
+  }
+
+  bool _isFxSessionAlreadyPendingOrClosed(ConflictFailure error) {
+    final message = error.message.toLowerCase();
+    return _isFxSessionAlreadyClosed(error) ||
+        message.contains('déjà été soumis') ||
+        message.contains('deja ete soumis') ||
+        message.contains('attente de validation');
+  }
+
+  Future<bool> _processFxOperation(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final existingServerId =
+        await _fxExchangeLocal.findOperationServerId(shopId, item.recordId);
+    if (existingServerId != null) return true;
+
+    if (item.operation != SyncOperation.fxOperationCreate) {
+      throw ValidationFailure(
+        'Opération FX inconnue : ${item.operation}',
+      );
+    }
+
+    final localSessionId = (payload['sessionId'] as num?)?.toInt();
+    if (localSessionId == null) return true;
+
+    final sessionServerId = await _fxExchangeLocal.findSessionServerId(
+      shopId,
+      localSessionId,
+    );
+    if (sessionServerId == null) {
+      await _queue.markDeferred(
+        item.id,
+        'Session FX non synchronisée.',
+      );
+      return false;
+    }
+
+    int? remoteCustomerId;
+    final localCustomerId = (payload['customerId'] as num?)?.toInt();
+    if (localCustomerId != null) {
+      final customer =
+          await _customersLocal.findCustomer(shopId, localCustomerId);
+      if (customer == null || customer.serverId == null) {
+        await _queue.markDeferred(
+          item.id,
+          'Client FX non synchronisé.',
+        );
+        return false;
+      }
+      remoteCustomerId = int.tryParse(customer.serverId!);
+      if (remoteCustomerId == null) {
+        await _queue.markDeferred(
+          item.id,
+          'Client FX serverId invalide.',
+        );
+        return false;
+      }
+    }
+
+    final created = await _fxExchangeRemote.createOperation(
+      int.parse(sessionServerId),
+      CreateFxOperationRequest(
+        operationType: payload['operationType'] as String? ?? 'buy',
+        fromCurrency: payload['fromCurrency'] as String,
+        fromAmount: (payload['fromAmount'] as num).toInt(),
+        toCurrency: payload['toCurrency'] as String,
+        toAmount: (payload['toAmount'] as num).toInt(),
+        customerId: remoteCustomerId,
+        note: payload['note'] as String?,
+      ),
+    );
+    await _fxExchangeLocal.updateOperationServerSync(
+      operationId: item.recordId,
+      serverId: '${created.id}',
+    );
+    return true;
+  }
+
+  Future<bool> _processFxMovement(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final existingServerId =
+        await _fxExchangeLocal.findMovementServerId(shopId, item.recordId);
+    if (existingServerId != null) return true;
+
+    if (item.operation != SyncOperation.fxMovementCreate) {
+      throw ValidationFailure(
+        'Mouvement FX inconnu : ${item.operation}',
+      );
+    }
+
+    final localSessionId = (payload['sessionId'] as num?)?.toInt();
+    if (localSessionId == null) return true;
+
+    final sessionServerId = await _fxExchangeLocal.findSessionServerId(
+      shopId,
+      localSessionId,
+    );
+    if (sessionServerId == null) {
+      await _queue.markDeferred(
+        item.id,
+        'Session FX non synchronisée.',
+      );
+      return false;
+    }
+
+    final created = await _fxExchangeRemote.createMovement(
+      int.parse(sessionServerId),
+      CreateFxMovementRequest(
+        currencyCode: payload['currencyCode'] as String,
+        movementType: payload['movementType'] as String? ?? 'deposit',
+        amount: (payload['amount'] as num).toInt(),
+        note: payload['note'] as String?,
+      ),
+    );
+    await _fxExchangeLocal.updateMovementServerSync(
+      movementId: item.recordId,
+      serverId: '${created.id}',
+    );
+    return true;
+  }
+
   Future<Map<String, dynamic>> _buildExpenseBody(
     int shopId,
     Expense expense,
@@ -949,7 +1360,13 @@ class SyncQueueProcessor {
     Map<String, dynamic> payload,
   ) async {
     final enabled = payload['enabled'] as bool? ?? false;
-    await _calculatorsRemote.toggleModule(enabled);
+    final moduleCode = payload['moduleCode'] as String?;
+    if (moduleCode == fxModuleCode) {
+      await _fxExchangeRemote.toggleModule(enabled);
+    } else {
+      // CALCULATORS ou payloads legacy sans moduleCode.
+      await _calculatorsRemote.toggleModule(enabled);
+    }
     return true;
   }
 
@@ -2528,6 +2945,30 @@ class SyncQueueProcessor {
     final lower = message.toLowerCase();
     return lower.contains('boutique destination');
   }
+}
+
+enum _QueueItemOutcome { processed, deferred, conflict, failed }
+
+Future<List<R>> _mapWithConcurrency<T, R>(
+  List<T> items, {
+  required int maxConcurrent,
+  required Future<R> Function(T item) mapper,
+}) async {
+  if (items.isEmpty) return const [];
+  final limit = maxConcurrent < 1 ? 1 : maxConcurrent.clamp(1, items.length);
+  final results = List<R?>.filled(items.length, null);
+  var nextIndex = 0;
+
+  Future<void> worker() async {
+    while (true) {
+      final i = nextIndex++;
+      if (i >= items.length) return;
+      results[i] = await mapper(items[i]);
+    }
+  }
+
+  await Future.wait(List.generate(limit, (_) => worker()));
+  return results.cast<R>();
 }
 
 class SyncQueueProcessResult {

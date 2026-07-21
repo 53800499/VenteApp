@@ -41,77 +41,125 @@ class _FxMovementPageState extends State<FxMovementPage> {
       Permission.fxExchangeAdjust,
     );
 
+    final amount = int.tryParse(_amountCtrl.text.replaceAll(' ', ''));
+    final canSubmit = !bloc.state.isSubmitting &&
+        _currencyCode != null &&
+        amount != null &&
+        amount > 0 &&
+        (_type != FxMovementType.adjustment ||
+            _noteCtrl.text.trim().isNotEmpty);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Mouvement manuel')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
+      body: Column(
         children: [
-          DropdownButtonFormField<FxMovementType>(
-            value: _type,
-            decoration: const InputDecoration(labelText: 'Type'),
-            items: [
-              const DropdownMenuItem(
-                value: FxMovementType.deposit,
-                child: Text('Dépôt'),
-              ),
-              const DropdownMenuItem(
-                value: FxMovementType.withdrawal,
-                child: Text('Retrait'),
-              ),
-              if (canAdjust)
-                const DropdownMenuItem(
-                  value: FxMovementType.adjustment,
-                  child: Text('Ajustement'),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              children: [
+                Text(
+                  'Type',
+                  style: Theme.of(context).textTheme.titleSmall,
                 ),
-            ],
-            onChanged: (v) => setState(() => _type = v ?? _type),
-          ),
-          DropdownButtonFormField<String>(
-            value: _currencyCode,
-            decoration: const InputDecoration(labelText: 'Devise'),
-            items: codes
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                .toList(),
-            onChanged: (v) => setState(() => _currencyCode = v),
-          ),
-          TextField(
-            controller: _amountCtrl,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Montant'),
-          ),
-          TextField(
-            controller: _noteCtrl,
-            decoration: InputDecoration(
-              labelText: _type == FxMovementType.adjustment
-                  ? 'Justification (obligatoire)'
-                  : 'Note',
+                const SizedBox(height: AppSpacing.sm),
+                SegmentedButton<FxMovementType>(
+                  segments: [
+                    const ButtonSegment(
+                      value: FxMovementType.deposit,
+                      label: Text('Dépôt'),
+                      icon: Icon(Icons.add, size: 16),
+                    ),
+                    const ButtonSegment(
+                      value: FxMovementType.withdrawal,
+                      label: Text('Retrait'),
+                      icon: Icon(Icons.remove, size: 16),
+                    ),
+                    if (canAdjust)
+                      const ButtonSegment(
+                        value: FxMovementType.adjustment,
+                        label: Text('Ajust.'),
+                        icon: Icon(Icons.tune, size: 16),
+                      ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (values) {
+                    setState(() => _type = values.first);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: _currencyCode,
+                  decoration: const InputDecoration(
+                    labelText: 'Devise',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.currency_exchange),
+                  ),
+                  items: codes
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _currencyCode = v),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: _amountCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Montant',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.payments_outlined),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: _noteCtrl,
+                  decoration: InputDecoration(
+                    labelText: _type == FxMovementType.adjustment
+                        ? 'Justification (obligatoire)'
+                        : 'Note (optionnel)',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.notes_outlined),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(
-            onPressed: bloc.state.isSubmitting || _currencyCode == null
-                ? null
-                : () {
-                    final amount =
-                        int.tryParse(_amountCtrl.text.replaceAll(' ', ''));
-                    if (amount == null || amount <= 0) return;
-
-                    bloc.add(
-                      FxCreateMovementRequested(
-                        allowNegativeBalance: canAdjust,
-                        input: CreateFxMovementInput(
-                          currencyCode: _currencyCode!,
-                          movementType: _type,
-                          amount: amount,
-                          note: _noteCtrl.text.trim().isEmpty
-                              ? null
-                              : _noteCtrl.text.trim(),
-                        ),
-                      ),
-                    );
-                    Navigator.pop(context);
-                  },
-            child: const Text('Enregistrer'),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.md,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: AppSizes.controlHeight,
+                child: FilledButton(
+                  onPressed: !canSubmit
+                      ? null
+                      : () {
+                          bloc.add(
+                            FxCreateMovementRequested(
+                              allowNegativeBalance: canAdjust,
+                              input: CreateFxMovementInput(
+                                currencyCode: _currencyCode!,
+                                movementType: _type,
+                                amount: amount,
+                                note: _noteCtrl.text.trim().isEmpty
+                                    ? null
+                                    : _noteCtrl.text.trim(),
+                              ),
+                            ),
+                          );
+                          Navigator.pop(context);
+                        },
+                  child: const Text('Enregistrer'),
+                ),
+              ),
+            ),
           ),
         ],
       ),

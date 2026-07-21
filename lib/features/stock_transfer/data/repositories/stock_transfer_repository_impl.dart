@@ -724,11 +724,19 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       // Best-effort : aligner les serverId avant de mapper source/destination.
     }
 
-    final outgoing = await _remote.fetchOutgoing();
-    final incoming = await _remote.fetchIncoming();
+    // Delta : premier sync = full ; ensuite uniquement les modifiés.
+    final updatedAfter = force
+        ? null
+        : await _syncPolicy.entityUpdatedAfterCursor(
+            shopId: shopId,
+            entity: SyncPullEntity.stockTransfers,
+          );
+
+    final outgoing = await _remote.fetchOutgoing(updatedAfter: updatedAfter);
+    final incoming = await _remote.fetchIncoming(updatedAfter: updatedAfter);
     List<Map<String, dynamic>> inTransit = const [];
     try {
-      inTransit = await _remote.fetchInTransit();
+      inTransit = await _remote.fetchInTransit(updatedAfter: updatedAfter);
     } catch (_) {}
     final seenServerIds = <String>{};
     final all = <Map<String, dynamic>>[];
@@ -754,12 +762,34 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       final serverId = raw['id']?.toString();
       if (serverId == null) continue;
 
-      Map<String, dynamic> detail = raw;
+      final remoteVersion = (raw['version'] as num?)?.toInt() ?? 1;
+      final localMeta =
+          await _local.findTransferSyncMetaByServerId(serverId);
+
+      // Déjà à jour localement avec lignes : pas de GET détail ni d'upsert.
+      if (localMeta != null &&
+          localMeta.hasItems &&
+          localMeta.version >= remoteVersion) {
+        continue;
+      }
+
       final serverInt = int.tryParse(serverId);
-      if (serverInt != null) {
-        try {
-          detail = await _remote.fetchTransfer(serverInt);
-        } catch (_) {}
+      if (serverInt == null) continue;
+
+      // Jamais avancer version/status avec le résumé liste (sans items) :
+      // un GET échoué + upsert liste figerait des quantités obsolètes.
+      Map<String, dynamic> detail;
+      try {
+        detail = await _remote.fetchTransfer(serverInt);
+      } catch (_) {
+        continue;
+      }
+
+      final remoteItems = detail['items'];
+      final hasRemoteItems = remoteItems is List && remoteItems.isNotEmpty;
+      if (!hasRemoteItems && (localMeta == null || !localMeta.hasItems)) {
+        // Détail incomplet : réessayer au prochain cycle.
+        continue;
       }
 
       await _local.upsertTransferFromRemoteDetail(
@@ -773,6 +803,45 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
       shopId: shopId,
       entity: SyncPullEntity.stockTransfers,
     );
+  }
+
+  @override
+  Future<StockTransfer?> refreshTransferFromRemote({
+    required int shopId,
+    required int transferId,
+    int? importUserId,
+  }) async {
+    if (!await _syncPolicy.shouldRunCloudSync(shopId: shopId)) {
+      return findTransfer(transferId: transferId, shopId: shopId);
+    }
+
+    try {
+      await _apiGuard.ensureReady();
+    } catch (_) {
+      return findTransfer(transferId: transferId, shopId: shopId);
+    }
+
+    final local = await _local.findTransfer(transferId);
+    final serverIdRaw = local?.serverId ?? await _local.findTransferServerId(transferId);
+    final serverId = int.tryParse(serverIdRaw?.trim() ?? '');
+    if (serverId == null) {
+      return findTransfer(transferId: transferId, shopId: shopId);
+    }
+
+    try {
+      final detail = await _remote.fetchTransfer(serverId);
+      final fallbackUserId =
+          importUserId ?? await _local.resolveFallbackUserId(shopId);
+      await _local.upsertTransferFromRemoteDetail(
+        currentShopId: shopId,
+        detail: detail,
+        importUserId: fallbackUserId,
+      );
+    } catch (_) {
+      // Hors ligne : conserver le détail local.
+    }
+
+    return findTransfer(transferId: transferId, shopId: shopId);
   }
 
   void _pushTransferCreateInBackground({

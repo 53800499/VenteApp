@@ -189,7 +189,8 @@ class StockTransferLocalDatasource {
           )
           ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
         .get();
-    final transfers = await _mapTransfers(rows);
+    // Articles chargés pour filtrer correctement la réception en attente.
+    final transfers = await _mapTransfers(rows, includeItems: true);
     return transfers
         .where((transfer) => transfer.pendingReceptionQuantity > 0)
         .toList(growable: false);
@@ -2923,6 +2924,29 @@ class StockTransferLocalDatasource {
           ..limit(1))
         .get();
     return rows.firstOrNull?.id;
+  }
+
+  /// Métadonnées locales pour décider si un GET détail est nécessaire.
+  Future<({int version, int updatedAt, bool hasItems, String status})?>
+      findTransferSyncMetaByServerId(String serverId) async {
+    final row = await (_db.select(_db.stockTransfers)
+          ..where((t) => t.serverId.equals(serverId))
+          ..orderBy([(t) => OrderingTerm.asc(t.id)])
+          ..limit(1))
+        .getSingleOrNull();
+    if (row == null) return null;
+
+    final hasItem = await (_db.select(_db.stockTransferItems)
+          ..where((i) => i.transferId.equals(row.id))
+          ..limit(1))
+        .getSingleOrNull();
+
+    return (
+      version: row.version,
+      updatedAt: row.updatedAt,
+      hasItems: hasItem != null,
+      status: row.status,
+    );
   }
 
   Future<int?> findTransferLocalIdByReference({

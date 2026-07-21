@@ -21,6 +21,7 @@ class DashboardPage extends StatefulWidget {
     this.onNewSaleTap,
     this.onSalesHistoryTap,
     this.onDebtorsTap,
+    this.onFxExchangeTap,
   });
 
   final AuthSession session;
@@ -28,6 +29,7 @@ class DashboardPage extends StatefulWidget {
   final VoidCallback? onNewSaleTap;
   final VoidCallback? onSalesHistoryTap;
   final VoidCallback? onDebtorsTap;
+  final VoidCallback? onFxExchangeTap;
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -107,6 +109,22 @@ class _DashboardPageState extends State<DashboardPage> {
                         userName: widget.session.user.name,
                         date: data.date,
                       ),
+                      if (widget.onFxExchangeTap != null) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            Icons.currency_exchange,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          title: const Text('Bureau de change'),
+                          subtitle: const Text(
+                            'Ouvrir le module — ou activez « Change en écran d’accueil »',
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: widget.onFxExchangeTap,
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       RevenueHeroCard(
                         revenue: data.kpis.totalRevenue,

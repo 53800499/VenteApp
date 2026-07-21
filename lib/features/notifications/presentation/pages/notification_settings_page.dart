@@ -9,6 +9,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../data/datasources/local/notifications_local_datasource.dart';
 import '../../domain/usecases/notification_usecases.dart';
 import '../bloc/notification_settings_bloc.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 class NotificationSettingsPage extends StatelessWidget {
   const NotificationSettingsPage({super.key, required this.session});
@@ -38,6 +39,7 @@ class _NotificationSettingsView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alertes'),
+        actions: const [ModuleHelpButton(articleId: 'notifications')],
       ),
       body: Column(
         children: [

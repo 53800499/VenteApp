@@ -8,13 +8,23 @@ class StockTransferRemoteDatasource {
 
   final ApiClient _client;
 
-  Future<List<Map<String, dynamic>>> fetchOutgoing() async {
-    final data = await _getData('/stock-transfers/outgoing');
+  Future<List<Map<String, dynamic>>> fetchOutgoing({int? updatedAfter}) async {
+    final data = await _getData(
+      '/stock-transfers/outgoing',
+      query: {
+        if (updatedAfter != null) 'updatedAfter': '$updatedAfter',
+      },
+    );
     return _asListOfMaps(data);
   }
 
-  Future<List<Map<String, dynamic>>> fetchIncoming() async {
-    final data = await _getData('/stock-transfers/incoming');
+  Future<List<Map<String, dynamic>>> fetchIncoming({int? updatedAfter}) async {
+    final data = await _getData(
+      '/stock-transfers/incoming',
+      query: {
+        if (updatedAfter != null) 'updatedAfter': '$updatedAfter',
+      },
+    );
     return _asListOfMaps(data);
   }
 
@@ -65,8 +75,13 @@ class StockTransferRemoteDatasource {
     return data is Map<String, dynamic> ? data : {};
   }
 
-  Future<List<Map<String, dynamic>>> fetchInTransit() async {
-    final data = await _getData('/stock-transfers/in-transit');
+  Future<List<Map<String, dynamic>>> fetchInTransit({int? updatedAfter}) async {
+    final data = await _getData(
+      '/stock-transfers/in-transit',
+      query: {
+        if (updatedAfter != null) 'updatedAfter': '$updatedAfter',
+      },
+    );
     return _asListOfMaps(data);
   }
 

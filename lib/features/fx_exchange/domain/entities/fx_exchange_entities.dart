@@ -5,17 +5,24 @@ const fxModuleCode = 'FX_EXCHANGE';
 
 enum FxSessionStatus {
   open,
+  pendingClose,
   closed;
 
-  String get code => name;
+  String get code => switch (this) {
+        FxSessionStatus.open => 'open',
+        FxSessionStatus.pendingClose => 'pending_close',
+        FxSessionStatus.closed => 'closed',
+      };
 
   static FxSessionStatus fromCode(String code) => switch (code) {
         'closed' => FxSessionStatus.closed,
+        'pending_close' => FxSessionStatus.pendingClose,
         _ => FxSessionStatus.open,
       };
 
   String get label => switch (this) {
         FxSessionStatus.open => 'Ouverte',
+        FxSessionStatus.pendingClose => 'En attente de validation',
         FxSessionStatus.closed => 'Clôturée',
       };
 }
@@ -197,6 +204,11 @@ class FxSession extends Equatable {
 
   bool get isOpen => status == FxSessionStatus.open;
 
+  bool get isPendingClose => status == FxSessionStatus.pendingClose;
+
+  /// Session du jour encore active (ouverte ou en attente de validation).
+  bool get isActive => isOpen || isPendingClose;
+
   @override
   List<Object?> get props => [id, shopId, status, openedAt, closedAt];
 }
@@ -236,10 +248,17 @@ class FxOperation extends Equatable {
     required this.toAmount,
     this.rateSnapshotId,
     required this.marginFcfa,
+    this.customerId,
+    this.customerName,
     this.note,
     required this.createdBy,
     required this.createdByName,
     required this.createdAt,
+    this.quoteCurrency,
+    this.sellRateNumerator,
+    this.sellRateDenominator,
+    this.buyRateNumerator,
+    this.buyRateDenominator,
   });
 
   final int id;
@@ -252,13 +271,40 @@ class FxOperation extends Equatable {
   final int toAmount;
   final int? rateSnapshotId;
   final int marginFcfa;
+  final int? customerId;
+  final String? customerName;
   final String? note;
   final int createdBy;
   final String createdByName;
   final int createdAt;
+  final String? quoteCurrency;
+  final int? sellRateNumerator;
+  final int? sellRateDenominator;
+  final int? buyRateNumerator;
+  final int? buyRateDenominator;
+
+  bool get hasSellRate =>
+      quoteCurrency != null &&
+      sellRateNumerator != null &&
+      sellRateDenominator != null &&
+      sellRateDenominator! > 0;
+
+  bool get hasBuyRate =>
+      quoteCurrency != null &&
+      buyRateNumerator != null &&
+      buyRateDenominator != null &&
+      buyRateDenominator! > 0;
 
   @override
-  List<Object?> get props => [id, operationType, fromCurrency, toCurrency, createdAt];
+  List<Object?> get props => [
+        id,
+        operationType,
+        fromCurrency,
+        toCurrency,
+        createdAt,
+        sellRateNumerator,
+        buyRateNumerator,
+      ];
 }
 
 class FxMovement extends Equatable {
@@ -313,6 +359,7 @@ class CreateFxRateInput {
     required this.buyRateDenominator,
     required this.sellRateNumerator,
     required this.sellRateDenominator,
+    this.applyMode = FxRateApplyMode.nextSession,
   });
 
   final String quoteCurrency;
@@ -320,6 +367,29 @@ class CreateFxRateInput {
   final int buyRateDenominator;
   final int sellRateNumerator;
   final int sellRateDenominator;
+
+  /// Si une session est ouverte : `now` met à jour les taux de session,
+  /// `nextSession` archive le snapshot sans toucher aux ops en cours.
+  final FxRateApplyMode applyMode;
+}
+
+/// Politique d'application d'un nouveau taux.
+enum FxRateApplyMode {
+  /// Appliquer immédiatement aux prochaines opérations de la session ouverte.
+  now,
+
+  /// Conserver les taux de session ; le snapshot servira à la prochaine ouverture.
+  nextSession;
+
+  String get code => switch (this) {
+        FxRateApplyMode.now => 'now',
+        FxRateApplyMode.nextSession => 'next_session',
+      };
+
+  static FxRateApplyMode fromCode(String? code) => switch (code) {
+        'now' => FxRateApplyMode.now,
+        _ => FxRateApplyMode.nextSession,
+      };
 }
 
 class CreateFxOperationInput {
@@ -329,6 +399,7 @@ class CreateFxOperationInput {
     required this.fromAmount,
     required this.toCurrency,
     required this.toAmount,
+    this.customerId,
     this.note,
   });
 
@@ -337,6 +408,7 @@ class CreateFxOperationInput {
   final int fromAmount;
   final String toCurrency;
   final int toAmount;
+  final int? customerId;
   final String? note;
 }
 
@@ -389,6 +461,30 @@ class FxDailyReport extends Equatable {
 
   @override
   List<Object?> get props => [session.id, operations.length, movements.length];
+}
+
+/// Rapport agrégé sur une plage de dates (ops + mouvements).
+class FxPeriodReport extends Equatable {
+  const FxPeriodReport({
+    required this.fromMs,
+    required this.toMs,
+    required this.operations,
+    required this.movements,
+    required this.totalMarginFcfa,
+    required this.volumeByCurrency,
+    required this.sessionCount,
+  });
+
+  final int fromMs;
+  final int toMs;
+  final List<FxOperation> operations;
+  final List<FxMovement> movements;
+  final int totalMarginFcfa;
+  final Map<String, int> volumeByCurrency;
+  final int sessionCount;
+
+  @override
+  List<Object?> get props => [fromMs, toMs, operations.length, movements.length];
 }
 
 class UpsertFxShopCurrencyInput {

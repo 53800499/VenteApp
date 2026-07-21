@@ -167,10 +167,13 @@ class FxSessionDto {
     required this.totalMarginFcfa,
     required this.operationCount,
     this.balances = const [],
+    this.sessionRates = const [],
   });
 
   factory FxSessionDto.fromJson(Map<String, dynamic> json) {
     final balancesJson = json['balances'] as List<dynamic>?;
+    final ratesJson = json['sessionRates'] as List<dynamic>? ??
+        json['session_rates'] as List<dynamic>?;
     return FxSessionDto(
       id: (json['id'] as num).toInt(),
       shopId: (json['shopId'] as num?)?.toInt() ??
@@ -197,6 +200,12 @@ class FxSessionDto {
               )
               .toList() ??
           const [],
+      sessionRates: ratesJson
+              ?.map(
+                (e) => FxSessionRateDto.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const [],
     );
   }
 
@@ -211,6 +220,34 @@ class FxSessionDto {
   final int totalMarginFcfa;
   final int operationCount;
   final List<FxSessionBalanceDto> balances;
+  final List<FxSessionRateDto> sessionRates;
+}
+
+class FxSessionRateDto {
+  FxSessionRateDto({
+    required this.quoteCurrency,
+    required this.rateSnapshotId,
+    required this.appliedAt,
+    this.id,
+  });
+
+  factory FxSessionRateDto.fromJson(Map<String, dynamic> json) {
+    return FxSessionRateDto(
+      id: (json['id'] as num?)?.toInt(),
+      quoteCurrency: json['quoteCurrency'] as String? ??
+          json['quote_currency'] as String,
+      rateSnapshotId: (json['rateSnapshotId'] as num?)?.toInt() ??
+          (json['rate_snapshot_id'] as num).toInt(),
+      appliedAt: (json['appliedAt'] as num?)?.toInt() ??
+          (json['applied_at'] as num?)?.toInt() ??
+          0,
+    );
+  }
+
+  final int? id;
+  final String quoteCurrency;
+  final int rateSnapshotId;
+  final int appliedAt;
 }
 
 class FxOpenSessionStateDto {
@@ -250,6 +287,7 @@ class FxOperationDto {
     required this.toAmount,
     this.rateSnapshotId,
     required this.marginFcfa,
+    this.customerId,
     this.note,
     required this.createdBy,
     required this.createdAt,
@@ -277,6 +315,8 @@ class FxOperationDto {
       marginFcfa: (json['marginFcfa'] as num?)?.toInt() ??
           (json['margin_fcfa'] as num?)?.toInt() ??
           0,
+      customerId: (json['customerId'] as num?)?.toInt() ??
+          (json['customer_id'] as num?)?.toInt(),
       note: json['note'] as String?,
       createdBy: (json['createdBy'] as num?)?.toInt() ??
           (json['created_by'] as num).toInt(),
@@ -295,6 +335,7 @@ class FxOperationDto {
   final int toAmount;
   final int? rateSnapshotId;
   final int marginFcfa;
+  final int? customerId;
   final String? note;
   final int createdBy;
   final int createdAt;
@@ -359,6 +400,7 @@ class CreateFxRateRequest {
     required this.buyRateDenominator,
     required this.sellRateNumerator,
     required this.sellRateDenominator,
+    this.applyMode = 'next_session',
   });
 
   final String quoteCurrency;
@@ -366,6 +408,7 @@ class CreateFxRateRequest {
   final int buyRateDenominator;
   final int sellRateNumerator;
   final int sellRateDenominator;
+  final String applyMode;
 
   Map<String, dynamic> toJson() => {
         'quoteCurrency': quoteCurrency,
@@ -373,6 +416,7 @@ class CreateFxRateRequest {
         'buyRateDenominator': buyRateDenominator,
         'sellRateNumerator': sellRateNumerator,
         'sellRateDenominator': sellRateDenominator,
+        'applyMode': applyMode,
       };
 }
 
@@ -406,6 +450,7 @@ class CreateFxOperationRequest {
     required this.fromAmount,
     required this.toCurrency,
     required this.toAmount,
+    this.customerId,
     this.note,
   });
 
@@ -414,6 +459,7 @@ class CreateFxOperationRequest {
   final int fromAmount;
   final String toCurrency;
   final int toAmount;
+  final int? customerId;
   final String? note;
 
   Map<String, dynamic> toJson() => {
@@ -422,6 +468,7 @@ class CreateFxOperationRequest {
         'fromAmount': fromAmount,
         'toCurrency': toCurrency,
         'toAmount': toAmount,
+        if (customerId != null) 'customerId': customerId,
         if (note != null) 'note': note,
       };
 }

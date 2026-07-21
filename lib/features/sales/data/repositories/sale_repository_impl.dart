@@ -468,6 +468,8 @@ class SaleRepositoryImpl implements SaleRepository {
     if (userId == null) return;
 
     final remoteSales = await _remote.listSales();
+    final detailJobs = <Future<void> Function()>[];
+
     for (final sale in remoteSales) {
       await _local.upsertSaleListItemFromRemote(
         shopId: shopId,
@@ -475,39 +477,65 @@ class SaleRepositoryImpl implements SaleRepository {
         remote: sale,
       );
 
-      if (sale.saleType == 'standard') {
-        final serverId = '${sale.id}';
-        final needsItems = !await _local.hasSaleItems(shopId, serverId);
-        final needsUnitCostBackfill =
-            !needsItems && await _local.saleItemsNeedUnitCostBackfill(shopId, serverId);
-        final needsPayment =
-            await _local.saleNeedsPaymentDetail(shopId, serverId);
-        if (needsItems || needsUnitCostBackfill || needsPayment) {
-          try {
-            final detail = await _remote.getSale(sale.id);
-            if (needsItems || needsUnitCostBackfill) {
-              await _local.upsertSaleItemsFromRemote(
-                shopId: shopId,
-                serverId: serverId,
-                items: detail.items,
-              );
-            }
-            if (needsPayment) {
-              await _local.upsertSalePaymentDetailFromRemote(
-                shopId: shopId,
-                detail: detail,
-              );
-            }
-          } catch (_) {
-            // Ignore single sale detail fetch error
+      if (sale.saleType != 'standard') continue;
+
+      final serverId = '${sale.id}';
+      final needsItems = !await _local.hasSaleItems(shopId, serverId);
+      final needsUnitCostBackfill =
+          !needsItems && await _local.saleItemsNeedUnitCostBackfill(shopId, serverId);
+      final needsPayment =
+          await _local.saleNeedsPaymentDetail(shopId, serverId);
+      if (!needsItems && !needsUnitCostBackfill && !needsPayment) continue;
+
+      final saleId = sale.id;
+      detailJobs.add(() async {
+        try {
+          final detail = await _remote.getSale(saleId);
+          if (needsItems || needsUnitCostBackfill) {
+            await _local.upsertSaleItemsFromRemote(
+              shopId: shopId,
+              serverId: serverId,
+              items: detail.items,
+            );
           }
+          if (needsPayment) {
+            await _local.upsertSalePaymentDetailFromRemote(
+              shopId: shopId,
+              detail: detail,
+            );
+          }
+        } catch (_) {
+          // Ignore single sale detail fetch error
         }
-      }
+      });
     }
+
+    await _runWithConcurrency(detailJobs, maxConcurrent: 3);
 
     await _syncPolicy.markEntitySynced(
       shopId: shopId,
       entity: SyncPullEntity.sales,
     );
   }
+}
+
+Future<void> _runWithConcurrency(
+  List<Future<void> Function()> jobs, {
+  int maxConcurrent = 3,
+}) async {
+  if (jobs.isEmpty) return;
+  final limit = maxConcurrent < 1 ? 1 : maxConcurrent;
+  var index = 0;
+
+  Future<void> worker() async {
+    while (true) {
+      final i = index++;
+      if (i >= jobs.length) return;
+      await jobs[i]();
+    }
+  }
+
+  await Future.wait(
+    List.generate(limit.clamp(1, jobs.length), (_) => worker()),
+  );
 }

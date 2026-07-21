@@ -489,7 +489,7 @@ class SalesLocalDatasource {
   Future<bool> saleNeedsPaymentDetail(int shopId, String serverId) async {
     final sale = await _firstSaleByServerId(shopId, serverId);
     if (sale == null) return true;
-    if (sale.customerId == null) return true;
+    // Walk-in (customerId null) : pas de GET si les montants sont déjà connus.
     return sale.amountCash == 0 &&
         sale.amountMomo == 0 &&
         sale.amountCredit == 0 &&

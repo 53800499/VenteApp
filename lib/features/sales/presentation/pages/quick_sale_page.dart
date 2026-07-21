@@ -10,6 +10,7 @@ import '../../domain/entities/sale_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
 import '../../../cash_sessions/domain/usecases/cash_session_usecases.dart';
 import '../widgets/sale_feedback.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'sale_receipt_page.dart';
 
 class QuickSalePage extends StatefulWidget {
@@ -132,7 +133,10 @@ class _QuickSalePageState extends State<QuickSalePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Vente rapide')),
+      appBar: AppBar(
+        title: const Text('Vente rapide'),
+        actions: const [ModuleHelpButton(articleId: 'quick_sale')],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [

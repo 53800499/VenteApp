@@ -11,6 +11,7 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/debt_entities.dart';
 import '../../domain/usecases/debt_usecases.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'debt_detail_page.dart';
 
 class ForgivenDebtsPage extends StatelessWidget {
@@ -23,6 +24,7 @@ class ForgivenDebtsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dettes pardonnées'),
+        actions: const [ModuleHelpButton(articleId: 'debts')],
       ),
       body: ForgivenDebtsList(session: session),
     );

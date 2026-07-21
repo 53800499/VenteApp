@@ -14,6 +14,7 @@ import '../../domain/entities/sales_analysis_entities.dart';
 import '../../domain/usecases/sales_analysis_usecases.dart';
 import '../bloc/sales_analysis_bloc.dart';
 import '../utils/sales_analysis_formatters.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'product_sales_detail_page.dart';
 
 Future<void> _refreshSalesAnalysis(BuildContext context) async {
@@ -142,6 +143,7 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
       appBar: AppBar(
         title: const Text('Analyse des ventes'),
         actions: [
+          const ModuleHelpButton(articleId: 'sales_analysis'),
           IconButton(
             tooltip: 'Actualiser',
             icon: const Icon(Icons.refresh),

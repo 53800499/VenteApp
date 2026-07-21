@@ -22,6 +22,7 @@ import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../notifications/presentation/pages/notification_settings_page.dart';
 import '../../../../shared/components/feature_ui.dart';
 import '../../../help/presentation/pages/help_hub_page.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import '../../domain/entities/settings_entities.dart';
 import '../../domain/services/settings_validation_service.dart';
 import '../../domain/usecases/settings_usecases.dart';
@@ -57,7 +58,10 @@ class SettingsPage extends StatelessWidget {
 
     if (!_canRead) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Paramètres')),
+        appBar: AppBar(
+          title: const Text('Paramètres'),
+          actions: const [ModuleHelpButton(articleId: 'settings_security')],
+        ),
         body: const Center(
           child: Text('Vous n\'avez pas accès aux paramètres.'),
         ),
@@ -152,7 +156,10 @@ class _SettingsViewState extends State<_SettingsView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Paramètres')),
+      appBar: AppBar(
+        title: const Text('Paramètres'),
+        actions: const [ModuleHelpButton(articleId: 'settings_security')],
+      ),
       body: Column(
         children: [
           const OfflineModeBanner(

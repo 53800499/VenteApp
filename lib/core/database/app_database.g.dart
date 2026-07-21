@@ -2081,6 +2081,32 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _fxCustomerRequiredAboveFcfaMeta =
+      const VerificationMeta('fxCustomerRequiredAboveFcfa');
+  @override
+  late final GeneratedColumn<int> fxCustomerRequiredAboveFcfa =
+      GeneratedColumn<int>(
+        'fx_customer_required_above_fcfa',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
+  static const VerificationMeta _fxPrimaryWorkspaceMeta =
+      const VerificationMeta('fxPrimaryWorkspace');
+  @override
+  late final GeneratedColumn<bool> fxPrimaryWorkspace = GeneratedColumn<bool>(
+    'fx_primary_workspace',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("fx_primary_workspace" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
   );
@@ -2117,6 +2143,8 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
     cloudLastSyncAt,
     autoLockMinutes,
     pricingTiersEnabled,
+    fxCustomerRequiredAboveFcfa,
+    fxPrimaryWorkspace,
     updatedAt,
   ];
   @override
@@ -2316,6 +2344,24 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
         ),
       );
     }
+    if (data.containsKey('fx_customer_required_above_fcfa')) {
+      context.handle(
+        _fxCustomerRequiredAboveFcfaMeta,
+        fxCustomerRequiredAboveFcfa.isAcceptableOrUnknown(
+          data['fx_customer_required_above_fcfa']!,
+          _fxCustomerRequiredAboveFcfaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fx_primary_workspace')) {
+      context.handle(
+        _fxPrimaryWorkspaceMeta,
+        fxPrimaryWorkspace.isAcceptableOrUnknown(
+          data['fx_primary_workspace']!,
+          _fxPrimaryWorkspaceMeta,
+        ),
+      );
+    }
     if (data.containsKey('updated_at')) {
       context.handle(
         _updatedAtMeta,
@@ -2425,6 +2471,14 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
         DriftSqlType.bool,
         data['${effectivePrefix}pricing_tiers_enabled'],
       )!,
+      fxCustomerRequiredAboveFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}fx_customer_required_above_fcfa'],
+      )!,
+      fxPrimaryWorkspace: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}fx_primary_workspace'],
+      )!,
       updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}updated_at'],
@@ -2462,6 +2516,12 @@ class Setting extends DataClass implements Insertable<Setting> {
   final int? cloudLastSyncAt;
   final int autoLockMinutes;
   final bool pricingTiersEnabled;
+
+  /// Seuil FCFA au-delà duquel un client est obligatoire sur une op FX (0 = jamais).
+  final int fxCustomerRequiredAboveFcfa;
+
+  /// Accès direct : onglet Change en racine (usage cambiste).
+  final bool fxPrimaryWorkspace;
   final int updatedAt;
   const Setting({
     required this.id,
@@ -2487,6 +2547,8 @@ class Setting extends DataClass implements Insertable<Setting> {
     this.cloudLastSyncAt,
     required this.autoLockMinutes,
     required this.pricingTiersEnabled,
+    required this.fxCustomerRequiredAboveFcfa,
+    required this.fxPrimaryWorkspace,
     required this.updatedAt,
   });
   @override
@@ -2529,6 +2591,10 @@ class Setting extends DataClass implements Insertable<Setting> {
     }
     map['auto_lock_minutes'] = Variable<int>(autoLockMinutes);
     map['pricing_tiers_enabled'] = Variable<bool>(pricingTiersEnabled);
+    map['fx_customer_required_above_fcfa'] = Variable<int>(
+      fxCustomerRequiredAboveFcfa,
+    );
+    map['fx_primary_workspace'] = Variable<bool>(fxPrimaryWorkspace);
     map['updated_at'] = Variable<int>(updatedAt);
     return map;
   }
@@ -2572,6 +2638,8 @@ class Setting extends DataClass implements Insertable<Setting> {
           : Value(cloudLastSyncAt),
       autoLockMinutes: Value(autoLockMinutes),
       pricingTiersEnabled: Value(pricingTiersEnabled),
+      fxCustomerRequiredAboveFcfa: Value(fxCustomerRequiredAboveFcfa),
+      fxPrimaryWorkspace: Value(fxPrimaryWorkspace),
       updatedAt: Value(updatedAt),
     );
   }
@@ -2613,6 +2681,10 @@ class Setting extends DataClass implements Insertable<Setting> {
       pricingTiersEnabled: serializer.fromJson<bool>(
         json['pricingTiersEnabled'],
       ),
+      fxCustomerRequiredAboveFcfa: serializer.fromJson<int>(
+        json['fxCustomerRequiredAboveFcfa'],
+      ),
+      fxPrimaryWorkspace: serializer.fromJson<bool>(json['fxPrimaryWorkspace']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
     );
   }
@@ -2643,6 +2715,10 @@ class Setting extends DataClass implements Insertable<Setting> {
       'cloudLastSyncAt': serializer.toJson<int?>(cloudLastSyncAt),
       'autoLockMinutes': serializer.toJson<int>(autoLockMinutes),
       'pricingTiersEnabled': serializer.toJson<bool>(pricingTiersEnabled),
+      'fxCustomerRequiredAboveFcfa': serializer.toJson<int>(
+        fxCustomerRequiredAboveFcfa,
+      ),
+      'fxPrimaryWorkspace': serializer.toJson<bool>(fxPrimaryWorkspace),
       'updatedAt': serializer.toJson<int>(updatedAt),
     };
   }
@@ -2671,6 +2747,8 @@ class Setting extends DataClass implements Insertable<Setting> {
     Value<int?> cloudLastSyncAt = const Value.absent(),
     int? autoLockMinutes,
     bool? pricingTiersEnabled,
+    int? fxCustomerRequiredAboveFcfa,
+    bool? fxPrimaryWorkspace,
     int? updatedAt,
   }) => Setting(
     id: id ?? this.id,
@@ -2700,6 +2778,9 @@ class Setting extends DataClass implements Insertable<Setting> {
         : this.cloudLastSyncAt,
     autoLockMinutes: autoLockMinutes ?? this.autoLockMinutes,
     pricingTiersEnabled: pricingTiersEnabled ?? this.pricingTiersEnabled,
+    fxCustomerRequiredAboveFcfa:
+        fxCustomerRequiredAboveFcfa ?? this.fxCustomerRequiredAboveFcfa,
+    fxPrimaryWorkspace: fxPrimaryWorkspace ?? this.fxPrimaryWorkspace,
     updatedAt: updatedAt ?? this.updatedAt,
   );
   Setting copyWithCompanion(SettingsCompanion data) {
@@ -2761,6 +2842,12 @@ class Setting extends DataClass implements Insertable<Setting> {
       pricingTiersEnabled: data.pricingTiersEnabled.present
           ? data.pricingTiersEnabled.value
           : this.pricingTiersEnabled,
+      fxCustomerRequiredAboveFcfa: data.fxCustomerRequiredAboveFcfa.present
+          ? data.fxCustomerRequiredAboveFcfa.value
+          : this.fxCustomerRequiredAboveFcfa,
+      fxPrimaryWorkspace: data.fxPrimaryWorkspace.present
+          ? data.fxPrimaryWorkspace.value
+          : this.fxPrimaryWorkspace,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
@@ -2791,6 +2878,8 @@ class Setting extends DataClass implements Insertable<Setting> {
           ..write('cloudLastSyncAt: $cloudLastSyncAt, ')
           ..write('autoLockMinutes: $autoLockMinutes, ')
           ..write('pricingTiersEnabled: $pricingTiersEnabled, ')
+          ..write('fxCustomerRequiredAboveFcfa: $fxCustomerRequiredAboveFcfa, ')
+          ..write('fxPrimaryWorkspace: $fxPrimaryWorkspace, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -2821,6 +2910,8 @@ class Setting extends DataClass implements Insertable<Setting> {
     cloudLastSyncAt,
     autoLockMinutes,
     pricingTiersEnabled,
+    fxCustomerRequiredAboveFcfa,
+    fxPrimaryWorkspace,
     updatedAt,
   ]);
   @override
@@ -2850,6 +2941,9 @@ class Setting extends DataClass implements Insertable<Setting> {
           other.cloudLastSyncAt == this.cloudLastSyncAt &&
           other.autoLockMinutes == this.autoLockMinutes &&
           other.pricingTiersEnabled == this.pricingTiersEnabled &&
+          other.fxCustomerRequiredAboveFcfa ==
+              this.fxCustomerRequiredAboveFcfa &&
+          other.fxPrimaryWorkspace == this.fxPrimaryWorkspace &&
           other.updatedAt == this.updatedAt);
 }
 
@@ -2877,6 +2971,8 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   final Value<int?> cloudLastSyncAt;
   final Value<int> autoLockMinutes;
   final Value<bool> pricingTiersEnabled;
+  final Value<int> fxCustomerRequiredAboveFcfa;
+  final Value<bool> fxPrimaryWorkspace;
   final Value<int> updatedAt;
   const SettingsCompanion({
     this.id = const Value.absent(),
@@ -2902,6 +2998,8 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
     this.cloudLastSyncAt = const Value.absent(),
     this.autoLockMinutes = const Value.absent(),
     this.pricingTiersEnabled = const Value.absent(),
+    this.fxCustomerRequiredAboveFcfa = const Value.absent(),
+    this.fxPrimaryWorkspace = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
   SettingsCompanion.insert({
@@ -2928,6 +3026,8 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
     this.cloudLastSyncAt = const Value.absent(),
     this.autoLockMinutes = const Value.absent(),
     this.pricingTiersEnabled = const Value.absent(),
+    this.fxCustomerRequiredAboveFcfa = const Value.absent(),
+    this.fxPrimaryWorkspace = const Value.absent(),
     required int updatedAt,
   }) : shopId = Value(shopId),
        updatedAt = Value(updatedAt);
@@ -2955,6 +3055,8 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
     Expression<int>? cloudLastSyncAt,
     Expression<int>? autoLockMinutes,
     Expression<bool>? pricingTiersEnabled,
+    Expression<int>? fxCustomerRequiredAboveFcfa,
+    Expression<bool>? fxPrimaryWorkspace,
     Expression<int>? updatedAt,
   }) {
     return RawValuesInsertable({
@@ -2987,6 +3089,10 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
       if (autoLockMinutes != null) 'auto_lock_minutes': autoLockMinutes,
       if (pricingTiersEnabled != null)
         'pricing_tiers_enabled': pricingTiersEnabled,
+      if (fxCustomerRequiredAboveFcfa != null)
+        'fx_customer_required_above_fcfa': fxCustomerRequiredAboveFcfa,
+      if (fxPrimaryWorkspace != null)
+        'fx_primary_workspace': fxPrimaryWorkspace,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
@@ -3015,6 +3121,8 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
     Value<int?>? cloudLastSyncAt,
     Value<int>? autoLockMinutes,
     Value<bool>? pricingTiersEnabled,
+    Value<int>? fxCustomerRequiredAboveFcfa,
+    Value<bool>? fxPrimaryWorkspace,
     Value<int>? updatedAt,
   }) {
     return SettingsCompanion(
@@ -3042,6 +3150,9 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
       cloudLastSyncAt: cloudLastSyncAt ?? this.cloudLastSyncAt,
       autoLockMinutes: autoLockMinutes ?? this.autoLockMinutes,
       pricingTiersEnabled: pricingTiersEnabled ?? this.pricingTiersEnabled,
+      fxCustomerRequiredAboveFcfa:
+          fxCustomerRequiredAboveFcfa ?? this.fxCustomerRequiredAboveFcfa,
+      fxPrimaryWorkspace: fxPrimaryWorkspace ?? this.fxPrimaryWorkspace,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -3122,6 +3233,14 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
     if (pricingTiersEnabled.present) {
       map['pricing_tiers_enabled'] = Variable<bool>(pricingTiersEnabled.value);
     }
+    if (fxCustomerRequiredAboveFcfa.present) {
+      map['fx_customer_required_above_fcfa'] = Variable<int>(
+        fxCustomerRequiredAboveFcfa.value,
+      );
+    }
+    if (fxPrimaryWorkspace.present) {
+      map['fx_primary_workspace'] = Variable<bool>(fxPrimaryWorkspace.value);
+    }
     if (updatedAt.present) {
       map['updated_at'] = Variable<int>(updatedAt.value);
     }
@@ -3154,6 +3273,8 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
           ..write('cloudLastSyncAt: $cloudLastSyncAt, ')
           ..write('autoLockMinutes: $autoLockMinutes, ')
           ..write('pricingTiersEnabled: $pricingTiersEnabled, ')
+          ..write('fxCustomerRequiredAboveFcfa: $fxCustomerRequiredAboveFcfa, ')
+          ..write('fxPrimaryWorkspace: $fxPrimaryWorkspace, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
@@ -37237,6 +37358,624 @@ class FxSessionBalancesCompanion extends UpdateCompanion<FxSessionBalance> {
   }
 }
 
+class $FxSessionRatesTable extends FxSessionRates
+    with TableInfo<$FxSessionRatesTable, FxSessionRate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FxSessionRatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _sessionIdMeta = const VerificationMeta(
+    'sessionId',
+  );
+  @override
+  late final GeneratedColumn<int> sessionId = GeneratedColumn<int>(
+    'session_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES fx_sessions (id)',
+    ),
+  );
+  static const VerificationMeta _quoteCurrencyMeta = const VerificationMeta(
+    'quoteCurrency',
+  );
+  @override
+  late final GeneratedColumn<String> quoteCurrency = GeneratedColumn<String>(
+    'quote_currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _rateSnapshotIdMeta = const VerificationMeta(
+    'rateSnapshotId',
+  );
+  @override
+  late final GeneratedColumn<int> rateSnapshotId = GeneratedColumn<int>(
+    'rate_snapshot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES fx_rate_snapshots (id)',
+    ),
+  );
+  static const VerificationMeta _appliedAtMeta = const VerificationMeta(
+    'appliedAt',
+  );
+  @override
+  late final GeneratedColumn<int> appliedAt = GeneratedColumn<int>(
+    'applied_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _serverIdMeta = const VerificationMeta(
+    'serverId',
+  );
+  @override
+  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
+    'server_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncedAtMeta = const VerificationMeta(
+    'syncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> syncedAt = GeneratedColumn<int>(
+    'synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    sessionId,
+    quoteCurrency,
+    rateSnapshotId,
+    appliedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fx_session_rates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<FxSessionRate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('session_id')) {
+      context.handle(
+        _sessionIdMeta,
+        sessionId.isAcceptableOrUnknown(data['session_id']!, _sessionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sessionIdMeta);
+    }
+    if (data.containsKey('quote_currency')) {
+      context.handle(
+        _quoteCurrencyMeta,
+        quoteCurrency.isAcceptableOrUnknown(
+          data['quote_currency']!,
+          _quoteCurrencyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_quoteCurrencyMeta);
+    }
+    if (data.containsKey('rate_snapshot_id')) {
+      context.handle(
+        _rateSnapshotIdMeta,
+        rateSnapshotId.isAcceptableOrUnknown(
+          data['rate_snapshot_id']!,
+          _rateSnapshotIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_rateSnapshotIdMeta);
+    }
+    if (data.containsKey('applied_at')) {
+      context.handle(
+        _appliedAtMeta,
+        appliedAt.isAcceptableOrUnknown(data['applied_at']!, _appliedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_appliedAtMeta);
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('server_id')) {
+      context.handle(
+        _serverIdMeta,
+        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+      );
+    }
+    if (data.containsKey('synced_at')) {
+      context.handle(
+        _syncedAtMeta,
+        syncedAt.isAcceptableOrUnknown(data['synced_at']!, _syncedAtMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  FxSessionRate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FxSessionRate(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      sessionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}session_id'],
+      )!,
+      quoteCurrency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}quote_currency'],
+      )!,
+      rateSnapshotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rate_snapshot_id'],
+      )!,
+      appliedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}applied_at'],
+      )!,
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      serverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}server_id'],
+      ),
+      syncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}synced_at'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      ),
+    );
+  }
+
+  @override
+  $FxSessionRatesTable createAlias(String alias) {
+    return $FxSessionRatesTable(attachedDatabase, alias);
+  }
+}
+
+class FxSessionRate extends DataClass implements Insertable<FxSessionRate> {
+  final int id;
+  final int shopId;
+  final int sessionId;
+  final String quoteCurrency;
+  final int rateSnapshotId;
+  final int appliedAt;
+  final int version;
+  final String? serverId;
+  final int? syncedAt;
+  final String? syncStatus;
+  const FxSessionRate({
+    required this.id,
+    required this.shopId,
+    required this.sessionId,
+    required this.quoteCurrency,
+    required this.rateSnapshotId,
+    required this.appliedAt,
+    required this.version,
+    this.serverId,
+    this.syncedAt,
+    this.syncStatus,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['session_id'] = Variable<int>(sessionId);
+    map['quote_currency'] = Variable<String>(quoteCurrency);
+    map['rate_snapshot_id'] = Variable<int>(rateSnapshotId);
+    map['applied_at'] = Variable<int>(appliedAt);
+    map['version'] = Variable<int>(version);
+    if (!nullToAbsent || serverId != null) {
+      map['server_id'] = Variable<String>(serverId);
+    }
+    if (!nullToAbsent || syncedAt != null) {
+      map['synced_at'] = Variable<int>(syncedAt);
+    }
+    if (!nullToAbsent || syncStatus != null) {
+      map['sync_status'] = Variable<String>(syncStatus);
+    }
+    return map;
+  }
+
+  FxSessionRatesCompanion toCompanion(bool nullToAbsent) {
+    return FxSessionRatesCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      sessionId: Value(sessionId),
+      quoteCurrency: Value(quoteCurrency),
+      rateSnapshotId: Value(rateSnapshotId),
+      appliedAt: Value(appliedAt),
+      version: Value(version),
+      serverId: serverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serverId),
+      syncedAt: syncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncedAt),
+      syncStatus: syncStatus == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncStatus),
+    );
+  }
+
+  factory FxSessionRate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FxSessionRate(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      sessionId: serializer.fromJson<int>(json['sessionId']),
+      quoteCurrency: serializer.fromJson<String>(json['quoteCurrency']),
+      rateSnapshotId: serializer.fromJson<int>(json['rateSnapshotId']),
+      appliedAt: serializer.fromJson<int>(json['appliedAt']),
+      version: serializer.fromJson<int>(json['version']),
+      serverId: serializer.fromJson<String?>(json['serverId']),
+      syncedAt: serializer.fromJson<int?>(json['syncedAt']),
+      syncStatus: serializer.fromJson<String?>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'sessionId': serializer.toJson<int>(sessionId),
+      'quoteCurrency': serializer.toJson<String>(quoteCurrency),
+      'rateSnapshotId': serializer.toJson<int>(rateSnapshotId),
+      'appliedAt': serializer.toJson<int>(appliedAt),
+      'version': serializer.toJson<int>(version),
+      'serverId': serializer.toJson<String?>(serverId),
+      'syncedAt': serializer.toJson<int?>(syncedAt),
+      'syncStatus': serializer.toJson<String?>(syncStatus),
+    };
+  }
+
+  FxSessionRate copyWith({
+    int? id,
+    int? shopId,
+    int? sessionId,
+    String? quoteCurrency,
+    int? rateSnapshotId,
+    int? appliedAt,
+    int? version,
+    Value<String?> serverId = const Value.absent(),
+    Value<int?> syncedAt = const Value.absent(),
+    Value<String?> syncStatus = const Value.absent(),
+  }) => FxSessionRate(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    sessionId: sessionId ?? this.sessionId,
+    quoteCurrency: quoteCurrency ?? this.quoteCurrency,
+    rateSnapshotId: rateSnapshotId ?? this.rateSnapshotId,
+    appliedAt: appliedAt ?? this.appliedAt,
+    version: version ?? this.version,
+    serverId: serverId.present ? serverId.value : this.serverId,
+    syncedAt: syncedAt.present ? syncedAt.value : this.syncedAt,
+    syncStatus: syncStatus.present ? syncStatus.value : this.syncStatus,
+  );
+  FxSessionRate copyWithCompanion(FxSessionRatesCompanion data) {
+    return FxSessionRate(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      sessionId: data.sessionId.present ? data.sessionId.value : this.sessionId,
+      quoteCurrency: data.quoteCurrency.present
+          ? data.quoteCurrency.value
+          : this.quoteCurrency,
+      rateSnapshotId: data.rateSnapshotId.present
+          ? data.rateSnapshotId.value
+          : this.rateSnapshotId,
+      appliedAt: data.appliedAt.present ? data.appliedAt.value : this.appliedAt,
+      version: data.version.present ? data.version.value : this.version,
+      serverId: data.serverId.present ? data.serverId.value : this.serverId,
+      syncedAt: data.syncedAt.present ? data.syncedAt.value : this.syncedAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxSessionRate(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('quoteCurrency: $quoteCurrency, ')
+          ..write('rateSnapshotId: $rateSnapshotId, ')
+          ..write('appliedAt: $appliedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    sessionId,
+    quoteCurrency,
+    rateSnapshotId,
+    appliedAt,
+    version,
+    serverId,
+    syncedAt,
+    syncStatus,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FxSessionRate &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.sessionId == this.sessionId &&
+          other.quoteCurrency == this.quoteCurrency &&
+          other.rateSnapshotId == this.rateSnapshotId &&
+          other.appliedAt == this.appliedAt &&
+          other.version == this.version &&
+          other.serverId == this.serverId &&
+          other.syncedAt == this.syncedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class FxSessionRatesCompanion extends UpdateCompanion<FxSessionRate> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<int> sessionId;
+  final Value<String> quoteCurrency;
+  final Value<int> rateSnapshotId;
+  final Value<int> appliedAt;
+  final Value<int> version;
+  final Value<String?> serverId;
+  final Value<int?> syncedAt;
+  final Value<String?> syncStatus;
+  const FxSessionRatesCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.sessionId = const Value.absent(),
+    this.quoteCurrency = const Value.absent(),
+    this.rateSnapshotId = const Value.absent(),
+    this.appliedAt = const Value.absent(),
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  });
+  FxSessionRatesCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required int sessionId,
+    required String quoteCurrency,
+    required int rateSnapshotId,
+    required int appliedAt,
+    this.version = const Value.absent(),
+    this.serverId = const Value.absent(),
+    this.syncedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+  }) : shopId = Value(shopId),
+       sessionId = Value(sessionId),
+       quoteCurrency = Value(quoteCurrency),
+       rateSnapshotId = Value(rateSnapshotId),
+       appliedAt = Value(appliedAt);
+  static Insertable<FxSessionRate> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<int>? sessionId,
+    Expression<String>? quoteCurrency,
+    Expression<int>? rateSnapshotId,
+    Expression<int>? appliedAt,
+    Expression<int>? version,
+    Expression<String>? serverId,
+    Expression<int>? syncedAt,
+    Expression<String>? syncStatus,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (sessionId != null) 'session_id': sessionId,
+      if (quoteCurrency != null) 'quote_currency': quoteCurrency,
+      if (rateSnapshotId != null) 'rate_snapshot_id': rateSnapshotId,
+      if (appliedAt != null) 'applied_at': appliedAt,
+      if (version != null) 'version': version,
+      if (serverId != null) 'server_id': serverId,
+      if (syncedAt != null) 'synced_at': syncedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+    });
+  }
+
+  FxSessionRatesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<int>? sessionId,
+    Value<String>? quoteCurrency,
+    Value<int>? rateSnapshotId,
+    Value<int>? appliedAt,
+    Value<int>? version,
+    Value<String?>? serverId,
+    Value<int?>? syncedAt,
+    Value<String?>? syncStatus,
+  }) {
+    return FxSessionRatesCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      sessionId: sessionId ?? this.sessionId,
+      quoteCurrency: quoteCurrency ?? this.quoteCurrency,
+      rateSnapshotId: rateSnapshotId ?? this.rateSnapshotId,
+      appliedAt: appliedAt ?? this.appliedAt,
+      version: version ?? this.version,
+      serverId: serverId ?? this.serverId,
+      syncedAt: syncedAt ?? this.syncedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (sessionId.present) {
+      map['session_id'] = Variable<int>(sessionId.value);
+    }
+    if (quoteCurrency.present) {
+      map['quote_currency'] = Variable<String>(quoteCurrency.value);
+    }
+    if (rateSnapshotId.present) {
+      map['rate_snapshot_id'] = Variable<int>(rateSnapshotId.value);
+    }
+    if (appliedAt.present) {
+      map['applied_at'] = Variable<int>(appliedAt.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (serverId.present) {
+      map['server_id'] = Variable<String>(serverId.value);
+    }
+    if (syncedAt.present) {
+      map['synced_at'] = Variable<int>(syncedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FxSessionRatesCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('sessionId: $sessionId, ')
+          ..write('quoteCurrency: $quoteCurrency, ')
+          ..write('rateSnapshotId: $rateSnapshotId, ')
+          ..write('appliedAt: $appliedAt, ')
+          ..write('version: $version, ')
+          ..write('serverId: $serverId, ')
+          ..write('syncedAt: $syncedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FxOperationsTable extends FxOperations
     with TableInfo<$FxOperationsTable, FxOperation> {
   @override
@@ -37360,6 +38099,17 @@ class $FxOperationsTable extends FxOperations
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _customerIdMeta = const VerificationMeta(
+    'customerId',
+  );
+  @override
+  late final GeneratedColumn<int> customerId = GeneratedColumn<int>(
+    'customer_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -37451,6 +38201,7 @@ class $FxOperationsTable extends FxOperations
     toAmount,
     rateSnapshotId,
     marginFcfa,
+    customerId,
     note,
     createdBy,
     createdAt,
@@ -37551,6 +38302,12 @@ class $FxOperationsTable extends FxOperations
         marginFcfa.isAcceptableOrUnknown(data['margin_fcfa']!, _marginFcfaMeta),
       );
     }
+    if (data.containsKey('customer_id')) {
+      context.handle(
+        _customerIdMeta,
+        customerId.isAcceptableOrUnknown(data['customer_id']!, _customerIdMeta),
+      );
+    }
     if (data.containsKey('note')) {
       context.handle(
         _noteMeta,
@@ -37646,6 +38403,10 @@ class $FxOperationsTable extends FxOperations
         DriftSqlType.int,
         data['${effectivePrefix}margin_fcfa'],
       )!,
+      customerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}customer_id'],
+      ),
       note: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}note'],
@@ -37694,6 +38455,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
   final int toAmount;
   final int? rateSnapshotId;
   final int marginFcfa;
+  final int? customerId;
   final String? note;
   final int createdBy;
   final int createdAt;
@@ -37712,6 +38474,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
     required this.toAmount,
     this.rateSnapshotId,
     required this.marginFcfa,
+    this.customerId,
     this.note,
     required this.createdBy,
     required this.createdAt,
@@ -37735,6 +38498,9 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
       map['rate_snapshot_id'] = Variable<int>(rateSnapshotId);
     }
     map['margin_fcfa'] = Variable<int>(marginFcfa);
+    if (!nullToAbsent || customerId != null) {
+      map['customer_id'] = Variable<int>(customerId);
+    }
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
@@ -37767,6 +38533,9 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
           ? const Value.absent()
           : Value(rateSnapshotId),
       marginFcfa: Value(marginFcfa),
+      customerId: customerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customerId),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdBy: Value(createdBy),
       createdAt: Value(createdAt),
@@ -37799,6 +38568,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
       toAmount: serializer.fromJson<int>(json['toAmount']),
       rateSnapshotId: serializer.fromJson<int?>(json['rateSnapshotId']),
       marginFcfa: serializer.fromJson<int>(json['marginFcfa']),
+      customerId: serializer.fromJson<int?>(json['customerId']),
       note: serializer.fromJson<String?>(json['note']),
       createdBy: serializer.fromJson<int>(json['createdBy']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
@@ -37822,6 +38592,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
       'toAmount': serializer.toJson<int>(toAmount),
       'rateSnapshotId': serializer.toJson<int?>(rateSnapshotId),
       'marginFcfa': serializer.toJson<int>(marginFcfa),
+      'customerId': serializer.toJson<int?>(customerId),
       'note': serializer.toJson<String?>(note),
       'createdBy': serializer.toJson<int>(createdBy),
       'createdAt': serializer.toJson<int>(createdAt),
@@ -37843,6 +38614,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
     int? toAmount,
     Value<int?> rateSnapshotId = const Value.absent(),
     int? marginFcfa,
+    Value<int?> customerId = const Value.absent(),
     Value<String?> note = const Value.absent(),
     int? createdBy,
     int? createdAt,
@@ -37863,6 +38635,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
         ? rateSnapshotId.value
         : this.rateSnapshotId,
     marginFcfa: marginFcfa ?? this.marginFcfa,
+    customerId: customerId.present ? customerId.value : this.customerId,
     note: note.present ? note.value : this.note,
     createdBy: createdBy ?? this.createdBy,
     createdAt: createdAt ?? this.createdAt,
@@ -37895,6 +38668,9 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
       marginFcfa: data.marginFcfa.present
           ? data.marginFcfa.value
           : this.marginFcfa,
+      customerId: data.customerId.present
+          ? data.customerId.value
+          : this.customerId,
       note: data.note.present ? data.note.value : this.note,
       createdBy: data.createdBy.present ? data.createdBy.value : this.createdBy,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
@@ -37920,6 +38696,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
           ..write('toAmount: $toAmount, ')
           ..write('rateSnapshotId: $rateSnapshotId, ')
           ..write('marginFcfa: $marginFcfa, ')
+          ..write('customerId: $customerId, ')
           ..write('note: $note, ')
           ..write('createdBy: $createdBy, ')
           ..write('createdAt: $createdAt, ')
@@ -37943,6 +38720,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
     toAmount,
     rateSnapshotId,
     marginFcfa,
+    customerId,
     note,
     createdBy,
     createdAt,
@@ -37965,6 +38743,7 @@ class FxOperation extends DataClass implements Insertable<FxOperation> {
           other.toAmount == this.toAmount &&
           other.rateSnapshotId == this.rateSnapshotId &&
           other.marginFcfa == this.marginFcfa &&
+          other.customerId == this.customerId &&
           other.note == this.note &&
           other.createdBy == this.createdBy &&
           other.createdAt == this.createdAt &&
@@ -37985,6 +38764,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
   final Value<int> toAmount;
   final Value<int?> rateSnapshotId;
   final Value<int> marginFcfa;
+  final Value<int?> customerId;
   final Value<String?> note;
   final Value<int> createdBy;
   final Value<int> createdAt;
@@ -38003,6 +38783,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
     this.toAmount = const Value.absent(),
     this.rateSnapshotId = const Value.absent(),
     this.marginFcfa = const Value.absent(),
+    this.customerId = const Value.absent(),
     this.note = const Value.absent(),
     this.createdBy = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -38022,6 +38803,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
     required int toAmount,
     this.rateSnapshotId = const Value.absent(),
     this.marginFcfa = const Value.absent(),
+    this.customerId = const Value.absent(),
     this.note = const Value.absent(),
     required int createdBy,
     required int createdAt,
@@ -38049,6 +38831,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
     Expression<int>? toAmount,
     Expression<int>? rateSnapshotId,
     Expression<int>? marginFcfa,
+    Expression<int>? customerId,
     Expression<String>? note,
     Expression<int>? createdBy,
     Expression<int>? createdAt,
@@ -38068,6 +38851,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
       if (toAmount != null) 'to_amount': toAmount,
       if (rateSnapshotId != null) 'rate_snapshot_id': rateSnapshotId,
       if (marginFcfa != null) 'margin_fcfa': marginFcfa,
+      if (customerId != null) 'customer_id': customerId,
       if (note != null) 'note': note,
       if (createdBy != null) 'created_by': createdBy,
       if (createdAt != null) 'created_at': createdAt,
@@ -38089,6 +38873,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
     Value<int>? toAmount,
     Value<int?>? rateSnapshotId,
     Value<int>? marginFcfa,
+    Value<int?>? customerId,
     Value<String?>? note,
     Value<int>? createdBy,
     Value<int>? createdAt,
@@ -38108,6 +38893,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
       toAmount: toAmount ?? this.toAmount,
       rateSnapshotId: rateSnapshotId ?? this.rateSnapshotId,
       marginFcfa: marginFcfa ?? this.marginFcfa,
+      customerId: customerId ?? this.customerId,
       note: note ?? this.note,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
@@ -38151,6 +38937,9 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
     if (marginFcfa.present) {
       map['margin_fcfa'] = Variable<int>(marginFcfa.value);
     }
+    if (customerId.present) {
+      map['customer_id'] = Variable<int>(customerId.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
@@ -38188,6 +38977,7 @@ class FxOperationsCompanion extends UpdateCompanion<FxOperation> {
           ..write('toAmount: $toAmount, ')
           ..write('rateSnapshotId: $rateSnapshotId, ')
           ..write('marginFcfa: $marginFcfa, ')
+          ..write('customerId: $customerId, ')
           ..write('note: $note, ')
           ..write('createdBy: $createdBy, ')
           ..write('createdAt: $createdAt, ')
@@ -39048,6 +39838,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $FxSessionsTable fxSessions = $FxSessionsTable(this);
   late final $FxSessionBalancesTable fxSessionBalances =
       $FxSessionBalancesTable(this);
+  late final $FxSessionRatesTable fxSessionRates = $FxSessionRatesTable(this);
   late final $FxOperationsTable fxOperations = $FxOperationsTable(this);
   late final $FxMovementsTable fxMovements = $FxMovementsTable(this);
   @override
@@ -39107,6 +39898,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     fxRateSnapshots,
     fxSessions,
     fxSessionBalances,
+    fxSessionRates,
     fxOperations,
     fxMovements,
   ];
@@ -39994,6 +40786,24 @@ final class $$ShopsTableReferences
     final cache = $_typedResult.readTableOrNull(
       _fxSessionBalancesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxSessionRatesTable, List<FxSessionRate>>
+  _fxSessionRatesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxSessionRates,
+    aliasName: 'shops__id__fx_session_rates__shop_id',
+  );
+
+  $$FxSessionRatesTableProcessedTableManager get fxSessionRatesRefs {
+    final manager = $$FxSessionRatesTableTableManager(
+      $_db,
+      $_db.fxSessionRates,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxSessionRatesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -41142,6 +41952,31 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
           }) => $$FxSessionBalancesTableFilterComposer(
             $db: $db,
             $table: $db.fxSessionBalances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxSessionRatesRefs(
+    Expression<bool> Function($$FxSessionRatesTableFilterComposer f) f,
+  ) {
+    final $$FxSessionRatesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionRates,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionRatesTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessionRates,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -42392,6 +43227,31 @@ class $$ShopsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> fxSessionRatesRefs<T extends Object>(
+    Expression<T> Function($$FxSessionRatesTableAnnotationComposer a) f,
+  ) {
+    final $$FxSessionRatesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionRates,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionRatesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessionRates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> fxOperationsRefs<T extends Object>(
     Expression<T> Function($$FxOperationsTableAnnotationComposer a) f,
   ) {
@@ -42499,6 +43359,7 @@ class $$ShopsTableTableManager
             bool fxRateSnapshotsRefs,
             bool fxSessionsRefs,
             bool fxSessionBalancesRefs,
+            bool fxSessionRatesRefs,
             bool fxOperationsRefs,
             bool fxMovementsRefs,
           })
@@ -42616,6 +43477,7 @@ class $$ShopsTableTableManager
                 fxRateSnapshotsRefs = false,
                 fxSessionsRefs = false,
                 fxSessionBalancesRefs = false,
+                fxSessionRatesRefs = false,
                 fxOperationsRefs = false,
                 fxMovementsRefs = false,
               }) {
@@ -42664,6 +43526,7 @@ class $$ShopsTableTableManager
                     if (fxRateSnapshotsRefs) db.fxRateSnapshots,
                     if (fxSessionsRefs) db.fxSessions,
                     if (fxSessionBalancesRefs) db.fxSessionBalances,
+                    if (fxSessionRatesRefs) db.fxSessionRates,
                     if (fxOperationsRefs) db.fxOperations,
                     if (fxMovementsRefs) db.fxMovements,
                   ],
@@ -43502,6 +44365,27 @@ class $$ShopsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (fxSessionRatesRefs)
+                        await $_getPrefetchedData<
+                          Shop,
+                          $ShopsTable,
+                          FxSessionRate
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._fxSessionRatesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxSessionRatesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (fxOperationsRefs)
                         await $_getPrefetchedData<
                           Shop,
@@ -43607,6 +44491,7 @@ typedef $$ShopsTableProcessedTableManager =
         bool fxRateSnapshotsRefs,
         bool fxSessionsRefs,
         bool fxSessionBalancesRefs,
+        bool fxSessionRatesRefs,
         bool fxOperationsRefs,
         bool fxMovementsRefs,
       })
@@ -45905,6 +46790,8 @@ typedef $$SettingsTableCreateCompanionBuilder =
       Value<int?> cloudLastSyncAt,
       Value<int> autoLockMinutes,
       Value<bool> pricingTiersEnabled,
+      Value<int> fxCustomerRequiredAboveFcfa,
+      Value<bool> fxPrimaryWorkspace,
       required int updatedAt,
     });
 typedef $$SettingsTableUpdateCompanionBuilder =
@@ -45932,6 +46819,8 @@ typedef $$SettingsTableUpdateCompanionBuilder =
       Value<int?> cloudLastSyncAt,
       Value<int> autoLockMinutes,
       Value<bool> pricingTiersEnabled,
+      Value<int> fxCustomerRequiredAboveFcfa,
+      Value<bool> fxPrimaryWorkspace,
       Value<int> updatedAt,
     });
 
@@ -46073,6 +46962,16 @@ class $$SettingsTableFilterComposer
 
   ColumnFilters<bool> get pricingTiersEnabled => $composableBuilder(
     column: $table.pricingTiersEnabled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fxCustomerRequiredAboveFcfa => $composableBuilder(
+    column: $table.fxCustomerRequiredAboveFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get fxPrimaryWorkspace => $composableBuilder(
+    column: $table.fxPrimaryWorkspace,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -46224,6 +47123,16 @@ class $$SettingsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get fxCustomerRequiredAboveFcfa => $composableBuilder(
+    column: $table.fxCustomerRequiredAboveFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get fxPrimaryWorkspace => $composableBuilder(
+    column: $table.fxPrimaryWorkspace,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
@@ -46362,6 +47271,16 @@ class $$SettingsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get fxCustomerRequiredAboveFcfa => $composableBuilder(
+    column: $table.fxCustomerRequiredAboveFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get fxPrimaryWorkspace => $composableBuilder(
+    column: $table.fxPrimaryWorkspace,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
@@ -46440,6 +47359,8 @@ class $$SettingsTableTableManager
                 Value<int?> cloudLastSyncAt = const Value.absent(),
                 Value<int> autoLockMinutes = const Value.absent(),
                 Value<bool> pricingTiersEnabled = const Value.absent(),
+                Value<int> fxCustomerRequiredAboveFcfa = const Value.absent(),
+                Value<bool> fxPrimaryWorkspace = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
               }) => SettingsCompanion(
                 id: id,
@@ -46465,6 +47386,8 @@ class $$SettingsTableTableManager
                 cloudLastSyncAt: cloudLastSyncAt,
                 autoLockMinutes: autoLockMinutes,
                 pricingTiersEnabled: pricingTiersEnabled,
+                fxCustomerRequiredAboveFcfa: fxCustomerRequiredAboveFcfa,
+                fxPrimaryWorkspace: fxPrimaryWorkspace,
                 updatedAt: updatedAt,
               ),
           createCompanionCallback:
@@ -46492,6 +47415,8 @@ class $$SettingsTableTableManager
                 Value<int?> cloudLastSyncAt = const Value.absent(),
                 Value<int> autoLockMinutes = const Value.absent(),
                 Value<bool> pricingTiersEnabled = const Value.absent(),
+                Value<int> fxCustomerRequiredAboveFcfa = const Value.absent(),
+                Value<bool> fxPrimaryWorkspace = const Value.absent(),
                 required int updatedAt,
               }) => SettingsCompanion.insert(
                 id: id,
@@ -46517,6 +47442,8 @@ class $$SettingsTableTableManager
                 cloudLastSyncAt: cloudLastSyncAt,
                 autoLockMinutes: autoLockMinutes,
                 pricingTiersEnabled: pricingTiersEnabled,
+                fxCustomerRequiredAboveFcfa: fxCustomerRequiredAboveFcfa,
+                fxPrimaryWorkspace: fxPrimaryWorkspace,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -78248,6 +79175,24 @@ final class $$FxRateSnapshotsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$FxSessionRatesTable, List<FxSessionRate>>
+  _fxSessionRatesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxSessionRates,
+    aliasName: 'fx_rate_snapshots__id__fx_session_rates__rate_snapshot_id',
+  );
+
+  $$FxSessionRatesTableProcessedTableManager get fxSessionRatesRefs {
+    final manager = $$FxSessionRatesTableTableManager(
+      $_db,
+      $_db.fxSessionRates,
+    ).filter((f) => f.rateSnapshotId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxSessionRatesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$FxRateSnapshotsTableFilterComposer
@@ -78368,6 +79313,31 @@ class $$FxRateSnapshotsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> fxSessionRatesRefs(
+    Expression<bool> Function($$FxSessionRatesTableFilterComposer f) f,
+  ) {
+    final $$FxSessionRatesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionRates,
+      getReferencedColumn: (t) => t.rateSnapshotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionRatesTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessionRates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -78601,6 +79571,31 @@ class $$FxRateSnapshotsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> fxSessionRatesRefs<T extends Object>(
+    Expression<T> Function($$FxSessionRatesTableAnnotationComposer a) f,
+  ) {
+    final $$FxSessionRatesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionRates,
+      getReferencedColumn: (t) => t.rateSnapshotId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionRatesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessionRates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$FxRateSnapshotsTableTableManager
@@ -78616,7 +79611,11 @@ class $$FxRateSnapshotsTableTableManager
           $$FxRateSnapshotsTableUpdateCompanionBuilder,
           (FxRateSnapshot, $$FxRateSnapshotsTableReferences),
           FxRateSnapshot,
-          PrefetchHooks Function({bool shopId, bool createdBy})
+          PrefetchHooks Function({
+            bool shopId,
+            bool createdBy,
+            bool fxSessionRatesRefs,
+          })
         > {
   $$FxRateSnapshotsTableTableManager(
     _$AppDatabase db,
@@ -78707,64 +79706,93 @@ class $$FxRateSnapshotsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({shopId = false, createdBy = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (shopId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.shopId,
-                                referencedTable:
-                                    $$FxRateSnapshotsTableReferences
-                                        ._shopIdTable(db),
-                                referencedColumn:
-                                    $$FxRateSnapshotsTableReferences
-                                        ._shopIdTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
-                    if (createdBy) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.createdBy,
-                                referencedTable:
-                                    $$FxRateSnapshotsTableReferences
-                                        ._createdByTable(db),
-                                referencedColumn:
-                                    $$FxRateSnapshotsTableReferences
-                                        ._createdByTable(db)
-                                        .id,
-                              )
-                              as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                shopId = false,
+                createdBy = false,
+                fxSessionRatesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (fxSessionRatesRefs) db.fxSessionRates,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$FxRateSnapshotsTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$FxRateSnapshotsTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (createdBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.createdBy,
+                                    referencedTable:
+                                        $$FxRateSnapshotsTableReferences
+                                            ._createdByTable(db),
+                                    referencedColumn:
+                                        $$FxRateSnapshotsTableReferences
+                                            ._createdByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (fxSessionRatesRefs)
+                        await $_getPrefetchedData<
+                          FxRateSnapshot,
+                          $FxRateSnapshotsTable,
+                          FxSessionRate
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FxRateSnapshotsTableReferences
+                              ._fxSessionRatesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FxRateSnapshotsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxSessionRatesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.rateSnapshotId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -78781,7 +79809,11 @@ typedef $$FxRateSnapshotsTableProcessedTableManager =
       $$FxRateSnapshotsTableUpdateCompanionBuilder,
       (FxRateSnapshot, $$FxRateSnapshotsTableReferences),
       FxRateSnapshot,
-      PrefetchHooks Function({bool shopId, bool createdBy})
+      PrefetchHooks Function({
+        bool shopId,
+        bool createdBy,
+        bool fxSessionRatesRefs,
+      })
     >;
 typedef $$FxSessionsTableCreateCompanionBuilder =
     FxSessionsCompanion Function({
@@ -78893,6 +79925,24 @@ final class $$FxSessionsTableReferences
     final cache = $_typedResult.readTableOrNull(
       _fxSessionBalancesRefsTable($_db),
     );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$FxSessionRatesTable, List<FxSessionRate>>
+  _fxSessionRatesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.fxSessionRates,
+    aliasName: 'fx_sessions__id__fx_session_rates__session_id',
+  );
+
+  $$FxSessionRatesTableProcessedTableManager get fxSessionRatesRefs {
+    final manager = $$FxSessionRatesTableTableManager(
+      $_db,
+      $_db.fxSessionRates,
+    ).filter((f) => f.sessionId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_fxSessionRatesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -79094,6 +80144,31 @@ class $$FxSessionsTableFilterComposer
           }) => $$FxSessionBalancesTableFilterComposer(
             $db: $db,
             $table: $db.fxSessionBalances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> fxSessionRatesRefs(
+    Expression<bool> Function($$FxSessionRatesTableFilterComposer f) f,
+  ) {
+    final $$FxSessionRatesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionRates,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionRatesTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessionRates,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -79449,6 +80524,31 @@ class $$FxSessionsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> fxSessionRatesRefs<T extends Object>(
+    Expression<T> Function($$FxSessionRatesTableAnnotationComposer a) f,
+  ) {
+    final $$FxSessionRatesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.fxSessionRates,
+      getReferencedColumn: (t) => t.sessionId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionRatesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessionRates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> fxOperationsRefs<T extends Object>(
     Expression<T> Function($$FxOperationsTableAnnotationComposer a) f,
   ) {
@@ -79518,6 +80618,7 @@ class $$FxSessionsTableTableManager
             bool openedBy,
             bool closedBy,
             bool fxSessionBalancesRefs,
+            bool fxSessionRatesRefs,
             bool fxOperationsRefs,
             bool fxMovementsRefs,
           })
@@ -79619,6 +80720,7 @@ class $$FxSessionsTableTableManager
                 openedBy = false,
                 closedBy = false,
                 fxSessionBalancesRefs = false,
+                fxSessionRatesRefs = false,
                 fxOperationsRefs = false,
                 fxMovementsRefs = false,
               }) {
@@ -79626,6 +80728,7 @@ class $$FxSessionsTableTableManager
                   db: db,
                   explicitlyWatchedTables: [
                     if (fxSessionBalancesRefs) db.fxSessionBalances,
+                    if (fxSessionRatesRefs) db.fxSessionRates,
                     if (fxOperationsRefs) db.fxOperations,
                     if (fxMovementsRefs) db.fxMovements,
                   ],
@@ -79713,6 +80816,27 @@ class $$FxSessionsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (fxSessionRatesRefs)
+                        await $_getPrefetchedData<
+                          FxSession,
+                          $FxSessionsTable,
+                          FxSessionRate
+                        >(
+                          currentTable: table,
+                          referencedTable: $$FxSessionsTableReferences
+                              ._fxSessionRatesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$FxSessionsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fxSessionRatesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.sessionId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (fxOperationsRefs)
                         await $_getPrefetchedData<
                           FxSession,
@@ -79780,6 +80904,7 @@ typedef $$FxSessionsTableProcessedTableManager =
         bool openedBy,
         bool closedBy,
         bool fxSessionBalancesRefs,
+        bool fxSessionRatesRefs,
         bool fxOperationsRefs,
         bool fxMovementsRefs,
       })
@@ -80344,6 +81469,606 @@ typedef $$FxSessionBalancesTableProcessedTableManager =
       FxSessionBalance,
       PrefetchHooks Function({bool shopId, bool sessionId})
     >;
+typedef $$FxSessionRatesTableCreateCompanionBuilder =
+    FxSessionRatesCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required int sessionId,
+      required String quoteCurrency,
+      required int rateSnapshotId,
+      required int appliedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+typedef $$FxSessionRatesTableUpdateCompanionBuilder =
+    FxSessionRatesCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<int> sessionId,
+      Value<String> quoteCurrency,
+      Value<int> rateSnapshotId,
+      Value<int> appliedAt,
+      Value<int> version,
+      Value<String?> serverId,
+      Value<int?> syncedAt,
+      Value<String?> syncStatus,
+    });
+
+final class $$FxSessionRatesTableReferences
+    extends BaseReferences<_$AppDatabase, $FxSessionRatesTable, FxSessionRate> {
+  $$FxSessionRatesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) =>
+      db.shops.createAlias('fx_session_rates__shop_id__shops__id');
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FxSessionsTable _sessionIdTable(_$AppDatabase db) => db.fxSessions
+      .createAlias('fx_session_rates__session_id__fx_sessions__id');
+
+  $$FxSessionsTableProcessedTableManager get sessionId {
+    final $_column = $_itemColumn<int>('session_id')!;
+
+    final manager = $$FxSessionsTableTableManager(
+      $_db,
+      $_db.fxSessions,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_sessionIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $FxRateSnapshotsTable _rateSnapshotIdTable(_$AppDatabase db) => db
+      .fxRateSnapshots
+      .createAlias('fx_session_rates__rate_snapshot_id__fx_rate_snapshots__id');
+
+  $$FxRateSnapshotsTableProcessedTableManager get rateSnapshotId {
+    final $_column = $_itemColumn<int>('rate_snapshot_id')!;
+
+    final manager = $$FxRateSnapshotsTableTableManager(
+      $_db,
+      $_db.fxRateSnapshots,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_rateSnapshotIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$FxSessionRatesTableFilterComposer
+    extends Composer<_$AppDatabase, $FxSessionRatesTable> {
+  $$FxSessionRatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get quoteCurrency => $composableBuilder(
+    column: $table.quoteCurrency,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get appliedAt => $composableBuilder(
+    column: $table.appliedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableFilterComposer get sessionId {
+    final $$FxSessionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxRateSnapshotsTableFilterComposer get rateSnapshotId {
+    final $$FxRateSnapshotsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rateSnapshotId,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableFilterComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionRatesTableOrderingComposer
+    extends Composer<_$AppDatabase, $FxSessionRatesTable> {
+  $$FxSessionRatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get quoteCurrency => $composableBuilder(
+    column: $table.quoteCurrency,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get appliedAt => $composableBuilder(
+    column: $table.appliedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get serverId => $composableBuilder(
+    column: $table.serverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get syncedAt => $composableBuilder(
+    column: $table.syncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableOrderingComposer get sessionId {
+    final $$FxSessionsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxRateSnapshotsTableOrderingComposer get rateSnapshotId {
+    final $$FxRateSnapshotsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rateSnapshotId,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableOrderingComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionRatesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FxSessionRatesTable> {
+  $$FxSessionRatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get quoteCurrency => $composableBuilder(
+    column: $table.quoteCurrency,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get appliedAt =>
+      $composableBuilder(column: $table.appliedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<String> get serverId =>
+      $composableBuilder(column: $table.serverId, builder: (column) => column);
+
+  GeneratedColumn<int> get syncedAt =>
+      $composableBuilder(column: $table.syncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxSessionsTableAnnotationComposer get sessionId {
+    final $$FxSessionsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.sessionId,
+      referencedTable: $db.fxSessions,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxSessionsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxSessions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$FxRateSnapshotsTableAnnotationComposer get rateSnapshotId {
+    final $$FxRateSnapshotsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.rateSnapshotId,
+      referencedTable: $db.fxRateSnapshots,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$FxRateSnapshotsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.fxRateSnapshots,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$FxSessionRatesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FxSessionRatesTable,
+          FxSessionRate,
+          $$FxSessionRatesTableFilterComposer,
+          $$FxSessionRatesTableOrderingComposer,
+          $$FxSessionRatesTableAnnotationComposer,
+          $$FxSessionRatesTableCreateCompanionBuilder,
+          $$FxSessionRatesTableUpdateCompanionBuilder,
+          (FxSessionRate, $$FxSessionRatesTableReferences),
+          FxSessionRate,
+          PrefetchHooks Function({
+            bool shopId,
+            bool sessionId,
+            bool rateSnapshotId,
+          })
+        > {
+  $$FxSessionRatesTableTableManager(
+    _$AppDatabase db,
+    $FxSessionRatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FxSessionRatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FxSessionRatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FxSessionRatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<int> sessionId = const Value.absent(),
+                Value<String> quoteCurrency = const Value.absent(),
+                Value<int> rateSnapshotId = const Value.absent(),
+                Value<int> appliedAt = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxSessionRatesCompanion(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                quoteCurrency: quoteCurrency,
+                rateSnapshotId: rateSnapshotId,
+                appliedAt: appliedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required int sessionId,
+                required String quoteCurrency,
+                required int rateSnapshotId,
+                required int appliedAt,
+                Value<int> version = const Value.absent(),
+                Value<String?> serverId = const Value.absent(),
+                Value<int?> syncedAt = const Value.absent(),
+                Value<String?> syncStatus = const Value.absent(),
+              }) => FxSessionRatesCompanion.insert(
+                id: id,
+                shopId: shopId,
+                sessionId: sessionId,
+                quoteCurrency: quoteCurrency,
+                rateSnapshotId: rateSnapshotId,
+                appliedAt: appliedAt,
+                version: version,
+                serverId: serverId,
+                syncedAt: syncedAt,
+                syncStatus: syncStatus,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$FxSessionRatesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({shopId = false, sessionId = false, rateSnapshotId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (shopId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.shopId,
+                                    referencedTable:
+                                        $$FxSessionRatesTableReferences
+                                            ._shopIdTable(db),
+                                    referencedColumn:
+                                        $$FxSessionRatesTableReferences
+                                            ._shopIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (sessionId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.sessionId,
+                                    referencedTable:
+                                        $$FxSessionRatesTableReferences
+                                            ._sessionIdTable(db),
+                                    referencedColumn:
+                                        $$FxSessionRatesTableReferences
+                                            ._sessionIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (rateSnapshotId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.rateSnapshotId,
+                                    referencedTable:
+                                        $$FxSessionRatesTableReferences
+                                            ._rateSnapshotIdTable(db),
+                                    referencedColumn:
+                                        $$FxSessionRatesTableReferences
+                                            ._rateSnapshotIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FxSessionRatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FxSessionRatesTable,
+      FxSessionRate,
+      $$FxSessionRatesTableFilterComposer,
+      $$FxSessionRatesTableOrderingComposer,
+      $$FxSessionRatesTableAnnotationComposer,
+      $$FxSessionRatesTableCreateCompanionBuilder,
+      $$FxSessionRatesTableUpdateCompanionBuilder,
+      (FxSessionRate, $$FxSessionRatesTableReferences),
+      FxSessionRate,
+      PrefetchHooks Function({bool shopId, bool sessionId, bool rateSnapshotId})
+    >;
 typedef $$FxOperationsTableCreateCompanionBuilder =
     FxOperationsCompanion Function({
       Value<int> id,
@@ -80356,6 +82081,7 @@ typedef $$FxOperationsTableCreateCompanionBuilder =
       required int toAmount,
       Value<int?> rateSnapshotId,
       Value<int> marginFcfa,
+      Value<int?> customerId,
       Value<String?> note,
       required int createdBy,
       required int createdAt,
@@ -80376,6 +82102,7 @@ typedef $$FxOperationsTableUpdateCompanionBuilder =
       Value<int> toAmount,
       Value<int?> rateSnapshotId,
       Value<int> marginFcfa,
+      Value<int?> customerId,
       Value<String?> note,
       Value<int> createdBy,
       Value<int> createdAt,
@@ -80487,6 +82214,11 @@ class $$FxOperationsTableFilterComposer
 
   ColumnFilters<int> get marginFcfa => $composableBuilder(
     column: $table.marginFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get customerId => $composableBuilder(
+    column: $table.customerId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -80639,6 +82371,11 @@ class $$FxOperationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get note => $composableBuilder(
     column: $table.note,
     builder: (column) => ColumnOrderings(column),
@@ -80784,6 +82521,11 @@ class $$FxOperationsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get customerId => $composableBuilder(
+    column: $table.customerId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
 
@@ -80912,6 +82654,7 @@ class $$FxOperationsTableTableManager
                 Value<int> toAmount = const Value.absent(),
                 Value<int?> rateSnapshotId = const Value.absent(),
                 Value<int> marginFcfa = const Value.absent(),
+                Value<int?> customerId = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 Value<int> createdBy = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
@@ -80930,6 +82673,7 @@ class $$FxOperationsTableTableManager
                 toAmount: toAmount,
                 rateSnapshotId: rateSnapshotId,
                 marginFcfa: marginFcfa,
+                customerId: customerId,
                 note: note,
                 createdBy: createdBy,
                 createdAt: createdAt,
@@ -80950,6 +82694,7 @@ class $$FxOperationsTableTableManager
                 required int toAmount,
                 Value<int?> rateSnapshotId = const Value.absent(),
                 Value<int> marginFcfa = const Value.absent(),
+                Value<int?> customerId = const Value.absent(),
                 Value<String?> note = const Value.absent(),
                 required int createdBy,
                 required int createdAt,
@@ -80968,6 +82713,7 @@ class $$FxOperationsTableTableManager
                 toAmount: toAmount,
                 rateSnapshotId: rateSnapshotId,
                 marginFcfa: marginFcfa,
+                customerId: customerId,
                 note: note,
                 createdBy: createdBy,
                 createdAt: createdAt,
@@ -81856,6 +83602,8 @@ class $AppDatabaseManager {
       $$FxSessionsTableTableManager(_db, _db.fxSessions);
   $$FxSessionBalancesTableTableManager get fxSessionBalances =>
       $$FxSessionBalancesTableTableManager(_db, _db.fxSessionBalances);
+  $$FxSessionRatesTableTableManager get fxSessionRates =>
+      $$FxSessionRatesTableTableManager(_db, _db.fxSessionRates);
   $$FxOperationsTableTableManager get fxOperations =>
       $$FxOperationsTableTableManager(_db, _db.fxOperations);
   $$FxMovementsTableTableManager get fxMovements =>

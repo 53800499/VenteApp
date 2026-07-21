@@ -17,6 +17,7 @@ import '../../domain/entities/shop_entities.dart';
 import '../bloc/shop_list_bloc.dart';
 import '../widgets/shop_feedback.dart';
 import '../widgets/shop_switcher_sheet.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import 'shop_form_page.dart';
 
 class ShopListPage extends StatelessWidget {
@@ -81,7 +82,10 @@ class _ShopListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes boutiques')),
+      appBar: AppBar(
+        title: const Text('Mes boutiques'),
+        actions: const [ModuleHelpButton(articleId: 'shops')],
+      ),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
               onPressed: () => _openForm(context),

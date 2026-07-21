@@ -21,12 +21,18 @@ class StockTransferListRefreshRequested extends StockTransferEvent {
 }
 
 class StockTransferDetailLoadRequested extends StockTransferEvent {
-  const StockTransferDetailLoadRequested(this.transferId);
+  const StockTransferDetailLoadRequested(
+    this.transferId, {
+    this.silent = false,
+  });
 
   final int transferId;
 
+  /// Rafraîchit sans écran de chargement ni flash (ex. après sync background).
+  final bool silent;
+
   @override
-  List<Object?> get props => [transferId];
+  List<Object?> get props => [transferId, silent];
 }
 
 class StockTransferDestinationsLoadRequested extends StockTransferEvent {

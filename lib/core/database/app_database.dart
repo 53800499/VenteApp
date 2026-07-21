@@ -72,22 +72,24 @@ part 'app_database.g.dart';
   FxRateSnapshots,
   FxSessions,
   FxSessionBalances,
+  FxSessionRates,
   FxOperations,
   FxMovements,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase({required DatabaseKeyStorage keyStorage})
-      : super(openEncryptedConnection(keyStorage));
+    : super(openEncryptedConnection(keyStorage));
 
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 35;
+  int get schemaVersion => 38;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         beforeOpen: (details) async {
           await _backfillNotificationSettingsColumns();
+          await _backfillFxSchemaColumns();
           try {
             await seedFxCurrencies(this);
           } catch (_) {
@@ -407,6 +409,28 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(fxMovements);
             await seedFxCurrencies(this);
           }
+          if (from < 36) {
+            await m.createTable(fxSessionRates);
+          }
+          if (from < 37) {
+            await _addColumnIfMissing(
+              m,
+              fxOperations,
+              fxOperations.customerId,
+            );
+            await _addColumnIfMissing(
+              m,
+              settings,
+              settings.fxCustomerRequiredAboveFcfa,
+            );
+          }
+          if (from < 38) {
+            await _addColumnIfMissing(
+              m,
+              settings,
+              settings.fxPrimaryWorkspace,
+            );
+          }
         },
       );
 
@@ -433,6 +457,46 @@ class AppDatabase extends _$AppDatabase {
       'UPDATE settings SET enable_good_day_alert = 1 '
       'WHERE enable_good_day_alert IS NULL',
     );
+  }
+
+  /// Répare le schéma FX si schemaVersion a déjà sauté sans colonnes
+  /// (hot reload / build intermédiaire pendant le dev).
+  Future<void> _backfillFxSchemaColumns() async {
+    await _ensureSqlColumn(
+      'fx_operations',
+      'customer_id',
+      'INTEGER NULL',
+    );
+    await _ensureSqlColumn(
+      'settings',
+      'fx_customer_required_above_fcfa',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureSqlColumn(
+      'settings',
+      'fx_primary_workspace',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+  }
+
+  Future<void> _ensureSqlColumn(
+    String tableName,
+    String columnName,
+    String sqlType,
+  ) async {
+    try {
+      final rows = await customSelect('PRAGMA table_info($tableName)').get();
+      if (rows.isEmpty) return;
+      final exists =
+          rows.any((row) => row.read<String>('name') == columnName);
+      if (!exists) {
+        await customStatement(
+          'ALTER TABLE $tableName ADD COLUMN $columnName $sqlType',
+        );
+      }
+    } catch (_) {
+      // Table absente : la migration classique s'en chargera.
+    }
   }
 
 }

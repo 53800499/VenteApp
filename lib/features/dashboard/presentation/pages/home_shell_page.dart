@@ -26,6 +26,10 @@ import '../../../inventory/presentation/pages/product_list_page.dart';
 import '../../../customers/presentation/bloc/customer_list_bloc.dart';
 import '../../../customers/presentation/pages/customer_list_page.dart';
 import '../../../shop/presentation/pages/more_page.dart';
+import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
+import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
+import '../../../fx_exchange/domain/usecases/fx_exchange_usecases.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 import '../bloc/dashboard_bloc.dart';
 import 'dashboard_page.dart';
 
@@ -40,16 +44,59 @@ class HomeShellPage extends StatefulWidget {
 
 class _HomeShellPageState extends State<HomeShellPage> {
   int _currentIndex = 0;
+  FxWorkspaceModeController? _fxWorkspace;
+  bool _fxWorkspaceReady = false;
+
+  bool get _canViewFx => PermissionGuard.can(
+        widget.session.user.permissions,
+        Permission.fxExchangeRead,
+      );
+
+  bool get _useFxPrimary =>
+      _canViewFx && (_fxWorkspace?.useFxPrimaryShell ?? false);
 
   @override
   void initState() {
     super.initState();
+    try {
+      ensureFxExchangeDependencies();
+      final workspace = sl<FxWorkspaceModeController>();
+      _fxWorkspace = workspace;
+      workspace.addListener(_onFxWorkspaceChanged);
+    } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _bootstrapNotifications();
+      await _loadFxWorkspaceMode();
       if (mounted) {
         await maybeShowCloudSessionStartupNotice(context);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _fxWorkspace?.removeListener(_onFxWorkspaceChanged);
+    super.dispose();
+  }
+
+  void _onFxWorkspaceChanged() {
+    if (!mounted) return;
+    setState(() => _currentIndex = 0);
+  }
+
+  Future<void> _loadFxWorkspaceMode() async {
+    final workspace = _fxWorkspace;
+    if (workspace == null) {
+      if (mounted) setState(() => _fxWorkspaceReady = true);
+      return;
+    }
+    try {
+      final shopId = widget.session.shop.id;
+      final enabled = await sl<IsFxModuleEnabled>()(shopId: shopId);
+      final primary = await sl<GetFxPrimaryWorkspace>()(shopId: shopId);
+      workspace.apply(primary: primary, moduleEnabled: enabled);
+    } catch (_) {}
+    if (mounted) setState(() => _fxWorkspaceReady = true);
   }
 
   Future<void> _bootstrapNotifications() async {
@@ -68,11 +115,13 @@ class _HomeShellPageState extends State<HomeShellPage> {
   }
 
   void _openNewSale(BuildContext context) {
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
         builder: (_) => NewSalePage(session: widget.session),
       ),
-    ).then((created) async {
+    )
+        .then((created) async {
       if (created != true || !context.mounted) return;
       context.read<CustomerListBloc>().add(
             const CustomerListLocalRefreshRequested(),
@@ -86,25 +135,40 @@ class _HomeShellPageState extends State<HomeShellPage> {
         shopId: widget.session.shop.id,
       );
       if (!mounted) return;
-      setState(() => _currentIndex = 1);
+      setState(() => _currentIndex = _useFxPrimary ? 0 : 1);
     });
   }
 
   void _openSalesTab() {
-    setState(() => _currentIndex = 1);
+    setState(() => _currentIndex = _useFxPrimary ? 2 : 1);
+  }
+
+  void _openFxExchange(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FxExchangePage(session: widget.session),
+      ),
+    );
   }
 
   void _openLowStockProducts(BuildContext context) {
-    setState(() {
-      _currentIndex = 2;
-    });
+    if (_useFxPrimary) {
+      setState(() => _currentIndex = 2);
+      return;
+    }
+    setState(() => _currentIndex = 2);
     context.read<ProductListBloc>().add(const ProductListLowStockToggled(true));
   }
 
   void _openDebtors(BuildContext context) {
-    setState(() {
-      _currentIndex = 3;
-    });
+    if (_useFxPrimary) {
+      setState(() => _currentIndex = 1);
+      context.read<CustomerListBloc>().add(
+            const CustomerListShowDebtorsToggled(true),
+          );
+      return;
+    }
+    setState(() => _currentIndex = 3);
     context.read<ProductListBloc>().add(const ProductListLowStockToggled(false));
     context.read<CustomerListBloc>().add(
           const CustomerListShowDebtorsToggled(true),
@@ -114,20 +178,43 @@ class _HomeShellPageState extends State<HomeShellPage> {
   void _onTabSelected(BuildContext context, int index) {
     setState(() {
       _currentIndex = index;
-      if (index != 2) {
-        context.read<ProductListBloc>().add(
-              const ProductListLowStockToggled(false),
-            );
-      }
-      if (index != 3) {
+      if (!_useFxPrimary) {
+        if (index != 2) {
+          context.read<ProductListBloc>().add(
+                const ProductListLowStockToggled(false),
+              );
+        }
+        if (index != 3) {
+          context.read<CustomerListBloc>().add(
+                const CustomerListShowDebtorsToggled(false),
+              );
+        }
+      } else if (index != 1) {
         context.read<CustomerListBloc>().add(
               const CustomerListShowDebtorsToggled(false),
             );
       }
     });
-    if (index == 0) {
+    if (!_useFxPrimary && index == 0) {
       context.read<DashboardBloc>().add(const DashboardRefreshRequested());
     }
+  }
+
+  /// Guide module pour l'onglet courant (null = déjà couvert ailleurs ou Plus).
+  String? _helpArticleForTab(int index, bool useFx) {
+    if (useFx) {
+      return switch (index) {
+        1 => 'customers',
+        _ => null, // Change a son bouton ; Plus a Aide & guides
+      };
+    }
+    return switch (index) {
+      0 => 'dashboard',
+      1 => 'sales',
+      2 => 'inventory',
+      3 => 'customers',
+      _ => null,
+    };
   }
 
   @override
@@ -138,6 +225,99 @@ class _HomeShellPageState extends State<HomeShellPage> {
           widget.session.user.permissions,
           Permission.shopsSwitch,
         );
+    final useFx = _useFxPrimary;
+    final destinations = useFx
+        ? const [
+            NavigationDestination(
+              icon: Icon(Icons.currency_exchange),
+              selectedIcon: Icon(Icons.currency_exchange),
+              label: 'Change',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people_rounded),
+              label: 'Clients',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.more_horiz),
+              selectedIcon: Icon(Icons.more_horiz),
+              label: 'Plus',
+            ),
+          ]
+        : const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Accueil',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.point_of_sale_outlined),
+              selectedIcon: Icon(Icons.point_of_sale_rounded),
+              label: 'Ventes',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2_rounded),
+              label: 'Stock',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people_rounded),
+              label: 'Clients',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.more_horiz),
+              selectedIcon: Icon(Icons.more_horiz),
+              label: 'Plus',
+            ),
+          ];
+    final railDestinations = useFx
+        ? const [
+            NavigationRailDestination(
+              icon: Icon(Icons.currency_exchange),
+              selectedIcon: Icon(Icons.currency_exchange),
+              label: Text('Change'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people_rounded),
+              label: Text('Clients'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.more_horiz),
+              selectedIcon: Icon(Icons.more_horiz),
+              label: Text('Plus'),
+            ),
+          ]
+        : const [
+            NavigationRailDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: Text('Accueil'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.point_of_sale_outlined),
+              selectedIcon: Icon(Icons.point_of_sale_rounded),
+              label: Text('Ventes'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.inventory_2_outlined),
+              selectedIcon: Icon(Icons.inventory_2_rounded),
+              label: Text('Stock'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people_rounded),
+              label: Text('Clients'),
+            ),
+            NavigationRailDestination(
+              icon: Icon(Icons.more_horiz),
+              selectedIcon: Icon(Icons.more_horiz),
+              label: Text('Plus'),
+            ),
+          ];
+
+    final safeIndex = _currentIndex.clamp(0, destinations.length - 1);
 
     return MultiBlocProvider(
       providers: [
@@ -182,21 +362,28 @@ class _HomeShellPageState extends State<HomeShellPage> {
       child: ResponsiveBuilder(
         builder: (context, screenType) {
           final useRail = Breakpoints.useNavigationRail(screenType);
-          final content = _ShellContent(
-            session: widget.session,
-            currentIndex: _currentIndex,
-            onLowStockTap: () => _openLowStockProducts(context),
-            onDebtorsTap: () => _openDebtors(context),
-            onNewSaleTap: () => _openNewSale(context),
-            onSalesHistoryTap: _openSalesTab,
-          );
+          final content = !_fxWorkspaceReady
+              ? const Center(child: CircularProgressIndicator())
+              : _ShellContent(
+                  session: widget.session,
+                  currentIndex: safeIndex,
+                  useFxPrimary: useFx,
+                  showFxShortcut: _canViewFx &&
+                      (_fxWorkspace?.moduleEnabled ?? false) &&
+                      !(_fxWorkspace?.primary ?? false),
+                  onLowStockTap: () => _openLowStockProducts(context),
+                  onDebtorsTap: () => _openDebtors(context),
+                  onNewSaleTap: () => _openNewSale(context),
+                  onSalesHistoryTap: _openSalesTab,
+                  onFxExchangeTap: () => _openFxExchange(context),
+                );
 
           if (useRail) {
             return Scaffold(
               body: Row(
                 children: [
                   NavigationRail(
-                    selectedIndex: _currentIndex,
+                    selectedIndex: safeIndex,
                     extended: screenType == ScreenType.expanded,
                     minWidth: Breakpoints.navigationRailWidth(screenType),
                     minExtendedWidth: 200,
@@ -204,7 +391,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
                         ? NavigationRailLabelType.all
                         : NavigationRailLabelType.selected,
                     indicatorColor: colorScheme.primaryContainer,
-                    onDestinationSelected: (index) => _onTabSelected(context, index),
+                    onDestinationSelected: (index) =>
+                        _onTabSelected(context, index),
                     leading: Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.sm),
                       child: _ShellAvatar(
@@ -212,33 +400,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                         size: screenType == ScreenType.expanded ? 48 : 40,
                       ),
                     ),
-                    destinations: const [
-                      NavigationRailDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home_rounded),
-                        label: Text('Accueil'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.point_of_sale_outlined),
-                        selectedIcon: Icon(Icons.point_of_sale_rounded),
-                        label: Text('Ventes'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.inventory_2_outlined),
-                        selectedIcon: Icon(Icons.inventory_2_rounded),
-                        label: Text('Stock'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.people_outline),
-                        selectedIcon: Icon(Icons.people_rounded),
-                        label: Text('Clients'),
-                      ),
-                      NavigationRailDestination(
-                        icon: Icon(Icons.more_horiz),
-                        selectedIcon: Icon(Icons.more_horiz),
-                        label: Text('Plus'),
-                      ),
-                    ],
+                    destinations: railDestinations,
                   ),
                   const VerticalDivider(width: 1),
                   Expanded(
@@ -260,6 +422,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                               .add(const AuthAppLockedRequested()),
                           compact: false,
                           session: widget.session,
+                          helpArticleId: _helpArticleForTab(safeIndex, useFx),
                         ),
                         const OfflineModeBanner(showWhenSynced: true),
                         Expanded(child: content),
@@ -287,6 +450,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                       .add(const AuthAppLockedRequested()),
                   compact: true,
                   session: widget.session,
+                  helpArticleId: _helpArticleForTab(safeIndex, useFx),
                 ),
                 const OfflineModeBanner(showWhenSynced: true),
                 Expanded(child: content),
@@ -295,7 +459,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
             bottomNavigationBar: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (_currentIndex == 0)
+                if (!useFx && safeIndex == 0)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.md,
@@ -326,38 +490,13 @@ class _HomeShellPageState extends State<HomeShellPage> {
                   child: SafeArea(
                     top: false,
                     child: NavigationBar(
-                      selectedIndex: _currentIndex,
+                      selectedIndex: safeIndex,
                       backgroundColor: Colors.transparent,
                       elevation: 0,
                       indicatorColor: colorScheme.primaryContainer,
-                      onDestinationSelected: (index) => _onTabSelected(context, index),
-                      destinations: const [
-                        NavigationDestination(
-                          icon: Icon(Icons.home_outlined),
-                          selectedIcon: Icon(Icons.home_rounded),
-                          label: 'Accueil',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.point_of_sale_outlined),
-                          selectedIcon: Icon(Icons.point_of_sale_rounded),
-                          label: 'Ventes',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.inventory_2_outlined),
-                          selectedIcon: Icon(Icons.inventory_2_rounded),
-                          label: 'Stock',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.people_outline),
-                          selectedIcon: Icon(Icons.people_rounded),
-                          label: 'Clients',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.more_horiz),
-                          selectedIcon: Icon(Icons.more_horiz),
-                          label: 'Plus',
-                        ),
-                      ],
+                      onDestinationSelected: (index) =>
+                          _onTabSelected(context, index),
+                      destinations: destinations,
                     ),
                   ),
                 ),
@@ -374,38 +513,53 @@ class _ShellContent extends StatelessWidget {
   const _ShellContent({
     required this.session,
     required this.currentIndex,
+    required this.useFxPrimary,
+    required this.showFxShortcut,
     required this.onLowStockTap,
     required this.onDebtorsTap,
     required this.onNewSaleTap,
     required this.onSalesHistoryTap,
+    required this.onFxExchangeTap,
   });
 
   final AuthSession session;
   final int currentIndex;
+  final bool useFxPrimary;
+  final bool showFxShortcut;
   final VoidCallback onLowStockTap;
   final VoidCallback onDebtorsTap;
   final VoidCallback onNewSaleTap;
   final VoidCallback onSalesHistoryTap;
+  final VoidCallback onFxExchangeTap;
 
   @override
   Widget build(BuildContext context) {
+    final pages = useFxPrimary
+        ? [
+            FxExchangePage(session: session, embeddedInShell: true),
+            CustomerListPage(session: session),
+            MorePage(session: session),
+          ]
+        : [
+            DashboardPage(
+              session: session,
+              onLowStockTap: onLowStockTap,
+              onNewSaleTap: onNewSaleTap,
+              onSalesHistoryTap: onSalesHistoryTap,
+              onDebtorsTap: onDebtorsTap,
+              onFxExchangeTap: showFxShortcut ? onFxExchangeTap : null,
+            ),
+            SaleListPage(session: session),
+            ProductListPage(session: session),
+            CustomerListPage(session: session),
+            MorePage(session: session),
+          ];
+
     return ResponsivePage(
       padding: EdgeInsets.zero,
       child: IndexedStack(
-        index: currentIndex,
-        children: [
-          DashboardPage(
-            session: session,
-            onLowStockTap: onLowStockTap,
-            onNewSaleTap: onNewSaleTap,
-            onSalesHistoryTap: onSalesHistoryTap,
-            onDebtorsTap: onDebtorsTap,
-          ),
-          SaleListPage(session: session),
-          ProductListPage(session: session),
-          CustomerListPage(session: session),
-          MorePage(session: session),
-        ],
+        index: currentIndex.clamp(0, pages.length - 1),
+        children: pages,
       ),
     );
   }
@@ -454,6 +608,7 @@ class _ShellHeader extends StatelessWidget {
     required this.compact,
     this.onSwitchShop,
     this.session,
+    this.helpArticleId,
   });
 
   final String shopName;
@@ -464,6 +619,7 @@ class _ShellHeader extends StatelessWidget {
   final VoidCallback onLock;
   final bool compact;
   final AuthSession? session;
+  final String? helpArticleId;
 
   @override
   Widget build(BuildContext context) {
@@ -474,7 +630,9 @@ class _ShellHeader extends StatelessWidget {
       width: double.infinity,
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
-        compact ? MediaQuery.paddingOf(context).top + AppSpacing.sm : AppSpacing.md,
+        compact
+            ? MediaQuery.paddingOf(context).top + AppSpacing.sm
+            : AppSpacing.md,
         horizontalPadding,
         AppSpacing.md,
       ),
@@ -535,6 +693,8 @@ class _ShellHeader extends StatelessWidget {
               ),
             ),
           ),
+          if (helpArticleId != null)
+            ModuleHelpButton(articleId: helpArticleId!),
           IconButton.filledTonal(
             onPressed: onLock,
             icon: const Icon(Icons.lock_outline_rounded),

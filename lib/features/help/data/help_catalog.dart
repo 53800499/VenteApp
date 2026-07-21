@@ -30,7 +30,7 @@ abstract final class HelpCatalog {
     HelpCategory(
       id: 'finance',
       title: 'Finances',
-      subtitle: 'Caisse, dépenses, rapports et marges',
+      subtitle: 'Caisse, change, dépenses, rapports et marges',
       icon: Icons.account_balance_wallet_outlined,
       color: Color(0xFF6A1B9A),
     ),
@@ -66,7 +66,7 @@ abstract final class HelpCatalog {
             'Ventes : historique et création de nouvelles ventes.',
             'Stock : catalogue produits, catégories et alertes.',
             'Clients : fichier client et suivi des achats.',
-            'Plus : modules avancés (rapports, approvisionnement, transferts, équipe, paramètres, aide…).',
+            'Plus : modules avancés (rapports, bureau de change, approvisionnement, transferts, équipe, paramètres, aide…).',
           ],
         ),
         HelpSection(
@@ -92,7 +92,10 @@ abstract final class HelpCatalog {
             'Pour l\'état cloud : touchez l\'icône nuage en haut à droite.',
           ],
           tip:
-              'Le bouton flottant « Nouvelle vente » sur l\'accueil est le raccourci le plus rapide vers la caisse.',
+              'Le bouton flottant « Nouvelle vente » sur l\'accueil est le raccourci le plus rapide vers la caisse. '
+              'Si vous utilisez surtout le change : activez « Change en écran d\'accueil » '
+              'dans la configuration du Bureau de change (barre Change | Clients | Plus). '
+              'Sur chaque module, l\'icône livre ouvre le guide pas à pas dédié.',
         ),
         HelpSection(
           title: 'Travail hors ligne',
@@ -136,7 +139,7 @@ abstract final class HelpCatalog {
             'Vous arrivez directement à l\'écran de caisse.',
           ],
           tip:
-              'Consultez l\'accueil en début et fin de journée pour suivre votre performance.',
+              'Si le Bureau de change est activé, un raccourci apparaît aussi sous le message de bienvenue.',
         ),
       ],
     ),
@@ -519,6 +522,147 @@ abstract final class HelpCatalog {
           ],
           tip:
               'Une seule session ouverte à la fois. Notez chaque sortie de caisse dans les mouvements.',
+        ),
+      ],
+    ),
+    HelpArticle(
+      id: 'fx_exchange',
+      categoryId: 'finance',
+      title: 'Bureau de change',
+      summary:
+          'Taux, session multi-devises, achat/vente, mouvements, clôture et rapports.',
+      icon: Icons.currency_exchange,
+      color: Color(0xFF00695C),
+      keywords: [
+        'change',
+        'fx',
+        'devise',
+        'taux',
+        'naira',
+        'dollar',
+        'euro',
+        'session',
+        'cambiste',
+        'marge',
+      ],
+      sections: [
+        HelpSection(
+          title: 'À quoi sert ce module ?',
+          body:
+              'Le Bureau de change gère les caisses multi-devises (FCFA, NGN, USD…), '
+              'les taux d\'achat et de vente, les opérations de change et la clôture '
+              'de journée. Il est séparé de la caisse retail (ventes produits).',
+          bullets: [
+            'Module optionnel : à activer par boutique.',
+            'Devise pivot : FCFA (XOF).',
+            'Taux gelés pendant une session ouverte.',
+            'Fonctionne hors ligne, puis synchronise.',
+          ],
+        ),
+        HelpSection(
+          title: 'Ouvrir le module — pas à pas',
+          steps: [
+            'Ouvrez Plus → Bureau de change '
+                '(ou le raccourci Accueil si le module est activé).',
+            'Si le module est désactivé : Configuration → activez '
+                '« Module Bureau de change ».',
+            'Choisissez les devises actives (XOF reste toujours actif) '
+                'puis Enregistrer.',
+            'Option cambiste : activez « Change en écran d\'accueil » '
+                'pour avoir l\'onglet Change en racine '
+                '(Change | Clients | Plus).',
+          ],
+          tip:
+              'Le guide est aussi accessible via l\'icône livre dans Bureau de change.',
+        ),
+        HelpSection(
+          title: 'Saisir les taux du jour — pas à pas',
+          steps: [
+            'Dans Bureau de change, ouvrez « Taux du jour ».',
+            'Choisissez la devise cotée (ex. NGN).',
+            'Saisissez le taux d\'achat et le taux de vente '
+                '(ex. 1 000 NGN = 380 / 400 FCFA).',
+            'Si une session est ouverte : choisissez '
+                '« Appliquer maintenant » (prochaines ops) '
+                'ou « Prochaine session ».',
+            'Consultez l\'historique des taux via le bouton dédié.',
+          ],
+          tip:
+              'Taux vente = client achète des devises. '
+              'Taux achat = client vend des devises.',
+        ),
+        HelpSection(
+          title: 'Ouvrir une session FX — pas à pas',
+          steps: [
+            'Vérifiez qu\'au moins une devise étrangère est active '
+                'et que ses taux existent.',
+            'Touchez « Ouvrir la session FX ».',
+            'Saisissez le solde d\'ouverture de chaque devise.',
+            'Confirmez : les taux du moment sont gelés pour la session.',
+          ],
+          tip:
+              'Une seule session active à la fois (ouverte ou en attente de validation).',
+        ),
+        HelpSection(
+          title: 'Enregistrer une vente ou un achat — pas à pas',
+          steps: [
+            'Session ouverte : touchez le bouton « Opération ».',
+            'Choisissez Vente devise ou Achat devise.',
+            'Sélectionnez la devise et le montant.',
+            'Vérifiez le montant calculé, le taux appliqué et la marge.',
+            'Ajoutez un client si demandé (seuil FCFA en configuration) '
+                'ou pour le suivi.',
+            'Validez : les soldes des caisses sont mis à jour.',
+          ],
+          tip:
+              'Dans l\'historique, chaque opération affiche son taux '
+              '(vente ou achat) et la date/heure.',
+        ),
+        HelpSection(
+          title: 'Mouvements manuels — pas à pas',
+          steps: [
+            'Session ouverte : touchez « Mouvement ».',
+            'Choisissez Dépôt, Retrait ou Ajustement '
+                '(ajustement réservé aux profils autorisés).',
+            'Sélectionnez la devise et le montant.',
+            'Pour un ajustement : saisissez une justification obligatoire.',
+            'Validez.',
+          ],
+        ),
+        HelpSection(
+          title: 'Clôturer la session — pas à pas',
+          steps: [
+            'Touchez « Clôturer » sur la session ouverte.',
+            'Comptez chaque devise et saisissez le montant réel.',
+            'Vérifiez les écarts (compté − attendu).',
+            'Soumettez : la session passe « En attente de validation ».',
+            'Contrôlez puis « Valider la clôture », '
+                'ou « Reprendre » pour continuer à opérer.',
+          ],
+          tip:
+              'Pendant l\'attente de validation, les opérations et mouvements '
+              'sont bloqués.',
+        ),
+        HelpSection(
+          title: 'Rapports — pas à pas',
+          steps: [
+            'Rapport de session : bouton « Rapport » sur la session '
+                'ou touchez une session dans Historique.',
+            'Rapports période : icône Rapports → Journalier, Mensuel '
+                'ou Personnalisé.',
+            'Consultez marge, volumes par devise (les deux côtés des ops), '
+                'ventes/achats et mouvements.',
+          ],
+        ),
+        HelpSection(
+          title: 'Configuration utile',
+          body: 'Dans Configuration FX (icône engrenage) :',
+          bullets: [
+            'Activer / désactiver le module.',
+            'Change en écran d\'accueil (navigation cambiste).',
+            'Devises actives.',
+            'Seuil FCFA : client obligatoire au-delà de ce montant (0 = jamais).',
+          ],
         ),
       ],
     ),

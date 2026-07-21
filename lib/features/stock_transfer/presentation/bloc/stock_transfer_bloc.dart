@@ -187,24 +187,55 @@ class StockTransferBloc extends Bloc<StockTransferEvent, StockTransferState> {
     StockTransferDetailLoadRequested event,
     Emitter<StockTransferState> emit,
   ) async {
-    final hasExisting = state.selectedTransfer?.id == event.transferId;
-    emit(
-      state.copyWith(
-        status: hasExisting
-            ? StockTransferBlocStatus.loaded
-            : StockTransferBlocStatus.loading,
-        clearError: true,
-      ),
-    );
+    final isSameTransfer = state.selectedTransfer?.id == event.transferId;
+    final silentRefresh = event.silent && isSameTransfer;
+
+    if (!silentRefresh) {
+      // Évite d'afficher un détail obsolète (liste/cache) avant le pull cloud.
+      emit(
+        state.copyWith(
+          status: StockTransferBlocStatus.loading,
+          clearSelectedTransfer: true,
+          clearError: true,
+        ),
+      );
+    }
+
     try {
-      final transfer = await _loadTransferDetail(event.transferId);
+      final transfer = await _repository.refreshTransferFromRemote(
+            shopId: shopId,
+            transferId: event.transferId,
+            importUserId: userId,
+          ) ??
+          await _loadTransferDetail(event.transferId);
+
+      if (silentRefresh &&
+          transfer != null &&
+          state.selectedTransfer != null &&
+          !_transferDetailChanged(state.selectedTransfer!, transfer)) {
+        return;
+      }
+
       emit(
         state.copyWith(
           status: StockTransferBlocStatus.loaded,
           selectedTransfer: transfer,
+          clearError: true,
         ),
       );
     } on Failure catch (e) {
+      final fallback = await _loadTransferDetail(event.transferId);
+      if (fallback != null) {
+        emit(
+          state.copyWith(
+            status: StockTransferBlocStatus.loaded,
+            selectedTransfer: fallback,
+            errorMessage: silentRefresh ? null : friendlyErrorMessage(e),
+            clearError: silentRefresh,
+          ),
+        );
+        return;
+      }
       emit(
         state.copyWith(
           status: StockTransferBlocStatus.failure,
@@ -212,6 +243,25 @@ class StockTransferBloc extends Bloc<StockTransferEvent, StockTransferState> {
         ),
       );
     }
+  }
+
+  bool _transferDetailChanged(StockTransfer current, StockTransfer next) {
+    if (current.status != next.status) return true;
+    if (current.updatedAt != next.updatedAt) return true;
+    if ((current.items?.length ?? 0) != (next.items?.length ?? 0)) return true;
+    final currentItems = current.items ?? const <StockTransferItem>[];
+    final nextItems = next.items ?? const <StockTransferItem>[];
+    for (var i = 0; i < currentItems.length; i++) {
+      final a = currentItems[i];
+      final b = nextItems[i];
+      if (a.id != b.id ||
+          a.quantityShipped != b.quantityShipped ||
+          a.quantityReceived != b.quantityReceived ||
+          a.quantityRequested != b.quantityRequested) {
+        return true;
+      }
+    }
+    return false;
   }
 
   Future<void> _onCreateReturn(

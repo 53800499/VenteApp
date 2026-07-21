@@ -25,8 +25,8 @@ abstract final class SyncPullEntity {
       debts => const Duration(minutes: 2),
       cashSessions => const Duration(minutes: 1),
       fxExchange => const Duration(minutes: 1),
-      // Destination doit voir très vite les créations / expéditions source.
-      stockTransfers => Duration.zero,
+      // Assez court pour la destination, sans re-pull à chaque cycle.
+      stockTransfers => const Duration(seconds: 15),
       procurement => const Duration(minutes: 5),
       _ => const Duration(minutes: 5),
     };

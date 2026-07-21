@@ -22,6 +22,11 @@ abstract class FxExchangeRepository {
 
   Future<List<FxRateSnapshot>> listLatestRates({required int shopId});
 
+  Future<List<FxRateSnapshot>> listSessionRates({
+    required int shopId,
+    required int sessionId,
+  });
+
   Future<List<FxRateSnapshot>> listRateHistory({
     required int shopId,
     String? quoteCurrency,
@@ -55,9 +60,35 @@ abstract class FxExchangeRepository {
     required CloseFxSessionInput input,
   });
 
+  Future<FxSession> confirmCloseSession({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+  });
+
+  Future<FxSession> cancelPendingClose({
+    required int shopId,
+    required int sessionId,
+  });
+
+  Future<int> getCustomerRequiredAboveFcfa({required int shopId});
+
+  Future<void> setCustomerRequiredAboveFcfa({
+    required int shopId,
+    required int amountFcfa,
+  });
+
+  Future<bool> getPrimaryWorkspace({required int shopId});
+
+  Future<void> setPrimaryWorkspace({
+    required int shopId,
+    required bool enabled,
+  });
+
   Future<FxOperationPreview> previewOperation({
     required int shopId,
     required CreateFxOperationInput input,
+    int? sessionId,
   });
 
   Future<FxOperation> createOperation({
@@ -93,5 +124,11 @@ abstract class FxExchangeRepository {
     required int sessionId,
   });
 
-  Future<void> syncFromRemote({required int shopId});
+  Future<FxPeriodReport> getPeriodReport({
+    required int shopId,
+    required int fromMs,
+    required int toMs,
+  });
+
+  Future<void> syncFromRemote({required int shopId, bool force = false});
 }

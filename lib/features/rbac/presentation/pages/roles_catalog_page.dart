@@ -12,6 +12,7 @@ import '../../domain/entities/rbac_entities.dart';
 import '../../domain/usecases/rbac_usecases.dart';
 import 'role_detail_page.dart';
 import 'role_form_page.dart';
+import '../../../help/presentation/widgets/module_help_button.dart';
 
 class RolesCatalogPage extends StatefulWidget {
   const RolesCatalogPage({super.key, required this.session});
@@ -88,7 +89,10 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
   Widget build(BuildContext context) {
     if (!_canRead) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Rôles & permissions')),
+        appBar: AppBar(
+          title: const Text('Rôles & permissions'),
+          actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+        ),
         body: const Center(
           child: Text('Vous n\'avez pas accès aux rôles.'),
         ),
@@ -96,7 +100,10 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rôles & permissions')),
+      appBar: AppBar(
+        title: const Text('Rôles & permissions'),
+        actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+      ),
       floatingActionButton: _canManage
           ? FloatingActionButton.extended(
               onPressed: _loading ? null : _openCreateForm,

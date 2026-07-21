@@ -120,6 +120,11 @@ class SyncQueueDatasource {
       SyncEntityTable.supplierInvoices: 'facture(s) fournisseur',
       SyncEntityTable.supplierPayments: 'paiement(s) fournisseur',
       SyncEntityTable.stockTransfers: 'transfert(s) inter-boutiques',
+      SyncEntityTable.fxRateSnapshots: 'taux de change',
+      SyncEntityTable.fxShopCurrencies: 'devise(s) boutique',
+      SyncEntityTable.fxSessions: 'session(s) bureau de change',
+      SyncEntityTable.fxOperations: 'opération(s) de change',
+      SyncEntityTable.fxMovements: 'mouvement(s) de change',
     };
 
     final parts = byTable.entries

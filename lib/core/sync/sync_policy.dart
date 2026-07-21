@@ -69,6 +69,31 @@ class SyncPolicy {
     return DateTime.now().difference(lastSynced) >= stale;
   }
 
+  /// Horodatage du dernier pull réussi pour [entity], ou null si jamais.
+  Future<int?> entityLastSyncedAt({
+    required int shopId,
+    required String entity,
+  }) async {
+    final row = await (_db.select(_db.syncEntityCache)
+          ..where(
+            (c) => c.shopId.equals(shopId) & c.entity.equals(entity),
+          ))
+        .getSingleOrNull();
+    return row?.lastSyncedAt;
+  }
+
+  /// Curseur delta : lastSync - marge (réseau / horloges), pour ne pas rater
+  /// des updates frontière.
+  Future<int?> entityUpdatedAfterCursor({
+    required int shopId,
+    required String entity,
+    Duration skew = const Duration(minutes: 2),
+  }) async {
+    final last = await entityLastSyncedAt(shopId: shopId, entity: entity);
+    if (last == null) return null;
+    return last - skew.inMilliseconds;
+  }
+
   Future<void> markEntitySynced({
     required int shopId,
     required String entity,

@@ -58,8 +58,12 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
       if (!mounted) return;
       if (snapshot.shopId != context.read<StockTransferBloc>().shopId) return;
       if (snapshot.phase != SyncRunPhase.completed) return;
+      // Silent : pas de loader ni d'affichage intermédiaire incorrect.
       context.read<StockTransferBloc>().add(
-            StockTransferDetailLoadRequested(widget.transferId),
+            StockTransferDetailLoadRequested(
+              widget.transferId,
+              silent: true,
+            ),
           );
     });
   }
@@ -179,9 +183,14 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
       },
       builder: (context, state) {
         final transfer = state.selectedTransfer;
-        if (state.status == StockTransferBlocStatus.loading && transfer == null) {
+        // Toujours attendre la fin du chargement initial (évite données stale).
+        if (state.status == StockTransferBlocStatus.loading) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Transfert')),
+            appBar: AppBar(
+              title: Text(
+                transfer?.reference ?? 'Transfert',
+              ),
+            ),
             body: const Center(child: CircularProgressIndicator()),
           );
         }
