@@ -9,7 +9,6 @@ import '../../../../core/sync/sync_service.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/user_role.dart';
-import '../../../../shared/components/action_feedback.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 
@@ -229,17 +228,22 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
       'categories' => 'Catégorie',
       'sales' => 'Vente',
       'debts' => 'Dette',
+      'sales_orders' => 'Commande client',
       _ => table,
     };
   }
 
   Future<void> _resolve(SyncConflictView conflict, {required bool keepLocal}) async {
     final label = keepLocal ? 'garder votre version' : 'accepter la version serveur';
+    final deliverNote = !keepLocal && conflict.isSalesOrderDeliverConflict
+        ? '\n\nAttention : la vente et le stock déjà enregistrés localement '
+            'ne seront pas annulés automatiquement.'
+        : '';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Confirmer'),
-        content: Text('Voulez-vous $label pour cet élément ?'),
+        content: Text('Voulez-vous $label pour cet élément ?$deliverNote'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),

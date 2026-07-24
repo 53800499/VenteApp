@@ -123,6 +123,56 @@ void main() {
     });
   });
 
+  group('Router Phase 4 fulfillment', () {
+    const router = VoiceIntentRouter();
+
+    test('camion → receivePurchase', () {
+      expect(
+        router.detect('Le camion est arrivé'),
+        VoiceIntentKind.receivePurchase,
+      );
+    });
+
+    test('livrer commande client → deliverSalesOrder', () {
+      expect(
+        router.detect('Livrer la commande client'),
+        VoiceIntentKind.deliverSalesOrder,
+      );
+    });
+
+    test('le client refuse → deliverSalesOrder', () {
+      expect(
+        router.detect('Le client refuse la livraison'),
+        VoiceIntentKind.deliverSalesOrder,
+      );
+    });
+
+    test('remplacer → openSaleReplacement', () {
+      expect(
+        router.detect('Le client veut remplacer'),
+        VoiceIntentKind.openSaleReplacement,
+      );
+    });
+
+    test('remplacer X par Y → openSaleReplacement', () {
+      expect(
+        router.detect('Remplacer ciment par sable'),
+        VoiceIntentKind.openSaleReplacement,
+      );
+    });
+
+    test('fournisseur refuse → receivePurchase ≠ deliverSalesOrder', () {
+      expect(
+        router.detect('Le fournisseur refuse'),
+        VoiceIntentKind.receivePurchase,
+      );
+      expect(
+        router.detect('Le client refuse'),
+        VoiceIntentKind.deliverSalesOrder,
+      );
+    });
+  });
+
   group('DebtPaymentWorkflow', () {
     test('une seule facture → prêt avec montant', () async {
       final wf = DebtPaymentWorkflow(
@@ -224,7 +274,41 @@ void main() {
       expect(wf.status, VoiceWorkflowStatus.asking);
       await wf.advance('la dernière');
       expect(wf.status, VoiceWorkflowStatus.asking);
-      expect(wf.currentPrompt?.question, contains('Quantité'));
+      expect(wf.currentPrompt?.question, contains('Quantité acceptée'));
+    });
+
+    test('mono-ligne acceptée + refusée + motif → draft canSave', () async {
+      final po = _po(
+        id: 2,
+        number: 'PO-2',
+        supplier: 'Beta',
+        status: PurchaseOrderStatus.sent,
+        items: [_item(id: 10, productId: 1, ordered: 50)],
+      );
+      final wf = ReceivePoWorkflow(
+        shopId: 1,
+        listOrders: () async => [po],
+        findOrder: (_) async => po,
+      );
+      await wf.bootstrap('Le fournisseur refuse');
+      expect(wf.status, VoiceWorkflowStatus.asking);
+      expect(wf.currentPrompt?.question, contains('Tout refusé'));
+      await wf.advance('40'); // accepted
+      expect(wf.currentPrompt?.question, contains('refusé'));
+      await wf.advance('oui'); // rest refused = 10
+      expect(wf.currentPrompt?.question, contains('Motif'));
+      await wf.advance('qualité');
+      expect(wf.status, VoiceWorkflowStatus.asking);
+      expect(wf.currentPrompt?.question, contains('Prix'));
+      await wf.advance('oui');
+      expect(wf.status, VoiceWorkflowStatus.ready);
+      final draft = wf.draft;
+      expect(draft, isA<VoiceReceivePurchaseDraft>());
+      final d = draft! as VoiceReceivePurchaseDraft;
+      expect(d.quantityReceived, 40);
+      expect(d.quantityRefused, 10);
+      expect(d.refusalReasonCode, 'quality');
+      expect(d.canSave, isTrue);
     });
   });
 

@@ -517,6 +517,112 @@ class SaleRepositoryImpl implements SaleRepository {
       entity: SyncPullEntity.sales,
     );
   }
+
+  @override
+  Future<List<SaleReplacement>> listReplacementsForSale({
+    required int shopId,
+    required int saleId,
+  }) {
+    return _local.listReplacementsForSale(shopId: shopId, saleId: saleId);
+  }
+
+  @override
+  Future<Map<int, int>> returnedQuantitiesBySaleItem({
+    required int shopId,
+    required int saleId,
+  }) {
+    return _local.returnedQuantitiesBySaleItem(
+      shopId: shopId,
+      saleId: saleId,
+    );
+  }
+
+  @override
+  Future<SaleReplacement> createSaleReplacement({
+    required int shopId,
+    required int userId,
+    required CreateSaleReplacementInput input,
+  }) async {
+    final sale = await _local.findSale(shopId, input.saleId);
+    if (sale == null) {
+      throw const NotFoundFailure('Vente introuvable.');
+    }
+    if (sale.isCancelled) {
+      throw const ValidationFailure(
+        'Impossible de remplacer une vente annulée.',
+      );
+    }
+    if (sale.saleType != SaleType.standard) {
+      throw const ValidationFailure(
+        'Le remplacement n\'est possible que sur une vente standard.',
+      );
+    }
+    if (input.items.isEmpty) {
+      throw const ValidationFailure(
+        'Ajoutez au moins une ligne de remplacement.',
+      );
+    }
+
+    final replacement = await _local.createSaleReplacement(
+      shopId: shopId,
+      userId: userId,
+      saleId: input.saleId,
+      items: input.items,
+      notes: input.notes,
+    );
+
+    unawaited(
+      _trySyncReplacement(
+        shopId: shopId,
+        saleId: input.saleId,
+        replacement: replacement,
+        input: input,
+      ),
+    );
+
+    return replacement;
+  }
+
+  Future<void> _trySyncReplacement({
+    required int shopId,
+    required int saleId,
+    required SaleReplacement replacement,
+    required CreateSaleReplacementInput input,
+  }) async {
+    try {
+      await _apiGuard.ensureReady();
+      final remote = await _remote.createSaleReplacement(
+        saleId,
+        {
+          'number': replacement.number,
+          'replacedAt': replacement.replacedAt,
+          'notes': replacement.notes,
+          'items': input.items
+              .map(
+                (it) => {
+                  'returnedSaleItemId': it.returnedSaleItemId,
+                  'quantityReturned': it.quantityReturned,
+                  'issuedProductId': it.issuedProductId,
+                  'quantityIssued': it.quantityIssued,
+                  'unitPriceIssued': it.unitPriceIssued,
+                  'reason': it.reason.code,
+                },
+              )
+              .toList(),
+        },
+      );
+      final serverId = remote['serverId'] as String? ?? remote['id']?.toString();
+      if (serverId != null) {
+        await _local.markReplacementSynced(
+          shopId: shopId,
+          replacementId: replacement.id,
+          serverId: serverId,
+        );
+      }
+    } catch (_) {
+      // Offline / erreur : reste pending localement.
+    }
+  }
 }
 
 Future<void> _runWithConcurrency(

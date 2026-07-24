@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/action_feedback.dart';
 import '../../domain/entities/procurement.dart';
 import '../../domain/repositories/procurement_repository.dart';
 import '../bloc/procurement_bloc.dart';
@@ -23,7 +24,7 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
   final _receiptNumberController = TextEditingController();
   final _notesController = TextEditingController();
 
-  // List holding user inputs: {purchaseOrderItemId: int, productId: int, quantityReceived: int, unitCost: int, remaining: int, productName: String, controller: TextEditingController, batchController: TextEditingController, expiryMs: int?}
+  /// Lignes : acceptedCtrl, refusedCtrl, refusalReason, remaining, …
   final List<Map<String, dynamic>> _items = [];
   bool _submitPending = false;
 
@@ -32,18 +33,19 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadNextReceiptNumber());
 
-    // Populate lines
     final poItems = widget.po.items ?? [];
     for (final it in poItems) {
-      final remaining = it.quantityOrdered - it.quantityReceived;
+      final remaining = it.quantityRemaining;
       if (remaining > 0) {
         _items.add({
           'purchaseOrderItemId': it.id,
           'productId': it.productId,
-          'productName': it.productName ?? "Produit #${it.productId}",
+          'productName': it.productName ?? 'Produit #${it.productId}',
           'unitCost': it.unitCost,
           'remaining': remaining,
-          'controller': TextEditingController(text: '$remaining'),
+          'acceptedCtrl': TextEditingController(text: '$remaining'),
+          'refusedCtrl': TextEditingController(text: '0'),
+          'refusalReason': null as SupplierRefusalReason?,
           'batchController': TextEditingController(),
           'expiryMs': null,
         });
@@ -65,8 +67,9 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
     _receiptNumberController.dispose();
     _notesController.dispose();
     for (final it in _items) {
-      it['controller'].dispose();
-      it['batchController'].dispose();
+      (it['acceptedCtrl'] as TextEditingController).dispose();
+      (it['refusedCtrl'] as TextEditingController).dispose();
+      (it['batchController'] as TextEditingController).dispose();
     }
     super.dispose();
   }
@@ -96,172 +99,215 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
             context: context,
             title: 'Réception enregistrée',
             message:
-                'Le bon de réception « ${_receiptNumberController.text.trim()} » '
-                'a été enregistré. Le stock a été mis à jour.',
+                'Le bon « ${_receiptNumberController.text.trim()} » a été '
+                'enregistré. Seules les quantités acceptées augmentent le stock.',
           );
           if (context.mounted) Navigator.pop(context);
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Réception Articles'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            Text(
-              'Commande #${widget.po.number}',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Fournisseur: ${widget.po.supplierName ?? "#${widget.po.supplierId}"}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: AppSpacing.md),
-
-            // Receipt number
-            TextFormField(
-              controller: _receiptNumberController,
-              decoration: const InputDecoration(
-                labelText: 'Numéro de Bon de Réception (BR) *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.receipt_outlined),
+        appBar: AppBar(
+          title: const Text('Réception Articles'),
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              Text(
+                'Commande #${widget.po.number}',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            Text(
-              'Quantités reçues par article',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            if (_items.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24.0),
-                  child: Text(
-                    'Tous les articles ont déjà été entièrement réceptionnés.',
-                    style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                  ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Fournisseur: ${widget.po.supplierName ?? "#${widget.po.supplierId}"}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _receiptNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Numéro de Bon de Réception (BR) *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.receipt_outlined),
                 ),
-              )
-            else
-              ..._items.map((it) {
-                final remaining = it['remaining'] as int;
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Requis' : null,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Accepté / refusé par article',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (_items.isEmpty)
+                const Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          it['productName'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Prix d\'achat : ${formatFcfa(it['unitCost'] as int)}/u',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text('Reste à recevoir: $remaining unités'),
-                            ),
-                            SizedBox(
-                              width: 120,
-                              child: TextFormField(
-                                controller: it['controller'] as TextEditingController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Reçu *',
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Requis';
-                                  final val = int.tryParse(v);
-                                  if (val == null || val < 0) return 'Invalide';
-                                  if (val > remaining) return 'Max $remaining';
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // Lot / Expiry Fields
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: it['batchController'] as TextEditingController,
-                                decoration: const InputDecoration(
-                                  labelText: 'N° de Lot',
-                                  border: OutlineInputBorder(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: _ExpirySelector(
-                                expiryMs: it['expiryMs'] as int?,
-                                onSelected: (ms) {
-                                  setState(() {
-                                    it['expiryMs'] = ms;
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'Tous les articles ont déjà été entièrement traités.',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
-                );
-              }),
-
-            const SizedBox(height: AppSpacing.md),
-            // Notes
-            TextFormField(
-              controller: _notesController,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Remarques sur la livraison',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Submit
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, AppSizes.controlHeight),
+                )
+              else
+                ..._items.map(_buildLineCard),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _notesController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Remarques sur la livraison',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
-                onPressed: _items.isEmpty || _submitPending ? null : _submitReceipt,
-                icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Confirmer la réception'),
               ),
+              const SizedBox(height: AppSpacing.xl),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, AppSizes.controlHeight),
+                  ),
+                  onPressed:
+                      _items.isEmpty || _submitPending ? null : _submitReceipt,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Confirmer la réception'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLineCard(Map<String, dynamic> it) {
+    final remaining = it['remaining'] as int;
+    final refusedCtrl = it['refusedCtrl'] as TextEditingController;
+    final refusedQty = int.tryParse(refusedCtrl.text.trim()) ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              it['productName'] as String,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Prix d\'achat : ${formatFcfa(it['unitCost'] as int)}/u · '
+              'Reste $remaining',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: it['acceptedCtrl'] as TextEditingController,
+                    decoration: const InputDecoration(
+                      labelText: 'Accepté',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: (v) {
+                      final accepted = int.tryParse(v?.trim() ?? '');
+                      final refused = int.tryParse(
+                            (it['refusedCtrl'] as TextEditingController)
+                                .text
+                                .trim(),
+                          ) ??
+                          0;
+                      if (accepted == null || accepted < 0) return 'Invalide';
+                      if (accepted + refused <= 0) return 'Saisir une qté';
+                      if (accepted + refused > remaining) {
+                        return 'Max $remaining';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextFormField(
+                    controller: refusedCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Refusé',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) => setState(() {}),
+                    validator: (v) {
+                      final refused = int.tryParse(v?.trim() ?? '');
+                      if (refused == null || refused < 0) return 'Invalide';
+                      return null;
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (refusedQty > 0) ...[
+              const SizedBox(height: AppSpacing.sm),
+              DropdownButtonFormField<SupplierRefusalReason>(
+                value: it['refusalReason'] as SupplierRefusalReason?,
+                decoration: const InputDecoration(
+                  labelText: 'Motif du refus *',
+                  border: OutlineInputBorder(),
+                ),
+                items: SupplierRefusalReason.values
+                    .map(
+                      (r) => DropdownMenuItem(
+                        value: r,
+                        child: Text(r.labelFr),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => it['refusalReason'] = v),
+                validator: (v) {
+                  if (refusedQty > 0 && v == null) return 'Motif requis';
+                  return null;
+                },
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: it['batchController'] as TextEditingController,
+                    decoration: const InputDecoration(
+                      labelText: 'N° de Lot',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _ExpirySelector(
+                    expiryMs: it['expiryMs'] as int?,
+                    onSelected: (ms) {
+                      setState(() => it['expiryMs'] = ms);
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
-    ),
     );
   }
 
@@ -269,39 +315,51 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final receiptItems = <Map<String, dynamic>>[];
-    var totalQty = 0;
+    var totalAccepted = 0;
+    var totalRefused = 0;
     for (final it in _items) {
-      final qty = int.parse((it['controller'] as TextEditingController).text.trim());
-      if (qty > 0) {
-        totalQty += qty;
-        receiptItems.add({
-          'purchaseOrderItemId': it['purchaseOrderItemId'] as int,
-          'productId': it['productId'] as int,
-          'quantityReceived': qty,
-          'unitCost': it['unitCost'] as int,
-          'batchNumber': (it['batchController'] as TextEditingController).text.trim().isEmpty
-              ? null
-              : (it['batchController'] as TextEditingController).text.trim(),
-          'expiryDate': it['expiryMs'],
-        });
-      }
+      final accepted = int.parse(
+        (it['acceptedCtrl'] as TextEditingController).text.trim(),
+      );
+      final refused = int.parse(
+        (it['refusedCtrl'] as TextEditingController).text.trim(),
+      );
+      if (accepted + refused <= 0) continue;
+      totalAccepted += accepted;
+      totalRefused += refused;
+      final reason = it['refusalReason'] as SupplierRefusalReason?;
+      receiptItems.add({
+        'purchaseOrderItemId': it['purchaseOrderItemId'] as int,
+        'productId': it['productId'] as int,
+        'quantityReceived': accepted,
+        'quantityRefused': refused,
+        'refusalReason': refused > 0 ? reason?.code : null,
+        'unitCost': it['unitCost'] as int,
+        'batchNumber':
+            (it['batchController'] as TextEditingController).text.trim().isEmpty
+                ? null
+                : (it['batchController'] as TextEditingController).text.trim(),
+        'expiryDate': it['expiryMs'],
+      });
     }
 
     if (receiptItems.isEmpty) {
-      ProcurementFeedback.showErrorMessage(
+      ActionFeedback.showErrorMessage(
         context,
-        'Veuillez saisir une quantité supérieure à 0 pour au moins un article.',
+        'Indiquez au moins une quantité acceptée ou refusée.',
       );
       return;
     }
 
-    final confirmed = await ProcurementFeedback.confirm(
+    final confirmed = await ActionFeedback.confirm(
       context: context,
       title: 'Confirmer la réception ?',
       message:
-          'Enregistrer le bon « ${_receiptNumberController.text.trim()} » '
-          'pour la commande #${widget.po.number} ?\n\n'
-          '$totalQty unité(s) seront ajoutées au stock.',
+          'Bon « ${_receiptNumberController.text.trim()} » — '
+          'commande #${widget.po.number}.\n\n'
+          'Accepté : $totalAccepted (→ stock)\n'
+          'Refusé : $totalRefused'
+          '${totalRefused > 0 ? ' (tracé sur le BR)' : ''}',
       confirmLabel: 'Confirmer la réception',
     );
     if (confirmed != true || !mounted) return;
@@ -311,16 +369,15 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
       context: context,
       shopId: shopId,
       lines: receiptItems
+          .where((it) => (it['quantityReceived'] as int) > 0)
           .map(
             (it) => ProcurementReceiptLineInput(
               productId: it['productId'] as int,
               unitCost: it['unitCost'] as int,
               quantityReceived: it['quantityReceived'] as int,
               productName: _items
-                  .cast<Map<String, dynamic>>()
                   .firstWhere(
                     (row) => row['productId'] == it['productId'],
-                    orElse: () => {},
                   )['productName'] as String?,
             ),
           )
@@ -328,51 +385,54 @@ class _ReceiveItemsPageState extends State<ReceiveItemsPage> {
     );
     if (!priceFlowOk || !mounted) return;
 
-    setState(() => _submitPending = true);
+    _submitPending = true;
     context.read<ProcurementBloc>().add(
           ProcurementOrderReceiveSubmitted(
             poId: widget.po.id,
             receiptNumber: _receiptNumberController.text.trim(),
             receivedAt: DateTime.now().millisecondsSinceEpoch,
-            notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+            notes: _notesController.text.trim().isEmpty
+                ? null
+                : _notesController.text.trim(),
             items: receiptItems,
           ),
         );
   }
 }
 
-// ---------------------------------------------------------------------------
-// Expiry Date Selector widget
-// ---------------------------------------------------------------------------
 class _ExpirySelector extends StatelessWidget {
-  const _ExpirySelector({required this.expiryMs, required this.onSelected});
+  const _ExpirySelector({
+    required this.expiryMs,
+    required this.onSelected,
+  });
+
   final int? expiryMs;
   final ValueChanged<int?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final hasDate = expiryMs != null;
-    final text = hasDate
-        ? DateTime.fromMillisecondsSinceEpoch(expiryMs!).toLocal().toString().substring(0, 10)
-        : 'Sélectionner Exp.';
-
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-      icon: const Icon(Icons.calendar_month),
-      label: Text(text, style: const TextStyle(fontSize: 12)),
+    final label = expiryMs == null
+        ? 'Expiration'
+        : DateTime.fromMillisecondsSinceEpoch(expiryMs!)
+            .toLocal()
+            .toString()
+            .substring(0, 10);
+    return OutlinedButton(
       onPressed: () async {
-        final date = await showDatePicker(
+        final now = DateTime.now();
+        final picked = await showDatePicker(
           context: context,
-          initialDate: DateTime.now().add(const Duration(days: 90)),
-          firstDate: DateTime.now(),
-          lastDate: DateTime.now().add(const Duration(days: 3650)),
+          initialDate: expiryMs == null
+              ? now.add(const Duration(days: 30))
+              : DateTime.fromMillisecondsSinceEpoch(expiryMs!),
+          firstDate: now,
+          lastDate: now.add(const Duration(days: 3650)),
         );
-        if (date != null) {
-          onSelected(date.millisecondsSinceEpoch);
-        }
+        onSelected(
+          picked == null ? null : picked.millisecondsSinceEpoch,
+        );
       },
+      child: Text(label, overflow: TextOverflow.ellipsis),
     );
   }
 }

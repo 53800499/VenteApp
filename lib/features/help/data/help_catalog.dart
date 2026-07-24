@@ -149,8 +149,9 @@ abstract final class HelpCatalog {
       categoryId: 'start',
       title: 'Assistant vocal ARIKE',
       summary:
-          'Parler pour vendre, rembourser, recevoir un camion, confirmer un change, '
-          'poser une question stock / change / dépenses, et enchaîner plusieurs commandes.',
+          'Parler pour vendre, rembourser, recevoir un camion, livrer une commande client, '
+          'remplacer un produit, confirmer un change, poser une question stock / change / dépenses, '
+          'et enchaîner plusieurs commandes.',
       icon: Icons.mic_outlined,
       color: AppColors.seed,
       keywords: [
@@ -225,8 +226,17 @@ abstract final class HelpCatalog {
             'Dépense : « Ajoute une dépense de 25 000 francs pour le transport. »',
             'Paiement de dette : « Koffi paie » ou « Rembourse 10 000 francs de la dette de Koffi. »',
             'Change : « Échanger cinq cent mille francs CFA en nairas. »',
-            'Réception : « Le camion est arrivé », « Le camion est là », '
-                '« On a reçu la livraison », « Le fournisseur est arrivé ».',
+            'Réception fournisseur : « Le camion est arrivé », « Le camion est là », '
+                '« On a reçu la livraison », « Le fournisseur est arrivé ». '
+                'Refus fournisseur (mono-ligne) : « Le fournisseur refuse » '
+                'puis quantités + motif (casse, humidité, qualité…).',
+            'Livraison commande client : « Livrer la commande client », '
+                '« Livraison client » — ouvre l’écran de livraison '
+                '(accepté / refusé / motif à confirmer à l’écran).',
+            'Refus client : « Le client refuse », « Refus client » — '
+                'même parcours que la livraison (pas d’enregistrement auto).',
+            'Remplacement après vente : « Remplacer », '
+                'ou « Remplacer ciment par sable » pour préremplir le formulaire.',
             'Commande fournisseur : « Commande 100 tonnes de ciment chez CIMBENIN. » '
                 '(ouvre le formulaire prérempli, sans enregistrement direct).',
           ],
@@ -282,8 +292,14 @@ abstract final class HelpCatalog {
                 'et le montant reçu, puis demande « Confirmer ? » (oui / non).',
             'Réception camion : « Le camion est arrivé » — choix de la commande '
                 '(« la dernière », numéro, fournisseur). '
-                'Une seule ligne produit : quantité + prix à voix. '
+                'Une seule ligne produit : quantité acceptée / refusée + motif + prix. '
                 'Plusieurs lignes : ouverture du formulaire de réception.',
+            'Livraison / refus client : « Livrer la commande client » ou '
+                '« Le client refuse » — choix de la commande, puis ouverture '
+                'de l’écran de livraison (confirmation manuelle).',
+            'Remplacement : « Remplacer » / « Remplacer ciment par sable » — '
+                'choix d’une vente récente, puis ouverture du formulaire '
+                '(prérempli si X par Y).',
           ],
           tip:
               'Pendant un workflow, répondez à la question affichée puis '
@@ -328,8 +344,9 @@ abstract final class HelpCatalog {
               'L\'assistant respecte les droits de votre rôle. Une intention '
               'non autorisée affiche un message clair sans enregistrer.',
           bullets: [
-            'Vente / dépense / dette / change / commande / réception : '
-                'droits de création ou réception du module.',
+            'Vente / dépense / dette / change / commande / réception / '
+                'livraison client / remplacement : '
+                'droits de création, réception ou livraison du module.',
             'Question stock / conseil stock : droit de lecture inventaire.',
             'Question solde change / marge change : droit de lecture bureau de change.',
             'Question dépenses : droit de lecture dépenses.',
@@ -356,6 +373,74 @@ abstract final class HelpCatalog {
       ],
     ),
 
+    HelpArticle(
+      id: 'sales_orders',
+      categoryId: 'commerce',
+      title: 'Commandes clients & livraisons',
+      summary:
+          'Commande différée, livraisons partielles, refus client et clôture — quand le stock ne suffit pas pour tout livrer d’un coup.',
+      icon: Icons.assignment_outlined,
+      color: Color(0xFF00897B),
+      keywords: [
+        'commande client',
+        'livraison',
+        'reliquat',
+        'refus',
+        'SO',
+        'partiel',
+      ],
+      sections: [
+        HelpSection(
+          title: 'Quand utiliser une commande client ?',
+          body:
+              'Quand le client commande plus que le stock disponible, ou une livraison '
+              'échelonnée (ex. 200 sacs en plusieurs camions). '
+              'Ce n’est pas une vente immédiate : le stock ne sort qu’à chaque livraison validée.',
+        ),
+        HelpSection(
+          title: 'Créer et confirmer — pas à pas',
+          steps: [
+            'Plus → Commandes clients.',
+            'Touchez + Commande, choisissez le client et les lignes (quantité / prix).',
+            'Enregistrez le brouillon, puis Confirmer sur le détail.',
+            'Optionnel : Préparation avant d’expédier.',
+          ],
+        ),
+        HelpSection(
+          title: 'Livraison partielle & refus',
+          steps: [
+            'Sur la commande, touchez Nouvelle livraison.',
+            'Pour chaque produit : accepté, refusé et éventuellement remplacé (autre produit).',
+            'Si refus : motif (cassé, humide, erreur de commande, client absent…) et destination (retour stock ou perte).',
+            'S’il reste un reliquat : indiquez pourquoi (camion plein, report, stock insuffisant…).',
+            'Optionnel : chauffeur, plaque du véhicule et notes.',
+            'Choisissez le paiement pour accepté + remplacé (espèces, MoMo, crédit).',
+            'Valider : vente + stock FIFO ; les pertes décrémentent aussi le stock.',
+          ],
+        ),
+        HelpSection(
+          title: 'Onglet Rapports',
+          body:
+              'Dans Commandes clients → Rapports : répartition des motifs de refus, '
+              'destinations (retour / perte) et raisons de reliquat sur 7 jours, 30 jours ou le mois en cours.',
+          tip:
+              'Répétez les livraisons jusqu’à « Livrée », puis Clôturer. '
+              'Annulation possible seulement s’il n’y a encore aucune livraison. '
+              'Pour un remplacement après livraison : Ouvrir la vente liée → Remplacer.',
+        ),
+        HelpSection(
+          title: 'Plusieurs appareils (tablettes)',
+          body:
+              'Les commandes se synchronisent avec le cloud (pull + push). '
+              'Si deux appareils modifient la même commande hors-ligne, un conflit peut apparaître. '
+              'Dans Plus → Conflits de sync : « Garder la mienne » rejoue votre version, '
+              '« Garder serveur » recharge la version cloud. '
+              'Après une livraison conflictuelle, vérifiez vente et stock localement '
+              '(ils ne sont pas annulés automatiquement).',
+        ),
+      ],
+    ),
+
     // ── Commerce ─────────────────────────────────────────────────
     HelpArticle(
       id: 'sales',
@@ -373,6 +458,8 @@ abstract final class HelpCatalog {
         'panier',
         'vocal',
         'micro',
+        'remplacement',
+        'retour',
       ],
       sections: [
         HelpSection(
@@ -428,6 +515,24 @@ abstract final class HelpCatalog {
             'Pour le reçu : touchez « Reçu » ou l\'icône partage / PDF.',
             'Pour annuler (si autorisé) : touchez « Annuler » et confirmez.',
           ],
+        ),
+        HelpSection(
+          title: 'Remplacer un produit après vente — pas à pas',
+          body:
+              'Le client revient avec un produit déjà vendu. Vous enregistrez un '
+              'retour en stock et la sortie du produit de remplacement. '
+              'Aucun encaissement ni remboursement dans cet écran.',
+          steps: [
+            'Ouvrez la vente (onglet Ventes, ou « Ouvrir la vente » depuis une livraison de commande client).',
+            'Touchez « Remplacer ».',
+            'Cochez chaque ligne concernée : quantité retournée, produit émis, motif.',
+            'Confirmez le récapitulatif (écart de prix informatif, hors caisse).',
+            'Le stock est mis à jour ; le remplacement apparaît sur le détail de la vente.',
+          ],
+          tip:
+              'Un même article peut être remplacé en plusieurs fois tant qu\'il '
+              'reste une quantité retournable. Le règlement d\'un écart de prix '
+              'se fera plus tard (hors cette version).',
         ),
         HelpSection(
           title: 'Appliquer une remise',
@@ -1441,18 +1546,22 @@ abstract final class HelpCatalog {
         HelpSection(
           title: 'Réceptionner une livraison — pas à pas',
           body:
-              'C\'est à la réception que le stock augmente. Les produits entrent '
-              'en lots avec leur prix d\'achat (base du calcul FIFO).',
+              'C\'est à la réception que le stock augmente. Les produits acceptés '
+              'entrent en lots avec leur prix d\'achat (base du calcul FIFO). '
+              'Vous pouvez aussi refuser une partie (sacs déchirés, humidité…).',
           steps: [
             'Ouvrez une commande au statut Envoyée ou Partiellement reçue.',
             'Touchez « Réceptionner ».',
-            'Pour chaque ligne, saisissez la quantité réellement reçue (≤ quantité restante).',
-            'Validez la réception.',
-            'Le stock est mis à jour et un lot d\'inventaire est créé.',
+            'Pour chaque ligne : quantité Acceptée (entre en stock) et Refusée.',
+            'Si refus > 0, choisissez un motif (cassé, humidité, qualité…).',
+            'Confirmez le récapitulatif puis validez.',
+            'Seul l\'accepté augmente le stock ; le refus est tracé sur le bon.',
             'Répétez si la livraison arrive en plusieurs fois (réception partielle).',
           ],
           tip:
-              'En cas d\'écart (moins reçu que commandé), saisissez la quantité réelle : l\'écart reste visible sur la commande.',
+              'Le reliquat de la commande = commandé − accepté − refusé. '
+              'Quand le reliquat est à zéro, la commande passe à « Reçue ». '
+              'Un avoir / retour fournisseur sera géré plus tard si besoin.',
         ),
         HelpSection(
           title: 'Approvisionnement direct (sans commande) — pas à pas',

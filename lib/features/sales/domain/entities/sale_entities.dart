@@ -291,3 +291,151 @@ class SaleListFilters extends Equatable {
   @override
   List<Object?> get props => [search, status, from, to, limit];
 }
+
+enum SaleReplacementReason {
+  breakage,
+  humidity,
+  quality,
+  wrongItem,
+  other;
+
+  String get code => switch (this) {
+        SaleReplacementReason.breakage => 'breakage',
+        SaleReplacementReason.humidity => 'humidity',
+        SaleReplacementReason.quality => 'quality',
+        SaleReplacementReason.wrongItem => 'wrong_item',
+        SaleReplacementReason.other => 'other',
+      };
+
+  String get labelFr => switch (this) {
+        SaleReplacementReason.breakage => 'Cassé / déchiré',
+        SaleReplacementReason.humidity => 'Humidité',
+        SaleReplacementReason.quality => 'Qualité',
+        SaleReplacementReason.wrongItem => 'Mauvais article',
+        SaleReplacementReason.other => 'Autre',
+      };
+
+  static SaleReplacementReason fromCode(String code) {
+    for (final r in SaleReplacementReason.values) {
+      if (r.code == code) return r;
+    }
+    return SaleReplacementReason.other;
+  }
+}
+
+class SaleReplacementItem extends Equatable {
+  const SaleReplacementItem({
+    required this.id,
+    required this.replacementId,
+    required this.returnedSaleItemId,
+    required this.returnedProductId,
+    this.returnedProductName,
+    required this.quantityReturned,
+    required this.issuedProductId,
+    this.issuedProductName,
+    required this.quantityIssued,
+    required this.unitPriceIssued,
+    required this.reason,
+  });
+
+  final int id;
+  final int replacementId;
+  final int returnedSaleItemId;
+  final int returnedProductId;
+  final String? returnedProductName;
+  final int quantityReturned;
+  final int issuedProductId;
+  final String? issuedProductName;
+  final int quantityIssued;
+  final int unitPriceIssued;
+  final String reason;
+
+  SaleReplacementReason get reasonEnum =>
+      SaleReplacementReason.fromCode(reason);
+
+  @override
+  List<Object?> get props => [
+        id,
+        returnedSaleItemId,
+        quantityReturned,
+        issuedProductId,
+        quantityIssued,
+        reason,
+      ];
+}
+
+class SaleReplacement extends Equatable {
+  const SaleReplacement({
+    required this.id,
+    required this.shopId,
+    required this.saleId,
+    required this.number,
+    required this.replacedAt,
+    required this.replacedBy,
+    this.notes,
+    this.items = const [],
+  });
+
+  final int id;
+  final int shopId;
+  final int saleId;
+  final String number;
+  final int replacedAt;
+  final int replacedBy;
+  final String? notes;
+  final List<SaleReplacementItem> items;
+
+  @override
+  List<Object?> get props => [id, saleId, number, replacedAt];
+}
+
+class SaleReplacementLineInput extends Equatable {
+  const SaleReplacementLineInput({
+    required this.returnedSaleItemId,
+    required this.quantityReturned,
+    required this.issuedProductId,
+    required this.quantityIssued,
+    required this.unitPriceIssued,
+    required this.reason,
+  });
+
+  final int returnedSaleItemId;
+  final int quantityReturned;
+  final int issuedProductId;
+  final int quantityIssued;
+  final int unitPriceIssued;
+  final SaleReplacementReason reason;
+
+  @override
+  List<Object?> get props => [
+        returnedSaleItemId,
+        quantityReturned,
+        issuedProductId,
+        quantityIssued,
+        reason,
+      ];
+}
+
+class CreateSaleReplacementInput extends Equatable {
+  const CreateSaleReplacementInput({
+    required this.saleId,
+    required this.items,
+    this.notes,
+  });
+
+  final int saleId;
+  final List<SaleReplacementLineInput> items;
+  final String? notes;
+
+  @override
+  List<Object?> get props => [saleId, items, notes];
+}
+
+/// Quantité encore retournable pour une ligne de vente.
+int saleItemQuantityReturnable({
+  required int soldQuantity,
+  required int alreadyReturned,
+}) {
+  final remaining = soldQuantity - alreadyReturned;
+  return remaining < 0 ? 0 : remaining;
+}

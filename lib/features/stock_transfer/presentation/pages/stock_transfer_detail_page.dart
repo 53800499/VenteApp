@@ -715,9 +715,45 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
     BuildContext context,
     StockTransfer transfer,
   ) async {
-    final pendingItems =
-        (transfer.items ?? []).where((i) => i.quantityPendingShip > 0).toList();
-    if (pendingItems.isEmpty) return;
+    var working = transfer;
+    var pendingItems =
+        (working.items ?? []).where((i) => i.quantityPendingShip > 0).toList();
+
+    // Transfert sync sans lignes à jour : rafraîchir avant d'abandonner.
+    if (pendingItems.isEmpty && working.isCreateSynced) {
+      try {
+        final refreshed = await sl<StockTransferRepository>()
+            .refreshTransferFromRemote(
+          shopId: context.read<StockTransferBloc>().shopId,
+          transferId: working.id,
+        );
+        if (refreshed != null) {
+          working = refreshed;
+          pendingItems = (working.items ?? [])
+              .where((i) => i.quantityPendingShip > 0)
+              .toList();
+          if (context.mounted) {
+            context.read<StockTransferBloc>().add(
+                  StockTransferDetailLoadRequested(working.id, silent: true),
+                );
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (pendingItems.isEmpty) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            (working.items ?? []).isEmpty
+                ? 'Lignes du transfert absentes. Relancez la synchronisation, puis réessayez.'
+                : 'Aucune quantité restante à expédier sur ce transfert.',
+          ),
+        ),
+      );
+      return;
+    }
 
     final totalUnits =
         pendingItems.fold(0, (sum, i) => sum + i.quantityPendingShip);
@@ -744,14 +780,14 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
     );
     if (ok != true || !context.mounted) return;
 
-    final label = _nextShipmentLabel(transfer);
+    final label = _nextShipmentLabel(working);
     setState(() {
       _actionPending = true;
       _pendingQrShipmentLabel = label;
     });
     context.read<StockTransferBloc>().add(
           StockTransferShipRequested(
-            transferId: transfer.id,
+            transferId: working.id,
             shipmentLabel: label,
           ),
         );

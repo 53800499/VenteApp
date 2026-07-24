@@ -44,6 +44,25 @@ class StockTransferCloudSyncHelper {
         lower.contains('ne peut pas etre expedi');
   }
 
+  /// Quantité d'expédition rejetée : souvent un retry alors que le cloud a déjà expédié.
+  static bool isShipQuantityTooHighError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('quantité expédiée trop élevée') ||
+        lower.contains('quantite expediee trop elevee');
+  }
+
+  static bool canResolveDiscrepancyOnRemote(String status) =>
+      status == StockTransferStatus.partiallyShipped ||
+      status == StockTransferStatus.shipped ||
+      status == StockTransferStatus.partiallyReceived ||
+      status == StockTransferStatus.received;
+
+  static bool isDiscrepancyNotAllowedError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('ne peut pas recevoir de résolution') ||
+        lower.contains('ne peut pas recevoir de resolution');
+  }
+
   static bool isAlreadyValidatedError(String message) {
     final lower = message.toLowerCase();
     return lower.contains('brouillon') && lower.contains('valid');
@@ -52,6 +71,227 @@ class StockTransferCloudSyncHelper {
   static bool isInsufficientStockError(String message) {
     final lower = message.toLowerCase();
     return lower.contains('stock insuffisant') || lower.contains('stock insuff');
+  }
+
+  static bool isTerminalClosedStatus(String status) =>
+      status == StockTransferStatus.cancelled ||
+      status == StockTransferStatus.closed ||
+      status == StockTransferStatus.closedWithException;
+
+  /// Limite les qtés d'expédition au pending cloud (évite le retry post-ship).
+  static Map<int, int> clampShipQuantitiesToRemotePending({
+    required Map<int, int> quantitiesByLocalItemId,
+    required List<Map<String, dynamic>> mapping,
+    required List<Map<String, dynamic>> remoteItems,
+  }) {
+    final remoteById = <int, Map<String, dynamic>>{};
+    for (final ri in remoteItems) {
+      final id = StockTransferLocalDatasource.coerceRemoteInt(ri['id']);
+      if (id != null) remoteById[id] = ri;
+    }
+
+    final clamped = <int, int>{};
+    for (final row in mapping) {
+      final localItemId = row['localItemId'] as int?;
+      final remoteItemId = row['remoteItemId'] as int?;
+      if (localItemId == null || remoteItemId == null) continue;
+      final qty = quantitiesByLocalItemId[localItemId] ?? 0;
+      if (qty <= 0) continue;
+      final remote = remoteById[remoteItemId];
+      if (remote == null) continue;
+      final requested =
+          StockTransferLocalDatasource.coerceRemoteInt(
+            remote['quantityRequested'],
+          ) ??
+          0;
+      final shipped =
+          StockTransferLocalDatasource.coerceRemoteInt(
+            remote['quantityShipped'],
+          ) ??
+          0;
+      final pending = requested - shipped;
+      if (pending <= 0) continue;
+      clamped[localItemId] = qty > pending ? pending : qty;
+    }
+    return clamped;
+  }
+
+  /// True si chaque ligne à expédier a déjà un pending cloud à 0.
+  static bool remoteAlreadyCoversShipQuantities({
+    required Map<int, int> quantitiesByLocalItemId,
+    required List<Map<String, dynamic>> mapping,
+    required List<Map<String, dynamic>> remoteItems,
+  }) {
+    final remoteById = <int, Map<String, dynamic>>{};
+    for (final ri in remoteItems) {
+      final id = StockTransferLocalDatasource.coerceRemoteInt(ri['id']);
+      if (id != null) remoteById[id] = ri;
+    }
+
+    var sawRequested = false;
+    for (final row in mapping) {
+      final localItemId = row['localItemId'] as int?;
+      final remoteItemId = row['remoteItemId'] as int?;
+      if (localItemId == null || remoteItemId == null) continue;
+      final qty = quantitiesByLocalItemId[localItemId] ?? 0;
+      if (qty <= 0) continue;
+      sawRequested = true;
+      final remote = remoteById[remoteItemId];
+      if (remote == null) return false;
+      final requested =
+          StockTransferLocalDatasource.coerceRemoteInt(
+            remote['quantityRequested'],
+          ) ??
+          0;
+      final shipped =
+          StockTransferLocalDatasource.coerceRemoteInt(
+            remote['quantityShipped'],
+          ) ??
+          0;
+      if (requested - shipped > 0) return false;
+    }
+    return sawRequested;
+  }
+
+  /// Limite les qtés de réception au pending cloud (retry post-receive).
+  static Map<int, int> clampReceiveQuantitiesToRemotePending({
+    required Map<int, int> quantitiesByLocalItemId,
+    required List<Map<String, dynamic>> mapping,
+    required List<Map<String, dynamic>> remoteItems,
+    int? remoteShipmentId,
+  }) {
+    final remoteById = <int, Map<String, dynamic>>{};
+    for (final ri in remoteItems) {
+      final id = StockTransferLocalDatasource.coerceRemoteInt(ri['id']);
+      if (id != null) remoteById[id] = ri;
+    }
+
+    final clamped = <int, int>{};
+    for (final row in mapping) {
+      final localItemId = row['localItemId'] as int?;
+      final remoteItemId = row['remoteItemId'] as int?;
+      if (localItemId == null || remoteItemId == null) continue;
+      final qty = quantitiesByLocalItemId[localItemId] ?? 0;
+      if (qty <= 0) continue;
+      final remote = remoteById[remoteItemId];
+      if (remote == null) continue;
+      final pending = _remotePendingReceive(remote, remoteShipmentId);
+      if (pending <= 0) continue;
+      clamped[localItemId] = qty > pending ? pending : qty;
+    }
+    return clamped;
+  }
+
+  static bool remoteAlreadyCoversReceiveQuantities({
+    required Map<int, int> quantitiesByLocalItemId,
+    required List<Map<String, dynamic>> mapping,
+    required List<Map<String, dynamic>> remoteItems,
+    int? remoteShipmentId,
+  }) {
+    final remoteById = <int, Map<String, dynamic>>{};
+    for (final ri in remoteItems) {
+      final id = StockTransferLocalDatasource.coerceRemoteInt(ri['id']);
+      if (id != null) remoteById[id] = ri;
+    }
+
+    var sawRequested = false;
+    for (final row in mapping) {
+      final localItemId = row['localItemId'] as int?;
+      final remoteItemId = row['remoteItemId'] as int?;
+      if (localItemId == null || remoteItemId == null) continue;
+      final qty = quantitiesByLocalItemId[localItemId] ?? 0;
+      if (qty <= 0) continue;
+      sawRequested = true;
+      final remote = remoteById[remoteItemId];
+      if (remote == null) return false;
+      if (_remotePendingReceive(remote, remoteShipmentId) > 0) return false;
+    }
+    return sawRequested;
+  }
+
+  static int _remotePendingReceive(
+    Map<String, dynamic> remoteItem,
+    int? remoteShipmentId,
+  ) {
+    if (remoteShipmentId != null) {
+      final lotLines = (remoteItem['lotLines'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .toList() ??
+          const [];
+      var pending = 0;
+      for (final line in lotLines) {
+        final shipmentId =
+            StockTransferLocalDatasource.coerceRemoteInt(line['shipmentId']);
+        if (shipmentId != remoteShipmentId) continue;
+        final qty =
+            StockTransferLocalDatasource.coerceRemoteInt(line['quantity']) ?? 0;
+        final received =
+            StockTransferLocalDatasource.coerceRemoteInt(
+              line['quantityReceived'],
+            ) ??
+            0;
+        pending += qty - received;
+      }
+      return pending > 0 ? pending : 0;
+    }
+    final shipped =
+        StockTransferLocalDatasource.coerceRemoteInt(
+          remoteItem['quantityShipped'],
+        ) ??
+        0;
+    final received =
+        StockTransferLocalDatasource.coerceRemoteInt(
+          remoteItem['quantityReceived'],
+        ) ??
+        0;
+    final pending = shipped - received;
+    return pending > 0 ? pending : 0;
+  }
+
+  static bool isReceiveQuantityTooHighError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('trop élevées') ||
+        lower.contains('trop elevees') ||
+        lower.contains('trop élevée') ||
+        lower.contains('trop elevee');
+  }
+
+  static bool isNotReadyToReceiveError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('ne peut pas être réceptionn') ||
+        lower.contains('ne peut pas etre receptionn') ||
+        lower.contains('ne peut pas être recu') ||
+        lower.contains('pas encore expédi');
+  }
+
+  static int openDiscrepancyQtyOnRemoteItem({
+    required Map<String, dynamic> remoteItem,
+    required List<Map<String, dynamic>> discrepancies,
+    required int remoteItemId,
+  }) {
+    final shipped =
+        StockTransferLocalDatasource.coerceRemoteInt(
+          remoteItem['quantityShipped'],
+        ) ??
+        0;
+    final received =
+        StockTransferLocalDatasource.coerceRemoteInt(
+          remoteItem['quantityReceived'],
+        ) ??
+        0;
+    final gap = shipped - received;
+    if (gap <= 0) return 0;
+    var resolved = 0;
+    for (final row in discrepancies) {
+      final itemId = StockTransferLocalDatasource.coerceRemoteInt(
+        row['transferItemId'] ?? row['itemId'],
+      );
+      if (itemId != remoteItemId) continue;
+      resolved +=
+          StockTransferLocalDatasource.coerceRemoteInt(row['quantity']) ?? 0;
+    }
+    final open = gap - resolved;
+    return open > 0 ? open : 0;
   }
 
   Future<int?> resolveSourceServerShopId(StockTransfer transfer) =>

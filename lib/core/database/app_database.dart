@@ -16,6 +16,8 @@ import 'tables/inventory_lot_tables.dart';
 import 'tables/product_pricing_tables.dart';
 import 'tables/stock_transfer_tables.dart';
 import 'tables/fx_exchange_tables.dart';
+import 'tables/sales_order_tables.dart';
+import 'tables/sale_replacement_tables.dart';
 
 part 'app_database.g.dart';
 
@@ -75,6 +77,13 @@ part 'app_database.g.dart';
   FxSessionRates,
   FxOperations,
   FxMovements,
+  SalesOrders,
+  SalesOrderItems,
+  SalesOrderDeliveries,
+  SalesOrderDeliveryItems,
+  SalesOrderHistoryEntries,
+  SaleReplacements,
+  SaleReplacementItems,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase({required DatabaseKeyStorage keyStorage})
@@ -83,7 +92,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 38;
+  int get schemaVersion => 45;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -429,6 +438,97 @@ class AppDatabase extends _$AppDatabase {
               m,
               settings,
               settings.fxPrimaryWorkspace,
+            );
+          }
+          if (from < 39) {
+            await m.createTable(salesOrders);
+            await m.createTable(salesOrderItems);
+            await m.createTable(salesOrderDeliveries);
+            await m.createTable(salesOrderDeliveryItems);
+            await m.createTable(salesOrderHistoryEntries);
+          }
+          if (from < 40) {
+            await _addColumnIfMissing(
+              m,
+              purchaseOrderItems,
+              purchaseOrderItems.quantityRefused,
+            );
+            await _addColumnIfMissing(
+              m,
+              purchaseReceiptItems,
+              purchaseReceiptItems.quantityRefused,
+            );
+            await _addColumnIfMissing(
+              m,
+              purchaseReceiptItems,
+              purchaseReceiptItems.refusalReason,
+            );
+          }
+          if (from < 41) {
+            await m.createTable(saleReplacements);
+            await m.createTable(saleReplacementItems);
+          }
+          if (from < 42) {
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveries,
+              salesOrderDeliveries.driverName,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveries,
+              salesOrderDeliveries.vehiclePlate,
+            );
+          }
+          if (from < 43) {
+            await _addColumnIfMissing(
+              m,
+              salesOrderItems,
+              salesOrderItems.quantityReplaced,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveryItems,
+              salesOrderDeliveryItems.refusalDestination,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveryItems,
+              salesOrderDeliveryItems.quantityReplaced,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveryItems,
+              salesOrderDeliveryItems.replacementProductId,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveryItems,
+              salesOrderDeliveryItems.replacementUnitPrice,
+            );
+          }
+          if (from < 44) {
+            await _addColumnIfMissing(
+              m,
+              salesOrderDeliveries,
+              salesOrderDeliveries.remainingReason,
+            );
+          }
+          if (from < 45) {
+            await _addColumnIfMissing(
+              m,
+              salesOrderHistoryEntries,
+              salesOrderHistoryEntries.payload,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrders,
+              salesOrders.updatedBy,
+            );
+            await _addColumnIfMissing(
+              m,
+              salesOrders,
+              salesOrders.deviceId,
             );
           }
         },

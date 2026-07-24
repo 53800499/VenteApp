@@ -3,12 +3,17 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/time.dart';
 import '../entities/notification_entities.dart';
 import '../../data/datasources/local/notifications_local_datasource.dart';
+import '../../../sales_orders/data/datasources/sales_order_local_datasource.dart';
 
 /// Agrégation locale du feed — miroir backend `NotificationFeedService`.
 class NotificationFeedBuilder {
-  const NotificationFeedBuilder(this._local);
+  const NotificationFeedBuilder(
+    this._local, {
+    SalesOrderLocalDatasource? salesOrders,
+  }) : _salesOrders = salesOrders;
 
   final NotificationsLocalDatasource _local;
+  final SalesOrderLocalDatasource? _salesOrders;
 
   Future<NotificationFeed> build({required int shopId, int? atMs}) async {
     final now = atMs ?? nowMs();
@@ -230,6 +235,32 @@ class NotificationFeedBuilder {
           },
         ),
       );
+    }
+
+    final soLocal = _salesOrders;
+    if (soLocal != null) {
+      final open = await soLocal.countOpenWithRemaining(shopId);
+      if (open.count > 0) {
+        final preview = open.previewNumber;
+        items.add(
+          NotificationItem(
+            code: NotificationCode.salesOrderOpen.label,
+            channel: 'system',
+            title: 'Commandes avec reliquat',
+            body: open.count == 1 && preview != null
+                ? '1 commande ouverte avec reliquat : $preview.'
+                : '${open.count} commandes ouvertes avec reliquat'
+                    '${preview != null ? ' (ex. $preview)' : ''}.',
+            deepLink: '/sales-orders',
+            configurable: false,
+            alwaysOn: true,
+            payload: {
+              'count': open.count,
+              if (preview != null) 'previewNumber': preview,
+            },
+          ),
+        );
+      }
     }
 
     return NotificationFeed(

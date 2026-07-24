@@ -450,6 +450,14 @@ class VoiceIntentParser {
           transcript: text,
           missingFields: const ['commande'],
         ),
+      VoiceIntentKind.deliverSalesOrder => VoiceDeliverSalesOrderDraft(
+          transcript: text,
+          missingFields: const ['commande'],
+        ),
+      VoiceIntentKind.openSaleReplacement => VoiceOpenSaleReplacementDraft(
+          transcript: text,
+          missingFields: const ['vente'],
+        ),
       VoiceIntentKind.sale => _parseSale(text, lower, products, customers),
       VoiceIntentKind.createProduct =>
         _parseCreateProduct(text, lower, categories),

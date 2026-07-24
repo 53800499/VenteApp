@@ -227,7 +227,16 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
                     child: ListTile(
                       title: Text(product.name as String),
                       subtitle: Text(
-                        '${item['quantityReceived']} u · achat ${formatFcfa(item['unitCost'] as int)}/u',
+                        () {
+                          final accepted = item['quantityReceived'] as int;
+                          final refused =
+                              (item['quantityRefused'] as int?) ?? 0;
+                          final refusedPart = refused > 0
+                              ? ' · refusé $refused'
+                              : '';
+                          return 'Accepté $accepted$refusedPart · '
+                              'achat ${formatFcfa(item['unitCost'] as int)}/u';
+                        }(),
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -381,9 +390,11 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
 
   void _showAddItemDialog() {
     dynamic selectedProduct;
-    final qtyController = TextEditingController(text: '1');
+    final acceptedController = TextEditingController(text: '1');
+    final refusedController = TextEditingController(text: '0');
     final costController = TextEditingController();
     final batchController = TextEditingController();
+    SupplierRefusalReason? refusalReason;
     int? expiryMs;
 
     showDialog(
@@ -427,14 +438,51 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
                   },
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                TextFormField(
-                  controller: qtyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Quantité *',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: acceptedController,
+                        decoration: const InputDecoration(
+                          labelText: 'Accepté *',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: TextFormField(
+                        controller: refusedController,
+                        decoration: const InputDecoration(
+                          labelText: 'Refusé',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) => setStateDialog(() {}),
+                      ),
+                    ),
+                  ],
                 ),
+                if ((int.tryParse(refusedController.text.trim()) ?? 0) > 0) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  DropdownButtonFormField<SupplierRefusalReason>(
+                    value: refusalReason,
+                    decoration: const InputDecoration(
+                      labelText: 'Motif du refus *',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: SupplierRefusalReason.values
+                        .map(
+                          (r) => DropdownMenuItem(
+                            value: r,
+                            child: Text(r.labelFr),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setStateDialog(() => refusalReason = v),
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.sm),
                 TextFormField(
                   controller: costController,
@@ -488,17 +536,24 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
             FilledButton(
               onPressed: () {
                 if (selectedProduct == null) return;
-                final qty = int.tryParse(qtyController.text.trim()) ?? 0;
+                final accepted =
+                    int.tryParse(acceptedController.text.trim()) ?? 0;
+                final refused =
+                    int.tryParse(refusedController.text.trim()) ?? 0;
                 final cost = int.tryParse(costController.text.trim()) ?? 0;
-                if (qty <= 0) return;
+                if (accepted < 0 || refused < 0) return;
+                if (accepted + refused <= 0) return;
+                if (refused > 0 && refusalReason == null) return;
 
                 setState(() {
                   _items.add({
                     'product': selectedProduct,
                     'productId': selectedProduct.id,
-                    'quantityReceived': qty,
+                    'quantityReceived': accepted,
+                    'quantityRefused': refused,
+                    'refusalReason': refusalReason?.code,
                     'unitCost': cost,
-                    'subtotal': qty * cost,
+                    'subtotal': accepted * cost,
                     'batchNumber': batchController.text.trim().isEmpty
                         ? null
                         : batchController.text.trim(),
@@ -538,6 +593,8 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
           (it) => {
             'productId': it['productId'] as int,
             'quantityReceived': it['quantityReceived'] as int,
+            'quantityRefused': (it['quantityRefused'] as int?) ?? 0,
+            'refusalReason': it['refusalReason'] as String?,
             'unitCost': it['unitCost'] as int,
             'batchNumber': it['batchNumber'] as String?,
             'expiryDate': it['expiryDate'] as int?,
@@ -545,9 +602,13 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
         )
         .toList();
 
-    final totalQty = receiptItems.fold<int>(
+    final acceptedQty = receiptItems.fold<int>(
       0,
       (sum, it) => sum + (it['quantityReceived'] as int),
+    );
+    final refusedQty = receiptItems.fold<int>(
+      0,
+      (sum, it) => sum + (it['quantityRefused'] as int),
     );
 
     final confirmed = await ProcurementFeedback.confirm(
@@ -556,7 +617,8 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
       message:
           'Enregistrer le bon « ${_receiptNumberController.text.trim()} » '
           'chez ${supplierName ?? 'le fournisseur'} ?\n\n'
-          '$totalQty unité(s) seront ajoutées au stock.',
+          'Accepté : $acceptedQty → stock\n'
+          '${refusedQty > 0 ? 'Refusé : $refusedQty (hors stock)\n' : ''}',
       confirmLabel: 'Confirmer',
     );
     if (confirmed != true || !mounted) return;
@@ -566,6 +628,7 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
       context: context,
       shopId: shopId,
       lines: receiptItems
+          .where((it) => (it['quantityReceived'] as int) > 0)
           .map(
             (it) {
               final product = _items.firstWhere(

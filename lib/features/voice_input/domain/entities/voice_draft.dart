@@ -7,6 +7,8 @@ enum VoiceIntentKind {
   fxOperation,
   procurementOrder,
   receivePurchase,
+  deliverSalesOrder,
+  openSaleReplacement,
   createProduct,
   createCategory,
   stockQuery,
@@ -32,6 +34,8 @@ extension VoiceIntentKindX on VoiceIntentKind {
         VoiceIntentKind.fxOperation => 'Bureau de change',
         VoiceIntentKind.procurementOrder => 'Commande fournisseur',
         VoiceIntentKind.receivePurchase => 'Réception commande',
+        VoiceIntentKind.deliverSalesOrder => 'Livraison commande client',
+        VoiceIntentKind.openSaleReplacement => 'Remplacement après vente',
         VoiceIntentKind.createProduct => 'Nouveau produit',
         VoiceIntentKind.createCategory => 'Nouvelle catégorie',
         VoiceIntentKind.stockQuery => 'Stock',
@@ -61,7 +65,9 @@ extension VoiceIntentKindX on VoiceIntentKind {
   bool get usesWorkflow => switch (this) {
         VoiceIntentKind.debtPayment ||
         VoiceIntentKind.fxOperation ||
-        VoiceIntentKind.receivePurchase =>
+        VoiceIntentKind.receivePurchase ||
+        VoiceIntentKind.deliverSalesOrder ||
+        VoiceIntentKind.openSaleReplacement =>
           true,
         _ => false,
       };
@@ -437,6 +443,8 @@ class VoiceReceivePurchaseDraft extends VoiceDraft {
     this.productId,
     this.productName,
     this.quantityReceived,
+    this.quantityRefused,
+    this.refusalReasonCode,
     this.unitCost,
     this.remainingBefore,
   });
@@ -448,18 +456,32 @@ class VoiceReceivePurchaseDraft extends VoiceDraft {
   final int? productId;
   final String? productName;
   final int? quantityReceived;
+  final int? quantityRefused;
+  final String? refusalReasonCode;
   final int? unitCost;
   final int? remainingBefore;
 
+  int get _accepted => quantityReceived ?? 0;
+  int get _refused => quantityRefused ?? 0;
+
   @override
-  bool get canSave =>
-      missingFields.isEmpty &&
-      poId != null &&
-      purchaseOrderItemId != null &&
-      productId != null &&
-      quantityReceived != null &&
-      quantityReceived! > 0 &&
-      unitCost != null;
+  bool get canSave {
+    if (missingFields.isNotEmpty) return false;
+    if (poId == null || purchaseOrderItemId == null || productId == null) {
+      return false;
+    }
+    if (_accepted < 0 || _refused < 0) return false;
+    if (_accepted + _refused <= 0) return false;
+    if (_refused > 0 &&
+        (refusalReasonCode == null || refusalReasonCode!.trim().isEmpty)) {
+      return false;
+    }
+    if (remainingBefore != null && _accepted + _refused > remainingBefore!) {
+      return false;
+    }
+    if (_accepted > 0 && unitCost == null) return false;
+    return true;
+  }
 
   @override
   VoiceIntentKind get kind => VoiceIntentKind.receivePurchase;
@@ -475,8 +497,91 @@ class VoiceReceivePurchaseDraft extends VoiceDraft {
         productId,
         productName,
         quantityReceived,
+        quantityRefused,
+        refusalReasonCode,
         unitCost,
         remainingBefore,
+      ];
+}
+
+/// Seed workflow : ouvrir l’écran de livraison commande client.
+class VoiceDeliverSalesOrderDraft extends VoiceDraft {
+  const VoiceDeliverSalesOrderDraft({
+    required super.transcript,
+    required super.missingFields,
+    this.salesOrderId,
+    this.orderNumber,
+    this.customerName,
+  });
+
+  final int? salesOrderId;
+  final String? orderNumber;
+  final String? customerName;
+
+  @override
+  bool get canSave => false;
+
+  @override
+  VoiceIntentKind get kind => VoiceIntentKind.deliverSalesOrder;
+
+  @override
+  List<Object?> get props => [
+        transcript,
+        missingFields,
+        salesOrderId,
+        orderNumber,
+        customerName,
+      ];
+}
+
+/// Seed workflow : ouvrir le remplacement post-vente.
+class VoiceOpenSaleReplacementDraft extends VoiceDraft {
+  const VoiceOpenSaleReplacementDraft({
+    required super.transcript,
+    required super.missingFields,
+    this.saleId,
+    this.receiptNumber,
+    this.customerName,
+    this.returnedProductId,
+    this.returnedProductName,
+    this.rawReturnedQuery,
+    this.issuedProductId,
+    this.issuedProductName,
+    this.rawIssuedQuery,
+    this.quantity,
+  });
+
+  final int? saleId;
+  final String? receiptNumber;
+  final String? customerName;
+  final int? returnedProductId;
+  final String? returnedProductName;
+  final String? rawReturnedQuery;
+  final int? issuedProductId;
+  final String? issuedProductName;
+  final String? rawIssuedQuery;
+  final int? quantity;
+
+  @override
+  bool get canSave => false;
+
+  @override
+  VoiceIntentKind get kind => VoiceIntentKind.openSaleReplacement;
+
+  @override
+  List<Object?> get props => [
+        transcript,
+        missingFields,
+        saleId,
+        receiptNumber,
+        customerName,
+        returnedProductId,
+        returnedProductName,
+        rawReturnedQuery,
+        issuedProductId,
+        issuedProductName,
+        rawIssuedQuery,
+        quantity,
       ];
 }
 

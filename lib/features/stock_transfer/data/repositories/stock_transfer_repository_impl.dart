@@ -372,13 +372,8 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
         salePriceByItemId: effectivePrices,
         products: missing,
       );
-      await _recordCreatedProductsForSync(
-        shopId: effectiveDestinationShopId,
-        products: missing,
-        salePriceByItemId: effectivePrices,
-        createdProductIds: createResult.productIds,
-        newlyCreatedItemIds: createResult.newlyCreatedItemIds,
-      );
+      // Pas de recordProductCreate : Nest crée via productSetup à la réception
+      // (évite doublon local sync + productSetup concurrent).
     }
 
     final transfer = await _local.receiveTransfer(
@@ -453,39 +448,6 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
     );
 
     return transfer;
-  }
-
-  Future<void> _recordCreatedProductsForSync({
-    required int shopId,
-    required List<TransferMissingDestinationProduct> products,
-    required Map<int, int> salePriceByItemId,
-    required Map<int, int> createdProductIds,
-    required Set<int> newlyCreatedItemIds,
-  }) async {
-    final recorder = _recorder;
-    if (recorder == null || products.isEmpty) return;
-
-    final categoryId = await _local.resolveTransferImportCategoryId(shopId);
-
-    for (final product in products) {
-      if (!newlyCreatedItemIds.contains(product.itemId)) continue;
-
-      final productId = createdProductIds[product.itemId];
-      if (productId == null) continue;
-
-      await recorder.recordProductCreate(
-        shopId: shopId,
-        productId: productId,
-        payload: {
-          'name': product.productName,
-          'localCategoryId': categoryId,
-          'priceSell': salePriceByItemId[product.itemId],
-          if (product.suggestedPriceBuy != null)
-            'priceBuy': product.suggestedPriceBuy,
-          'initialQuantity': 0,
-        },
-      );
-    }
   }
 
   @override
@@ -773,16 +735,21 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
         continue;
       }
 
-      final serverInt = int.tryParse(serverId);
-      if (serverInt == null) continue;
+      final listItems = raw['items'];
+      final listHasItems = listItems is List && listItems.isNotEmpty;
 
-      // Jamais avancer version/status avec le résumé liste (sans items) :
-      // un GET échoué + upsert liste figerait des quantités obsolètes.
+      // La liste Nest hydrate déjà items/shipments : pas de GET unitaire.
       Map<String, dynamic> detail;
-      try {
-        detail = await _remote.fetchTransfer(serverInt);
-      } catch (_) {
-        continue;
+      if (listHasItems) {
+        detail = raw;
+      } else {
+        final serverInt = int.tryParse(serverId);
+        if (serverInt == null) continue;
+        try {
+          detail = await _remote.fetchTransfer(serverInt);
+        } catch (_) {
+          continue;
+        }
       }
 
       final remoteItems = detail['items'];
@@ -1003,12 +970,35 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
             );
             if (qtyMap.isEmpty) return;
 
+            final clamped =
+                StockTransferCloudSyncHelper.clampShipQuantitiesToRemotePending(
+              quantitiesByLocalItemId: qtyMap,
+              mapping: mapping,
+              remoteItems: remoteItems,
+            );
+            if (clamped.isEmpty) {
+              if (StockTransferCloudSyncHelper.isPostShipStatus(
+                    remoteDetail['status'] as String? ?? '',
+                  ) ||
+                  StockTransferCloudSyncHelper.remoteAlreadyCoversShipQuantities(
+                    quantitiesByLocalItemId: qtyMap,
+                    mapping: mapping,
+                    remoteItems: remoteItems,
+                  )) {
+                await _local.applyRemoteStockTransferSnapshot(
+                  transferId,
+                  remoteDetail,
+                );
+              }
+              return;
+            }
+
             final body = StockTransferRemotePayloads.shipBody(
               label: shipmentLabel,
               notes: shipmentNotes,
               driverName: driverName,
               vehiclePlate: vehiclePlate,
-              quantitiesByItemId: qtyMap,
+              quantitiesByItemId: clamped,
               remoteItems: mapping,
             );
 
@@ -1139,6 +1129,7 @@ class StockTransferRepositoryImpl implements StockTransferRepository {
 
           final remote = await _remote.receiveTransfer(serverId, body);
           await _local.applyRemoteStockTransferSnapshot(transferId, remote);
+          await _local.clearPendingTransferReceiveOps(transferId);
         });
       } catch (_) {}
     });

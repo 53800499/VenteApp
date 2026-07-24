@@ -4,6 +4,8 @@ import '../database/app_database.dart';
 import '../utils/time.dart';
 import 'sync_constants.dart';
 import 'sync_policy.dart';
+import 'workflow/sync_workflow.dart';
+import 'workflow/sync_workflow_registry.dart';
 
 /// Couche 2 — file d'attente locale (V2/V3, BDD §3.2).
 class SyncQueueDatasource {
@@ -92,6 +94,39 @@ class SyncQueueDatasource {
         .getSingleOrNull();
   }
 
+  Future<List<SyncQueueData>> fetchPendingForRecord({
+    required int shopId,
+    required String entityTable,
+    required int recordId,
+  }) async {
+    return (_db.select(_db.syncQueue)
+          ..where(
+            (q) =>
+                q.shopId.equals(shopId) &
+                q.entityTable.equals(entityTable) &
+                q.recordId.equals(recordId) &
+                q.status.equals('pending'),
+          )
+          ..orderBy([(q) => OrderingTerm.asc(q.createdAt)]))
+        .get();
+  }
+
+  /// Toutes boutiques : requis pour les workflows cross-shop (transferts).
+  Future<List<SyncQueueData>> fetchPendingForRecordAnyShop({
+    required String entityTable,
+    required int recordId,
+  }) async {
+    return (_db.select(_db.syncQueue)
+          ..where(
+            (q) =>
+                q.entityTable.equals(entityTable) &
+                q.recordId.equals(recordId) &
+                q.status.equals('pending'),
+          )
+          ..orderBy([(q) => OrderingTerm.asc(q.createdAt)]))
+        .get();
+  }
+
   /// Résumé lisible des éléments encore en file (pour l'UI cloud).
   Future<String?> describePendingBlock({required int shopId}) async {
     final rows = await fetchPending(shopId: shopId, limit: 50);
@@ -120,6 +155,7 @@ class SyncQueueDatasource {
       SyncEntityTable.supplierInvoices: 'facture(s) fournisseur',
       SyncEntityTable.supplierPayments: 'paiement(s) fournisseur',
       SyncEntityTable.stockTransfers: 'transfert(s) inter-boutiques',
+      SyncEntityTable.salesOrders: 'commande(s) client',
       SyncEntityTable.fxRateSnapshots: 'taux de change',
       SyncEntityTable.fxShopCurrencies: 'devise(s) boutique',
       SyncEntityTable.fxSessions: 'session(s) bureau de change',
@@ -131,21 +167,57 @@ class SyncQueueDatasource {
         .map((e) => '${e.value} ${labels[e.key] ?? e.key}')
         .join(', ');
 
-    final hints = rows
-        .map((r) => r.lastError)
-        .whereType<String>()
-        .where((m) => m.trim().isNotEmpty)
-        .toSet()
-        .take(2)
-        .join(' · ');
+    final workflowHints = <String>[];
+    final byRecord = <String, List<SyncQueueData>>{};
+    for (final row in rows) {
+      final key = '${row.entityTable}:${row.recordId}';
+      byRecord.putIfAbsent(key, () => []).add(row);
+    }
+
+    for (final entry in byRecord.entries) {
+      if (workflowHints.length >= 2) break;
+      final sample = entry.value.first;
+      final workflow = SyncWorkflowRegistry.forTable(sample.entityTable);
+      if (workflow == null) continue;
+
+      final progress = WorkflowProgress.derive(
+        workflow: workflow,
+        recordId: sample.recordId,
+        pendingOps: [
+          for (final r in entry.value)
+            WorkflowPendingOp(operation: r.operation, lastError: r.lastError),
+        ],
+      );
+      if (progress.blockedReason != null &&
+          progress.blockedReason!.trim().isNotEmpty) {
+        workflowHints.add(progress.blockedReason!);
+      } else if (progress.current != null) {
+        final lines = progress.formatLines(workflow);
+        final focus = lines.where((l) => l.startsWith('⏳')).take(2).join(' → ');
+        if (focus.isNotEmpty) {
+          workflowHints.add(focus);
+        }
+      }
+    }
+
+    final hints = workflowHints.isNotEmpty
+        ? workflowHints.join(' · ')
+        : rows
+            .map((r) => r.lastError)
+            .whereType<String>()
+            .where((m) => m.trim().isNotEmpty)
+            .toSet()
+            .take(2)
+            .join(' · ');
 
     final buffer = StringBuffer('$parts en attente.');
     if (hints.isNotEmpty) {
       buffer.write(' $hints');
     } else {
       buffer.write(
-        ' Les ventes nécessitent des produits synchronisés ; '
-        'les produits nécessitent leurs catégories.',
+        ' Des étapes cloud sont en attente dans l\'ordre. '
+        'Relancez la sync ; les étapes suivantes partiront automatiquement. '
+        'Ne recréez pas l\'action localement.',
       );
     }
     return buffer.toString();

@@ -114,3 +114,25 @@ class VoiceCategorySeed {
       (name != null && name!.trim().isNotEmpty) ||
       (description != null && description!.trim().isNotEmpty);
 }
+
+/// Préremplissage du formulaire de remplacement post-vente.
+class VoiceSaleReplacementSeed {
+  const VoiceSaleReplacementSeed({
+    this.returnedProductId,
+    this.returnedProductName,
+    this.issuedProductId,
+    this.issuedProductName,
+    this.quantity,
+  });
+
+  final int? returnedProductId;
+  final String? returnedProductName;
+  final int? issuedProductId;
+  final String? issuedProductName;
+  final int? quantity;
+
+  bool get hasAny =>
+      returnedProductId != null ||
+      issuedProductId != null ||
+      (quantity != null && quantity! > 0);
+}

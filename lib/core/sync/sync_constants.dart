@@ -17,6 +17,7 @@ abstract final class SyncEntityTable {
   static const supplierInvoices = 'supplier_invoices';
   static const supplierPayments = 'supplier_payments';
   static const stockTransfers = 'stock_transfers';
+  static const salesOrders = 'sales_orders';
   static const fxSessions = 'fx_sessions';
   static const fxOperations = 'fx_operations';
   static const fxMovements = 'fx_movements';
@@ -40,6 +41,9 @@ abstract final class SyncOperation {
   static const validate = 'validate';
   static const send = 'send';
   static const receive = 'receive';
+  static const confirm = 'confirm';
+  static const preparing = 'preparing';
+  static const deliver = 'deliver';
   static const submit = 'submit';
   static const approve = 'approve';
   static const close = 'close';

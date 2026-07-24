@@ -134,8 +134,26 @@ String explainVoiceDraftFailure(VoiceDraft draft) {
       if (d.poId == null) {
         reasons.add('Commande fournisseur non sélectionnée.');
       }
-      if (d.quantityReceived == null || d.quantityReceived! <= 0) {
-        reasons.add('Quantité reçue manquante ou invalide.');
+      final accepted = d.quantityReceived ?? 0;
+      final refused = d.quantityRefused ?? 0;
+      if (accepted + refused <= 0) {
+        reasons.add('Indiquez une quantité acceptée ou refusée.');
+      }
+      if (refused > 0 &&
+          (d.refusalReasonCode == null ||
+              d.refusalReasonCode!.trim().isEmpty)) {
+        reasons.add('Motif de refus manquant.');
+      }
+      if (accepted > 0 && d.unitCost == null) {
+        reasons.add('Prix unitaire manquant.');
+      }
+    case VoiceDeliverSalesOrderDraft d:
+      if (d.salesOrderId == null) {
+        reasons.add('Commande client non sélectionnée.');
+      }
+    case VoiceOpenSaleReplacementDraft d:
+      if (d.saleId == null) {
+        reasons.add('Vente non sélectionnée.');
       }
     case VoiceStockQueryDraft d:
       if (d.productId == null) {
@@ -247,8 +265,18 @@ List<String> voiceExamplePhrasesFor(VoiceIntentKind kind) {
       ],
     VoiceIntentKind.receivePurchase => const [
         'Le camion est arrivé.',
+        'Le fournisseur a refusé 5 sacs — qualité.',
         'Réception de la livraison.',
-        'La dernière commande est livrée.',
+      ],
+    VoiceIntentKind.deliverSalesOrder => const [
+        'Livrer la commande client.',
+        'Livraison client.',
+        'Le client refuse la livraison.',
+      ],
+    VoiceIntentKind.openSaleReplacement => const [
+        'Remplacer ciment par sable.',
+        'Remplacer un produit.',
+        'Le client veut remplacer.',
       ],
     VoiceIntentKind.stockQuery => const [
         'Combien me reste-t-il de ciment ?',

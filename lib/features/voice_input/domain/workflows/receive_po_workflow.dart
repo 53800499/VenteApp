@@ -5,7 +5,7 @@ import 'voice_workflow.dart';
 typedef ListReceivableOrdersFn = Future<List<PurchaseOrder>> Function();
 typedef FindPurchaseOrderFn = Future<PurchaseOrder?> Function(int id);
 
-/// Réception camion / PO : sélection → mono-ligne vocal, multi → formulaire.
+/// Réception camion / PO : sélection → mono-ligne vocal (+ refus), multi → formulaire.
 class ReceivePoWorkflow extends VoiceWorkflow {
   ReceivePoWorkflow({
     required this.shopId,
@@ -26,6 +26,12 @@ class ReceivePoWorkflow extends VoiceWorkflow {
   String _transcript = '';
   List<PurchaseOrder> _candidates = const [];
   PurchaseOrder? _selected;
+  PurchaseOrderItem? _item;
+  int _remaining = 0;
+  int _accepted = 0;
+  int _refused = 0;
+  String? _refusalReasonCode;
+  bool _preferFullRefuse = false;
   _PoStep _step = _PoStep.pickOrder;
 
   @override
@@ -49,6 +55,7 @@ class ReceivePoWorkflow extends VoiceWorkflow {
   @override
   Future<void> bootstrap(String initialTranscript) async {
     _transcript = initialTranscript;
+    _preferFullRefuse = _looksLikeSupplierRefusal(initialTranscript);
     final receivable = <PurchaseOrderStatus>{
       PurchaseOrderStatus.validated,
       PurchaseOrderStatus.sent,
@@ -97,15 +104,12 @@ class ReceivePoWorkflow extends VoiceWorkflow {
           question: 'Dites « la dernière », un numéro, ou le fournisseur.',
           details: _orderListDetails(),
         );
-      case _PoStep.askQty:
-        final qty = VoiceWorkflowParsing.extractInt(transcript.toLowerCase());
-        if (qty == null || qty <= 0) {
-          _prompt = const VoiceWorkflowPrompt(
-            question: 'Quelle quantité livrée ?',
-          );
-          return;
-        }
-        await _afterQty(qty);
+      case _PoStep.askAcceptedQty:
+        await _onAcceptedQty(transcript);
+      case _PoStep.askRefusedQty:
+        await _onRefusedQty(transcript);
+      case _PoStep.askRefusalReason:
+        await _onRefusalReason(transcript);
       case _PoStep.askPrice:
         final lower = transcript.toLowerCase();
         if (VoiceWorkflowParsing.isNo(lower)) {
@@ -168,7 +172,7 @@ class ReceivePoWorkflow extends VoiceWorkflow {
     _selected = full;
 
     final items = (full.items ?? [])
-        .where((it) => it.quantityOrdered - it.quantityReceived > 0)
+        .where((it) => it.quantityRemaining > 0)
         .toList();
     if (items.isEmpty) {
       _fail('Rien à réceptionner sur ${full.number}.');
@@ -180,35 +184,140 @@ class ReceivePoWorkflow extends VoiceWorkflow {
       return;
     }
 
-    final it = items.first;
-    final remaining = it.quantityOrdered - it.quantityReceived;
-    _step = _PoStep.askQty;
+    _item = items.first;
+    _remaining = _item!.quantityRemaining;
+    _accepted = 0;
+    _refused = 0;
+    _refusalReasonCode = null;
+
+    _step = _PoStep.askAcceptedQty;
     _status = VoiceWorkflowStatus.asking;
-    _prompt = VoiceWorkflowPrompt(
-      question:
-          'Quantité livrée pour ${it.productName ?? 'produit'} '
-          '(reste $remaining) ?',
-      details: 'Commande ${full.number}'
-          '${full.supplierName != null ? ' — ${full.supplierName}' : ''}',
-    );
+    if (_preferFullRefuse) {
+      _prompt = VoiceWorkflowPrompt(
+        question:
+            'Tout refusé pour ${_item!.productName ?? 'produit'} '
+            '(reste $_remaining) ?',
+        details: 'Oui = tout refusé, ou dites la quantité acceptée.\n'
+            'Commande ${full.number}'
+            '${full.supplierName != null ? ' — ${full.supplierName}' : ''}',
+      );
+    } else {
+      _prompt = VoiceWorkflowPrompt(
+        question:
+            'Quantité acceptée pour ${_item!.productName ?? 'produit'} '
+            '(reste $_remaining, 0 possible) ?',
+        details: 'Commande ${full.number}'
+            '${full.supplierName != null ? ' — ${full.supplierName}' : ''}',
+      );
+    }
   }
 
-  Future<void> _afterQty(int qty) async {
+  Future<void> _onAcceptedQty(String transcript) async {
+    final lower = transcript.toLowerCase();
+    if (_preferFullRefuse && VoiceWorkflowParsing.isYes(lower)) {
+      _accepted = 0;
+      _refused = _remaining;
+      await _afterAcceptedResolved();
+      return;
+    }
+    final qty = VoiceWorkflowParsing.extractInt(lower);
+    if (qty == null || qty < 0) {
+      _prompt = VoiceWorkflowPrompt(
+        question:
+            'Quelle quantité acceptée ? (0 à $_remaining)',
+      );
+      return;
+    }
+    _accepted = qty > _remaining ? _remaining : qty;
+    await _afterAcceptedResolved();
+  }
+
+  Future<void> _afterAcceptedResolved() async {
+    if (_accepted < _remaining) {
+      final defaultRefused = _remaining - _accepted;
+      if (_refused > 0 && _refused == defaultRefused) {
+        await _afterRefusedResolved();
+        return;
+      }
+      _step = _PoStep.askRefusedQty;
+      _status = VoiceWorkflowStatus.asking;
+      _prompt = VoiceWorkflowPrompt(
+        question: 'Le reste ($defaultRefused) est refusé ?',
+        details: 'Oui, ou dites la quantité refusée (0 = rien refusé).',
+      );
+      return;
+    }
+    _refused = 0;
+    _refusalReasonCode = null;
+    await _finishOrAskPrice();
+  }
+
+  Future<void> _onRefusedQty(String transcript) async {
+    final lower = transcript.toLowerCase();
+    final defaultRefused = _remaining - _accepted;
+    if (VoiceWorkflowParsing.isYes(lower)) {
+      _refused = defaultRefused;
+      await _afterRefusedResolved();
+      return;
+    }
+    if (VoiceWorkflowParsing.isNo(lower)) {
+      _refused = 0;
+      _refusalReasonCode = null;
+      await _finishOrAskPrice();
+      return;
+    }
+    final qty = VoiceWorkflowParsing.extractInt(lower);
+    if (qty == null || qty < 0) {
+      _prompt = VoiceWorkflowPrompt(
+        question: 'Quantité refusée ? (max $defaultRefused)',
+      );
+      return;
+    }
+    _refused = qty > defaultRefused ? defaultRefused : qty;
+    await _afterRefusedResolved();
+  }
+
+  Future<void> _afterRefusedResolved() async {
+    if (_accepted + _refused <= 0) {
+      _prompt = VoiceWorkflowPrompt(
+        question: 'Indiquez une quantité acceptée ou refusée (reste $_remaining).',
+      );
+      _step = _PoStep.askAcceptedQty;
+      return;
+    }
+    if (_refused > 0) {
+      _step = _PoStep.askRefusalReason;
+      _status = VoiceWorkflowStatus.asking;
+      _prompt = const VoiceWorkflowPrompt(
+        question: 'Motif du refus ?',
+        details: 'Casse, humidité, qualité, manquant, ou autre.',
+      );
+      return;
+    }
+    _refusalReasonCode = null;
+    await _finishOrAskPrice();
+  }
+
+  Future<void> _onRefusalReason(String transcript) async {
+    final reason = parseSupplierRefusalReason(transcript);
+    if (reason == null) {
+      _prompt = const VoiceWorkflowPrompt(
+        question: 'Motif non reconnu. Lequel ?',
+        details: 'Casse, humidité, qualité, manquant, ou autre.',
+      );
+      return;
+    }
+    _refusalReasonCode = reason.code;
+    await _finishOrAskPrice();
+  }
+
+  Future<void> _finishOrAskPrice() async {
     final po = _selected;
-    if (po == null) {
-      _fail('Commande non sélectionnée.');
+    final it = _item;
+    if (po == null || it == null) {
+      _fail('Réception incomplète.');
       return;
     }
-    final items = (po.items ?? [])
-        .where((it) => it.quantityOrdered - it.quantityReceived > 0)
-        .toList();
-    if (items.length != 1) {
-      _openForm(po);
-      return;
-    }
-    final it = items.first;
-    final remaining = it.quantityOrdered - it.quantityReceived;
-    final received = qty > remaining ? remaining : qty;
 
     _draft = VoiceReceivePurchaseDraft(
       transcript: _transcript,
@@ -219,17 +328,25 @@ class ReceivePoWorkflow extends VoiceWorkflow {
       purchaseOrderItemId: it.id,
       productId: it.productId,
       productName: it.productName ?? 'Produit',
-      quantityReceived: received,
+      quantityReceived: _accepted,
+      quantityRefused: _refused > 0 ? _refused : null,
+      refusalReasonCode: _refusalReasonCode,
       unitCost: it.unitCost,
-      remainingBefore: remaining,
+      remainingBefore: _remaining,
     );
 
-    _step = _PoStep.askPrice;
-    _status = VoiceWorkflowStatus.asking;
-    _prompt = const VoiceWorkflowPrompt(
-      question: 'Prix identique à la commande ?',
-      details: 'Oui (défaut) ou non pour ouvrir le formulaire.',
-    );
+    if (_accepted > 0) {
+      _step = _PoStep.askPrice;
+      _status = VoiceWorkflowStatus.asking;
+      _prompt = const VoiceWorkflowPrompt(
+        question: 'Prix identique à la commande ?',
+        details: 'Oui (défaut) ou non pour ouvrir le formulaire.',
+      );
+      return;
+    }
+
+    _status = VoiceWorkflowStatus.ready;
+    _prompt = null;
   }
 
   void _openForm(PurchaseOrder po) {
@@ -260,6 +377,43 @@ class ReceivePoWorkflow extends VoiceWorkflow {
     _status = VoiceWorkflowStatus.failed;
     _prompt = null;
   }
+
+  static bool _looksLikeSupplierRefusal(String transcript) {
+    final lower = transcript.toLowerCase();
+    if (!RegExp(r'\b(refuse|refus|refusee|refuser)\b').hasMatch(lower)) {
+      return false;
+    }
+    // Refus client → autre intent ; ici = refus fournisseur / réception.
+    if (RegExp(r'\b(client|clients)\b').hasMatch(lower)) return false;
+    return true;
+  }
 }
 
-enum _PoStep { pickOrder, askQty, askPrice }
+enum _PoStep {
+  pickOrder,
+  askAcceptedQty,
+  askRefusedQty,
+  askRefusalReason,
+  askPrice,
+}
+
+/// Mapping mots-clés → motif refus fournisseur.
+SupplierRefusalReason? parseSupplierRefusalReason(String transcript) {
+  final lower = transcript.toLowerCase();
+  if (RegExp(r'cass|dechir|bris').hasMatch(lower)) {
+    return SupplierRefusalReason.breakage;
+  }
+  if (RegExp(r'humid|mouill').hasMatch(lower)) {
+    return SupplierRefusalReason.humidity;
+  }
+  if (RegExp(r'qualit|mauvais|defect').hasMatch(lower)) {
+    return SupplierRefusalReason.quality;
+  }
+  if (RegExp(r'manquan|manque|incomplet|short').hasMatch(lower)) {
+    return SupplierRefusalReason.shortDelivery;
+  }
+  if (RegExp(r'\bautre').hasMatch(lower)) {
+    return SupplierRefusalReason.other;
+  }
+  return null;
+}

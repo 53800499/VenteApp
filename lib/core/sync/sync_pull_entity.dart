@@ -11,6 +11,7 @@ abstract final class SyncPullEntity {
   static const inventoryLots = 'inventory_lots';
   static const stockTransfers = 'stock_transfers';
   static const fxExchange = 'fx_exchange';
+  static const salesOrders = 'sales_orders';
 
   /// Détail d'un client (pull ciblé GET /customers/:id).
   static String customerDetail(int customerId) => 'customer_detail:$customerId';
@@ -27,6 +28,7 @@ abstract final class SyncPullEntity {
       fxExchange => const Duration(minutes: 1),
       // Assez court pour la destination, sans re-pull à chaque cycle.
       stockTransfers => const Duration(seconds: 15),
+      salesOrders => const Duration(seconds: 15),
       procurement => const Duration(minutes: 5),
       _ => const Duration(minutes: 5),
     };
@@ -69,6 +71,8 @@ abstract final class SyncPullEntity {
         return [procurement, inventoryLots, products];
       case 'stock_transfers':
         return [stockTransfers, inventoryLots, products];
+      case 'sales_orders':
+        return [salesOrders];
       case 'fx_sessions':
       case 'fx_operations':
       case 'fx_movements':

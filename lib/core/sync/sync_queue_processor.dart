@@ -16,6 +16,9 @@ import '../../features/sales/data/datasources/local/sales_local_datasource.dart'
 import '../../features/sales/data/datasources/remote/sales_remote_datasource.dart';
 import '../../features/sales/data/models/sale_api_models.dart';
 import '../../features/sales/domain/entities/sale_entities.dart';
+import '../../features/sales_orders/data/datasources/sales_order_local_datasource.dart';
+import '../../features/sales_orders/data/datasources/sales_order_remote_datasource.dart';
+import '../../features/sales_orders/domain/entities/sales_order.dart';
 import '../database/app_database.dart'
     hide
         Sale,
@@ -27,12 +30,15 @@ import '../database/app_database.dart'
         PurchaseReceiptItem,
         SupplierInvoice,
         SupplierPayment,
-        StockTransfer;
+        StockTransfer,
+        SalesOrderItem;
 import '../errors/failures.dart';
 import '../network/api_client.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
 import 'sync_queue_datasource.dart';
+import 'workflow/sync_workflow.dart';
+import 'workflow/sync_workflow_registry.dart';
 import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
 import '../../features/calculators/data/datasources/remote/calculators_remote_datasource.dart';
 import '../../features/procurement/data/datasources/procurement_local_datasource.dart';
@@ -74,6 +80,8 @@ class SyncQueueProcessor {
     required StockTransferRemoteDatasource stockTransferRemote,
     required FxExchangeLocalDatasource fxExchangeLocal,
     required FxExchangeRemoteDatasource fxExchangeRemote,
+    required SalesOrderLocalDatasource salesOrderLocal,
+    required SalesOrderRemoteDatasource salesOrderRemote,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -95,7 +103,9 @@ class SyncQueueProcessor {
         _stockTransferLocal = stockTransferLocal,
         _stockTransferRemote = stockTransferRemote,
         _fxExchangeLocal = fxExchangeLocal,
-        _fxExchangeRemote = fxExchangeRemote;
+        _fxExchangeRemote = fxExchangeRemote,
+        _salesOrderLocal = salesOrderLocal,
+        _salesOrderRemote = salesOrderRemote;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -119,6 +129,8 @@ class SyncQueueProcessor {
   final StockTransferRemoteDatasource _stockTransferRemote;
   final FxExchangeLocalDatasource _fxExchangeLocal;
   final FxExchangeRemoteDatasource _fxExchangeRemote;
+  final SalesOrderLocalDatasource _salesOrderLocal;
+  final SalesOrderRemoteDatasource _salesOrderRemote;
 
   StockTransferCloudSyncHelper get _stockTransferCloudSync =>
       StockTransferCloudSyncHelper(
@@ -142,8 +154,15 @@ class SyncQueueProcessor {
           final priority = _entityPriority(a.entityTable)
               .compareTo(_entityPriority(b.entityTable));
           if (priority != 0) return priority;
-          final opPriority = _operationPriority(a.operation)
-              .compareTo(_operationPriority(b.operation));
+          final opPriority = SyncWorkflowRegistry.operationPriority(
+            a.entityTable,
+            a.operation,
+          ).compareTo(
+            SyncWorkflowRegistry.operationPriority(
+              b.entityTable,
+              b.operation,
+            ),
+          );
           if (opPriority != 0) return opPriority;
           return a.createdAt.compareTo(b.createdAt);
         });
@@ -192,6 +211,9 @@ class SyncQueueProcessor {
               } catch (error) {
                 await _queue.markFailed(item.id, error.toString());
                 outcomes.add(_QueueItemOutcome.failed);
+              }
+              if (!shouldContinueChain(_toPublicOutcome(outcomes.last))) {
+                break;
               }
             }
             return outcomes;
@@ -242,40 +264,13 @@ class SyncQueueProcessor {
         SyncEntityTable.supplierInvoices => 14,
         SyncEntityTable.supplierPayments => 15,
         SyncEntityTable.stockTransfers => 16,
-        SyncEntityTable.fxRateSnapshots => 17,
-        SyncEntityTable.fxShopCurrencies => 18,
-        SyncEntityTable.fxSessions => 19,
-        SyncEntityTable.fxOperations => 20,
-        SyncEntityTable.fxMovements => 21,
+        SyncEntityTable.salesOrders => 17,
+        SyncEntityTable.fxRateSnapshots => 18,
+        SyncEntityTable.fxShopCurrencies => 19,
+        SyncEntityTable.fxSessions => 20,
+        SyncEntityTable.fxOperations => 21,
+        SyncEntityTable.fxMovements => 22,
         _ => 99,
-      };
-
-  static int _operationPriority(String operation) => switch (operation) {
-        SyncOperation.create => 0,
-        SyncOperation.update => 1,
-        SyncOperation.validate => 2,
-        SyncOperation.submit => 3,
-        SyncOperation.approve => 4,
-        SyncOperation.send => 5,
-        SyncOperation.receive => 6,
-        SyncOperation.resolveDiscrepancy => 7,
-        SyncOperation.cancel => 8,
-        SyncOperation.close => 9,
-        SyncOperation.archive => 10,
-        SyncOperation.stockAdjust => 11,
-        SyncOperation.payment => 12,
-        SyncOperation.forgive => 13,
-        SyncOperation.saleQuick => 14,
-        SyncOperation.cashSessionOpen => 15,
-        SyncOperation.cashSessionClose => 16,
-        SyncOperation.cashMovementCreate => 17,
-        SyncOperation.fxSessionOpen => 18,
-        SyncOperation.fxSessionClose => 19,
-        SyncOperation.fxSessionConfirmClose => 20,
-        SyncOperation.fxSessionCancelClose => 21,
-        SyncOperation.fxOperationCreate => 22,
-        SyncOperation.fxMovementCreate => 23,
-        _ => 50,
       };
 
   Future<bool> _processItem({
@@ -283,6 +278,10 @@ class SyncQueueProcessor {
     required SyncQueueData item,
   }) async {
     final payload = _decodePayload(item.payload);
+
+    if (!await _deferIfWorkflowPrerequisitesPending(shopId: shopId, item: item)) {
+      return false;
+    }
 
     switch (item.entityTable) {
       case SyncEntityTable.customers:
@@ -319,6 +318,8 @@ class SyncQueueProcessor {
         return _processSupplierPayment(shopId, item, payload);
       case SyncEntityTable.stockTransfers:
         return _processStockTransfer(shopId, item, payload);
+      case SyncEntityTable.salesOrders:
+        return _processSalesOrder(shopId, item, payload);
       case SyncEntityTable.fxRateSnapshots:
         return _processFxRate(shopId, item, payload);
       case SyncEntityTable.fxShopCurrencies:
@@ -334,6 +335,54 @@ class SyncQueueProcessor {
         return true;
     }
   }
+
+  /// Retourne false si l'op doit être différée (prérequis encore en file).
+  Future<bool> _deferIfWorkflowPrerequisitesPending({
+    required int shopId,
+    required SyncQueueData item,
+  }) async {
+    final workflow = SyncWorkflowRegistry.forTable(item.entityTable);
+    if (workflow == null) return true;
+
+    final siblings = item.entityTable == SyncEntityTable.stockTransfers
+        ? await _queue.fetchPendingForRecordAnyShop(
+            entityTable: item.entityTable,
+            recordId: item.recordId,
+          )
+        : await _queue.fetchPendingForRecord(
+            shopId: shopId,
+            entityTable: item.entityTable,
+            recordId: item.recordId,
+          );
+    final pendingOps = {
+      for (final row in siblings)
+        if (row.id != item.id) row.operation,
+    };
+
+    final waitingFor = firstPendingPrerequisite(
+      workflow: workflow,
+      operation: item.operation,
+      pendingOperations: pendingOps,
+    );
+    if (waitingFor == null) return true;
+
+    await _queue.markDeferred(
+      item.id,
+      workflow.blockedMessage(
+        current: item.operation,
+        waitingFor: waitingFor,
+      ),
+    );
+    return false;
+  }
+
+  static QueueItemOutcome _toPublicOutcome(_QueueItemOutcome outcome) =>
+      switch (outcome) {
+        _QueueItemOutcome.processed => QueueItemOutcome.processed,
+        _QueueItemOutcome.deferred => QueueItemOutcome.deferred,
+        _QueueItemOutcome.failed => QueueItemOutcome.failed,
+        _QueueItemOutcome.conflict => QueueItemOutcome.conflict,
+      };
 
   Map<String, dynamic> _decodePayload(String raw) {
     if (raw.isEmpty) return {};
@@ -1639,6 +1688,319 @@ class SyncQueueProcessor {
     return true;
   }
 
+  Future<bool> _processSalesOrder(
+    int shopId,
+    SyncQueueData item,
+    Map<String, dynamic> payload,
+  ) async {
+    final local = await _salesOrderLocal.findOrder(
+      shopId: shopId,
+      id: item.recordId,
+    );
+    if (local == null) return true;
+
+    switch (item.operation) {
+      case SyncOperation.create:
+        if (local.serverId != null) return true;
+
+        final customer =
+            await _customersLocal.findCustomer(shopId, local.customerId);
+        if (customer == null ||
+            customer.serverId == null ||
+            customer.serverId!.isEmpty) {
+          await _queue.markDeferred(
+            item.id,
+            'Client associé non synchronisé.',
+          );
+          return false;
+        }
+
+        final remoteItems = <Map<String, dynamic>>[];
+        for (final it in local.items) {
+          final prod =
+              await _inventoryLocal.findProduct(shopId, it.productId);
+          if (prod == null ||
+              prod.serverId == null ||
+              prod.serverId!.isEmpty) {
+            await _queue.markDeferred(
+              item.id,
+              'Produit #${it.productId} non synchronisé.',
+            );
+            return false;
+          }
+          remoteItems.add({
+            'productId': int.parse(prod.serverId!),
+            'quantityOrdered': it.quantityOrdered,
+            'unitPrice': it.unitPrice,
+            'lineTotal': it.lineTotal,
+          });
+        }
+
+        final remote = await _salesOrderRemote.createOrder({
+          'localId': local.id,
+          'number': local.number,
+          'customerId': int.parse(customer.serverId!),
+          'notes': local.notes,
+          'orderedAt': local.orderedAt,
+          'subtotal': local.subtotal,
+          'total': local.total,
+          'version': local.version,
+          if (local.deviceId != null) 'deviceId': local.deviceId,
+          'items': remoteItems,
+        });
+        await _salesOrderLocal.applyRemoteSalesOrderSnapshot(
+          shopId,
+          local.id,
+          Map<String, dynamic>.from(remote),
+        );
+        return true;
+
+      case SyncOperation.confirm:
+      case SyncOperation.preparing:
+      case SyncOperation.cancel:
+      case SyncOperation.close:
+        if (local.serverId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Création de la commande encore en attente de synchronisation. '
+            'Cette étape partira automatiquement ensuite.',
+          );
+          return false;
+        }
+        try {
+          switch (item.operation) {
+            case SyncOperation.confirm:
+              await _salesOrderRemote.confirmOrder(
+                local.serverId!,
+                body: {
+                  'version': local.version,
+                  if (local.deviceId != null) 'deviceId': local.deviceId,
+                },
+              );
+            case SyncOperation.preparing:
+              await _salesOrderRemote.prepareOrder(
+                local.serverId!,
+                body: {
+                  'version': local.version,
+                  if (local.deviceId != null) 'deviceId': local.deviceId,
+                },
+              );
+            case SyncOperation.cancel:
+              await _salesOrderRemote.cancelOrder(
+                local.serverId!,
+                reason: payload['reason'] as String?,
+                body: {
+                  'version': local.version,
+                  if (local.deviceId != null) 'deviceId': local.deviceId,
+                },
+              );
+            case SyncOperation.close:
+              await _salesOrderRemote.closeOrder(
+                local.serverId!,
+                body: {
+                  'version': local.version,
+                  if (local.deviceId != null) 'deviceId': local.deviceId,
+                },
+              );
+          }
+        } on ConflictFailure catch (error) {
+          await _salesOrderLocal.markSyncConflict(
+            orderId: local.id,
+            message: error.message,
+          );
+          rethrow;
+        } on Failure catch (error) {
+          final healed = await _healSalesOrderIfAlreadyApplied(
+            shopId: shopId,
+            localId: local.id,
+            serverId: local.serverId!,
+            operation: item.operation,
+            error: error,
+          );
+          if (healed) return true;
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
+        return true;
+
+      case SyncOperation.deliver:
+        if (local.serverId == null) {
+          await _queue.markDeferred(
+            item.id,
+            'Création de la commande encore en attente de synchronisation. '
+            'La livraison partira automatiquement ensuite.',
+          );
+          return false;
+        }
+        final refreshed = await _salesOrderLocal.findOrder(
+          shopId: shopId,
+          id: item.recordId,
+        );
+        if (refreshed == null) return true;
+
+        final rawItems = payload['items'];
+        if (rawItems is! List || rawItems.isEmpty) {
+          await _queue.markDeferred(
+            item.id,
+            'Lignes de livraison absentes du payload.',
+          );
+          return false;
+        }
+
+        final remoteLines = <Map<String, dynamic>>[];
+        for (final raw in rawItems) {
+          final line = Map<String, dynamic>.from(raw as Map);
+          final localItemId = line['salesOrderItemId'] as int?;
+          final localProductId = line['productId'] as int?;
+          if (localItemId == null || localProductId == null) continue;
+
+          SalesOrderItem? soItem;
+          for (final i in refreshed.items) {
+            if (i.id == localItemId) {
+              soItem = i;
+              break;
+            }
+          }
+          if (soItem?.serverId == null || soItem!.serverId!.isEmpty) {
+            await _queue.markDeferred(
+              item.id,
+              'Ligne commande #$localItemId non synchronisée.',
+            );
+            return false;
+          }
+
+          final prod =
+              await _inventoryLocal.findProduct(shopId, localProductId);
+          if (prod == null ||
+              prod.serverId == null ||
+              prod.serverId!.isEmpty) {
+            await _queue.markDeferred(
+              item.id,
+              'Produit #$localProductId non synchronisé.',
+            );
+            return false;
+          }
+
+          remoteLines.add({
+            'salesOrderItemId': int.parse(soItem.serverId!),
+            'productId': int.parse(prod.serverId!),
+            'quantitySent': line['quantitySent'],
+            'quantityAccepted': line['quantityAccepted'],
+            'quantityRefused': line['quantityRefused'],
+            'quantityReplaced': line['quantityReplaced'] ?? 0,
+            if (line['refusalReason'] != null)
+              'refusalReason': line['refusalReason'],
+            if (line['refusalDestination'] != null)
+              'refusalDestination': line['refusalDestination'],
+            'unitPrice': line['unitPrice'],
+          });
+
+          final replacedQty = (line['quantityReplaced'] as num?)?.toInt() ?? 0;
+          if (replacedQty > 0) {
+            final localRepId = line['replacementProductId'] as int?;
+            if (localRepId == null) {
+              await _queue.markDeferred(
+                item.id,
+                'Produit de remplacement manquant.',
+              );
+              return false;
+            }
+            final repProd =
+                await _inventoryLocal.findProduct(shopId, localRepId);
+            if (repProd == null ||
+                repProd.serverId == null ||
+                repProd.serverId!.isEmpty) {
+              await _queue.markDeferred(
+                item.id,
+                'Produit de remplacement #$localRepId non synchronisé.',
+              );
+              return false;
+            }
+            remoteLines.last['replacementProductId'] =
+                int.parse(repProd.serverId!);
+            remoteLines.last['replacementUnitPrice'] =
+                line['replacementUnitPrice'];
+          }
+        }
+
+        int? remoteSaleId;
+        final localSaleId = payload['saleId'] as int?;
+        if (localSaleId != null) {
+          final saleServerId =
+              await _salesLocal.findSaleServerId(shopId, localSaleId);
+          if (saleServerId != null && saleServerId.isNotEmpty) {
+            remoteSaleId = int.tryParse(saleServerId);
+          }
+        }
+
+        try {
+          await _salesOrderRemote.deliver(local.serverId!, {
+            'notes': payload['notes'],
+            'driverName': payload['driverName'],
+            'vehiclePlate': payload['vehiclePlate'],
+            'number': payload['deliveryNumber'],
+            'version': refreshed.version,
+            if (refreshed.deviceId != null) 'deviceId': refreshed.deviceId,
+            if (payload['remainingReason'] != null)
+              'remainingReason': payload['remainingReason'],
+            if (remoteSaleId != null) 'saleId': remoteSaleId,
+            'items': remoteLines,
+          });
+        } on ConflictFailure catch (error) {
+          await _salesOrderLocal.markSyncConflict(
+            orderId: local.id,
+            message: error.message,
+          );
+          rethrow;
+        } on Failure catch (error) {
+          final healed = await _healSalesOrderIfAlreadyApplied(
+            shopId: shopId,
+            localId: local.id,
+            serverId: local.serverId!,
+            operation: SyncOperation.deliver,
+            error: error,
+          );
+          if (healed) return true;
+          await _queue.markDeferred(item.id, error.message);
+          return false;
+        }
+        return true;
+
+      case SyncOperation.update:
+        // Brouillon : pas d'endpoint update dédié — recreate non supportée ici.
+        return true;
+    }
+    return true;
+  }
+
+  Future<bool> _healSalesOrderIfAlreadyApplied({
+    required int shopId,
+    required int localId,
+    required String serverId,
+    required String operation,
+    required Failure error,
+  }) async {
+    final workflow = SyncWorkflowRegistry.forTable(SyncEntityTable.salesOrders);
+    if (workflow == null || !workflow.shouldAttemptHeal(error.message, operation)) {
+      return false;
+    }
+    try {
+      final remote = await _salesOrderRemote.getOrder(serverId);
+      final snapshot = Map<String, dynamic>.from(remote);
+      if (!workflow.isAlreadyApplied(snapshot, operation)) {
+        return false;
+      }
+      await _salesOrderLocal.applyRemoteSalesOrderSnapshot(
+        shopId,
+        localId,
+        snapshot,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> _processPurchaseReceipt(
     int shopId,
     SyncQueueData item,
@@ -2337,7 +2699,8 @@ class SyncQueueProcessor {
                 .toList() ??
             [];
 
-        final shipQuantities = _stockTransferLocal.resolveShipQuantitiesForSync(
+        final requestedShipQuantities =
+            _stockTransferLocal.resolveShipQuantitiesForSync(
           transfer: local,
           payload: payload,
         );
@@ -2368,6 +2731,35 @@ class SyncQueueProcessor {
           }
         }
 
+        final shipQuantities =
+            StockTransferCloudSyncHelper.clampShipQuantitiesToRemotePending(
+          quantitiesByLocalItemId: requestedShipQuantities,
+          mapping: shipMapping,
+          remoteItems: remoteItems,
+        );
+
+        if (shipQuantities.isEmpty) {
+          if (StockTransferCloudSyncHelper.isPostShipStatus(
+                remoteDetail['status'] as String? ?? '',
+              ) ||
+              StockTransferCloudSyncHelper.remoteAlreadyCoversShipQuantities(
+                quantitiesByLocalItemId: requestedShipQuantities,
+                mapping: shipMapping,
+                remoteItems: remoteItems,
+              )) {
+            await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+              local.id,
+              remoteDetail,
+            );
+            return true;
+          }
+          await _queue.markDeferred(
+            item.id,
+            'Quantités d\'expédition introuvables pour la synchronisation.',
+          );
+          return false;
+        }
+
         final shipBody = StockTransferRemotePayloads.shipBody(
           label: payload['label'] as String? ?? 'Expédition',
           notes: payload['notes'] as String?,
@@ -2396,13 +2788,19 @@ class SyncQueueProcessor {
           await _stockTransferLocal.applyRemoteStockTransferSnapshot(local.id, remote);
           return true;
         } on Failure catch (error) {
-          if (StockTransferCloudSyncHelper.isNotReadyToShipError(error.message)) {
+          if (StockTransferCloudSyncHelper.isNotReadyToShipError(error.message) ||
+              StockTransferCloudSyncHelper.isShipQuantityTooHighError(
+                error.message,
+              )) {
             final refreshed = await _stockTransferCloudSync.runOnSourceShop(
               transfer: local,
               action: () => _stockTransferRemote.fetchTransfer(sendServerInt),
             );
             final status = refreshed?['status'] as String? ?? '';
-            if (status == StockTransferStatus.draft) {
+            if (status == StockTransferStatus.draft &&
+                StockTransferCloudSyncHelper.isNotReadyToShipError(
+                  error.message,
+                )) {
               final revalidate =
                   await _stockTransferCloudSync.ensureValidatedOnServer(
                 localTransferId: local.id,
@@ -2440,10 +2838,20 @@ class SyncQueueProcessor {
               );
               return true;
             }
-            if (StockTransferCloudSyncHelper.isPostShipStatus(status)) {
+            if (refreshed != null &&
+                (StockTransferCloudSyncHelper.isPostShipStatus(status) ||
+                    StockTransferCloudSyncHelper
+                        .remoteAlreadyCoversShipQuantities(
+                      quantitiesByLocalItemId: requestedShipQuantities,
+                      mapping: shipMapping,
+                      remoteItems: (refreshed['items'] as List?)
+                              ?.whereType<Map<String, dynamic>>()
+                              .toList() ??
+                          remoteItems,
+                    ))) {
               await _stockTransferLocal.applyRemoteStockTransferSnapshot(
                 local.id,
-                refreshed!,
+                refreshed,
               );
               return true;
             }
@@ -2553,7 +2961,7 @@ class SyncQueueProcessor {
                     .toList() ??
                 [];
 
-            final quantitiesByItemId =
+            final quantitiesRequested =
                 _stockTransferLocal.resolveReceiveQuantitiesForSync(
               transfer: transfer,
               payload: payload,
@@ -2626,6 +3034,36 @@ class SyncQueueProcessor {
                   )
                 : null;
 
+            final quantitiesByItemId =
+                StockTransferCloudSyncHelper.clampReceiveQuantitiesToRemotePending(
+              quantitiesByLocalItemId: quantitiesRequested,
+              mapping: mapping,
+              remoteItems: remoteItems,
+              remoteShipmentId: remoteShipmentId,
+            );
+
+            if (quantitiesByItemId.isEmpty && refusalsByItemId.isEmpty) {
+              if (StockTransferCloudSyncHelper.remoteAlreadyCoversReceiveQuantities(
+                    quantitiesByLocalItemId: quantitiesRequested,
+                    mapping: mapping,
+                    remoteItems: remoteItems,
+                    remoteShipmentId: remoteShipmentId,
+                  ) ||
+                  (remoteDetailFinal['status'] as String?) ==
+                      StockTransferStatus.received) {
+                await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                  transfer.id,
+                  remoteDetailFinal,
+                );
+                return true;
+              }
+              await _queue.markDeferred(
+                item.id,
+                'Quantités de réception introuvables pour la synchronisation.',
+              );
+              return false;
+            }
+
             final receiveBody = StockTransferRemotePayloads.receiveBody(
               quantitiesByItemId: quantitiesByItemId,
               remoteItems: mapping,
@@ -2659,6 +3097,57 @@ class SyncQueueProcessor {
               'l\'onglet Transferts.',
             );
             return false;
+          }
+          if (StockTransferCloudSyncHelper.isReceiveQuantityTooHighError(
+                error.message,
+              ) ||
+              StockTransferCloudSyncHelper.isNotReadyToReceiveError(
+                error.message,
+              )) {
+            try {
+              final refreshed = await ApiClient.runScopedToServerShop(
+                destServerId,
+                () => _stockTransferRemote.fetchTransfer(receiveServerInt),
+              );
+              final status = refreshed['status'] as String? ?? '';
+              final remoteItems = (refreshed['items'] as List?)
+                      ?.whereType<Map<String, dynamic>>()
+                      .toList() ??
+                  [];
+              final mapping = await _stockTransferLocal.buildRemoteItemMapping(
+                transfer: transfer,
+                remoteItems: remoteItems,
+              );
+              final qtyRequested =
+                  _stockTransferLocal.resolveReceiveQuantitiesForSync(
+                transfer: transfer,
+                payload: payload,
+              );
+              if (status == StockTransferStatus.received ||
+                  status == StockTransferStatus.partiallyReceived ||
+                  StockTransferCloudSyncHelper
+                      .remoteAlreadyCoversReceiveQuantities(
+                    quantitiesByLocalItemId: qtyRequested,
+                    mapping: mapping,
+                    remoteItems: remoteItems,
+                  )) {
+                await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                  transfer.id,
+                  refreshed,
+                );
+                return true;
+              }
+              if (StockTransferCloudSyncHelper.isNotReadyToReceiveError(
+                error.message,
+              )) {
+                await _queue.markDeferred(
+                  item.id,
+                  'L\'expédition n\'est pas encore synchronisée côté cloud. '
+                  'Relancez la sync depuis la boutique source, puis réessayez.',
+                );
+                return false;
+              }
+            } catch (_) {}
           }
           await _queue.markDeferred(item.id, error.message);
           return false;
@@ -2728,54 +3217,149 @@ class SyncQueueProcessor {
           await _queue.markDeferred(item.id, 'Article d\'écart introuvable.');
           return false;
         }
-        try {
-          return await _stockTransferCloudSync.runOnSourceShop(
-                transfer: local,
-                action: () async {
-                  final remoteDetail = await _stockTransferRemote.fetchTransfer(
-                    int.parse(resolveServerId),
-                  );
-                  final remoteItems = (remoteDetail['items'] as List?)
-                          ?.whereType<Map<String, dynamic>>()
-                          .toList() ??
-                      [];
-                  final mapping = await _stockTransferLocal.buildRemoteItemMapping(
-                    transfer: local,
-                    remoteItems: remoteItems,
-                  );
-                  final remoteItemId = mapping
-                      .where((row) => row['localItemId'] == localItemId)
-                      .map((row) => row['remoteItemId'] as int?)
-                      .whereType<int>()
-                      .firstOrNull;
-                  if (remoteItemId == null) {
-                    await _queue.markDeferred(
-                      item.id,
-                      'Article local non mappé côté serveur.',
-                    );
-                    return false;
-                  }
+        final resolveServerInt = int.parse(resolveServerId);
+        final resolveQty = (payload['quantity'] as num?)?.toInt() ?? 0;
 
-                  final remote = await _stockTransferRemote.resolveDiscrepancy(
-                    int.parse(resolveServerId),
-                    StockTransferRemotePayloads.resolveDiscrepancyBody(
-                      itemId: remoteItemId,
-                      quantity: (payload['quantity'] as num?)?.toInt() ?? 0,
-                      reason: payload['reason'] as String? ?? 'loss',
-                      resolution:
-                          payload['resolution'] as String? ?? 'write_off',
-                      notes: payload['notes'] as String?,
-                    ),
-                  );
-                  await _stockTransferLocal.applyRemoteStockTransferSnapshot(
-                    local.id,
-                    remote,
-                  );
-                  return true;
-                },
-              ) ??
-              false;
+        Future<bool> applyResolvedSnapshot(Map<String, dynamic> remote) async {
+          await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+            local.id,
+            remote,
+          );
+          return true;
+        }
+
+        try {
+          final scoped = await _stockTransferCloudSync.runOnSourceShop(
+            transfer: local,
+            action: () async {
+              final remoteDetail = await _stockTransferRemote.fetchTransfer(
+                resolveServerInt,
+              );
+              final status = remoteDetail['status'] as String? ?? '';
+              if (StockTransferCloudSyncHelper.isTerminalClosedStatus(status)) {
+                return applyResolvedSnapshot(remoteDetail);
+              }
+              if (!StockTransferCloudSyncHelper.canResolveDiscrepancyOnRemote(
+                status,
+              )) {
+                await _queue.markDeferred(
+                  item.id,
+                  'L\'expédition n\'est pas encore synchronisée côté cloud '
+                  '(statut « ${StockTransferStatus.label(status)} »). '
+                  'Synchronisez d\'abord l\'expédition, puis la résolution d\'écart.',
+                );
+                return false;
+              }
+
+              final remoteItems = (remoteDetail['items'] as List?)
+                      ?.whereType<Map<String, dynamic>>()
+                      .toList() ??
+                  [];
+              final discrepancies = (remoteDetail['discrepancies'] as List?)
+                      ?.whereType<Map<String, dynamic>>()
+                      .toList() ??
+                  [];
+              final mapping = await _stockTransferLocal.buildRemoteItemMapping(
+                transfer: local,
+                remoteItems: remoteItems,
+              );
+              final remoteItemId = mapping
+                  .where((row) => row['localItemId'] == localItemId)
+                  .map((row) => row['remoteItemId'] as int?)
+                  .whereType<int>()
+                  .firstOrNull;
+              if (remoteItemId == null) {
+                await _queue.markDeferred(
+                  item.id,
+                  'Article local non mappé côté serveur.',
+                );
+                return false;
+              }
+
+              Map<String, dynamic>? remoteItem;
+              for (final ri in remoteItems) {
+                if (StockTransferLocalDatasource.coerceRemoteInt(ri['id']) ==
+                    remoteItemId) {
+                  remoteItem = ri;
+                  break;
+                }
+              }
+              if (remoteItem == null) {
+                await _queue.markDeferred(
+                  item.id,
+                  'Article local non mappé côté serveur.',
+                );
+                return false;
+              }
+
+              final openQty =
+                  StockTransferCloudSyncHelper.openDiscrepancyQtyOnRemoteItem(
+                remoteItem: remoteItem,
+                discrepancies: discrepancies,
+                remoteItemId: remoteItemId,
+              );
+              if (openQty <= 0 || resolveQty <= 0) {
+                return applyResolvedSnapshot(remoteDetail);
+              }
+
+              final remote = await _stockTransferRemote.resolveDiscrepancy(
+                resolveServerInt,
+                StockTransferRemotePayloads.resolveDiscrepancyBody(
+                  itemId: remoteItemId,
+                  quantity: resolveQty > openQty ? openQty : resolveQty,
+                  reason: payload['reason'] as String? ?? 'loss',
+                  resolution:
+                      payload['resolution'] as String? ?? 'write_off',
+                  notes: payload['notes'] as String?,
+                ),
+              );
+              return applyResolvedSnapshot(remote);
+            },
+          );
+          if (scoped == null) {
+            await _queue.markDeferred(
+              item.id,
+              'Boutique source non synchronisée.',
+            );
+            return false;
+          }
+          return scoped;
         } on Failure catch (error) {
+          if (StockTransferCloudSyncHelper.isDiscrepancyNotAllowedError(
+            error.message,
+          )) {
+            final refreshed = await _stockTransferCloudSync.runOnSourceShop(
+              transfer: local,
+              action: () =>
+                  _stockTransferRemote.fetchTransfer(resolveServerInt),
+            );
+            if (refreshed != null) {
+              final status = refreshed['status'] as String? ?? '';
+              if (StockTransferCloudSyncHelper.isTerminalClosedStatus(status)) {
+                await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                  local.id,
+                  refreshed,
+                );
+                return true;
+              }
+              if (!StockTransferCloudSyncHelper.canResolveDiscrepancyOnRemote(
+                status,
+              )) {
+                await _queue.markDeferred(
+                  item.id,
+                  'L\'expédition n\'est pas encore synchronisée côté cloud '
+                  '(statut « ${StockTransferStatus.label(status)} »). '
+                  'Synchronisez d\'abord l\'expédition, puis la résolution d\'écart.',
+                );
+                return false;
+              }
+              await _stockTransferLocal.applyRemoteStockTransferSnapshot(
+                local.id,
+                refreshed,
+              );
+              return true;
+            }
+          }
           await _queue.markDeferred(item.id, error.message);
           return false;
         }

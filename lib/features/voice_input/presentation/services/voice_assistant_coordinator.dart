@@ -32,6 +32,11 @@ import '../../../procurement/presentation/pages/receive_items_page.dart';
 import '../../../sales/domain/entities/sale_entities.dart';
 import '../../../sales/domain/usecases/sale_usecases.dart';
 import '../../../sales/presentation/pages/new_sale_page.dart';
+import '../../../sales/presentation/pages/sale_replacement_page.dart';
+import '../../../sales_orders/domain/entities/sales_order.dart';
+import '../../../sales_orders/domain/repositories/sales_order_repository.dart';
+import '../../../sales_orders/presentation/bloc/sales_order_bloc.dart';
+import '../../../sales_orders/presentation/pages/sales_order_deliver_page.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../expenses/presentation/pages/expenses_page.dart';
 import '../../../inventory/presentation/pages/product_detail_page.dart';
@@ -684,6 +689,10 @@ class VoiceAssistantCoordinator {
         PermissionGuard.can(_perms, Permission.procurementCreate),
       VoiceIntentKind.receivePurchase =>
         PermissionGuard.can(_perms, Permission.procurementReceive),
+      VoiceIntentKind.deliverSalesOrder =>
+        PermissionGuard.can(_perms, Permission.salesOrdersDeliver),
+      VoiceIntentKind.openSaleReplacement =>
+        PermissionGuard.can(_perms, Permission.salesCreate),
       VoiceIntentKind.stockQuery || VoiceIntentKind.stockAdviceQuery =>
         PermissionGuard.can(_perms, Permission.inventoryRead),
       VoiceIntentKind.fxBalanceQuery || VoiceIntentKind.fxMarginQuery =>
@@ -750,6 +759,11 @@ class VoiceAssistantCoordinator {
         final target = workflow.formTarget;
         if (target is PurchaseOrder) {
           await _openReceiveItemsPage(target);
+        } else if (target is SalesOrder) {
+          await _openSalesOrderDeliverPage(target);
+        } else if (target is Sale) {
+          final seed = _replacementSeedFromDraft(workflow.draft);
+          await _openSaleReplacementPage(target, seed: seed);
         }
         if (!context.mounted) return false;
         return showVoiceContinueDialog(context);
@@ -864,6 +878,25 @@ class VoiceAssistantCoordinator {
           findOrder: (id) =>
               repo.findPurchaseOrder(shopId: session.shop.id, id: id),
         );
+      case VoiceIntentKind.deliverSalesOrder:
+        ensureSalesOrderDependencies();
+        final soRepo = sl<SalesOrderRepository>();
+        return DeliverSalesOrderWorkflow(
+          shopId: session.shop.id,
+          listOrders: () => soRepo.listOrders(shopId: session.shop.id),
+          findOrder: (id) =>
+              soRepo.findOrder(shopId: session.shop.id, id: id),
+        );
+      case VoiceIntentKind.openSaleReplacement:
+        return OpenSaleReplacementWorkflow(
+          shopId: session.shop.id,
+          listSales: () => sl<ListSales>()(
+            session: session,
+            filters: const SaleListFilters(limit: 20),
+          ),
+          findSale: (id) => sl<GetSale>()(session: session, saleId: id),
+          products: catalogs.products,
+        );
       default:
         return null;
     }
@@ -883,6 +916,53 @@ class VoiceAssistantCoordinator {
         ),
       ),
     );
+  }
+
+  Future<void> _openSalesOrderDeliverPage(SalesOrder order) async {
+    if (!context.mounted) return;
+    ensureSalesOrderDependencies();
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => SalesOrderBloc(
+            repository: sl<SalesOrderRepository>(),
+            session: session,
+          ),
+          child: SalesOrderDeliverPage(
+            session: session,
+            order: order,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSaleReplacementPage(
+    Sale sale, {
+    VoiceSaleReplacementSeed? seed,
+  }) async {
+    if (!context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SaleReplacementPage(
+          session: session,
+          sale: sale,
+          voiceSeed: seed,
+        ),
+      ),
+    );
+  }
+
+  VoiceSaleReplacementSeed? _replacementSeedFromDraft(VoiceDraft? draft) {
+    if (draft is! VoiceOpenSaleReplacementDraft) return null;
+    final seed = VoiceSaleReplacementSeed(
+      returnedProductId: draft.returnedProductId,
+      returnedProductName: draft.returnedProductName,
+      issuedProductId: draft.issuedProductId,
+      issuedProductName: draft.issuedProductName,
+      quantity: draft.quantity,
+    );
+    return seed.hasAny ? seed : null;
   }
 
   Future<_CatalogBundle> _loadCatalogs() async {
@@ -1023,6 +1103,8 @@ class VoiceAssistantCoordinator {
         await _saveFx(d);
       case VoiceReceivePurchaseDraft d:
         await _saveReceive(d);
+      case VoiceDeliverSalesOrderDraft _:
+      case VoiceOpenSaleReplacementDraft _:
       case VoiceProcurementDraft _:
         await _openForm(draft);
       case VoiceCreateProductDraft _:
@@ -1046,13 +1128,13 @@ class VoiceAssistantCoordinator {
     final poId = draft.poId;
     final itemId = draft.purchaseOrderItemId;
     final productId = draft.productId;
-    final qty = draft.quantityReceived;
+    final qty = draft.quantityReceived ?? 0;
+    final refused = draft.quantityRefused ?? 0;
     final cost = draft.unitCost;
     if (poId == null ||
         itemId == null ||
         productId == null ||
-        qty == null ||
-        cost == null) {
+        !draft.canSave) {
       await _fail(explainVoiceDraftFailure(draft), kind: draft.kind);
       return;
     }
@@ -1072,12 +1154,18 @@ class VoiceAssistantCoordinator {
           'purchaseOrderItemId': itemId,
           'productId': productId,
           'quantityReceived': qty,
-          'unitCost': cost,
+          'quantityRefused': refused,
+          if (refused > 0) 'refusalReason': draft.refusalReasonCode,
+          'unitCost': cost ?? 0,
         },
       ],
     );
     if (context.mounted) {
-      _snack('Réception enregistrée (${draft.poNumber ?? poId})');
+      final refusedLabel = refused > 0 ? ', $refused refusé(s)' : '';
+      _snack(
+        'Réception enregistrée (${draft.poNumber ?? poId}'
+        '$refusedLabel)',
+      );
     }
   }
 
@@ -1331,6 +1419,38 @@ class VoiceAssistantCoordinator {
           if (po != null && context.mounted) {
             await _openReceiveItemsPage(po);
             return;
+          }
+        }
+        await _fail(explainVoiceDraftFailure(d), kind: d.kind);
+      case VoiceDeliverSalesOrderDraft d:
+        if (d.salesOrderId != null) {
+          ensureSalesOrderDependencies();
+          final order = await sl<SalesOrderRepository>().findOrder(
+            shopId: session.shop.id,
+            id: d.salesOrderId!,
+          );
+          if (order != null && context.mounted) {
+            await _openSalesOrderDeliverPage(order);
+            return;
+          }
+        }
+        await _fail(explainVoiceDraftFailure(d), kind: d.kind);
+      case VoiceOpenSaleReplacementDraft d:
+        if (d.saleId != null) {
+          try {
+            final sale = await sl<GetSale>()(
+              session: session,
+              saleId: d.saleId!,
+            );
+            if (context.mounted) {
+              await _openSaleReplacementPage(
+                sale,
+                seed: _replacementSeedFromDraft(d),
+              );
+              return;
+            }
+          } catch (_) {
+            // fall through to failure
           }
         }
         await _fail(explainVoiceDraftFailure(d), kind: d.kind);

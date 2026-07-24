@@ -2,9 +2,12 @@ import 'package:drift/drift.dart';
 
 import '../../../../inventory/data/datasources/local/inventory_local_datasource.dart';
 import '../../../../../core/database/app_database.dart' as db;
+import '../../../../../core/errors/failures.dart';
 import '../../../../../core/utils/benin_day_range.dart';
 import '../../../../../core/utils/time.dart';
 import '../../../../inventory/data/datasources/local/inventory_lot_local_datasource.dart';
+import '../../../../inventory/domain/entities/inventory_lot_entities.dart'
+    as lot_entity;
 import '../../../domain/entities/sale_entities.dart';
 import '../../../domain/services/receipt_number_service.dart';
 import '../../../domain/services/sale_validation_service.dart';
@@ -868,5 +871,336 @@ class SalesLocalDatasource {
             createdAt: ts,
           ),
         );
+  }
+
+  Future<String> nextReplacementNumber(int shopId) async {
+    final rows = await (_db.select(_db.saleReplacements)
+          ..where((t) => t.shopId.equals(shopId))
+          ..orderBy([(t) => OrderingTerm.desc(t.id)])
+          ..limit(1))
+        .get();
+    final next = rows.isEmpty ? 1 : rows.first.id + 1;
+    return 'RX-${next.toString().padLeft(5, '0')}';
+  }
+
+  Future<Map<int, int>> returnedQuantitiesBySaleItem({
+    required int shopId,
+    required int saleId,
+  }) async {
+    final replacements = await (_db.select(_db.saleReplacements)
+          ..where(
+            (r) => r.shopId.equals(shopId) & r.saleId.equals(saleId),
+          ))
+        .get();
+    if (replacements.isEmpty) return {};
+
+    final replacementIds = replacements.map((r) => r.id).toList();
+    final items = await (_db.select(_db.saleReplacementItems)
+          ..where(
+            (i) =>
+                i.shopId.equals(shopId) &
+                i.replacementId.isIn(replacementIds),
+          ))
+        .get();
+
+    final map = <int, int>{};
+    for (final item in items) {
+      map[item.returnedSaleItemId] =
+          (map[item.returnedSaleItemId] ?? 0) + item.quantityReturned;
+    }
+    return map;
+  }
+
+  Future<List<SaleReplacement>> listReplacementsForSale({
+    required int shopId,
+    required int saleId,
+  }) async {
+    final rows = await (_db.select(_db.saleReplacements)
+          ..where(
+            (r) => r.shopId.equals(shopId) & r.saleId.equals(saleId),
+          )
+          ..orderBy([(r) => OrderingTerm.desc(r.replacedAt)]))
+        .get();
+
+    final result = <SaleReplacement>[];
+    for (final row in rows) {
+      result.add(await _mapReplacement(shopId, row));
+    }
+    return result;
+  }
+
+  Future<SaleReplacement> createSaleReplacement({
+    required int shopId,
+    required int userId,
+    required int saleId,
+    required List<SaleReplacementLineInput> items,
+    String? notes,
+    int timestamp = 0,
+  }) async {
+    final ts = timestamp > 0 ? timestamp : nowMs();
+
+    return _db.transaction(() async {
+      final saleRow = await (_db.select(_db.sales)
+            ..where(
+              (s) => s.id.equals(saleId) & s.shopId.equals(shopId),
+            )
+            ..limit(1))
+          .getSingleOrNull();
+      if (saleRow == null) {
+        throw const NotFoundFailure('Vente introuvable.');
+      }
+      if (saleRow.status == 'cancelled') {
+        throw const ValidationFailure(
+          'Impossible de remplacer une vente annulée.',
+        );
+      }
+      if (saleRow.saleType != 'standard') {
+        throw const ValidationFailure(
+          'Le remplacement n\'est possible que sur une vente standard.',
+        );
+      }
+      if (items.isEmpty) {
+        throw const ValidationFailure(
+          'Ajoutez au moins une ligne de remplacement.',
+        );
+      }
+
+      final alreadyReturned = await returnedQuantitiesBySaleItem(
+        shopId: shopId,
+        saleId: saleId,
+      );
+      final saleItems = await (_db.select(_db.saleItems)
+            ..where((i) => i.saleId.equals(saleId)))
+          .get();
+      final saleItemById = {for (final i in saleItems) i.id: i};
+
+      final lotDs = InventoryLotLocalDatasource(_db);
+      final number = await nextReplacementNumber(shopId);
+
+      final replacementId = await _db.into(_db.saleReplacements).insert(
+            db.SaleReplacementsCompanion.insert(
+              shopId: shopId,
+              saleId: saleId,
+              number: number,
+              replacedAt: ts,
+              replacedBy: userId,
+              notes: Value(notes),
+              syncStatus: const Value('pending'),
+            ),
+          );
+
+      for (final line in items) {
+        if (line.quantityReturned <= 0 || line.quantityIssued <= 0) {
+          throw const ValidationFailure(
+            'Les quantités retournées et émises doivent être > 0.',
+          );
+        }
+
+        final saleItem = saleItemById[line.returnedSaleItemId];
+        if (saleItem == null || saleItem.productId == null) {
+          throw ValidationFailure(
+            'Ligne de vente #${line.returnedSaleItemId} introuvable.',
+          );
+        }
+
+        final soldQty = saleItem.quantity.round();
+        final prior = alreadyReturned[saleItem.id] ?? 0;
+        final returnable = saleItemQuantityReturnable(
+          soldQuantity: soldQty,
+          alreadyReturned: prior,
+        );
+        if (line.quantityReturned > returnable) {
+          throw ValidationFailure(
+            'Retour trop élevé pour ${saleItem.productName} '
+            '(reste retournable : $returnable).',
+          );
+        }
+        alreadyReturned[saleItem.id] = prior + line.quantityReturned;
+
+        final returnedProductId = saleItem.productId!;
+        final issuedProduct = await findProduct(shopId, line.issuedProductId);
+        if (issuedProduct == null) {
+          throw NotFoundFailure(
+            'Produit #${line.issuedProductId} introuvable.',
+          );
+        }
+        if (issuedProduct.quantityInStock < line.quantityIssued) {
+          throw ValidationFailure(
+            'Stock insuffisant pour ${issuedProduct.name} '
+            '(dispo ${issuedProduct.quantityInStock}).',
+          );
+        }
+
+        final unitCostReturned = saleItem.unitCost ??
+            (await lotDs.getReferenceUnitCost(
+              shopId: shopId,
+              productId: returnedProductId,
+            ));
+
+        // 1) Retour → stock + lot
+        final qtyBeforeReturn = (await findProduct(shopId, returnedProductId))
+                ?.quantityInStock ??
+            0;
+        await lotDs.createLot(
+          shopId: shopId,
+          productId: returnedProductId,
+          sourceType: lot_entity.InventoryLotSourceType.saleReplacementReturn,
+          sourceId: replacementId,
+          unitCost: unitCostReturned,
+          quantity: line.quantityReturned,
+          receivedAt: ts,
+        );
+        final qtyAfterReturn = (await findProduct(shopId, returnedProductId))
+                ?.quantityInStock ??
+            (qtyBeforeReturn + line.quantityReturned);
+
+        await _db.into(_db.stockMovements).insert(
+              db.StockMovementsCompanion.insert(
+                shopId: shopId,
+                productId: returnedProductId,
+                userId: userId,
+                type: 'return',
+                quantityChange: line.quantityReturned,
+                quantityBefore: qtyBeforeReturn,
+                quantityAfter: qtyAfterReturn,
+                saleId: Value(saleId),
+                reason: Value('Remplacement $number'),
+                unitCost: Value(unitCostReturned),
+                createdAt: ts,
+              ),
+            );
+
+        // 2) Sortie produit de remplacement (FIFO)
+        final qtyBeforeIssue = issuedProduct.quantityInStock;
+        final slices = await lotDs.allocateFifo(
+          shopId: shopId,
+          productId: issuedProduct.id,
+          quantity: line.quantityIssued,
+        );
+        final unitCostIssued =
+            InventoryLotLocalDatasource.weightedUnitCost(slices);
+        final qtyAfterIssue = (await findProduct(shopId, issuedProduct.id))
+                ?.quantityInStock ??
+            (qtyBeforeIssue - line.quantityIssued);
+
+        await _db.into(_db.stockMovements).insert(
+              db.StockMovementsCompanion.insert(
+                shopId: shopId,
+                productId: issuedProduct.id,
+                userId: userId,
+                type: 'sale',
+                quantityChange: -line.quantityIssued,
+                quantityBefore: qtyBeforeIssue,
+                quantityAfter: qtyAfterIssue,
+                saleId: Value(saleId),
+                reason: Value('Remplacement $number'),
+                unitCost: Value(unitCostIssued),
+                createdAt: ts,
+              ),
+            );
+
+        await _db.into(_db.saleReplacementItems).insert(
+              db.SaleReplacementItemsCompanion.insert(
+                shopId: shopId,
+                replacementId: replacementId,
+                returnedSaleItemId: saleItem.id,
+                returnedProductId: returnedProductId,
+                quantityReturned: line.quantityReturned,
+                issuedProductId: issuedProduct.id,
+                quantityIssued: line.quantityIssued,
+                unitPriceIssued: line.unitPriceIssued,
+                reason: line.reason.code,
+                syncStatus: const Value('pending'),
+              ),
+            );
+      }
+
+      // Historique SO si vente liée à une livraison
+      final delivery = await (_db.select(_db.salesOrderDeliveries)
+            ..where(
+              (d) => d.shopId.equals(shopId) & d.saleId.equals(saleId),
+            )
+            ..limit(1))
+          .getSingleOrNull();
+      if (delivery != null) {
+        await _db.into(_db.salesOrderHistoryEntries).insert(
+              db.SalesOrderHistoryEntriesCompanion.insert(
+                shopId: shopId,
+                salesOrderId: delivery.salesOrderId,
+                action: 'replacement',
+                performedBy: userId,
+                performedAt: ts,
+                details: Value(
+                  'Remplacement $number via vente #$saleId',
+                ),
+              ),
+            );
+      }
+
+      final row = await (_db.select(_db.saleReplacements)
+            ..where((r) => r.id.equals(replacementId)))
+          .getSingle();
+      return _mapReplacement(shopId, row);
+    });
+  }
+
+  Future<void> markReplacementSynced({
+    required int shopId,
+    required int replacementId,
+    required String serverId,
+  }) async {
+    final now = nowMs();
+    await (_db.update(_db.saleReplacements)
+          ..where(
+            (r) => r.id.equals(replacementId) & r.shopId.equals(shopId),
+          ))
+        .write(
+      db.SaleReplacementsCompanion(
+        serverId: Value(serverId),
+        syncedAt: Value(now),
+        syncStatus: const Value('synced'),
+      ),
+    );
+  }
+
+  Future<SaleReplacement> _mapReplacement(
+    int shopId,
+    db.SaleReplacement row,
+  ) async {
+    final itemRows = await (_db.select(_db.saleReplacementItems)
+          ..where((i) => i.replacementId.equals(row.id)))
+        .get();
+
+    final items = <SaleReplacementItem>[];
+    for (final ir in itemRows) {
+      final returned = await findProduct(shopId, ir.returnedProductId);
+      final issued = await findProduct(shopId, ir.issuedProductId);
+      items.add(
+        SaleReplacementItem(
+          id: ir.id,
+          replacementId: ir.replacementId,
+          returnedSaleItemId: ir.returnedSaleItemId,
+          returnedProductId: ir.returnedProductId,
+          returnedProductName: returned?.name,
+          quantityReturned: ir.quantityReturned,
+          issuedProductId: ir.issuedProductId,
+          issuedProductName: issued?.name,
+          quantityIssued: ir.quantityIssued,
+          unitPriceIssued: ir.unitPriceIssued,
+          reason: ir.reason,
+        ),
+      );
+    }
+
+    return SaleReplacement(
+      id: row.id,
+      shopId: row.shopId,
+      saleId: row.saleId,
+      number: row.number,
+      replacedAt: row.replacedAt,
+      replacedBy: row.replacedBy,
+      notes: row.notes,
+      items: items,
+    );
   }
 }

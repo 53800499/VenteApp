@@ -122,3 +122,52 @@ class ConvertQuickSaleToStandard {
     );
   }
 }
+
+class ListSaleReplacements {
+  ListSaleReplacements(this._repository);
+
+  final SaleRepository _repository;
+
+  Future<List<SaleReplacement>> call({
+    required AuthSession session,
+    required int saleId,
+  }) {
+    return _repository.listReplacementsForSale(
+      shopId: session.shop.id,
+      saleId: saleId,
+    );
+  }
+}
+
+class GetSaleReturnedQuantities {
+  GetSaleReturnedQuantities(this._repository);
+
+  final SaleRepository _repository;
+
+  Future<Map<int, int>> call({
+    required AuthSession session,
+    required int saleId,
+  }) {
+    return _repository.returnedQuantitiesBySaleItem(
+      shopId: session.shop.id,
+      saleId: saleId,
+    );
+  }
+}
+
+class CreateSaleReplacement {
+  CreateSaleReplacement(this._repository);
+
+  final SaleRepository _repository;
+
+  Future<SaleReplacement> call({
+    required AuthSession session,
+    required CreateSaleReplacementInput input,
+  }) {
+    return _repository.createSaleReplacement(
+      shopId: session.shop.id,
+      userId: session.user.id,
+      input: input,
+    );
+  }
+}

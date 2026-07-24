@@ -381,6 +381,16 @@ class NotificationsLocalDatasource {
       entities.add(SyncConflictEntity(table: 'sales', id: s.id));
     }
 
+    final orders = await (_database.select(_database.salesOrders)
+          ..where(
+            (t) =>
+                t.shopId.equals(shopId) & t.syncStatus.equals('conflict'),
+          ))
+        .get();
+    for (final o in orders) {
+      entities.add(SyncConflictEntity(table: 'sales_orders', id: o.id));
+    }
+
     return SyncConflictSummary(count: entities.length, entities: entities);
   }
 

@@ -2,7 +2,9 @@ import 'voice_workflow.dart';
 
 export 'voice_workflow.dart';
 export 'debt_payment_workflow.dart';
+export 'deliver_sales_order_workflow.dart';
 export 'fx_exchange_workflow.dart';
+export 'open_sale_replacement_workflow.dart';
 export 'receive_po_workflow.dart';
 export 'sale_cart_workflow.dart';
 

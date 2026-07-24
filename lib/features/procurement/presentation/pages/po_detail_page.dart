@@ -144,21 +144,29 @@ class _PoDetailPageState extends State<PoDetailPage> {
           ),
           const Divider(),
           ...receipts.map(
-            (r) => Card(
-              child: ListTile(
-                leading: const Icon(
-                  Icons.local_shipping_outlined,
-                  color: Colors.green,
+            (r) {
+              final accepted = (r.items ?? [])
+                  .fold<int>(0, (sum, i) => sum + i.quantityReceived);
+              final refused = (r.items ?? [])
+                  .fold<int>(0, (sum, i) => sum + i.quantityRefused);
+              return Card(
+                child: ListTile(
+                  leading: const Icon(
+                    Icons.local_shipping_outlined,
+                    color: Colors.green,
+                  ),
+                  title: Text('BR #${r.receiptNumber}'),
+                  subtitle: Text(
+                    'Reçu le: ${DateTime.fromMillisecondsSinceEpoch(r.receivedAt).toLocal().toString().substring(0, 10)} '
+                    'par ${r.receivedByName ?? "ID #${r.receivedBy}"}\n'
+                    'Accepté $accepted'
+                    '${refused > 0 ? ' · Refusé $refused' : ''}',
+                  ),
+                  isThreeLine: refused > 0,
+                  trailing: Text('$accepted art.'),
                 ),
-                title: Text('BR #${r.receiptNumber}'),
-                subtitle: Text(
-                  'Reçu le: ${DateTime.fromMillisecondsSinceEpoch(r.receivedAt).toLocal().toString().substring(0, 10)} par ${r.receivedByName ?? "ID #${r.receivedBy}"}',
-                ),
-                trailing: Text(
-                  '${(r.items ?? []).fold<int>(0, (sum, i) => sum + i.quantityReceived)} art.',
-                ),
-              ),
-            ),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
@@ -545,7 +553,11 @@ class _PoItemsCard extends StatelessWidget {
               itemCount: items.length,
               itemBuilder: (context, idx) {
                 final it = items[idx];
-                final progress = it.quantityReceived / it.quantityOrdered;
+                final treated = it.quantityReceived + it.quantityRefused;
+                final progress = it.quantityOrdered <= 0
+                    ? 0.0
+                    : treated / it.quantityOrdered;
+                final complete = it.quantityRemaining <= 0;
 
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -568,23 +580,27 @@ class _PoItemsCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
+                      Text('Prix d\'achat unitaire : ${formatFcfa(it.unitCost)}'),
+                      const SizedBox(height: 4),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Prix d\'achat unitaire : ${formatFcfa(it.unitCost)}'),
                           Text(
-                            'Reçu: ${it.quantityReceived} / ${it.quantityOrdered}',
+                            'Reçu ${it.quantityReceived} · '
+                            'Refusé ${it.quantityRefused} · '
+                            'Reste ${it.quantityRemaining}',
                             style: TextStyle(
-                              color: it.quantityReceived == it.quantityOrdered ? Colors.green : Colors.orange,
+                              color: complete ? Colors.green : Colors.orange,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          Text('${it.quantityOrdered} cmd'),
                         ],
                       ),
                       const SizedBox(height: 6),
                       LinearProgressIndicator(
-                        value: progress,
-                        color: it.quantityReceived == it.quantityOrdered ? Colors.green : Colors.orange,
+                        value: progress.clamp(0.0, 1.0),
+                        color: complete ? Colors.green : Colors.orange,
                         backgroundColor: Colors.grey.shade200,
                       ),
                     ],

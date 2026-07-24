@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../help/presentation/pages/help_article_page.dart';
+import '../../../procurement/domain/entities/procurement.dart';
 import '../../domain/entities/voice_draft.dart';
 import '../../domain/services/voice_failure_explainer.dart';
 import '../cubit/voice_input_cubit.dart';
@@ -767,17 +768,27 @@ List<Widget> _rowsFor(VoiceDraft draft) {
     ];
   }
   if (draft is VoiceReceivePurchaseDraft) {
+    final refused = draft.quantityRefused ?? 0;
+    final reason = draft.refusalReasonCode != null
+        ? (SupplierRefusalReason.fromCode(draft.refusalReasonCode)?.labelFr ??
+            draft.refusalReasonCode!)
+        : null;
     return [
       _row('Commande', draft.poNumber ?? '—'),
       _row('Fournisseur', draft.supplierName ?? '—'),
       _row('Produit', draft.productName ?? '—'),
-      _row('Qté reçue', draft.quantityReceived?.toString() ?? '—'),
+      _row('Qté acceptée', '${draft.quantityReceived ?? 0}'),
+      if (refused > 0) ...[
+        _row('Qté refusée', '$refused'),
+        if (reason != null) _row('Motif refus', reason),
+      ],
       if (draft.remainingBefore != null)
         _row('Reste avant', '${draft.remainingBefore}'),
-      _row(
-        'Prix unitaire',
-        draft.unitCost != null ? formatFcfa(draft.unitCost!) : '—',
-      ),
+      if ((draft.quantityReceived ?? 0) > 0)
+        _row(
+          'Prix unitaire',
+          draft.unitCost != null ? formatFcfa(draft.unitCost!) : '—',
+        ),
     ];
   }
   return const [];

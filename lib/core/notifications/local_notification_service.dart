@@ -163,4 +163,5 @@ class LocalNotificationService {
 abstract final class NotificationIds {
   static const dailySummary = 9001;
   static const debtPaidBase = 9100;
+  static const salesOrderDeliveredBase = 9200;
 }

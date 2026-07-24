@@ -17,6 +17,10 @@ import '../../features/stock_transfer/data/datasources/stock_transfer_local_data
 import '../../features/stock_transfer/data/datasources/stock_transfer_remote_datasource.dart';
 import '../../features/stock_transfer/data/repositories/stock_transfer_repository_impl.dart';
 import '../../features/stock_transfer/domain/repositories/stock_transfer_repository.dart';
+import '../../features/sales_orders/data/datasources/sales_order_local_datasource.dart';
+import '../../features/sales_orders/data/datasources/sales_order_remote_datasource.dart';
+import '../../features/sales_orders/data/repositories/sales_order_repository_impl.dart';
+import '../../features/sales_orders/domain/repositories/sales_order_repository.dart';
 import '../../features/fx_exchange/data/datasources/local/fx_exchange_local_datasource.dart';
 import '../../features/fx_exchange/data/datasources/remote/fx_exchange_remote_datasource.dart';
 import '../../features/fx_exchange/data/repositories/fx_exchange_repository_impl.dart';
@@ -431,6 +435,32 @@ void ensureStockTransferDependencies() {
   }
 }
 
+/// Enregistre le module Commandes clients si absent.
+void ensureSalesOrderDependencies() {
+  if (!sl.isRegistered<SalesOrderLocalDatasource>()) {
+    sl.registerLazySingleton(
+      () => SalesOrderLocalDatasource(sl(), deviceIds: sl()),
+    );
+  }
+  if (!sl.isRegistered<SalesOrderRemoteDatasource>()) {
+    sl.registerLazySingleton(() => SalesOrderRemoteDatasource(sl()));
+  }
+  if (!sl.isRegistered<SalesOrderRepository>()) {
+    sl.registerLazySingleton<SalesOrderRepository>(
+      () => SalesOrderRepositoryImpl(
+        local: sl(),
+        remote: sl(),
+        apiGuard: sl(),
+        syncPolicy: sl(),
+        recorder: sl(),
+        notificationOrchestrator: sl.isRegistered<NotificationOrchestrator>()
+            ? sl<NotificationOrchestrator>()
+            : null,
+      ),
+    );
+  }
+}
+
 /// Enregistre le module Gestion de caisse si absent.
 void ensureCashSessionDependencies() {
   if (!sl.isRegistered<CashSessionsLocalDatasource>()) {
@@ -611,7 +641,12 @@ void ensureNotificationsDependencies() {
   }
   if (!sl.isRegistered<NotificationFeedBuilder>()) {
     sl.registerLazySingleton(
-      () => NotificationFeedBuilder(sl<NotificationsLocalDatasource>()),
+      () => NotificationFeedBuilder(
+        sl<NotificationsLocalDatasource>(),
+        salesOrders: sl.isRegistered<SalesOrderLocalDatasource>()
+            ? sl<SalesOrderLocalDatasource>()
+            : null,
+      ),
     );
   }
   if (!sl.isRegistered<NotificationRepository>()) {
@@ -985,6 +1020,7 @@ Future<void> initDependencies() async {
   ensureExpensesDependencies();
   ensureProcurementDependencies();
   ensureStockTransferDependencies();
+  ensureSalesOrderDependencies();
   ensureCashSessionDependencies();
   ensureFxExchangeDependencies();
   sl.registerLazySingleton<DashboardRepository>(
@@ -1100,6 +1136,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => CreateQuickSale(sl()));
   sl.registerLazySingleton(() => ConvertQuickSaleToStandard(sl()));
   sl.registerLazySingleton(() => CancelSale(sl()));
+  sl.registerLazySingleton(() => ListSaleReplacements(sl()));
+  sl.registerLazySingleton(() => GetSaleReturnedQuantities(sl()));
+  sl.registerLazySingleton(() => CreateSaleReplacement(sl()));
 
   sl.registerLazySingleton(() => CustomerRemoteSyncAdapter(sl<CustomerRepository>()));
   sl.registerLazySingleton(() => InventoryRemoteSyncAdapter(sl<InventoryRepository>()));
@@ -1114,6 +1153,9 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => StockTransferRemoteSyncAdapter(sl<StockTransferRepository>()),
   );
+  sl.registerLazySingleton(
+    () => SalesOrderRemoteSyncAdapter(sl<SalesOrderRepository>()),
+  );
   sl.registerLazySingleton(() => SyncPolicy(sl(), sl()));
   sl.registerLazySingleton(() => SyncQueueDatasource(sl()));
   sl.registerLazySingleton(() => LocalAuditWriter(sl()));
@@ -1124,6 +1166,12 @@ Future<void> initDependencies() async {
       auditWriter: sl(),
       customersLocal: sl(),
       customersRemote: sl(),
+      salesOrderLocal: sl.isRegistered<SalesOrderLocalDatasource>()
+          ? sl<SalesOrderLocalDatasource>()
+          : null,
+      salesOrderRemote: sl.isRegistered<SalesOrderRemoteDatasource>()
+          ? sl<SalesOrderRemoteDatasource>()
+          : null,
     ),
   );
   sl.registerLazySingleton(
@@ -1157,6 +1205,8 @@ Future<void> initDependencies() async {
       stockTransferRemote: sl(),
       fxExchangeLocal: sl(),
       fxExchangeRemote: sl(),
+      salesOrderLocal: sl(),
+      salesOrderRemote: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -1178,6 +1228,7 @@ Future<void> initDependencies() async {
         sl<ProcurementRemoteSyncAdapter>(),
         sl<StockTransferRemoteSyncAdapter>(),
         sl<FxExchangeRemoteSyncAdapter>(),
+        sl<SalesOrderRemoteSyncAdapter>(),
       ],
       settingsLocal: sl(),
       activeShop: sl(),

@@ -3,6 +3,7 @@ import 'package:venteapp/features/voice_input/domain/entities/voice_draft.dart';
 import 'package:venteapp/features/voice_input/domain/services/entity_matcher.dart';
 import 'package:venteapp/features/voice_input/domain/services/voice_intent_parser.dart';
 import 'package:venteapp/features/voice_input/domain/services/voice_intent_router.dart';
+import 'package:venteapp/features/voice_input/domain/services/voice_replace_xy_parser.dart';
 
 void main() {
   late VoiceIntentParser parser;
@@ -134,6 +135,70 @@ void main() {
       expect(
         router.detect('Le camion est arrivé'),
         VoiceIntentKind.receivePurchase,
+      );
+    });
+
+    test('Phase 4 livrer commande client → deliverSalesOrder', () {
+      expect(
+        router.detect('Livrer la commande client'),
+        VoiceIntentKind.deliverSalesOrder,
+      );
+    });
+
+    test('Phase 4 le client refuse → deliverSalesOrder', () {
+      expect(
+        router.detect('Le client refuse'),
+        VoiceIntentKind.deliverSalesOrder,
+      );
+    });
+
+    test('Phase 4 remplacer → openSaleReplacement', () {
+      expect(
+        router.detect('Remplacer un produit'),
+        VoiceIntentKind.openSaleReplacement,
+      );
+    });
+
+    test('Phase 4 option 2 fournisseur refuse → receivePurchase', () {
+      expect(
+        router.detect('Le fournisseur refuse'),
+        VoiceIntentKind.receivePurchase,
+      );
+    });
+
+    test('Phase 4 option 2 client refuse ≠ fournisseur', () {
+      expect(
+        router.detect('Le client refuse'),
+        VoiceIntentKind.deliverSalesOrder,
+      );
+      expect(
+        router.detect('Le fournisseur refuse'),
+        isNot(VoiceIntentKind.deliverSalesOrder),
+      );
+    });
+
+    test('Phase 4 option 2 remplacer X par Y → openSaleReplacement', () {
+      expect(
+        router.detect('Remplacer ciment par sable'),
+        VoiceIntentKind.openSaleReplacement,
+      );
+    });
+
+    test('Phase 4 option 2 parse remplacer X par Y', () {
+      final parsed = parseReplaceXY('Remplacer ciment par sable');
+      expect(parsed, isNotNull);
+      expect(parsed!.returnedQuery.toLowerCase(), contains('ciment'));
+      expect(parsed.issuedQuery.toLowerCase(), contains('sable'));
+    });
+
+    test('Phase 4 camion ≠ livraison client', () {
+      expect(
+        router.detect('Le camion est arrivé'),
+        VoiceIntentKind.receivePurchase,
+      );
+      expect(
+        router.detect('Livraison client'),
+        VoiceIntentKind.deliverSalesOrder,
       );
     });
 

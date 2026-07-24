@@ -9,7 +9,8 @@ enum NotificationCode {
   syncConflict('N-07'),
   procurementOverdue('N-08'),
   procurementInvoiceDue('N-09'),
-  stockTransferIncoming('N-10');
+  stockTransferIncoming('N-10'),
+  salesOrderOpen('N-11');
 
   const NotificationCode(this.label);
   final String label;
@@ -145,6 +146,9 @@ class NotificationItem {
       return '${payload['customerId'] ?? payload['debtId']}';
     }
     if (code == NotificationCode.syncConflict.label) {
+      return '${payload['count'] ?? entitiesCount}';
+    }
+    if (code == NotificationCode.salesOrderOpen.label) {
       return '${payload['count'] ?? entitiesCount}';
     }
     return code;

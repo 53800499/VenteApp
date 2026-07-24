@@ -36,6 +36,13 @@ class SalesRemoteDatasource {
     await _patchData('/sales/$saleId/cancel', {'reason': reason});
   }
 
+  Future<Map<String, dynamic>> createSaleReplacement(
+    int saleId,
+    Map<String, dynamic> body,
+  ) {
+    return _postData('/sales/$saleId/replacements', body);
+  }
+
   Future<SaleDetailApiDto> getSale(int saleId) async {
     final data = await _getData('/sales/$saleId');
     return SaleDetailApiDto.fromJson(data);

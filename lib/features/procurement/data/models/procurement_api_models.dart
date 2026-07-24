@@ -175,6 +175,7 @@ class PurchaseOrderItemApiDto {
     this.productName,
     required this.quantityOrdered,
     required this.quantityReceived,
+    this.quantityRefused = 0,
     required this.unitCost,
     required this.discount,
     required this.tax,
@@ -190,6 +191,7 @@ class PurchaseOrderItemApiDto {
   final String? productName;
   final int quantityOrdered;
   final int quantityReceived;
+  final int quantityRefused;
   final int unitCost;
   final int discount;
   final int tax;
@@ -206,6 +208,7 @@ class PurchaseOrderItemApiDto {
       productName: json['productName'] as String?,
       quantityOrdered: (json['quantityOrdered'] as num).toInt(),
       quantityReceived: (json['quantityReceived'] as num? ?? 0).toInt(),
+      quantityRefused: (json['quantityRefused'] as num? ?? 0).toInt(),
       unitCost: (json['unitCost'] as num).toInt(),
       discount: (json['discount'] as num? ?? 0).toInt(),
       tax: (json['tax'] as num? ?? 0).toInt(),
@@ -223,6 +226,7 @@ class PurchaseOrderItemApiDto {
         productName: productName,
         quantityOrdered: quantityOrdered,
         quantityReceived: quantityReceived,
+        quantityRefused: quantityRefused,
         unitCost: unitCost,
         discount: discount,
         tax: tax,
@@ -313,6 +317,8 @@ class PurchaseReceiptItemApiDto {
     required this.productId,
     this.productName,
     required this.quantityReceived,
+    this.quantityRefused = 0,
+    this.refusalReason,
     required this.unitCost,
     this.batchNumber,
     this.expiryDate,
@@ -327,6 +333,8 @@ class PurchaseReceiptItemApiDto {
   final int productId;
   final String? productName;
   final int quantityReceived;
+  final int quantityRefused;
+  final String? refusalReason;
   final int unitCost;
   final String? batchNumber;
   final int? expiryDate;
@@ -344,6 +352,8 @@ class PurchaseReceiptItemApiDto {
       productId: (json['productId'] as num).toInt(),
       productName: json['productName'] as String?,
       quantityReceived: (json['quantityReceived'] as num).toInt(),
+      quantityRefused: (json['quantityRefused'] as num? ?? 0).toInt(),
+      refusalReason: json['refusalReason'] as String?,
       unitCost: (json['unitCost'] as num).toInt(),
       batchNumber: json['batchNumber'] as String?,
       expiryDate: (json['expiryDate'] as num?)?.toInt(),
@@ -360,6 +370,8 @@ class PurchaseReceiptItemApiDto {
         productId: productId,
         productName: productName,
         quantityReceived: quantityReceived,
+        quantityRefused: quantityRefused,
+        refusalReason: refusalReason,
         unitCost: unitCost,
         batchNumber: batchNumber,
         expiryDate: expiryDate,

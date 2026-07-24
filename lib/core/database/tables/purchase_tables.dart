@@ -47,6 +47,7 @@ class PurchaseOrderItems extends Table {
   IntColumn get productId => integer().references(Products, #id)();
   IntColumn get quantityOrdered => integer()();
   IntColumn get quantityReceived => integer().withDefault(const Constant(0))();
+  IntColumn get quantityRefused => integer().withDefault(const Constant(0))();
   IntColumn get unitCost => integer()();
   IntColumn get discount => integer().withDefault(const Constant(0))();
   IntColumn get tax => integer().withDefault(const Constant(0))();
@@ -83,6 +84,8 @@ class PurchaseReceiptItems extends Table {
       integer().nullable().references(PurchaseOrderItems, #id)();
   IntColumn get productId => integer().references(Products, #id)();
   IntColumn get quantityReceived => integer()();
+  IntColumn get quantityRefused => integer().withDefault(const Constant(0))();
+  TextColumn get refusalReason => text().nullable()();
   IntColumn get unitCost => integer()();
   TextColumn get batchNumber => text().nullable()();
   IntColumn get expiryDate => integer().nullable()();

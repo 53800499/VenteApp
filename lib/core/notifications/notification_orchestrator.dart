@@ -2,7 +2,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/utils/benin_day_range.dart';
 import '../../core/utils/currency_formatter.dart';
-import '../../core/utils/time.dart';
 import '../../features/notifications/domain/entities/notification_entities.dart';
 import '../../features/notifications/domain/usecases/notification_usecases.dart';
 import 'local_notification_service.dart';
@@ -92,6 +91,37 @@ class NotificationOrchestrator {
     );
   }
 
+  /// Notif locale après livraison SO (partielle ou complète).
+  Future<void> showSalesOrderDelivered({
+    required String orderNumber,
+    required int orderId,
+    required bool partial,
+  }) async {
+    if (!_local.isAvailable) return;
+
+    final item = NotificationItem(
+      code: 'SO-DELIVER',
+      channel: 'system',
+      title: partial ? 'Reliquat commande' : 'Commande livrée',
+      body: partial
+          ? 'Reliquat sur $orderNumber'
+          : 'Commande $orderNumber livrée',
+      deepLink: '/sales-orders/$orderId',
+      configurable: false,
+      alwaysOn: false,
+      payload: {
+        'orderId': orderId,
+        'orderNumber': orderNumber,
+        'partial': partial,
+      },
+    );
+
+    await _local.showItem(
+      item,
+      notificationId: NotificationIds.salesOrderDeliveredBase + orderId,
+    );
+  }
+
   NotificationDeepLinkHandler get deepLinks => _deepLinks;
 
   Future<void> _maybeShowDailySummary(int shopId, NotificationFeed feed) async {
@@ -142,6 +172,13 @@ class NotificationOrchestrator {
       final current = item.payload['count'] as int? ?? 0;
       return lastCount == current;
     }
+    if (item.alwaysOn &&
+        item.code == NotificationCode.salesOrderOpen.label) {
+      final lastCount =
+          _prefs.getInt(_salesOrderOpenKey(shopId, dayKey)) ?? -1;
+      final current = item.payload['count'] as int? ?? 0;
+      return lastCount == current;
+    }
 
     return _prefs.getBool(_shownKey(shopId, dayKey, item)) ?? false;
   }
@@ -150,6 +187,11 @@ class NotificationOrchestrator {
     if (item.code == NotificationCode.syncConflict.label) {
       final count = item.payload['count'] as int? ?? 0;
       await _prefs.setInt(_syncConflictKey(shopId, dayKey), count);
+      return;
+    }
+    if (item.code == NotificationCode.salesOrderOpen.label) {
+      final count = item.payload['count'] as int? ?? 0;
+      await _prefs.setInt(_salesOrderOpenKey(shopId, dayKey), count);
       return;
     }
     await _prefs.setBool(_shownKey(shopId, dayKey, item), true);
@@ -161,4 +203,7 @@ class NotificationOrchestrator {
 
   String _syncConflictKey(int shopId, String dayKey) =>
       'notif_n07_count_${shopId}_$dayKey';
+
+  String _salesOrderOpenKey(int shopId, String dayKey) =>
+      'notif_n11_count_${shopId}_$dayKey';
 }

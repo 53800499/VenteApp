@@ -16,6 +16,8 @@ class VoiceIntentRouter {
 
     final scores = <VoiceIntentKind, int>{
       VoiceIntentKind.receivePurchase: _scoreReceive(lower),
+      VoiceIntentKind.deliverSalesOrder: _scoreDeliverSalesOrder(lower),
+      VoiceIntentKind.openSaleReplacement: _scoreOpenSaleReplacement(lower),
       VoiceIntentKind.stockAdviceQuery: _scoreStockAdvice(lower),
       VoiceIntentKind.cashExplainQuery: _scoreCashExplain(lower),
       VoiceIntentKind.fxMarginQuery: _scoreFxMargin(lower),
@@ -217,18 +219,28 @@ class VoiceIntentRouter {
       lower,
     );
     if (RegExp(r'\b(camion|camions)\b').hasMatch(lower)) s += 4;
+    if (RegExp(r'\b(refuse|refus|refusee|refuser)\b').hasMatch(lower) &&
+        RegExp(r'\b(fournisseur|camion|reception|receptionner)\b')
+            .hasMatch(lower) &&
+        !RegExp(r'\b(client|clients)\b').hasMatch(lower)) {
+      s += 8;
+    }
     if (RegExp(r'\b(arrive|arrivee|arrives|arriver|la)\b').hasMatch(lower) &&
         RegExp(r'\b(camion|fournisseur|livraison|marchandise)\b')
             .hasMatch(lower)) {
       s += 3;
     }
-    if (RegExp(r'\b(reception|receptionner|livraison|livre|livree)\b')
-        .hasMatch(lower)) {
+    if (RegExp(r'\b(reception|receptionner)\b').hasMatch(lower)) {
       s += 4;
+    }
+    if (RegExp(r'\b(livraison|livre|livree)\b').hasMatch(lower) &&
+        !RegExp(r'\b(client|clients)\b').hasMatch(lower)) {
+      s += 3;
     }
     if (RegExp(r'\b(recu|recue|recus|recues)\b').hasMatch(lower) &&
         RegExp(r'\b(commande|marchandise|stock|camion|livraison)\b')
-            .hasMatch(lower)) {
+            .hasMatch(lower) &&
+        !RegExp(r'\b(client|clients)\b').hasMatch(lower)) {
       s += 3;
     }
     if (RegExp(r'\b(fournisseur)\b').hasMatch(lower) &&
@@ -238,6 +250,82 @@ class VoiceIntentRouter {
     if (RegExp(r'\b(commande|commander)\b').hasMatch(lower) &&
         !RegExp(r'\b(camion|arriv|reception|livr|recu)\b').hasMatch(lower)) {
       s -= 3;
+    }
+    if (RegExp(r'\b(client|clients)\b').hasMatch(lower) &&
+        !RegExp(r'\b(camion|fournisseur)\b').hasMatch(lower)) {
+      s -= 6;
+    }
+    if (RegExp(r'\b(commande\s+client|livrer\s+a|refus\s+client)\b')
+        .hasMatch(lower)) {
+      s -= 8;
+    }
+    return s.clamp(0, 20);
+  }
+
+  int _scoreDeliverSalesOrder(String lower) {
+    var s = VoiceIntentTriggerCatalog.phraseBonus(
+      VoiceIntentKind.deliverSalesOrder,
+      lower,
+    );
+    if (RegExp(r'\b(livrer|livraison)\b').hasMatch(lower) &&
+        RegExp(r'\b(client|clients|commande)\b').hasMatch(lower)) {
+      s += 5;
+    }
+    if (RegExp(r'\b(commande\s+client)\b').hasMatch(lower)) s += 4;
+    if (RegExp(r'\b(refuse|refus|refusee|refuser)\b').hasMatch(lower) &&
+        RegExp(r'\b(client|clients|livraison)\b').hasMatch(lower)) {
+      s += 6;
+    }
+    if (RegExp(r'\b(livrer\s+a|livraison\s+pour)\b').hasMatch(lower)) s += 4;
+    if (RegExp(r'\b(camion|fournisseur|reception|receptionner)\b')
+        .hasMatch(lower)) {
+      s -= 8;
+    }
+    if (RegExp(r'\b(refuse|refus|refusee|refuser)\b').hasMatch(lower) &&
+        RegExp(r'\b(fournisseur|camion)\b').hasMatch(lower) &&
+        !RegExp(r'\b(client|clients)\b').hasMatch(lower)) {
+      s -= 10;
+    }
+    if (RegExp(r'\b(remplac|echange|retour)\b').hasMatch(lower) &&
+        !RegExp(r'\b(refuse|refus)\b').hasMatch(lower)) {
+      s -= 4;
+    }
+    return s.clamp(0, 20);
+  }
+
+  int _scoreOpenSaleReplacement(String lower) {
+    var s = VoiceIntentTriggerCatalog.phraseBonus(
+      VoiceIntentKind.openSaleReplacement,
+      lower,
+    );
+    if (RegExp(r'\b(remplac|remplacement|remplacer)\b').hasMatch(lower)) {
+      s += 6;
+    }
+    if (RegExp(r'\bremplac(?:er|e)?\s+.+\s+par\s+', caseSensitive: false)
+            .hasMatch(lower) ||
+        RegExp(r'\bechang(?:er|e)?\s+.+\s+(?:contre|par)\s+',
+                caseSensitive: false)
+            .hasMatch(lower)) {
+      s += 4;
+    }
+    if (RegExp(r'\b(echange|echanger)\b').hasMatch(lower) &&
+        RegExp(r'\b(produit|article|vente)\b').hasMatch(lower)) {
+      s += 4;
+    }
+    if (RegExp(r'\b(retour)\b').hasMatch(lower) &&
+        RegExp(r'\b(vente|produit|apres)\b').hasMatch(lower)) {
+      s += 4;
+    }
+    if (RegExp(r'\b(client)\b').hasMatch(lower) &&
+        RegExp(r'\b(remplac|echange)\b').hasMatch(lower)) {
+      s += 3;
+    }
+    if (RegExp(r'\b(camion|fournisseur|reception)\b').hasMatch(lower)) {
+      s -= 6;
+    }
+    if (RegExp(r'\b(livrer|livraison)\b').hasMatch(lower) &&
+        !RegExp(r'\b(remplac|echange|retour)\b').hasMatch(lower)) {
+      s -= 4;
     }
     return s.clamp(0, 20);
   }

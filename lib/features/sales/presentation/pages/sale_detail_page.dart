@@ -13,6 +13,7 @@ import '../../domain/usecases/sale_usecases.dart';
 import '../widgets/sale_feedback.dart';
 import 'new_sale_page.dart';
 import 'sale_receipt_page.dart';
+import 'sale_replacement_page.dart';
 
 class SaleDetailPage extends StatefulWidget {
   const SaleDetailPage({
@@ -30,6 +31,7 @@ class SaleDetailPage extends StatefulWidget {
 
 class _SaleDetailPageState extends State<SaleDetailPage> {
   Sale? _sale;
+  List<SaleReplacement> _replacements = const [];
   String? _error;
   bool _loading = true;
   bool _cancelling = false;
@@ -39,6 +41,12 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
       PermissionGuard.can(
         widget.session.user.permissions,
         Permission.salesCancel,
+      );
+
+  bool get _canReplace =>
+      PermissionGuard.can(
+        widget.session.user.permissions,
+        Permission.salesCreate,
       );
 
   bool get _canConvert =>
@@ -59,9 +67,14 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
         session: widget.session,
         saleId: widget.saleId,
       );
+      final replacements = await sl<ListSaleReplacements>()(
+        session: widget.session,
+        saleId: widget.saleId,
+      );
       if (mounted) {
         setState(() {
           _sale = sale;
+          _replacements = replacements;
           _error = null;
           _loading = false;
         });
@@ -194,6 +207,21 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (!_sale!.isCancelled &&
+                        _sale!.saleType == SaleType.standard &&
+                        _sale!.items.isNotEmpty &&
+                        _canReplace)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _cancelling ? null : _openReplacement,
+                            icon: const Icon(Icons.swap_horiz),
+                            label: const Text('Remplacer'),
+                          ),
+                        ),
+                      ),
+                    if (!_sale!.isCancelled &&
                         _sale!.saleType == SaleType.quick &&
                         _sale!.items.isEmpty &&
                         _canConvert)
@@ -229,6 +257,20 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
               ),
             ),
     );
+  }
+
+  Future<void> _openReplacement() async {
+    final sale = _sale;
+    if (sale == null) return;
+    final done = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => SaleReplacementPage(
+          session: widget.session,
+          sale: sale,
+        ),
+      ),
+    );
+    if (done == true && mounted) await _refreshSale();
   }
 
   Future<void> _openConversion(Sale sale) async {
@@ -307,6 +349,36 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
             trailing: Text(formatFcfa(item.lineTotal)),
           ),
         ),
+        if (_replacements.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Remplacements',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const Divider(),
+          ..._replacements.map((rx) {
+            final dt = DateTime.fromMillisecondsSinceEpoch(rx.replacedAt);
+            final date =
+                '${dt.day.toString().padLeft(2, '0')}/'
+                '${dt.month.toString().padLeft(2, '0')}/'
+                '${dt.year}';
+            final summary = rx.items
+                .map(
+                  (i) =>
+                      '${i.returnedProductName ?? 'Produit'} ×${i.quantityReturned}'
+                      ' → ${i.issuedProductName ?? 'Produit'} ×${i.quantityIssued}',
+                )
+                .join('\n');
+            return ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: Text(rx.number),
+              subtitle: Text('$date\n$summary'),
+              isThreeLine: true,
+            );
+          }),
+        ],
       ],
     );
   }

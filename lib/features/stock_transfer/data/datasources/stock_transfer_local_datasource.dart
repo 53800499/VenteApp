@@ -2076,15 +2076,8 @@ class StockTransferLocalDatasource {
         created[product.itemId] = productId;
         newlyCreated.add(product.itemId);
 
-        if (product.productServerId != null &&
-            product.productServerId!.trim().isNotEmpty) {
-          await inventoryLocal.updateProductRow(
-            productId,
-            db.ProductsCompanion(
-              serverId: Value(product.productServerId!.trim()),
-            ),
-          );
-        }
+        // Ne jamais recopier le serverId catalogue source : il est UNIQUE
+        // globalement et provoque doublons au pull + collision cloud.
 
         await (_db.update(_db.stockTransferItems)
               ..where((i) => i.id.equals(product.itemId)))
@@ -2153,16 +2146,6 @@ class StockTransferLocalDatasource {
         priceBuy: sourceProduct?.priceBuy,
         priceSell: priceSell > 0 ? priceSell : 1,
       );
-
-      if (item.productServerId != null &&
-          item.productServerId!.trim().isNotEmpty) {
-        await inventoryLocal.updateProductRow(
-          productId,
-          db.ProductsCompanion(
-            serverId: Value(item.productServerId!.trim()),
-          ),
-        );
-      }
 
       await (_db.update(_db.stockTransferItems)
             ..where((i) => i.id.equals(item.id)))
@@ -2324,24 +2307,7 @@ class StockTransferLocalDatasource {
         destinationShopId,
         name,
       );
-      if (byName != null) {
-        // Aligne le serverId source sur l'existant (si vide) pour les prochains transferts.
-        final preferredServerId = serverIdCandidates.isEmpty
-            ? null
-            : serverIdCandidates.first;
-        if (preferredServerId != null) {
-          final existing =
-              await inventoryLocal.findProduct(destinationShopId, byName);
-          final existingServerId = existing?.serverId?.trim();
-          if (existingServerId == null || existingServerId.isEmpty) {
-            await inventoryLocal.updateProductRow(
-              byName,
-              db.ProductsCompanion(serverId: Value(preferredServerId)),
-            );
-          }
-        }
-        return byName;
-      }
+      if (byName != null) return byName;
     }
 
     if (item.destinationProductId != null) {
@@ -3050,6 +3016,19 @@ class StockTransferLocalDatasource {
         .go();
   }
 
+  /// Après une réception cloud réussie (background), retire le retry file.
+  Future<void> clearPendingTransferReceiveOps(int transferId) async {
+    await (_db.delete(_db.syncQueue)
+          ..where(
+            (q) =>
+                q.entityTable.equals(SyncEntityTable.stockTransfers) &
+                q.recordId.equals(transferId) &
+                q.operation.equals(SyncOperation.receive) &
+                q.status.equals('pending'),
+          ))
+        .go();
+  }
+
   /// Supprime toute la file sync en attente pour un transfert jamais poussé (annulation locale).
   Future<void> purgePendingTransferSyncOps(int transferId) async {
     await (_db.delete(_db.syncQueue)
@@ -3702,16 +3681,6 @@ class StockTransferLocalDatasource {
     required int destinationShopId,
     required Map<String, dynamic> remoteItem,
   }) async {
-    // Ne jamais traiter destinationProductId cloud comme un id local SQLite.
-    final productServerId = remoteItem['productServerId']?.toString().trim();
-    if (productServerId != null && productServerId.isNotEmpty) {
-      final byServerId = await inventoryLocal.findLocalProductIdByServerId(
-        destinationShopId,
-        productServerId,
-      );
-      if (byServerId != null) return byServerId;
-    }
-
     final remoteDestinationProductId =
         coerceRemoteInt(remoteItem['destinationProductId']);
     if (remoteDestinationProductId != null) {
@@ -3725,10 +3694,27 @@ class StockTransferLocalDatasource {
     final name = (remoteItem['productName'] as String?)?.trim();
     if (name != null && name.isNotEmpty) {
       final normalized = name.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-      return inventoryLocal.findLocalProductIdByNormalizedName(
+      final byName = await inventoryLocal.findLocalProductIdByNormalizedName(
         destinationShopId,
         normalized,
       );
+      if (byName != null) {
+        // Lien cloud = id produit Nest destination (pas le catalog source).
+        if (remoteDestinationProductId != null) {
+          final existing =
+              await inventoryLocal.findProduct(destinationShopId, byName);
+          final existingServerId = existing?.serverId?.trim();
+          if (existingServerId == null || existingServerId.isEmpty) {
+            await inventoryLocal.updateProductRow(
+              byName,
+              db.ProductsCompanion(
+                serverId: Value('$remoteDestinationProductId'),
+              ),
+            );
+          }
+        }
+        return byName;
+      }
     }
 
     return null;

@@ -25,6 +25,7 @@ import '../../../rbac/presentation/pages/roles_catalog_page.dart';
 import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../procurement/presentation/pages/procurement_page.dart';
+import '../../../sales_orders/presentation/pages/sales_orders_page.dart';
 import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
@@ -85,6 +86,11 @@ class MorePage extends StatelessWidget {
   bool get _canViewProcurement => PermissionGuard.can(
         session.user.permissions,
         Permission.procurementRead,
+      );
+
+  bool get _canViewSalesOrders => PermissionGuard.can(
+        session.user.permissions,
+        Permission.salesOrdersRead,
       );
 
   bool get _canViewStockTransfer => PermissionGuard.can(
@@ -213,6 +219,17 @@ class MorePage extends StatelessWidget {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ProcurementPage(session: activeSession),
+                    ),
+                  ),
+                ),
+              if (_canViewSalesOrders)
+                ModuleActionTile(
+                  icon: Icons.assignment_outlined,
+                  title: 'Commandes clients',
+                  subtitle: 'Commandes, livraisons partielles et refus',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SalesOrdersPage(session: activeSession),
                     ),
                   ),
                 ),

@@ -46,4 +46,20 @@ abstract class SaleRepository {
   });
 
   Future<void> syncFromRemote({required int shopId, bool force = false});
+
+  Future<List<SaleReplacement>> listReplacementsForSale({
+    required int shopId,
+    required int saleId,
+  });
+
+  Future<Map<int, int>> returnedQuantitiesBySaleItem({
+    required int shopId,
+    required int saleId,
+  });
+
+  Future<SaleReplacement> createSaleReplacement({
+    required int shopId,
+    required int userId,
+    required CreateSaleReplacementInput input,
+  });
 }

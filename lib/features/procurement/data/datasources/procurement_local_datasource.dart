@@ -247,6 +247,7 @@ class ProcurementLocalDatasource {
         productName: product?.name,
         quantityOrdered: pi.quantityOrdered,
         quantityReceived: pi.quantityReceived,
+        quantityRefused: pi.quantityRefused,
         unitCost: pi.unitCost,
         discount: pi.discount,
         tax: pi.tax,
@@ -846,7 +847,7 @@ class ProcurementLocalDatasource {
         : await (_db.select(_db.purchaseOrders)
               ..where(
                 (p) =>
-                    p.shopId.equals(shopId) & p.id.equals(purchaseOrderId!),
+                    p.shopId.equals(shopId) & p.id.equals(purchaseOrderId),
               ))
             .getSingleOrNull();
     final poNumber = poRow?.number;
@@ -875,8 +876,41 @@ class ProcurementLocalDatasource {
       for (final it in items) {
         final poItemId = it['purchaseOrderItemId'] as int?;
         final productId = it['productId'] as int;
-        final quantity = it['quantityReceived'] as int;
+        final quantity = (it['quantityReceived'] as num?)?.toInt() ?? 0;
+        final quantityRefused = (it['quantityRefused'] as num?)?.toInt() ?? 0;
+        final refusalReason = it['refusalReason'] as String?;
         final unitCost = it['unitCost'] as int;
+
+        if (quantity < 0 || quantityRefused < 0) {
+          throw const ValidationFailure('Quantités invalides.');
+        }
+        if (quantity + quantityRefused <= 0) {
+          throw const ValidationFailure(
+            'Indiquez une quantité acceptée ou refusée.',
+          );
+        }
+        if (quantityRefused > 0 &&
+            (refusalReason == null || refusalReason.trim().isEmpty)) {
+          throw const ValidationFailure(
+            'Motif de refus requis pour les quantités refusées.',
+          );
+        }
+
+        if (poItemId != null) {
+          final curItem = await (_db.select(_db.purchaseOrderItems)
+                ..where((i) => i.id.equals(poItemId)))
+              .getSingleOrNull();
+          if (curItem != null) {
+            final remaining = curItem.quantityOrdered -
+                curItem.quantityReceived -
+                curItem.quantityRefused;
+            if (quantity + quantityRefused > remaining) {
+              throw ValidationFailure(
+                'Trop pour le produit #$productId (reste $remaining).',
+              );
+            }
+          }
+        }
 
         final receiptItemId = await _db.into(_db.purchaseReceiptItems).insert(
               db.PurchaseReceiptItemsCompanion.insert(
@@ -885,6 +919,8 @@ class ProcurementLocalDatasource {
                 purchaseOrderItemId: Value(poItemId),
                 productId: productId,
                 quantityReceived: quantity,
+                quantityRefused: Value(quantityRefused),
+                refusalReason: Value(refusalReason),
                 unitCost: unitCost,
                 batchNumber: Value(it['batchNumber'] as String?),
                 expiryDate: Value(it['expiryDate'] as int?),
@@ -902,6 +938,8 @@ class ProcurementLocalDatasource {
                 .write(
               db.PurchaseOrderItemsCompanion(
                 quantityReceived: Value(curItem.quantityReceived + quantity),
+                quantityRefused:
+                    Value(curItem.quantityRefused + quantityRefused),
               ),
             );
           }
@@ -966,19 +1004,21 @@ class ProcurementLocalDatasource {
 
       if (purchaseOrderId != null) {
         final poItems = await _listPurchaseOrderItems(shopId, purchaseOrderId);
-        var allReceived = true;
-        for (final pi in poItems) {
-          if (pi.quantityReceived < pi.quantityOrdered) {
-            allReceived = false;
-            break;
-          }
-        }
-
-        await updatePurchaseOrderStatus(
-          shopId,
-          purchaseOrderId,
-          allReceived ? 'received' : 'partially_received',
+        final currentStatus = _parseOrderStatus(poRow?.status ?? 'sent');
+        final nextStatus = PurchaseOrder.statusAfterReceipt(
+          items: poItems,
+          current: currentStatus,
         );
+        if (nextStatus == PurchaseOrderStatus.received ||
+            nextStatus == PurchaseOrderStatus.partiallyReceived) {
+          await updatePurchaseOrderStatus(
+            shopId,
+            purchaseOrderId,
+            nextStatus == PurchaseOrderStatus.received
+                ? 'received'
+                : 'partially_received',
+          );
+        }
       }
 
       final receipt = await findReceipt(shopId, recId);
@@ -1047,6 +1087,8 @@ class ProcurementLocalDatasource {
         productId: ri.productId,
         productName: product?.name,
         quantityReceived: ri.quantityReceived,
+        quantityRefused: ri.quantityRefused,
+        refusalReason: ri.refusalReason,
         unitCost: ri.unitCost,
         batchNumber: ri.batchNumber,
         expiryDate: ri.expiryDate,
@@ -1757,6 +1799,8 @@ class ProcurementLocalDatasource {
           purchaseOrderItemId: Value(localPoItemId),
           productId: Value(localProdId),
           quantityReceived: Value(item.quantityReceived),
+          quantityRefused: Value(item.quantityRefused),
+          refusalReason: Value(item.refusalReason),
           unitCost: Value(item.unitCost),
           batchNumber: Value(item.batchNumber),
           expiryDate: Value(item.expiryDate),

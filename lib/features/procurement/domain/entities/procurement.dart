@@ -29,6 +29,38 @@ abstract final class PurchaseReceiptType {
   static const direct = 'direct';
 }
 
+enum SupplierRefusalReason {
+  breakage,
+  humidity,
+  quality,
+  shortDelivery,
+  other;
+
+  String get code => switch (this) {
+        SupplierRefusalReason.breakage => 'breakage',
+        SupplierRefusalReason.humidity => 'humidity',
+        SupplierRefusalReason.quality => 'quality',
+        SupplierRefusalReason.shortDelivery => 'short_delivery',
+        SupplierRefusalReason.other => 'other',
+      };
+
+  String get labelFr => switch (this) {
+        SupplierRefusalReason.breakage => 'Cassé / déchiré',
+        SupplierRefusalReason.humidity => 'Humidité',
+        SupplierRefusalReason.quality => 'Qualité',
+        SupplierRefusalReason.shortDelivery => 'Manquant à la livraison',
+        SupplierRefusalReason.other => 'Autre',
+      };
+
+  static SupplierRefusalReason? fromCode(String? code) {
+    if (code == null || code.isEmpty) return null;
+    for (final r in SupplierRefusalReason.values) {
+      if (r.code == code) return r;
+    }
+    return null;
+  }
+}
+
 class Supplier extends Equatable {
   const Supplier({
     required this.id,
@@ -117,6 +149,25 @@ class PurchaseOrder extends Equatable {
   final String? serverId;
   final List<PurchaseOrderItem>? items;
 
+  /// Statut après une réception (accepté + refusé consomment le reliquat).
+  static PurchaseOrderStatus statusAfterReceipt({
+    required List<PurchaseOrderItem> items,
+    required PurchaseOrderStatus current,
+  }) {
+    if (current == PurchaseOrderStatus.cancelled ||
+        current == PurchaseOrderStatus.draft) {
+      return current;
+    }
+    final remaining = items.fold(0, (s, i) => s + i.quantityRemaining);
+    final handled = items.fold(
+      0,
+      (s, i) => s + i.quantityReceived + i.quantityRefused,
+    );
+    if (handled <= 0) return current;
+    if (remaining <= 0) return PurchaseOrderStatus.received;
+    return PurchaseOrderStatus.partiallyReceived;
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -151,6 +202,7 @@ class PurchaseOrderItem extends Equatable {
     this.productName,
     required this.quantityOrdered,
     required this.quantityReceived,
+    this.quantityRefused = 0,
     required this.unitCost,
     required this.discount,
     required this.tax,
@@ -166,12 +218,18 @@ class PurchaseOrderItem extends Equatable {
   final String? productName;
   final int quantityOrdered;
   final int quantityReceived;
+  final int quantityRefused;
   final int unitCost;
   final int discount;
   final int tax;
   final int subtotal;
   final int version;
   final String? serverId;
+
+  /// Reliquat = commandé − reçu − refusé.
+  int get quantityRemaining =>
+      (quantityOrdered - quantityReceived - quantityRefused)
+          .clamp(0, quantityOrdered);
 
   @override
   List<Object?> get props => [
@@ -182,6 +240,7 @@ class PurchaseOrderItem extends Equatable {
         productName,
         quantityOrdered,
         quantityReceived,
+        quantityRefused,
         unitCost,
         discount,
         tax,
@@ -252,6 +311,8 @@ class PurchaseReceiptItem extends Equatable {
     required this.productId,
     this.productName,
     required this.quantityReceived,
+    this.quantityRefused = 0,
+    this.refusalReason,
     required this.unitCost,
     this.batchNumber,
     this.expiryDate,
@@ -266,11 +327,16 @@ class PurchaseReceiptItem extends Equatable {
   final int productId;
   final String? productName;
   final int quantityReceived;
+  final int quantityRefused;
+  final String? refusalReason;
   final int unitCost;
   final String? batchNumber;
   final int? expiryDate;
   final int version;
   final String? serverId;
+
+  SupplierRefusalReason? get refusalReasonEnum =>
+      SupplierRefusalReason.fromCode(refusalReason);
 
   @override
   List<Object?> get props => [
@@ -281,6 +347,8 @@ class PurchaseReceiptItem extends Equatable {
         productId,
         productName,
         quantityReceived,
+        quantityRefused,
+        refusalReason,
         unitCost,
         batchNumber,
         expiryDate,
