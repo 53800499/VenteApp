@@ -14,6 +14,7 @@ import '../../domain/entities/customer_entities.dart';
 import '../bloc/customer_list_bloc.dart';
 import 'customer_detail_page.dart';
 import 'customer_form_page.dart';
+import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 
 class CustomerListPage extends StatefulWidget {
   const CustomerListPage({
@@ -156,14 +157,20 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 ),
               ],
             ),
-            floatingActionButton: _canWrite
-                ? FloatingActionButton.extended(
-                    heroTag: 'new_customer',
-                    onPressed: () => _openCreate(context),
-                    icon: const Icon(Icons.person_add_outlined),
-                    label: const Text('Nouveau client'),
-                  )
-                : null,
+            floatingActionButton: VoiceAwareFabColumn(
+              session: widget.session,
+              heroTag: 'voice_fab_customers',
+              actionButtons: _canWrite
+                  ? [
+                      FloatingActionButton.extended(
+                        heroTag: 'new_customer',
+                        onPressed: () => _openCreate(context),
+                        icon: const Icon(Icons.person_add_outlined),
+                        label: const Text('Nouveau client'),
+                      ),
+                    ]
+                  : const [],
+            ),
           );
   }
 

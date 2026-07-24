@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -9,6 +10,13 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/auth/app_lock_controller.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../voice_input/domain/entities/voice_draft.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
+import '../../../voice_input/domain/services/voice_failure_explainer.dart';
+import '../../../voice_input/domain/services/voice_intent_parser.dart';
+import '../../../voice_input/presentation/cubit/voice_input_cubit.dart';
+import '../../../voice_input/presentation/services/voice_audit_helper.dart';
+import '../../../voice_input/presentation/widgets/voice_capture_button.dart';
 import '../../domain/entities/expense_entities.dart';
 import '../../domain/usecases/expense_usecases.dart';
 
@@ -18,11 +26,13 @@ class ExpenseFormPage extends StatefulWidget {
     required this.session,
     required this.categories,
     this.expense,
+    this.voiceSeed,
   });
 
   final AuthSession session;
   final List<ExpenseCategory> categories;
   final Expense? expense;
+  final VoiceExpenseSeed? voiceSeed;
 
   @override
   State<ExpenseFormPage> createState() => _ExpenseFormPageState();
@@ -47,6 +57,7 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
   @override
   void initState() {
     super.initState();
+    ensureVoiceInputDependencies();
     final expense = widget.expense;
     if (expense != null) {
       _titleController.text = expense.title;
@@ -61,6 +72,12 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
       _expenseDate = DateTime.fromMillisecondsSinceEpoch(expense.expenseDate);
     } else if (widget.categories.isNotEmpty) {
       _categoryId = widget.categories.first.id;
+    }
+    final seed = widget.voiceSeed;
+    if (seed != null) {
+      if (seed.title != null) _titleController.text = seed.title!;
+      if (seed.amount != null) _amountController.text = '${seed.amount}';
+      if (seed.categoryId != null) _categoryId = seed.categoryId;
     }
   }
 
@@ -96,6 +113,106 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
     );
     await File(filePath).copy(savedPath);
     setState(() => _attachmentPaths.add(savedPath));
+  }
+
+  Future<void> _onVoiceCapture(BuildContext context) async {
+    final cubit = context.read<VoiceInputCubit>();
+    await cubit.capture(
+      expectedKind: VoiceIntentKind.expense,
+      categories: widget.categories
+          .map((c) => VoiceCatalogCategory(id: c.id, name: c.name))
+          .toList(),
+    );
+
+    if (!context.mounted) return;
+    final state = cubit.state;
+    if (state.status == VoiceInputStatus.error) {
+      await showVoiceAssistantFailureDialog(
+        context,
+        message: state.errorMessage ??
+            'La reconnaissance vocale a échoué. Réessayez près du micro.',
+        kind: VoiceIntentKind.expense,
+      );
+      cubit.reset();
+      return;
+    }
+    if (state.status != VoiceInputStatus.preview || state.draft == null) {
+      return;
+    }
+    final draft = state.draft!;
+    if (draft is! VoiceExpenseDraft) {
+      cubit.reset();
+      return;
+    }
+
+    final action = await showVoicePreviewSheet(context: context, draft: draft);
+    if (!context.mounted) return;
+
+    if (action == null || action == VoicePreviewAction.cancel) {
+      cubit.reset();
+      return;
+    }
+
+    if (action == VoicePreviewAction.editForm) {
+      _applyExpenseDraft(draft);
+      cubit.reset();
+      return;
+    }
+
+    try {
+      setState(() => _saving = true);
+      if (!draft.canSave) {
+        throw StateError(explainVoiceDraftFailure(draft));
+      }
+      ensureExpensesDependencies();
+      final title = draft.title!;
+      final amount = draft.amount!;
+      final expense = await sl<CreateExpense>()(
+        shopId: widget.session.shop.id,
+        userId: widget.session.user.id,
+        input: CreateExpenseInput(
+          categoryId: draft.categoryId ?? _categoryId,
+          title: title,
+          amount: amount,
+          expenseDate: DateTime(
+            _expenseDate.year,
+            _expenseDate.month,
+            _expenseDate.day,
+          ).millisecondsSinceEpoch,
+          paymentMethod: _paymentMethod,
+          repeatSchedule: _repeat,
+          status: _status,
+        ),
+      );
+      await recordVoiceExpenseAudit(
+        shopId: widget.session.shop.id,
+        userId: widget.session.user.id,
+        expenseId: expense.id,
+        transcript: draft.transcript,
+      );
+      cubit.reset();
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      cubit.reset();
+      if (!mounted) return;
+      await showVoiceAssistantFailureDialog(
+        context,
+        title: 'Enregistrement impossible',
+        message: '$error',
+        kind: VoiceIntentKind.expense,
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _applyExpenseDraft(VoiceExpenseDraft draft) {
+    setState(() {
+      if (draft.title != null) _titleController.text = draft.title!;
+      if (draft.amount != null) _amountController.text = '${draft.amount}';
+      if (draft.categoryId != null) _categoryId = draft.categoryId;
+    });
   }
 
   Future<void> _save() async {
@@ -157,121 +274,168 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.expense == null ? 'Nouvelle dépense' : 'Modifier'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+    return BlocProvider(
+      create: (_) => sl<VoiceInputCubit>(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.expense == null ? 'Nouvelle dépense' : 'Modifier'),
+          actions: [
+            if (widget.expense == null)
+              Builder(
+                builder: (ctx) => VoiceCaptureButton(
+                  expectedKind: VoiceIntentKind.expense,
+                  onCapture: () => _onVoiceCapture(ctx),
+                ),
+              ),
+          ],
+        ),
+        body: Column(
           children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Titre *'),
-              validator: (v) =>
-                  (v == null || v.trim().length < 2) ? 'Titre requis' : null,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextFormField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Montant (FCFA) *'),
-              validator: (v) {
-                final n = int.tryParse(v ?? '');
-                if (n == null || n <= 0) return 'Montant invalide';
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<int>(
-              value: _categoryId,
-              decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: widget.categories
-                  .map(
-                    (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _categoryId = v),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<ExpensePaymentMethod>(
-              value: _paymentMethod,
-              decoration: const InputDecoration(labelText: 'Paiement'),
-              items: ExpensePaymentMethod.values
-                  .map(
-                    (m) => DropdownMenuItem(value: m, child: Text(m.label)),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _paymentMethod = v!),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<ExpenseRepeatSchedule>(
-              value: _repeat,
-              decoration: const InputDecoration(labelText: 'Récurrence'),
-              items: ExpenseRepeatSchedule.values
-                  .map(
-                    (r) => DropdownMenuItem(value: r, child: Text(r.label)),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _repeat = v!),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Date de dépense'),
-              subtitle: Text(
-                '${_expenseDate.day.toString().padLeft(2, '0')}/'
-                '${_expenseDate.month.toString().padLeft(2, '0')}/'
-                '${_expenseDate.year}',
+            const VoiceListeningBanner(),
+            Expanded(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  children: [
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(labelText: 'Titre *'),
+                      validator: (v) => (v == null || v.trim().length < 2)
+                          ? 'Titre requis'
+                          : null,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Montant (FCFA) *',
+                      ),
+                      validator: (v) {
+                        final n = int.tryParse(v ?? '');
+                        if (n == null || n <= 0) return 'Montant invalide';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<int>(
+                      value: _categoryId,
+                      decoration:
+                          const InputDecoration(labelText: 'Catégorie'),
+                      items: widget.categories
+                          .map(
+                            (c) => DropdownMenuItem(
+                              value: c.id,
+                              child: Text(c.name),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _categoryId = v),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<ExpensePaymentMethod>(
+                      value: _paymentMethod,
+                      decoration:
+                          const InputDecoration(labelText: 'Paiement'),
+                      items: ExpensePaymentMethod.values
+                          .map(
+                            (m) => DropdownMenuItem(
+                              value: m,
+                              child: Text(m.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _paymentMethod = v!),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    DropdownButtonFormField<ExpenseRepeatSchedule>(
+                      value: _repeat,
+                      decoration:
+                          const InputDecoration(labelText: 'Récurrence'),
+                      items: ExpenseRepeatSchedule.values
+                          .map(
+                            (r) => DropdownMenuItem(
+                              value: r,
+                              child: Text(r.label),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setState(() => _repeat = v!),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Date de dépense'),
+                      subtitle: Text(
+                        '${_expenseDate.day.toString().padLeft(2, '0')}/'
+                        '${_expenseDate.month.toString().padLeft(2, '0')}/'
+                        '${_expenseDate.year}',
+                      ),
+                      trailing: const Icon(Icons.calendar_today),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _expenseDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setState(() => _expenseDate = picked);
+                        }
+                      },
+                    ),
+                    TextFormField(
+                      controller: _supplierController,
+                      decoration:
+                          const InputDecoration(labelText: 'Fournisseur'),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _invoiceController,
+                      decoration:
+                          const InputDecoration(labelText: 'N° facture'),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration:
+                          const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    OutlinedButton.icon(
+                      onPressed: _pickAttachment,
+                      icon: const Icon(Icons.receipt_long),
+                      label: const Text('Joindre une pièce (photo)'),
+                    ),
+                    if (_attachmentPaths.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                        child: Text(
+                          '${_attachmentPaths.length} pièce(s) jointe(s)',
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                    FilledButton(
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              widget.expense == null
+                                  ? 'Enregistrer'
+                                  : 'Mettre à jour',
+                            ),
+                    ),
+                  ],
+                ),
               ),
-              trailing: const Icon(Icons.calendar_today),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _expenseDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                );
-                if (picked != null) setState(() => _expenseDate = picked);
-              },
-            ),
-            TextFormField(
-              controller: _supplierController,
-              decoration: const InputDecoration(labelText: 'Fournisseur'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextFormField(
-              controller: _invoiceController,
-              decoration: const InputDecoration(labelText: 'N° facture'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextFormField(
-              controller: _descriptionController,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            OutlinedButton.icon(
-              onPressed: _pickAttachment,
-              icon: const Icon(Icons.receipt_long),
-              label: const Text('Joindre une pièce (photo)'),
-            ),
-            if (_attachmentPaths.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Text('${_attachmentPaths.length} pièce(s) jointe(s)'),
-              ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: _saving
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(widget.expense == null ? 'Enregistrer' : 'Mettre à jour'),
             ),
           ],
         ),

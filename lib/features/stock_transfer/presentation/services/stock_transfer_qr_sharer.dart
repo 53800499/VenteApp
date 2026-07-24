@@ -48,7 +48,10 @@ class StockTransferQrSharer {
     return lines.join('\n');
   }
 
+  /// PNG opaque (fond blanc) : WhatsApp traite le transparent comme du noir,
+  /// ce qui rendait le QR (modules noirs) invisible / image toute noire.
   static Future<List<int>> _renderQrPng(String data) async {
+    const size = 512.0;
     final painter = QrPainter(
       data: data,
       version: QrVersions.auto,
@@ -56,7 +59,21 @@ class StockTransferQrSharer {
       eyeStyle: const QrEyeStyle(color: Colors.black),
       dataModuleStyle: const QrDataModuleStyle(color: Colors.black),
     );
-    final imageData = await painter.toImageData(512, format: ImageByteFormat.png);
+
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, size, size),
+      Paint()..color = Colors.white,
+    );
+    painter.paint(canvas, const Size(size, size));
+
+    final image = await recorder.endRecording().toImage(
+      size.toInt(),
+      size.toInt(),
+    );
+    final imageData = await image.toByteData(format: ImageByteFormat.png);
+    image.dispose();
     if (imageData == null) {
       throw StateError('Impossible de générer l\'image QR.');
     }

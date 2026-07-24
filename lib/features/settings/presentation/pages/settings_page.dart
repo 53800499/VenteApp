@@ -23,6 +23,7 @@ import '../../../notifications/presentation/pages/notification_settings_page.dar
 import '../../../../shared/components/feature_ui.dart';
 import '../../../help/presentation/pages/help_hub_page.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../voice_input/data/voice_input_preferences.dart';
 import '../../domain/entities/settings_entities.dart';
 import '../../domain/services/settings_validation_service.dart';
 import '../../domain/usecases/settings_usecases.dart';
@@ -104,12 +105,15 @@ class _SettingsViewState extends State<_SettingsView> {
   PinColdStartPolicy _pinColdStartPolicy = PinColdStartPolicy.always;
   String? _driveEmail;
   bool _driveAutoBackup = false;
+  bool _voiceInputEnabled = true;
 
   @override
   void initState() {
     super.initState();
     _biometricEnabled = widget.session.user.biometricEnabled;
     _pinColdStartPolicy = sl<AppLockController>().pinColdStartPolicy;
+    ensureVoiceInputDependencies();
+    _voiceInputEnabled = sl<VoiceInputPreferences>().isEnabled;
     _loadDriveState();
   }
 
@@ -409,6 +413,29 @@ class _SettingsViewState extends State<_SettingsView> {
                                   context.read<SettingsBloc>().add(
                                         SettingsPricingTiersChanged(enabled),
                                       );
+                                },
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                        const _SectionTitle(title: 'Saisie'),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Saisie vocale'),
+                          subtitle: const Text(
+                            'Assistant micro (accueil) + vente / dépense. '
+                            'Hors ligne si le français est installé sur l\'appareil. '
+                            'Aide : Assistant vocal ARIKE.',
+                          ),
+                          value: _voiceInputEnabled,
+                          onChanged: !widget.canWrite
+                              ? null
+                              : (enabled) async {
+                                  await sl<VoiceInputPreferences>()
+                                      .setEnabled(enabled);
+                                  if (mounted) {
+                                    setState(
+                                      () => _voiceInputEnabled = enabled,
+                                    );
+                                  }
                                 },
                         ),
                         const SizedBox(height: AppSpacing.lg),

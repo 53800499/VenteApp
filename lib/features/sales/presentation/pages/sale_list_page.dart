@@ -15,6 +15,7 @@ import '../bloc/sale_list_bloc.dart';
 import 'new_sale_page.dart';
 import 'sale_detail_page.dart';
 import 'quick_sale_page.dart';
+import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 
 class SaleListPage extends StatefulWidget {
   const SaleListPage({super.key, required this.session});
@@ -174,26 +175,26 @@ class _SaleListPageState extends State<SaleListPage> {
                 ),
               ],
             ),
-            floatingActionButton: _canCreate
-                ? Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+            floatingActionButton: VoiceAwareFabColumn(
+              session: widget.session,
+              heroTag: 'voice_fab_sales',
+              actionButtons: _canCreate
+                  ? [
                       FloatingActionButton.extended(
                         heroTag: 'quick_sale',
                         onPressed: () => _openQuickSale(context),
                         icon: const Icon(Icons.flash_on_outlined),
                         label: const Text('Rapide'),
                       ),
-                      const SizedBox(height: AppSpacing.sm),
                       FloatingActionButton.extended(
                         heroTag: 'new_sale',
                         onPressed: () => _openNewSale(context),
                         icon: const Icon(Icons.add_shopping_cart_outlined),
                         label: const Text('Nouvelle vente'),
                       ),
-                    ],
-                  )
-                : null,
+                    ]
+                  : const [],
+            ),
     );
   }
 

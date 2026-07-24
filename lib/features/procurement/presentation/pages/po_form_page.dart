@@ -146,6 +146,9 @@ class _PoFormPageState extends State<PoFormPage> {
         'unitCost': cost,
         'subtotal': qty * cost,
       });
+      if (prefill.supplierId != null) {
+        _selectedSupplierId = prefill.supplierId;
+      }
     }
   }
 

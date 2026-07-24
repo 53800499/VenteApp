@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -11,15 +13,27 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
+import '../../../voice_input/domain/entities/voice_draft.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
+import '../../../voice_input/domain/services/voice_intent_parser.dart';
+import '../../../voice_input/presentation/cubit/voice_input_cubit.dart';
+import '../../../voice_input/presentation/widgets/voice_capture_button.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../../domain/services/category_validation_service.dart';
 import '../bloc/category_list_bloc.dart';
 import '../widgets/inventory_feedback.dart';
 
 class CategoryListPage extends StatelessWidget {
-  const CategoryListPage({super.key, required this.session});
+  const CategoryListPage({
+    super.key,
+    required this.session,
+    this.voiceSeed,
+    this.startGuidedVoiceCategory = false,
+  });
 
   final AuthSession session;
+  final VoiceCategorySeed? voiceSeed;
+  final bool startGuidedVoiceCategory;
 
   bool get _canWrite => PermissionGuard.can(
         session.user.permissions,
@@ -28,15 +42,25 @@ class CategoryListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => CategoryListBloc(
-        listCategoriesWithStats: sl(),
-        createCategory: sl(),
-        updateCategory: sl(),
-        deleteCategory: sl(),
-        session: session,
-      )..add(const CategoryListLoadRequested()),
-      child: _CategoryListView(canWrite: _canWrite),
+    ensureVoiceInputDependencies();
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => CategoryListBloc(
+            listCategoriesWithStats: sl(),
+            createCategory: sl(),
+            updateCategory: sl(),
+            deleteCategory: sl(),
+            session: session,
+          )..add(const CategoryListLoadRequested()),
+        ),
+        BlocProvider(create: (_) => sl<VoiceInputCubit>()),
+      ],
+      child: _CategoryListView(
+        canWrite: _canWrite,
+        voiceSeed: voiceSeed,
+        startGuidedVoiceCategory: startGuidedVoiceCategory,
+      ),
     );
   }
 }
@@ -48,15 +72,96 @@ class CategoryFormResult {
   final String? description;
 }
 
-class _CategoryListView extends StatelessWidget {
-  const _CategoryListView({required this.canWrite});
+class _CategoryListView extends StatefulWidget {
+  const _CategoryListView({
+    required this.canWrite,
+    this.voiceSeed,
+    this.startGuidedVoiceCategory = false,
+  });
 
   final bool canWrite;
+  final VoiceCategorySeed? voiceSeed;
+  final bool startGuidedVoiceCategory;
+
+  @override
+  State<_CategoryListView> createState() => _CategoryListViewState();
+}
+
+class _CategoryListViewState extends State<_CategoryListView> {
+  bool _guidedVoiceStarted = false;
+
+  bool get canWrite => widget.canWrite;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final seed = widget.voiceSeed;
+      if (seed != null && seed.hasAny) {
+        unawaited(
+          _showCategoryForm(
+            context,
+            initialName: seed.name,
+            initialDescription: seed.description,
+          ),
+        );
+        return;
+      }
+      if (widget.startGuidedVoiceCategory && !_guidedVoiceStarted) {
+        _guidedVoiceStarted = true;
+        unawaited(_runGuidedVoiceCategory());
+      }
+    });
+  }
+
+  Future<void> _runGuidedVoiceCategory() async {
+    if (!canWrite || !mounted) return;
+    final cubit = context.read<VoiceInputCubit>();
+    const formatHint =
+        'Dites : nom Boissons\n'
+        'ou : catégorie Alimentation description Produits alimentaires';
+
+    final spoken = await showVoiceWorkflowPromptDialog(
+      context: context,
+      cubit: cubit,
+      question: 'Nouvelle catégorie',
+      details: formatHint,
+    );
+    cubit.reset();
+    if (!mounted || spoken == null || spoken.trim().isEmpty) return;
+
+    final structured =
+        VoiceIntentParser().parseStructuredCategoryLine(spoken);
+    if (structured == null) {
+      await showVoiceAssistantFailureDialog(
+        context,
+        message: 'Format non reconnu.\n\n$formatHint',
+        kind: VoiceIntentKind.createCategory,
+      );
+      return;
+    }
+
+    await _showCategoryForm(
+      context,
+      initialName: structured.name,
+      initialDescription: structured.description,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Catégories')),
+      appBar: AppBar(
+        title: const Text('Catégories'),
+        actions: [
+          if (canWrite)
+            VoiceCaptureButton(
+              expectedKind: VoiceIntentKind.createCategory,
+              onCapture: _runGuidedVoiceCategory,
+            ),
+        ],
+      ),
       floatingActionButton: canWrite
           ? FloatingActionButton.extended(
               onPressed: () => _showCategoryForm(context),
@@ -64,149 +169,169 @@ class _CategoryListView extends StatelessWidget {
               label: const Text('Catégorie'),
             )
           : null,
-      body: ResponsivePage(
-        padding: EdgeInsets.zero,
-        child: BlocConsumer<CategoryListBloc, CategoryListState>(
-        listenWhen: (prev, curr) {
-          if (prev.errorMessage != curr.errorMessage &&
-              curr.errorMessage != null) {
-            return true;
-          }
-          if (prev.isSaving && !curr.isSaving && curr.errorMessage == null) {
-            return true;
-          }
-          return false;
-        },
-        listener: (context, state) async {
-          if (state.errorMessage != null) {
-            await InventoryFeedback.showErrorDialog(
-              context,
-              title: 'Action impossible',
-              message: state.errorMessage!,
-            );
-            if (context.mounted) {
-              context
-                  .read<CategoryListBloc>()
-                  .add(const CategoryFeedbackDismissed());
-            }
-            return;
-          }
-          await InventoryFeedback.showSuccess(
-            context: context,
-            title: 'Catégorie enregistrée',
-            message: 'Les modifications ont été appliquées.',
-          );
-        },
-        builder: (context, state) {
-          if (state.status == CategoryListStatus.loading && !state.isRefreshing) {
-            return const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.md),
-                  Text('Chargement des catégories…'),
-                ],
-              ),
-            );
-          }
-
-          if (state.status == CategoryListStatus.failure &&
-              state.categories.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(state.errorMessage ?? 'Erreur de chargement'),
-                    const SizedBox(height: AppSpacing.md),
-                    FilledButton(
-                      onPressed: () => context
+      body: Column(
+        children: [
+          const VoiceListeningBanner(),
+          Expanded(
+            child: ResponsivePage(
+              padding: EdgeInsets.zero,
+              child: BlocConsumer<CategoryListBloc, CategoryListState>(
+                listenWhen: (prev, curr) {
+                  if (prev.errorMessage != curr.errorMessage &&
+                      curr.errorMessage != null) {
+                    return true;
+                  }
+                  if (prev.isSaving &&
+                      !curr.isSaving &&
+                      curr.errorMessage == null) {
+                    return true;
+                  }
+                  return false;
+                },
+                listener: (context, state) async {
+                  if (state.errorMessage != null) {
+                    await InventoryFeedback.showErrorDialog(
+                      context,
+                      title: 'Action impossible',
+                      message: state.errorMessage!,
+                    );
+                    if (context.mounted) {
+                      context
                           .read<CategoryListBloc>()
-                          .add(const CategoryListLoadRequested()),
-                      child: const Text('Réessayer'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          if (state.categories.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: () async {
-                context
-                    .read<CategoryListBloc>()
-                    .add(const CategoryListRefreshRequested());
-                await context.read<CategoryListBloc>().stream.firstWhere(
-                      (s) => !s.isRefreshing,
-                    );
-              },
-              child: EmptyListPlaceholder(
-                embedded: true,
-                icon: Icons.category_outlined,
-                title: 'Aucune catégorie',
-                subtitle: canWrite
-                    ? 'Ajoutez votre première catégorie avec le bouton +'
-                    : null,
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              if (state.isRefreshing || state.isSaving)
-                const LinearProgressIndicator(),
-              Expanded(
-                child: RefreshIndicator(
-            onRefresh: () async {
-              context
-                  .read<CategoryListBloc>()
-                  .add(const CategoryListRefreshRequested());
-              await context.read<CategoryListBloc>().stream.firstWhere(
-                    (s) => !s.isRefreshing,
+                          .add(const CategoryFeedbackDismissed());
+                    }
+                    return;
+                  }
+                  await InventoryFeedback.showSuccess(
+                    context: context,
+                    title: 'Catégorie enregistrée',
+                    message: 'Les modifications ont été appliquées.',
                   );
-            },
-            child: ResponsiveBuilder(
-              builder: (context, screenType) {
-                final horizontal = Breakpoints.horizontalPadding(screenType);
-                final bottomPadding =
-                    screenType.isTablet ? AppSpacing.lg : 100.0;
-
-                return ListView.separated(
-                  padding: EdgeInsets.fromLTRB(
-                    horizontal,
-                    AppSpacing.md,
-                    horizontal,
-                    bottomPadding,
-                  ),
-                  itemCount: state.categories.length,
-                  separatorBuilder: (_, index) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) {
-                    final item = state.categories[index];
-                    return _CategoryTile(
-                      item: item,
-                      canWrite: canWrite,
-                      onEdit: () => _showCategoryForm(
-                        context,
-                        category: item.category,
+                },
+                builder: (context, state) {
+                  if (state.status == CategoryListStatus.loading &&
+                      !state.isRefreshing) {
+                    return const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: AppSpacing.md),
+                          Text('Chargement des catégories…'),
+                        ],
                       ),
-                      onDelete: () => _confirmDelete(context, item),
-                      onToggleActive: (active) =>
-                          _confirmToggleActive(context, item, active),
                     );
-                  },
-                );
-              },
-            ),
-                ),
+                  }
+
+                  if (state.status == CategoryListStatus.failure &&
+                      state.categories.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              state.errorMessage ?? 'Erreur de chargement',
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            FilledButton(
+                              onPressed: () => context
+                                  .read<CategoryListBloc>()
+                                  .add(const CategoryListLoadRequested()),
+                              child: const Text('Réessayer'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (state.categories.isEmpty) {
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        context
+                            .read<CategoryListBloc>()
+                            .add(const CategoryListRefreshRequested());
+                        await context
+                            .read<CategoryListBloc>()
+                            .stream
+                            .firstWhere((s) => !s.isRefreshing);
+                      },
+                      child: EmptyListPlaceholder(
+                        embedded: true,
+                        icon: Icons.category_outlined,
+                        title: 'Aucune catégorie',
+                        subtitle: canWrite
+                            ? 'Ajoutez votre première catégorie avec le bouton +'
+                            : null,
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      if (state.isRefreshing || state.isSaving)
+                        const LinearProgressIndicator(),
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: () async {
+                            context
+                                .read<CategoryListBloc>()
+                                .add(const CategoryListRefreshRequested());
+                            await context
+                                .read<CategoryListBloc>()
+                                .stream
+                                .firstWhere((s) => !s.isRefreshing);
+                          },
+                          child: ResponsiveBuilder(
+                            builder: (context, screenType) {
+                              final horizontal =
+                                  Breakpoints.horizontalPadding(screenType);
+                              final bottomPadding =
+                                  screenType.isTablet ? AppSpacing.lg : 100.0;
+
+                              return ListView.separated(
+                                padding: EdgeInsets.fromLTRB(
+                                  horizontal,
+                                  AppSpacing.md,
+                                  horizontal,
+                                  bottomPadding,
+                                ),
+                                itemCount: state.categories.length,
+                                separatorBuilder: (_, index) =>
+                                    const SizedBox(height: AppSpacing.sm),
+                                itemBuilder: (context, index) {
+                                  final item = state.categories[index];
+                                  return _CategoryTile(
+                                    item: item,
+                                    canWrite: canWrite,
+                                    onEdit: () => _showCategoryForm(
+                                      context,
+                                      category: item.category,
+                                    ),
+                                    onDelete: () =>
+                                        _confirmDelete(context, item),
+                                    onToggleActive: (active) =>
+                                        _confirmToggleActive(
+                                      context,
+                                      item,
+                                      active,
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
-            ],
-          );
-        },
-      ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -214,13 +339,16 @@ class _CategoryListView extends StatelessWidget {
   Future<void> _showCategoryForm(
     BuildContext context, {
     ProductCategory? category,
+    String? initialName,
+    String? initialDescription,
   }) async {
     final result = await showDialog<CategoryFormResult>(
       context: context,
       builder: (ctx) => _CategoryFormDialog(
-        initialName: category?.name,
-        initialDescription: category?.description,
-        title: category == null ? 'Nouvelle catégorie' : 'Modifier la catégorie',
+        initialName: category?.name ?? initialName,
+        initialDescription: category?.description ?? initialDescription,
+        title:
+            category == null ? 'Nouvelle catégorie' : 'Modifier la catégorie',
       ),
     );
 
@@ -351,7 +479,8 @@ class _CategoryTile extends StatelessWidget {
         ),
         subtitle: Text(
           [
-            if (category.description != null && category.description!.isNotEmpty)
+            if (category.description != null &&
+                category.description!.isNotEmpty)
               category.description!,
             item.productCount == 1
                 ? '1 produit'

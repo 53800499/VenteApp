@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../core/storage/form_draft_storage.dart';
@@ -19,16 +20,25 @@ import '../../../calculators/domain/entities/calculator_entities.dart';
 import '../../../calculators/domain/repositories/calculators_repository.dart';
 import '../../../calculators/presentation/utils/calculator_form_validators.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../voice_input/domain/entities/voice_draft.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
+import '../../../voice_input/domain/services/voice_intent_parser.dart';
+import '../../../voice_input/presentation/cubit/voice_input_cubit.dart';
+import '../../../voice_input/presentation/widgets/voice_capture_button.dart';
 
 class ProductFormPage extends StatefulWidget {
   const ProductFormPage({
     super.key,
     required this.session,
     this.product,
+    this.voiceSeed,
+    this.startGuidedVoiceProduct = false,
   });
 
   final AuthSession session;
   final Product? product;
+  final VoiceProductSeed? voiceSeed;
+  final bool startGuidedVoiceProduct;
 
   bool get isEditing => product != null;
 
@@ -71,6 +81,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
   String? _errorMessage;
   bool _draftRestored = false;
   bool _submittedSuccessfully = false;
+  bool _voiceSeedApplied = false;
+  bool _guidedVoiceStarted = false;
+  bool _pendingGuidedVoice = false;
   ProductPricingMode _pricingMode = ProductPricingMode.manual;
   final _marginValueController = TextEditingController();
   late final String _draftKey;
@@ -277,10 +290,111 @@ class _ProductFormPageState extends State<ProductFormPage> {
   Future<void> _loadCategories() async {
     final categories =
         await sl<ListCategories>()(shopId: widget.session.shop.id);
+    if (!mounted) return;
     setState(() {
       _categories = categories;
       _categoryId ??= categories.firstOrNull?.id;
     });
+    _applyVoiceSeedIfNeeded();
+    if (widget.startGuidedVoiceProduct && !_guidedVoiceStarted) {
+      _guidedVoiceStarted = true;
+      _pendingGuidedVoice = true;
+    }
+  }
+
+  void _applyVoiceSeedIfNeeded() {
+    final seed = widget.voiceSeed;
+    if (_voiceSeedApplied || seed == null || !seed.hasAny) return;
+    _voiceSeedApplied = true;
+    setState(() {
+      if (seed.name != null && seed.name!.trim().isNotEmpty) {
+        _nameController.text = seed.name!.trim();
+      }
+      if (seed.priceSell != null) {
+        _priceSellController.text = '${seed.priceSell}';
+      }
+      if (seed.priceBuy != null) {
+        _priceBuyController.text = '${seed.priceBuy}';
+      }
+      if (seed.categoryId != null) {
+        _categoryId = seed.categoryId;
+      }
+      if (seed.sku != null && seed.sku!.trim().isNotEmpty) {
+        _skuController.text = seed.sku!.trim();
+      }
+      if (seed.quantity != null && !widget.isEditing) {
+        _quantityController.text = '${seed.quantity}';
+      }
+      if (seed.alertThreshold != null) {
+        _alertThresholdController.text = '${seed.alertThreshold}';
+      }
+    });
+  }
+
+  Future<void> _runGuidedVoiceProduct(BuildContext voiceContext) async {
+    ensureVoiceInputDependencies();
+    if (!voiceContext.mounted) return;
+    final cubit = voiceContext.read<VoiceInputCubit>();
+    const formatHint =
+        'Dites : nom Ciment prix vente 5000\n'
+        'Optionnel : prix achat … catégorie … stock … alerte … référence …';
+
+    final spoken = await showVoiceWorkflowPromptDialog(
+      context: voiceContext,
+      cubit: cubit,
+      question: 'Nouveau produit',
+      details: formatHint,
+    );
+    cubit.reset();
+    if (!voiceContext.mounted || spoken == null || spoken.trim().isEmpty) {
+      return;
+    }
+
+    final parser = VoiceIntentParser();
+    final structured = parser.parseStructuredProductLine(spoken);
+    if (structured == null) {
+      await showVoiceAssistantFailureDialog(
+        voiceContext,
+        message: 'Format non reconnu.\n\n$formatHint',
+        kind: VoiceIntentKind.createProduct,
+      );
+      return;
+    }
+
+    final draft = parser.parse(
+      transcript: spoken,
+      expectedKind: VoiceIntentKind.createProduct,
+      categories: _categories
+          .map((c) => VoiceCatalogCategory(id: c.id, name: c.name))
+          .toList(),
+    );
+    final categoryId =
+        draft is VoiceCreateProductDraft ? draft.categoryId : null;
+
+    setState(() {
+      _nameController.text = structured.name;
+      if (structured.priceSell != null) {
+        _priceSellController.text = '${structured.priceSell}';
+      }
+      if (structured.priceBuy != null) {
+        _priceBuyController.text = '${structured.priceBuy}';
+      }
+      if (categoryId != null) _categoryId = categoryId;
+      if (structured.sku != null) _skuController.text = structured.sku!;
+      if (structured.quantity != null && !widget.isEditing) {
+        _quantityController.text = '${structured.quantity}';
+      }
+      if (structured.alertThreshold != null) {
+        _alertThresholdController.text = '${structured.alertThreshold}';
+      }
+    });
+
+    if (!voiceContext.mounted) return;
+    ScaffoldMessenger.of(voiceContext).showSnackBar(
+      const SnackBar(
+        content: Text('Formulaire rempli — vérifiez puis Enregistrer.'),
+      ),
+    );
   }
 
   @override
@@ -496,57 +610,84 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEditing ? 'Modifier le produit' : 'Nouveau produit'),
-      ),
-      body: SafeArea(
-        child: ResponsiveFormPage(
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Nom du produit',
-                    prefixIcon: Icon(Icons.label_outline),
-                  ),
-                  validator: (v) =>
-                      (v == null || v.trim().length < 2) ? 'Min. 2 caractères' : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<int>(
-                  value: _categoryId,
-                  decoration: const InputDecoration(
-                    labelText: 'Catégorie',
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: _categories
-                      .map(
-                        (c) => DropdownMenuItem(
-                          value: c.id,
-                          child: Text(c.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: _isLoading
-                      ? null
-                      : (value) => setState(() => _categoryId = value),
-                  validator: (v) => v == null ? 'Catégorie requise' : null,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
-                  controller: _skuController,
-                  decoration: const InputDecoration(
-                    labelText: 'Référence / SKU (optionnel)',
-                    prefixIcon: Icon(Icons.tag_outlined),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                TextFormField(
+    ensureVoiceInputDependencies();
+    return BlocProvider(
+      create: (_) => sl<VoiceInputCubit>(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            widget.isEditing ? 'Modifier le produit' : 'Nouveau produit',
+          ),
+          actions: [
+            Builder(
+              builder: (voiceContext) => VoiceCaptureButton(
+                expectedKind: VoiceIntentKind.createProduct,
+                onCapture: () => _runGuidedVoiceProduct(voiceContext),
+              ),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            if (_pendingGuidedVoice)
+              _GuidedVoiceProductStarter(
+                onStart: (voiceContext) {
+                  _pendingGuidedVoice = false;
+                  return _runGuidedVoiceProduct(voiceContext);
+                },
+              ),
+            const VoiceListeningBanner(),
+            Expanded(
+              child: SafeArea(
+                child: ResponsiveFormPage(
+                  child: SingleChildScrollView(
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: const InputDecoration(
+                              labelText: 'Nom du produit',
+                              prefixIcon: Icon(Icons.label_outline),
+                            ),
+                            validator: (v) => (v == null || v.trim().length < 2)
+                                ? 'Min. 2 caractères'
+                                : null,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          DropdownButtonFormField<int>(
+                            value: _categoryId,
+                            decoration: const InputDecoration(
+                              labelText: 'Catégorie',
+                              prefixIcon: Icon(Icons.category_outlined),
+                            ),
+                            items: _categories
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c.id,
+                                    child: Text(c.name),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: _isLoading
+                                ? null
+                                : (value) =>
+                                    setState(() => _categoryId = value),
+                            validator: (v) =>
+                                v == null ? 'Catégorie requise' : null,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextFormField(
+                            controller: _skuController,
+                            decoration: const InputDecoration(
+                              labelText: 'Référence / SKU (optionnel)',
+                              prefixIcon: Icon(Icons.tag_outlined),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          TextFormField(
                   controller: _priceSellController,
                   decoration: const InputDecoration(
                     labelText: 'Prix de vente — détail (FCFA)',
@@ -683,12 +824,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       ? InventoryFeedback.inlineLoader()
                       : Text(widget.isEditing ? 'Enregistrer' : 'Créer le produit'),
                 ),
-              ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
-    ),
     );
   }
 
@@ -919,4 +1064,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
       ],
     );
   }
+}
+
+/// Démarre l’écoute guidée une fois le [VoiceInputCubit] disponible sous le provider.
+class _GuidedVoiceProductStarter extends StatefulWidget {
+  const _GuidedVoiceProductStarter({required this.onStart});
+
+  final Future<void> Function(BuildContext voiceContext) onStart;
+
+  @override
+  State<_GuidedVoiceProductStarter> createState() =>
+      _GuidedVoiceProductStarterState();
+}
+
+class _GuidedVoiceProductStarterState extends State<_GuidedVoiceProductStarter> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(widget.onStart(context));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }

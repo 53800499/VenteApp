@@ -9,7 +9,7 @@ abstract final class HelpCatalog {
     HelpCategory(
       id: 'start',
       title: 'Démarrage',
-      subtitle: 'Navigation, accueil et premiers pas',
+      subtitle: 'Navigation, accueil, assistant vocal et premiers pas',
       icon: Icons.rocket_launch_outlined,
       color: AppColors.seed,
     ),
@@ -95,7 +95,8 @@ abstract final class HelpCatalog {
               'Le bouton flottant « Nouvelle vente » sur l\'accueil est le raccourci le plus rapide vers la caisse. '
               'Si vous utilisez surtout le change : activez « Change en écran d\'accueil » '
               'dans la configuration du Bureau de change (barre Change | Clients | Plus). '
-              'Sur chaque module, l\'icône livre ouvre le guide pas à pas dédié.',
+              'Sur chaque module, l\'icône livre ouvre le guide pas à pas dédié. '
+              'Le bouton micro flottant lance l\'assistant vocal (vente, questions stock, etc.).',
         ),
         HelpSection(
           title: 'Travail hors ligne',
@@ -143,6 +144,217 @@ abstract final class HelpCatalog {
         ),
       ],
     ),
+    HelpArticle(
+      id: 'voice_assistant',
+      categoryId: 'start',
+      title: 'Assistant vocal ARIKE',
+      summary:
+          'Parler pour vendre, rembourser, recevoir un camion, confirmer un change, '
+          'poser une question stock / change / dépenses, et enchaîner plusieurs commandes.',
+      icon: Icons.mic_outlined,
+      color: AppColors.seed,
+      keywords: [
+        'voix',
+        'vocal',
+        'micro',
+        'assistant',
+        'saisie vocale',
+        'parler',
+        'stock',
+        'solde',
+        'naira',
+        'camion',
+        'dette',
+        'workflow',
+        'caisse',
+        'commander',
+        'copilote',
+      ],
+      sections: [
+        HelpSection(
+          title: 'À quoi sert l\'assistant vocal',
+          body:
+              'L\'assistant vocal accélère la saisie sans remplacer l\'écran classique. '
+              'Vous parlez, ARIKE propose une prévisualisation ou une réponse, '
+              'puis vous confirmez. Rien n\'est enregistré sans votre accord.',
+          bullets: [
+            'Bouton micro flottant (bas à droite) : au-dessus des actions '
+                'sur Ventes / Stock / Clients.',
+            'Icône micro sur Nouvelle vente et formulaire Dépense : saisie ciblée.',
+            'Fonctionne hors ligne si la reconnaissance vocale française est '
+                'disponible sur l\'appareil.',
+            'Activation : Plus → Paramètres → section Saisie → « Saisie vocale ».',
+          ],
+          tip:
+              'Autorisez l\'accès au micro lors de la première utilisation. '
+              'Parlez clairement, près du téléphone, une phrase à la fois, '
+              'puis touchez « J\'ai fini ». '
+              'Pour plus de précision hors ligne : installez le pack '
+              '« Français (France) » dans les paramètres de reconnaissance vocale '
+              'de l\'appareil.',
+        ),
+        HelpSection(
+          title: 'Lancer l\'assistant (bouton micro) — pas à pas',
+          steps: [
+            'Vérifiez que « Saisie vocale » est activée dans Paramètres.',
+            'Sur l\'écran principal, touchez le bouton micro (bas à droite).',
+            'Attendez « Parlez maintenant » (ne parlez pas pendant « Préparation… »).',
+            'Dictez votre commande ou votre question.',
+            'Touchez « J’ai fini » quand la phrase est complète '
+                '(ne comptez pas sur une validation automatique).',
+            'Relisez la prévisualisation ou la réponse, puis choisissez l’action.',
+            'À la fin, ARIKE propose « Autre commande ? » pour enchaîner sans refermer.',
+          ],
+        ),
+        HelpSection(
+          title: 'Actions métier (exemples de phrases)',
+          body:
+              'Pas besoin d’une phrase exacte. ARIKE détecte l’intention '
+              'même si vous variez les mots :',
+          bullets: [
+            'Vente : « Je veux vendre » (ou micro sur Nouvelle vente) — '
+                'dites : « produit Sac quantité 20 » (prix boutique) '
+                'ou avec prix : « … prix 3000 ». '
+                'Puis « Ajouter un autre » pour plusieurs produits.',
+            'Nouveau produit : « nouveau produit » — puis '
+                '« nom Ciment prix vente 5000 » '
+                '(optionnel : prix achat, catégorie, stock, alerte, référence). '
+                'Vérifiez le formulaire puis Enregistrer.',
+            'Nouvelle catégorie : « nouvelle catégorie » — puis '
+                '« nom Boissons » ou « catégorie Alimentation description … ».',
+            'Dépense : « Ajoute une dépense de 25 000 francs pour le transport. »',
+            'Paiement de dette : « Koffi paie » ou « Rembourse 10 000 francs de la dette de Koffi. »',
+            'Change : « Échanger cinq cent mille francs CFA en nairas. »',
+            'Réception : « Le camion est arrivé », « Le camion est là », '
+                '« On a reçu la livraison », « Le fournisseur est arrivé ».',
+            'Commande fournisseur : « Commande 100 tonnes de ciment chez CIMBENIN. » '
+                '(ouvre le formulaire prérempli, sans enregistrement direct).',
+          ],
+          tip:
+              'Utilisez les noms de produits, clients et fournisseurs tels qu\'ils '
+              'apparaissent dans votre catalogue. '
+              'Si ARIKE hésite, il vous propose les intentions possibles.',
+        ),
+        HelpSection(
+          title: 'Formulations libres & clarification',
+          body:
+              'L’intention métier est stable (vente, réception, dette…). '
+              'Les formulations sont un catalogue enrichissable. '
+              'Si la confiance est faible ou deux intentions sont proches, '
+              'ARIKE demande : « Vous vouliez : … »',
+          tip:
+              'Parlez naturellement. Évitez seulement les phrases trop vagues '
+              '(« bonjour », « ok ») sans contexte métier.',
+        ),
+        HelpSection(
+          title: 'Questions (assistant conversationnel)',
+          body:
+              'Vous pouvez aussi poser des questions. ARIKE répond à l\'écran '
+              'et propose d\'ouvrir le module concerné :',
+          bullets: [
+            'Stock : « Combien me reste-t-il de ciment ? »',
+            'Solde change : « Quel est mon solde en nairas ? » '
+                '(nécessite une session de change ouverte).',
+            'Dépenses du jour : « Montre les dépenses d\'aujourd\'hui. »',
+          ],
+          tip:
+              'Après une réponse, touchez « Autre commande » pour enchaîner '
+              '(ex. question stock puis une vente).',
+        ),
+        HelpSection(
+          title: 'Workflows opérationnels',
+          body:
+              'Pour certaines opérations, ARIKE pose des questions à la suite '
+              '(comme un opérateur métier) avant de proposer la confirmation. '
+              'Rien n\'est enregistré sans votre accord explicite.',
+          bullets: [
+            'Vente : « produit Sac quantité 20 » (prix boutique si omis) '
+                'ou « … prix 3000 » — la ligne remplit le panier. '
+                '« Ajouter un autre » pour plusieurs produits, '
+                'puis continuez le paiement sur l’écran.',
+            'Produit : « nom Ciment prix vente 5000 » — remplit le formulaire '
+                '(pas d’enregistrement sans votre validation).',
+            'Catégorie : « nom Boissons » — ouvre le dialogue prérempli '
+                'à confirmer avec Enregistrer.',
+            'Paiement dette : « Koffi paie » — si plusieurs factures, '
+                'dites « tout », un numéro de facture, ou un montant.',
+            'Change : après le montant et la devise, ARIKE annonce le taux '
+                'et le montant reçu, puis demande « Confirmer ? » (oui / non).',
+            'Réception camion : « Le camion est arrivé » — choix de la commande '
+                '(« la dernière », numéro, fournisseur). '
+                'Une seule ligne produit : quantité + prix à voix. '
+                'Plusieurs lignes : ouverture du formulaire de réception.',
+          ],
+          tip:
+              'Pendant un workflow, répondez à la question affichée puis '
+              'touchez « J\'ai fini », ou « Annuler » pour abandonner.',
+        ),
+        HelpSection(
+          title: 'Copilote (conseils métier)',
+          body:
+              'ARIKE peut aussi analyser votre stock, votre caisse, le change '
+              'et les dettes, sans enregistrer quoi que ce soit :',
+          bullets: [
+            'Stock à commander : « Qu’est-ce que je dois commander ? » '
+                'ou « Quels produits sont en stock bas ? » '
+                '(liste sous le seuil d’alerte + quantité suggérée).',
+            'Explication caisse : « Pourquoi ma caisse est faible ? » '
+                'ou « Explique l’état de la caisse » '
+                '(session ouverte : fond, ventes, dépenses, retraits).',
+            'Marge change : « Quelle est ma marge change aujourd’hui ? » '
+                '(session de change ouverte : marge + nombre d’opérations).',
+            'Dettes critiques : « Quelles sont les dettes critiques ? » '
+                '(clients avec solde dû et sans activité depuis 30 jours).',
+          ],
+          tip:
+              'Touchez « Ouvrir l’écran » pour aller au stock bas, '
+              'à la Caisse, au Bureau de change ou à la liste Clients.',
+        ),
+        HelpSection(
+          title: 'Confirmer, modifier ou annuler',
+          bullets: [
+            'Prévisualisation (vente, dépense…) : « Enregistrer », '
+                '« Modifier le formulaire » ou « Annuler ».',
+            'Réponse à une question : « Ouvrir l\'écran », « Autre commande » ou « Terminer ».',
+            'Si une info manque (produit introuvable, montant absent…), '
+                'ARIKE affiche clairement la raison de l\'échec.',
+            '« Annuler » pendant l\'écoute ferme uniquement le micro, '
+                'sans quitter l\'application.',
+          ],
+        ),
+        HelpSection(
+          title: 'Permissions & confidentialité',
+          body:
+              'L\'assistant respecte les droits de votre rôle. Une intention '
+              'non autorisée affiche un message clair sans enregistrer.',
+          bullets: [
+            'Vente / dépense / dette / change / commande / réception : '
+                'droits de création ou réception du module.',
+            'Question stock / conseil stock : droit de lecture inventaire.',
+            'Question solde change / marge change : droit de lecture bureau de change.',
+            'Question dépenses : droit de lecture dépenses.',
+            'Explication caisse : droit de lecture caisse.',
+            'Dettes critiques : droit de lecture clients ou dettes.',
+            'Les actions sensibles restent tracées dans le journal d\'audit '
+                '(création vocale).',
+          ],
+        ),
+        HelpSection(
+          title: 'Dépannage',
+          steps: [
+            'Micro refusé : Paramètres Android/iOS → ARIKE → autoriser le micro.',
+            '« Reconnaissance indisponible » : installez le pack langue française '
+                'dans les paramètres système de l\'appareil.',
+            'Produit non trouvé : vérifiez l\'orthographe ou le nom exact dans Stock.',
+            'Solde change vide : ouvrez d\'abord une session au Bureau de change.',
+            'Assistant absent : Plus → Paramètres → activez « Saisie vocale ».',
+            'Transcription imprécise : installez « Français (France) » dans les '
+                'réglages vocaux du téléphone ; parlez plus lentement et touchez '
+                '« J\'ai fini » seulement à la fin de la phrase.',
+          ],
+        ),
+      ],
+    ),
 
     // ── Commerce ─────────────────────────────────────────────────
     HelpArticle(
@@ -153,7 +365,15 @@ abstract final class HelpCatalog {
           'Créer une vente, choisir les produits, encaisser, crédit client et reçus.',
       icon: Icons.point_of_sale_outlined,
       color: Color(0xFF1565C0),
-      keywords: ['vente', 'caisse', 'encaissement', 'reçu', 'panier'],
+      keywords: [
+        'vente',
+        'caisse',
+        'encaissement',
+        'reçu',
+        'panier',
+        'vocal',
+        'micro',
+      ],
       sections: [
         HelpSection(
           title: 'Créer une vente classique — pas à pas',
@@ -168,6 +388,22 @@ abstract final class HelpCatalog {
             'Choisissez le mode de paiement (espèces, mobile money, crédit…).',
             'Confirmez : la vente est enregistrée et le stock est mis à jour.',
           ],
+        ),
+        HelpSection(
+          title: 'Vendre à la voix — pas à pas',
+          body:
+              'Sur l\'écran Nouvelle vente, l\'icône micro (ou le bouton micro '
+              'de l\'accueil) permet de dicter la ligne de vente.',
+          steps: [
+            'Touchez l\'icône micro dans la barre (ou le FAB micro sur l\'accueil).',
+            'Dites : « produit Sac quantité 20 » (prix boutique) '
+                'ou « produit Sac quantité 20 prix 3000 ».',
+            'Touchez « J\'ai fini » : la ligne s\'ajoute au panier.',
+            'Choisissez « Ajouter un autre » pour une autre ligne, '
+                'ou « C’est tout » puis continuez client / paiement.',
+          ],
+          tip:
+              'Guide complet : Plus → Aide & guides → Assistant vocal ARIKE.',
         ),
         HelpSection(
           title: 'Vendre à crédit — pas à pas',
@@ -298,6 +534,9 @@ abstract final class HelpCatalog {
             'Les produits sous leur seuil d\'alerte s\'affichent en premier.',
             'Touchez un produit pour le réapprovisionner via un ajustement.',
           ],
+          tip:
+              'À la voix : « Combien me reste-t-il de ciment ? » via le bouton micro '
+              '(guide Assistant vocal ARIKE).',
         ),
         HelpSection(
           title: 'Archiver un produit — pas à pas',
@@ -438,7 +677,15 @@ abstract final class HelpCatalog {
           'Enregistrer les charges, catégories de dépenses et impact sur le bénéfice.',
       icon: Icons.receipt_long_outlined,
       color: Color(0xFF6A1B9A),
-      keywords: ['dépense', 'charge', 'coût', 'loyer', 'électricité'],
+      keywords: [
+        'dépense',
+        'charge',
+        'coût',
+        'loyer',
+        'électricité',
+        'vocal',
+        'micro',
+      ],
       sections: [
         HelpSection(
           title: 'Pourquoi saisir les dépenses',
@@ -458,7 +705,18 @@ abstract final class HelpCatalog {
             'Validez : la charge est comptabilisée dans vos rapports.',
           ],
           tip:
-              'Saisissez les dépenses le jour même pour ne rien oublier.',
+              'Saisissez les dépenses le jour même pour ne rien oublier. '
+              'Vous pouvez aussi dicter : « Ajoute une dépense de 25 000 francs '
+              'pour le transport » (icône micro ou assistant vocal).',
+        ),
+        HelpSection(
+          title: 'Consulter les dépenses du jour à la voix',
+          body:
+              'Via le bouton micro de l\'accueil, dites par exemple '
+              '« Montre les dépenses d\'aujourd\'hui ». ARIKE affiche le total '
+              'et les principales lignes, puis propose d\'ouvrir l\'écran Dépenses.',
+          tip:
+              'Guide complet : Plus → Aide & guides → Assistant vocal ARIKE.',
         ),
         HelpSection(
           title: 'Gérer les catégories de dépenses — pas à pas',
@@ -552,12 +810,10 @@ abstract final class HelpCatalog {
               'Le Bureau de change gère les caisses multi-devises (FCFA, NGN, USD…), '
               'les taux d\'achat et de vente, les opérations de change et la clôture '
               'de journée. Il est séparé de la caisse retail (ventes produits).',
-          bullets: [
-            'Module optionnel : à activer par boutique.',
-            'Devise pivot : FCFA (XOF).',
-            'Taux gelés pendant une session ouverte.',
-            'Fonctionne hors ligne, puis synchronise.',
-          ],
+          tip:
+              'À la voix : « Quel est mon solde en nairas ? » ou '
+              '« Échanger cinq cent mille francs en nairas » '
+              '(guide Assistant vocal ARIKE).',
         ),
         HelpSection(
           title: 'Ouvrir le module — pas à pas',
@@ -857,8 +1113,29 @@ abstract final class HelpCatalog {
           'PIN, biométrie, reçus, sauvegarde, localisation et verrouillage.',
       icon: Icons.shield_outlined,
       color: Color(0xFF33691E),
-      keywords: ['pin', 'sécurité', 'sauvegarde', 'biométrie', 'paramètres'],
+      keywords: [
+        'pin',
+        'sécurité',
+        'sauvegarde',
+        'biométrie',
+        'paramètres',
+        'vocal',
+        'micro',
+        'saisie vocale',
+      ],
       sections: [
+        HelpSection(
+          title: 'Activer ou désactiver la saisie vocale — pas à pas',
+          steps: [
+            'Plus → Paramètres.',
+            'Dans la section « Saisie », activez ou désactivez « Saisie vocale ».',
+            'Si activée : le bouton micro apparaît sur l\'accueil, et l\'icône micro '
+                'sur Nouvelle vente / Dépenses.',
+          ],
+          tip:
+              'Détail des phrases et questions : Plus → Aide & guides → '
+              'Assistant vocal ARIKE.',
+        ),
         HelpSection(
           title: 'Modifier le code PIN — pas à pas',
           steps: [

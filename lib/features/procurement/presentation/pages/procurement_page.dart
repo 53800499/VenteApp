@@ -27,16 +27,19 @@ import 'po_detail_page.dart';
 import 'po_form_page.dart';
 import 'direct_procurement_page.dart';
 import 'direct_receipt_detail_page.dart';
+import '../models/po_form_prefill.dart';
 
 class ProcurementPage extends StatelessWidget {
   const ProcurementPage({
     super.key,
     required this.session,
     this.initialTab = 0,
+    this.voicePoPrefill,
   });
 
   final AuthSession session;
   final int initialTab;
+  final PoFormPrefill? voicePoPrefill;
 
   @override
   Widget build(BuildContext context) {
@@ -51,15 +54,19 @@ class ProcurementPage extends StatelessWidget {
         ..add(const ProcurementOrdersLoadRequested())
         ..add(const ProcurementDirectReceiptsLoadRequested())
         ..add(const ProcurementInvoicesLoadRequested()),
-      child: _ProcurementView(initialTab: initialTab),
+      child: _ProcurementView(
+        initialTab: initialTab,
+        voicePoPrefill: voicePoPrefill,
+      ),
     );
   }
 }
 
 class _ProcurementView extends StatefulWidget {
-  const _ProcurementView({this.initialTab = 0});
+  const _ProcurementView({this.initialTab = 0, this.voicePoPrefill});
 
   final int initialTab;
+  final PoFormPrefill? voicePoPrefill;
 
   @override
   State<_ProcurementView> createState() => _ProcurementViewState();
@@ -85,6 +92,17 @@ class _ProcurementViewState extends State<_ProcurementView>
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _bootstrapSync();
+      final prefill = widget.voicePoPrefill;
+      if (prefill != null && mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => BlocProvider.value(
+              value: context.read<ProcurementBloc>(),
+              child: PoFormPage(prefill: prefill),
+            ),
+          ),
+        );
+      }
     });
   }
 

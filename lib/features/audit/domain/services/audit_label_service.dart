@@ -15,6 +15,7 @@ class AuditLabelService {
     'debt_forgiven': 'Dette pardonnée',
     'sale_created': 'Vente enregistrée',
     'sale_cancelled': 'Vente annulée',
+    'expense_created': 'Dépense enregistrée',
     'stock_adjusted': 'Ajustement de stock',
     'product_price_changed': 'Modification de prix',
     'product_archived': 'Produit archivé',
@@ -41,9 +42,11 @@ class AuditLabelService {
     'users': 'Utilisateurs',
     'sales': 'Ventes',
     'debts': 'Dettes',
+    'expenses': 'Dépenses',
     'products': 'Inventaire',
     'shops': 'Boutiques',
     'customers': 'Clients',
+    'sync': 'Synchronisation',
   };
 
   String actionLabel(String action) =>

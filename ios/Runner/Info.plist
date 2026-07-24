@@ -68,6 +68,10 @@
 		</array>
 		<key>NSCameraUsageDescription</key>
 		<string>ARIKE utilise la caméra pour scanner les QR codes des expéditions de transfert.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>ARIKE utilise le micro pour la saisie vocale des ventes et dépenses.</string>
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>ARIKE convertit votre voix en texte pour préremplir les formulaires de vente et de dépense.</string>
 		<key>NSUserNotificationsUsageDescription</key>
 		<string>ARIKE vous envoie des alertes de stock, des rappels de dettes et des résumés quotidiens.</string>
 		<key>UIStatusBarHidden</key>

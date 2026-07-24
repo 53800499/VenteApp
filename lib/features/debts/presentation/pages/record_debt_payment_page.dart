@@ -10,6 +10,7 @@ import '../../../../shared/components/action_feedback.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/debt_entities.dart';
 import '../../domain/usecases/debt_usecases.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
 
 class RecordDebtPaymentPage extends StatefulWidget {
   const RecordDebtPaymentPage({
@@ -17,11 +18,13 @@ class RecordDebtPaymentPage extends StatefulWidget {
     required this.session,
     required this.debt,
     required this.customerName,
+    this.voiceSeed,
   });
 
   final AuthSession session;
   final Debt debt;
   final String customerName;
+  final VoiceDebtPaymentSeed? voiceSeed;
 
   @override
   State<RecordDebtPaymentPage> createState() => _RecordDebtPaymentPageState();
@@ -39,7 +42,9 @@ class _RecordDebtPaymentPageState extends State<RecordDebtPaymentPage> {
   @override
   void initState() {
     super.initState();
-    _amountController.text = '${widget.debt.amountRemaining}';
+    final seedAmount = widget.voiceSeed?.amount;
+    _amountController.text =
+        '${seedAmount ?? widget.debt.amountRemaining}';
   }
 
   @override

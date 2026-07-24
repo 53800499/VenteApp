@@ -12,6 +12,7 @@ import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/services/fx_calculation_service.dart';
 import '../../domain/usecases/fx_exchange_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
 import '../fx_exchange_navigation.dart';
 import '../bloc/fx_exchange_bloc.dart';
 import '../fx_workspace_mode_controller.dart';
@@ -30,11 +31,13 @@ class FxExchangePage extends StatelessWidget {
     super.key,
     required this.session,
     this.embeddedInShell = false,
+    this.voiceSeed,
   });
 
   final AuthSession session;
   /// True quand l'écran est l'onglet racine (pas de push Navigator).
   final bool embeddedInShell;
+  final VoiceFxSeed? voiceSeed;
 
   @override
   Widget build(BuildContext context) {
@@ -69,18 +72,47 @@ class FxExchangePage extends StatelessWidget {
         workspaceMode: sl<FxWorkspaceModeController>(),
         syncFromRemote: sl<SyncFxExchangeFromRemote>(),
       )..add(const FxExchangeLoadRequested()),
-      child: _FxExchangeView(embeddedInShell: embeddedInShell),
+      child: _FxExchangeView(
+        embeddedInShell: embeddedInShell,
+        voiceSeed: voiceSeed,
+      ),
     );
   }
 }
 
-class _FxExchangeView extends StatelessWidget {
-  const _FxExchangeView({required this.embeddedInShell});
+class _FxExchangeView extends StatefulWidget {
+  const _FxExchangeView({
+    required this.embeddedInShell,
+    this.voiceSeed,
+  });
 
   final bool embeddedInShell;
+  final VoiceFxSeed? voiceSeed;
+
+  @override
+  State<_FxExchangeView> createState() => _FxExchangeViewState();
+}
+
+class _FxExchangeViewState extends State<_FxExchangeView> {
+  var _voiceOpened = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final seed = widget.voiceSeed;
+      if (seed == null || _voiceOpened || !mounted) return;
+      _voiceOpened = true;
+      openFxSubPage(
+        context,
+        FxNewOperationPage(voiceSeed: seed),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final embeddedInShell = widget.embeddedInShell;
     final bloc = context.read<FxExchangeBloc>();
     final perms = bloc.session.user.permissions;
     final canConfigure =

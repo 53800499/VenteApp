@@ -16,6 +16,11 @@ import '../../../../shared/components/ui_primitives.dart';
 import '../bloc/new_sale_bloc.dart';
 import '../widgets/sale_feedback.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../voice_input/domain/entities/voice_draft.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
+import '../../../voice_input/domain/services/voice_intent_parser.dart';
+import '../../../voice_input/presentation/cubit/voice_input_cubit.dart';
+import '../../../voice_input/presentation/widgets/voice_capture_button.dart';
 import 'sale_receipt_page.dart';
 
 /// Page de création d'une vente.
@@ -29,11 +34,17 @@ class NewSalePage extends StatefulWidget {
     required this.session,
     this.conversion,
     this.calculationIntent,
+    this.voiceSeed,
+    this.startGuidedVoiceSale = false,
   });
 
   final AuthSession session;
   final QuickSaleConversion? conversion;
   final CalculationIntent? calculationIntent;
+  final VoiceSaleSeed? voiceSeed;
+
+  /// Démarre le guide vocal : produit → quantité → prix → panier.
+  final bool startGuidedVoiceSale;
 
   @override
   State<NewSalePage> createState() => _NewSalePageState();
@@ -45,6 +56,7 @@ class _NewSalePageState extends State<NewSalePage>
   late final TabController _tabController;
   final _searchController = TextEditingController();
   NewSaleBloc? _saleBloc;
+  bool _guidedVoiceStarted = false;
 
   @override
   void initState() {
@@ -69,6 +81,7 @@ class _NewSalePageState extends State<NewSalePage>
 
   @override
   Widget build(BuildContext context) {
+    ensureVoiceInputDependencies();
     return BlocProvider(
       create: (_) {
         _saleBloc = NewSaleBloc(
@@ -87,7 +100,9 @@ class _NewSalePageState extends State<NewSalePage>
       )..add(const NewSaleLoadRequested());
         return _saleBloc!;
       },
-      child: BlocListener<NewSaleBloc, NewSaleState>(
+      child: BlocProvider(
+        create: (_) => sl<VoiceInputCubit>(),
+        child: BlocListener<NewSaleBloc, NewSaleState>(
         listenWhen: (prev, curr) =>
             prev.creatingCustomer && !curr.creatingCustomer,
         listener: (context, state) async {
@@ -160,7 +175,30 @@ class _NewSalePageState extends State<NewSalePage>
               _tabController.animateTo(1);
             }
           },
-          child: BlocBuilder<NewSaleBloc, NewSaleState>(
+          child: BlocListener<NewSaleBloc, NewSaleState>(
+            listenWhen: (prev, curr) =>
+                widget.voiceSeed != null &&
+                prev.status != NewSaleStatus.ready &&
+                curr.status == NewSaleStatus.ready,
+            listener: (context, state) {
+              final seed = widget.voiceSeed;
+              if (seed == null) return;
+              _applyVoiceSeed(context, state, seed);
+            },
+            child: BlocListener<NewSaleBloc, NewSaleState>(
+              listenWhen: (prev, curr) =>
+                  widget.startGuidedVoiceSale &&
+                  !_guidedVoiceStarted &&
+                  prev.status != NewSaleStatus.ready &&
+                  curr.status == NewSaleStatus.ready,
+              listener: (context, state) {
+                _guidedVoiceStarted = true;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!context.mounted) return;
+                  _runGuidedVoiceSale(context);
+                });
+              },
+              child: BlocBuilder<NewSaleBloc, NewSaleState>(
             builder: (context, state) {
               return Scaffold(
                 resizeToAvoidBottomInset: true,
@@ -172,16 +210,203 @@ class _NewSalePageState extends State<NewSalePage>
                             ? 'Vente depuis calculateur'
                             : (_step == 0 ? 'Nouvelle vente' : 'Paiement'),
                   ),
-                  actions: const [ModuleHelpButton(articleId: 'sales')],
+                  actions: [
+                    VoiceCaptureButton(
+                      expectedKind: VoiceIntentKind.sale,
+                      onCapture: () => _runGuidedVoiceSale(context),
+                    ),
+                    const ModuleHelpButton(articleId: 'sales'),
+                  ],
                 ),
-                body: _buildBody(context, state),
+                body: Column(
+                  children: [
+                    const VoiceListeningBanner(),
+                    Expanded(child: _buildBody(context, state)),
+                  ],
+                ),
               );
             },
+          ),
+          ),
           ),
         ),
       ),
       ),
+      ),
     );
+  }
+
+  void _applyVoiceSeed(
+    BuildContext context,
+    NewSaleState saleState,
+    VoiceSaleSeed seed,
+  ) {
+    final bloc = context.read<NewSaleBloc>();
+    final effective = seed.effectiveLines;
+    if (effective.isEmpty) {
+      if (seed.customerId != null) {
+        bloc.add(NewSaleCustomerSelected(seed.customerId));
+      }
+      return;
+    }
+    for (final line in effective) {
+      final productId = line.productId;
+      if (productId == null) continue;
+      SaleProductOption? product;
+      for (final p in saleState.products) {
+        if (p.id == productId) {
+          product = p;
+          break;
+        }
+      }
+      if (product == null) continue;
+      bloc.add(NewSaleLineRemoved(productId));
+      final qty = (line.quantity ?? 1).clamp(1, product.quantityInStock);
+      bloc.add(NewSaleProductAdded(product, quantity: qty));
+      if (line.unitPrice != null && line.unitPrice! > 0) {
+        bloc.add(
+          NewSaleLineUnitPriceChanged(
+            productId: productId,
+            unitPrice: line.unitPrice!,
+          ),
+        );
+      }
+    }
+    if (seed.customerId != null) {
+      bloc.add(NewSaleCustomerSelected(seed.customerId));
+    }
+    if (_tabController.index != 1) {
+      _tabController.animateTo(1);
+    }
+  }
+
+  Future<void> _runGuidedVoiceSale(BuildContext context) async {
+    final cubit = context.read<VoiceInputCubit>();
+    final parser = VoiceIntentParser();
+    const formatHint =
+        'Dites : produit Sac quantité 20\n'
+        'ou : produit Sac quantité 20 prix 3000\n'
+        'ou : produit Sac prix 3000 quantité 20\n'
+        '(sans prix → prix boutique)';
+
+    while (context.mounted) {
+      final saleState = context.read<NewSaleBloc>().state;
+      final catalogProducts = saleState.products
+          .map(
+            (p) => VoiceCatalogProduct(
+              id: p.id,
+              name: p.name,
+              priceSell: p.priceSell,
+              quantityInStock: p.quantityInStock,
+            ),
+          )
+          .toList();
+
+      final spoken = await showVoiceWorkflowPromptDialog(
+        context: context,
+        cubit: cubit,
+        question: 'Ligne de vente',
+        details: formatHint,
+      );
+      cubit.reset();
+      if (!context.mounted || spoken == null || spoken.trim().isEmpty) return;
+
+      final structured = parser.parseStructuredSaleLine(spoken);
+      if (structured == null) {
+        await showVoiceAssistantFailureDialog(
+          context,
+          message: 'Format non reconnu.\n\n$formatHint',
+          kind: VoiceIntentKind.sale,
+        );
+        continue;
+      }
+
+      final catalog =
+          parser.matchProductByName(structured.productQuery, catalogProducts);
+      SaleProductOption? product;
+      if (catalog != null) {
+        for (final p in saleState.products) {
+          if (p.id == catalog.id) {
+            product = p;
+            break;
+          }
+        }
+      }
+      if (product == null) {
+        await showVoiceAssistantFailureDialog(
+          context,
+          message:
+              'Produit introuvable : « ${structured.productQuery} ».',
+          kind: VoiceIntentKind.sale,
+        );
+        continue;
+      }
+      if (structured.quantity > product.quantityInStock) {
+        await showVoiceAssistantFailureDialog(
+          context,
+          message:
+              'Stock insuffisant (${product.quantityInStock}) pour '
+              '${product.name}.',
+          kind: VoiceIntentKind.sale,
+        );
+        continue;
+      }
+
+      final unitPrice = structured.unitPrice ?? product.priceSell;
+      _applyLineToCart(
+        context,
+        product: product,
+        quantity: structured.quantity,
+        unitPrice: unitPrice,
+      );
+
+      if (!context.mounted) return;
+      final more = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('ARIKE Assistant'),
+          content: Text(
+            '${product!.name} × ${structured.quantity} ajouté '
+            '(${formatFcfa(unitPrice)}'
+            '${structured.unitPrice == null ? ' — prix boutique' : ''}).\n\n'
+            'Ajouter un autre produit ?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('C’est tout'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ajouter un autre'),
+            ),
+          ],
+        ),
+      );
+      if (more != true) break;
+    }
+  }
+
+  void _applyLineToCart(
+    BuildContext context, {
+    required SaleProductOption product,
+    required int quantity,
+    required int unitPrice,
+  }) {
+    final bloc = context.read<NewSaleBloc>();
+    bloc.add(NewSaleLineRemoved(product.id));
+    final qty = quantity.clamp(1, product.quantityInStock);
+    bloc.add(NewSaleProductAdded(product, quantity: qty));
+    bloc.add(
+      NewSaleLineUnitPriceChanged(
+        productId: product.id,
+        unitPrice: unitPrice,
+      ),
+    );
+    if (_tabController.index != 1) {
+      _tabController.animateTo(1);
+    }
   }
 
   Future<void> _confirmSubmit(BuildContext context, NewSaleState state) async {

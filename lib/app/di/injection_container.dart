@@ -160,6 +160,12 @@ import '../../features/sales/domain/repositories/sale_repository.dart';
 import '../../features/sales/domain/services/receipt_formatter_service.dart';
 import '../../features/sales/domain/services/sale_validation_service.dart';
 import '../../features/sales/domain/usecases/sale_usecases.dart';
+import '../../features/voice_input/data/speech_recognition_service.dart';
+import '../../features/voice_input/data/voice_input_preferences.dart';
+import '../../features/voice_input/domain/services/entity_matcher.dart';
+import '../../features/voice_input/domain/services/voice_intent_parser.dart';
+import '../../features/voice_input/domain/services/voice_intent_router.dart';
+import '../../features/voice_input/presentation/cubit/voice_input_cubit.dart';
 import 'package:get_it/get_it.dart';
 import 'package:local_auth/local_auth.dart';
 
@@ -276,8 +282,42 @@ void ensureSalesAnalysisDependencies() {
   }
 }
 
+/// Enregistre le module saisie vocale si absent.
+void ensureVoiceInputDependencies() {
+  if (!sl.isRegistered<VoiceInputPreferences>()) {
+    sl.registerLazySingleton(
+      () => VoiceInputPreferences(sl<SharedPreferences>()),
+    );
+  }
+  if (!sl.isRegistered<SpeechRecognitionService>()) {
+    sl.registerLazySingleton(SpeechRecognitionService.new);
+  }
+  if (!sl.isRegistered<EntityMatcher>()) {
+    sl.registerLazySingleton(() => const EntityMatcher());
+  }
+  if (!sl.isRegistered<VoiceIntentParser>()) {
+    sl.registerLazySingleton(
+      () => VoiceIntentParser(
+        matcher: sl<EntityMatcher>(),
+        router: const VoiceIntentRouter(),
+      ),
+    );
+  }
+  if (!sl.isRegistered<VoiceInputCubit>()) {
+    sl.registerFactory(
+      () => VoiceInputCubit(
+        speech: sl(),
+        parser: sl(),
+        preferences: sl(),
+      ),
+    );
+  }
+}
+
 /// Enregistre le module Dépenses si absent.
 void ensureExpensesDependencies() {
+  if (sl.isRegistered<ExpensesLocalDatasource>()) return;
+
   if (!sl.isRegistered<ExpensesLocalDatasource>()) {
     sl.registerLazySingleton(() => ExpensesLocalDatasource(sl()));
   }
@@ -711,6 +751,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => AuthCredentialsStorage(sl()));
   sl.registerLazySingleton(() => FormDraftStorage(sl()));
   sl.registerLazySingleton(() => DeviceIdStorage(sl()));
+  ensureVoiceInputDependencies();
   await sl<DeviceIdStorage>().getOrCreate();
   sl.registerLazySingleton(Connectivity.new);
   sl.registerLazySingleton(() => NetworkInfo(

@@ -9,13 +9,16 @@ import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../customers/domain/entities/customer_entities.dart';
 import '../../../customers/domain/usecases/customer_usecases.dart';
+import '../../../voice_input/domain/entities/voice_navigation_seeds.dart';
 import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/services/fx_calculation_service.dart';
 import '../../domain/usecases/fx_exchange_usecases.dart';
 import '../bloc/fx_exchange_bloc.dart';
 
 class FxNewOperationPage extends StatefulWidget {
-  const FxNewOperationPage({super.key});
+  const FxNewOperationPage({super.key, this.voiceSeed});
+
+  final VoiceFxSeed? voiceSeed;
 
   @override
   State<FxNewOperationPage> createState() => _FxNewOperationPageState();
@@ -38,6 +41,16 @@ class _FxNewOperationPageState extends State<FxNewOperationPage> {
   @override
   void initState() {
     super.initState();
+    final seed = widget.voiceSeed;
+    if (seed != null) {
+      if (seed.operationTypeCode == 'buy') {
+        _type = FxOperationType.buy;
+      }
+      _foreignCurrency = seed.foreignCurrency;
+      if (seed.fromAmount != null) {
+        _fromAmountCtrl.text = '${seed.fromAmount}';
+      }
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadCustomers());
   }
 

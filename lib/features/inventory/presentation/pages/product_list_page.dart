@@ -18,6 +18,7 @@ import '../widgets/product_card.dart';
 import 'product_detail_page.dart';
 import 'product_form_page.dart';
 import 'category_list_page.dart';
+import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 
 class ProductListPage extends StatefulWidget {
   const ProductListPage({
@@ -164,25 +165,32 @@ class _ProductListPageState extends State<ProductListPage> {
                 ),
               ],
             ),
-            floatingActionButton: _canWrite
-                ? FloatingActionButton.extended(
-                    onPressed: () async {
-                      final created = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ProductFormPage(session: widget.session),
-                        ),
-                      );
-                      if (created == true && context.mounted) {
-                        context
-                            .read<ProductListBloc>()
-                            .add(const ProductListLocalRefreshRequested());
-                      }
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Produit'),
-                  )
-                : null,
+            floatingActionButton: VoiceAwareFabColumn(
+              session: widget.session,
+              heroTag: 'voice_fab_stock',
+              actionButtons: _canWrite
+                  ? [
+                      FloatingActionButton.extended(
+                        heroTag: 'new_product',
+                        onPressed: () async {
+                          final created = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ProductFormPage(session: widget.session),
+                            ),
+                          );
+                          if (created == true && context.mounted) {
+                            context.read<ProductListBloc>().add(
+                                  const ProductListLocalRefreshRequested(),
+                                );
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Produit'),
+                      ),
+                    ]
+                  : const [],
+            ),
     );
   }
 }

@@ -30,6 +30,7 @@ import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
 import '../../../fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../bloc/dashboard_bloc.dart';
 import 'dashboard_page.dart';
 
@@ -217,6 +218,16 @@ class _HomeShellPageState extends State<HomeShellPage> {
     };
   }
 
+  /// Ventes / Stock / Clients empilent déjà le micro au-dessus de leur FAB.
+  bool _showShellVoiceFab(int index, bool useFx) {
+    if (useFx) {
+      // 0 Change, 1 Clients (FAB page), 2 Plus
+      return index != 1;
+    }
+    // 0 Accueil, 1 Ventes, 2 Stock, 3 Clients, 4 Plus
+    return index == 0 || index == 4;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -380,6 +391,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
           if (useRail) {
             return Scaffold(
+              floatingActionButton: _showShellVoiceFab(safeIndex, useFx)
+                  ? VoiceAssistantFab(session: widget.session)
+                  : null,
+              floatingActionButtonLocation:
+                  FloatingActionButtonLocation.endFloat,
               body: Row(
                 children: [
                   NavigationRail(
@@ -435,6 +451,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
           }
 
           return Scaffold(
+            floatingActionButton: _showShellVoiceFab(safeIndex, useFx)
+                ? VoiceAssistantFab(session: widget.session)
+                : null,
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.endFloat,
             body: Column(
               children: [
                 _ShellHeader(
