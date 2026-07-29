@@ -21,9 +21,9 @@ class SpeechCancelledException implements Exception {
 /// Wrap STT local / appareil.
 ///
 /// Important : Android envoie souvent `done` / `notListening` au milieu
-/// d’une phrase. On **ne valide pas** automatiquement : seule
+/// d’une phrase ou lors d'une pause. On **ne valide pas** automatiquement : seule
 /// [finishListening] ou le délai max [listenFor] termine la session.
-/// Si le moteur coupe trop tôt, on relance l’écoute pour continuer.
+/// Si le moteur coupe trop tôt, on relance l’écoute immédiatement.
 class SpeechRecognitionService {
   SpeechRecognitionService({SpeechToText? speech})
       : _speech = speech ?? SpeechToText();
@@ -32,14 +32,15 @@ class SpeechRecognitionService {
   bool _initialized = false;
   String? _localeId;
   Completer<String>? _listenCompleter;
+  String _accumulatedWords = '';
+  String _currentSessionWords = '';
   String _latestWords = '';
-  double _latestConfidence = -1;
 
   /// true uniquement après [finishListening] ou timeout max.
   bool _finishRequested = false;
   bool _restarting = false;
-  Duration _activeListenFor = const Duration(seconds: 45);
-  Duration _activePauseFor = const Duration(seconds: 12);
+  Duration _activeListenFor = const Duration(seconds: 60);
+  Duration _activePauseFor = const Duration(seconds: 15);
   void Function(String partial)? _activeOnPartial;
   Timer? _hardTimeout;
 
@@ -127,14 +128,14 @@ class SpeechRecognitionService {
     // Validation volontaire ou timeout → terminer après un court délai.
     if (_finishRequested) {
       unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 350), () {
+        Future<void>.delayed(const Duration(milliseconds: 250), () {
           _completeListen();
         }),
       );
       return;
     }
 
-    // Coupe précoce du moteur : relancer l’écoute, ne pas soumettre.
+    // Coupe précoce du moteur (silence/pause) : relancer l’écoute immédiatement.
     unawaited(_restartListenIfNeeded());
   }
 
@@ -145,7 +146,10 @@ class SpeechRecognitionService {
     }
     _restarting = true;
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (_latestWords.isNotEmpty) {
+        _accumulatedWords = _latestWords;
+        _currentSessionWords = '';
+      }
       if (_listenCompleter == null ||
           _listenCompleter!.isCompleted ||
           _finishRequested) {
@@ -154,8 +158,16 @@ class SpeechRecognitionService {
       if (_speech.isListening) return;
       await _startEngineListen();
     } catch (_) {
-      // Si la relance échoue, on garde le texte déjà capturé ;
-      // l’utilisateur valide avec « J’ai fini ».
+      // Si la relance immédiate échoue, réessayer après un très court délai
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      if (_listenCompleter != null &&
+          !_listenCompleter!.isCompleted &&
+          !_finishRequested &&
+          !_speech.isListening) {
+        try {
+          await _startEngineListen();
+        } catch (_) {}
+      }
     } finally {
       _restarting = false;
     }
@@ -172,8 +184,7 @@ class SpeechRecognitionService {
         localeId: _localeId,
         partialResults: true,
         cancelOnError: false,
-        listenMode: ListenMode.dictation,
-        onDevice: false,
+        listenMode: ListenMode.deviceDefault,
         autoPunctuation: true,
       ),
     );
@@ -182,17 +193,18 @@ class SpeechRecognitionService {
   /// Écoute longue (phrases métier). Utiliser [finishListening] pour valider.
   Future<String> listenOnce({
     Duration listenFor = const Duration(seconds: 60),
-    Duration pauseFor = const Duration(seconds: 12),
+    Duration pauseFor = const Duration(seconds: 15),
     void Function(String partial)? onPartial,
   }) async {
     await ensureReady();
     if (_speech.isListening) {
       await _speech.stop();
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
     }
 
+    _accumulatedWords = '';
+    _currentSessionWords = '';
     _latestWords = '';
-    _latestConfidence = -1;
     _finishRequested = false;
     _restarting = false;
     _activeListenFor = listenFor;
@@ -245,25 +257,74 @@ class SpeechRecognitionService {
     final candidate = _bestAlternateText(r);
     if (candidate.isEmpty) return;
 
-    final conf = r.hasConfidenceRating ? r.confidence : -1.0;
-    final longer = candidate.length > _latestWords.length;
-    final sameLenBetterConf = candidate.length == _latestWords.length &&
-        conf >= 0 &&
-        conf > _latestConfidence;
-    final extendsCurrent = _latestWords.isNotEmpty &&
-        candidate.toLowerCase().startsWith(
-              _latestWords.toLowerCase().trim(),
-            );
+    _currentSessionWords = candidate;
 
-    if (_latestWords.isEmpty || longer || sameLenBetterConf || extendsCurrent) {
-      _latestWords = candidate;
-      if (conf >= 0) _latestConfidence = conf;
-      onPartial?.call(_latestWords);
+    if (_accumulatedWords.isEmpty) {
+      _latestWords = _currentSessionWords;
+    } else {
+      _latestWords = mergeTranscripts(_accumulatedWords, candidate);
     }
+
+    onPartial?.call(_latestWords);
+  }
+
+  /// Fusionne intelligemment le texte déjà accumulé avant une pause et le candidat récent
+  /// en évitant toute perte du début, réitération ou chevauchement de mots.
+  static String mergeTranscripts(String accumulated, String candidate) {
+    final acc = accumulated.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final cand = candidate.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    if (acc.isEmpty) return cand;
+    if (cand.isEmpty) return acc;
+
+    final accLower = acc.toLowerCase();
+    final candLower = cand.toLowerCase();
+
+    // 1. Si candidate commence déjà par accumulated (ex: le moteur a gardé le contexte)
+    if (candLower.startsWith(accLower)) {
+      return cand;
+    }
+
+    // 2. Si accumulated se termine déjà par candidate (ex: le moteur réémet un fragment déjà capturé)
+    if (accLower.endsWith(candLower)) {
+      return acc;
+    }
+
+    // 3. Détection de chevauchement de mots aux limites (acc suffixe / cand préfixe)
+    final accWords = acc.split(RegExp(r'\s+'));
+    final candWords = cand.split(RegExp(r'\s+'));
+
+    int maxOverlap = 0;
+    final minLen = accWords.length < candWords.length ? accWords.length : candWords.length;
+
+    for (int i = 1; i <= minLen; i++) {
+      bool match = true;
+      for (int j = 0; j < i; j++) {
+        final accW = accWords[accWords.length - i + j].toLowerCase();
+        final candW = candWords[j].toLowerCase();
+        if (accW != candW) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        maxOverlap = i;
+      }
+    }
+
+    if (maxOverlap > 0) {
+      final nonOverlappingCand = candWords.sublist(maxOverlap).join(' ');
+      if (nonOverlappingCand.isEmpty) return acc;
+      return '$acc $nonOverlappingCand';
+    }
+
+    return '$acc $cand';
   }
 
   String _bestAlternateText(SpeechRecognitionResult r) {
-    if (r.alternates.isEmpty) return '';
+    final mainText = r.recognizedWords.trim();
+    if (r.alternates.isEmpty) return mainText;
+
     var best = r.alternates.first;
     for (final a in r.alternates.skip(1)) {
       final aConf = a.hasConfidenceRating ? a.confidence : -1.0;
@@ -275,7 +336,8 @@ class SpeechRecognitionService {
         best = a;
       }
     }
-    return best.recognizedWords.trim();
+    final bestText = best.recognizedWords.trim();
+    return bestText.length >= mainText.length ? bestText : mainText;
   }
 
   /// Légères normalisations FR métier (STT confond souvent ces formes).
@@ -313,7 +375,7 @@ class SpeechRecognitionService {
       await _speech.stop();
     }
     // Laisser arriver le dernier chunk après stop.
-    await Future<void>.delayed(const Duration(milliseconds: 450));
+    await Future<void>.delayed(const Duration(milliseconds: 250));
     _completeListen();
   }
 

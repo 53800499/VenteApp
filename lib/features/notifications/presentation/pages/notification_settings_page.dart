@@ -5,6 +5,8 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../shared/components/ui_primitives.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../data/datasources/local/notifications_local_datasource.dart';
 import '../../domain/usecases/notification_usecases.dart';
@@ -39,7 +41,10 @@ class _NotificationSettingsView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Alertes'),
-        actions: const [ModuleHelpButton(articleId: 'notifications')],
+        actions: const [
+          ModuleHelpButton(articleId: 'notifications'),
+          AppHeaderActions(),
+        ],
       ),
       body: Column(
         children: [
@@ -72,16 +77,7 @@ class _NotificationSettingsView extends StatelessWidget {
                 ),
               );
             }
-            return const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.md),
-                  Text('Chargement des préférences…'),
-                ],
-              ),
-            );
+            return const SaleListSkeleton();
           }
 
           final debtDays =

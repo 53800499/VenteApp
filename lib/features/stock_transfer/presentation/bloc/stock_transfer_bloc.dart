@@ -134,15 +134,17 @@ class StockTransferBloc extends Bloc<StockTransferEvent, StockTransferState> {
       emit(state.copyWith(isRefreshing: true));
 
       try {
-        await _repository.syncFromRemote(
-          shopId: shopId,
-          force: forceRemote,
-          importUserId: userId,
-        );
+        await _repository
+            .syncFromRemote(
+              shopId: shopId,
+              force: forceRemote,
+              importUserId: userId,
+            )
+            .timeout(const Duration(seconds: 4));
       } on Failure {
         // Sync cloud optionnelle — conserver les transferts locaux affichés.
       } catch (_) {
-        // Données cloud partielles : ne pas bloquer la liste.
+        // Données cloud partielles ou timeout : ne pas bloquer la liste.
       }
 
       final refreshedLists = await _loadLists();

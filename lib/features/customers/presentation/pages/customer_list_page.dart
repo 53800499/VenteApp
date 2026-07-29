@@ -7,6 +7,7 @@ import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -108,6 +109,10 @@ class _CustomerListPageState extends State<CustomerListPage> {
                 Expanded(
                   child: BlocBuilder<CustomerListBloc, CustomerListState>(
                     builder: (context, state) {
+                      if (state.status == CustomerListStatus.initial &&
+                          state.customers.isEmpty) {
+                        return const SaleListSkeleton();
+                      }
                       if (state.status == CustomerListStatus.failure) {
                         return Center(
                           child: Padding(

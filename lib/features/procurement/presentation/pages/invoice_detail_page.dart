@@ -6,6 +6,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../data/services/procurement_sync_status_service.dart';
 import '../../domain/entities/procurement.dart';
 import '../../domain/entities/procurement_sync_entities.dart';
@@ -72,6 +74,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
             icon: const Icon(Icons.refresh),
             onPressed: _refresh,
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: BlocConsumer<ProcurementBloc, ProcurementState>(
@@ -99,7 +102,7 @@ class _InvoiceDetailPageState extends State<InvoiceDetailPage> {
             return Center(child: Text(state.errorMessage!));
           }
 
-          return const Center(child: CircularProgressIndicator());
+          return const SaleListSkeleton();
         },
       ),
     ),

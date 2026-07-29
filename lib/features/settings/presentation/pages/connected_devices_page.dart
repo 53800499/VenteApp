@@ -9,6 +9,7 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import '../widgets/settings_feedback.dart';
@@ -131,6 +132,7 @@ class _ConnectedDevicesPageState extends State<ConnectedDevicesPage> {
             icon: const Icon(Icons.refresh_outlined),
             tooltip: 'Actualiser',
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: ResponsivePage(

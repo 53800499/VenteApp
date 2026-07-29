@@ -46,7 +46,6 @@ class HomeShellPage extends StatefulWidget {
 class _HomeShellPageState extends State<HomeShellPage> {
   int _currentIndex = 0;
   FxWorkspaceModeController? _fxWorkspace;
-  bool _fxWorkspaceReady = false;
 
   bool get _canViewFx => PermissionGuard.can(
         widget.session.user.permissions,
@@ -87,17 +86,14 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
   Future<void> _loadFxWorkspaceMode() async {
     final workspace = _fxWorkspace;
-    if (workspace == null) {
-      if (mounted) setState(() => _fxWorkspaceReady = true);
-      return;
-    }
+    if (workspace == null) return;
     try {
       final shopId = widget.session.shop.id;
       final enabled = await sl<IsFxModuleEnabled>()(shopId: shopId);
       final primary = await sl<GetFxPrimaryWorkspace>()(shopId: shopId);
       workspace.apply(primary: primary, moduleEnabled: enabled);
+      // Le listener _onFxWorkspaceChanged déclenchera un setState si le mode change.
     } catch (_) {}
-    if (mounted) setState(() => _fxWorkspaceReady = true);
   }
 
   Future<void> _bootstrapNotifications() async {
@@ -373,9 +369,10 @@ class _HomeShellPageState extends State<HomeShellPage> {
       child: ResponsiveBuilder(
         builder: (context, screenType) {
           final useRail = Breakpoints.useNavigationRail(screenType);
-          final content = !_fxWorkspaceReady
-              ? const Center(child: CircularProgressIndicator())
-              : _ShellContent(
+          // Affichage immédiat (Cache-First) : on ne bloque plus l'UI pendant
+          // le chargement du mode FX. _fxWorkspaceReady passe à true en arrière-
+          // plan et setState() met à jour silencieusement si le mode change.
+          final content = _ShellContent(
                   session: widget.session,
                   currentIndex: safeIndex,
                   useFxPrimary: useFx,

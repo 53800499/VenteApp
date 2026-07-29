@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +14,7 @@ import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/ui_primitives.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -162,7 +163,10 @@ class _SettingsViewState extends State<_SettingsView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Paramètres'),
-        actions: const [ModuleHelpButton(articleId: 'settings_security')],
+        actions: const [
+          ModuleHelpButton(articleId: 'settings_security'),
+          AppHeaderActions(),
+        ],
       ),
       body: Column(
         children: [

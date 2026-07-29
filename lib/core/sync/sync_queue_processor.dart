@@ -31,6 +31,7 @@ import '../database/app_database.dart'
         SupplierInvoice,
         SupplierPayment,
         StockTransfer,
+        SalesOrder,
         SalesOrderItem;
 import '../errors/failures.dart';
 import '../network/api_client.dart';
@@ -1693,7 +1694,7 @@ class SyncQueueProcessor {
     SyncQueueData item,
     Map<String, dynamic> payload,
   ) async {
-    final local = await _salesOrderLocal.findOrder(
+    var local = await _salesOrderLocal.findOrder(
       shopId: shopId,
       id: item.recordId,
     );
@@ -1760,6 +1761,19 @@ class SyncQueueProcessor {
       case SyncOperation.cancel:
       case SyncOperation.close:
         if (local.serverId == null) {
+          await _tryResolveOrPushSalesOrder(
+            shopId: shopId,
+            local: local,
+          );
+          final reloaded = await _salesOrderLocal.findOrder(
+            shopId: shopId,
+            id: item.recordId,
+          );
+          if (reloaded != null && reloaded.serverId != null) {
+            local = reloaded;
+          }
+        }
+        if (local.serverId == null) {
           await _queue.markDeferred(
             item.id,
             'Création de la commande encore en attente de synchronisation. '
@@ -1824,6 +1838,19 @@ class SyncQueueProcessor {
         return true;
 
       case SyncOperation.deliver:
+        if (local.serverId == null) {
+          await _tryResolveOrPushSalesOrder(
+            shopId: shopId,
+            local: local,
+          );
+          final reloaded = await _salesOrderLocal.findOrder(
+            shopId: shopId,
+            id: item.recordId,
+          );
+          if (reloaded != null && reloaded.serverId != null) {
+            local = reloaded;
+          }
+        }
         if (local.serverId == null) {
           await _queue.markDeferred(
             item.id,
@@ -1994,6 +2021,76 @@ class SyncQueueProcessor {
         shopId,
         localId,
         snapshot,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> _tryResolveOrPushSalesOrder({
+    required int shopId,
+    required SalesOrder local,
+  }) async {
+    try {
+      final remoteOrders = await _salesOrderRemote.listOrders();
+      final match = remoteOrders
+          .where(
+            (o) =>
+                o['number'] == local.number ||
+                (o['localId'] != null && o['localId'] == local.id),
+          )
+          .firstOrNull;
+      if (match != null) {
+        await _salesOrderLocal.applyRemoteSalesOrderSnapshot(
+          shopId,
+          local.id,
+          Map<String, dynamic>.from(match),
+        );
+        return true;
+      }
+
+      final customer =
+          await _customersLocal.findCustomer(shopId, local.customerId);
+      if (customer == null ||
+          customer.serverId == null ||
+          customer.serverId!.isEmpty) {
+        return false;
+      }
+
+      final remoteItems = <Map<String, dynamic>>[];
+      for (final it in local.items) {
+        final prod = await _inventoryLocal.findProduct(shopId, it.productId);
+        if (prod == null ||
+            prod.serverId == null ||
+            prod.serverId!.isEmpty) {
+          return false;
+        }
+        remoteItems.add({
+          'productId': int.parse(prod.serverId!),
+          'quantityOrdered': it.quantityOrdered,
+          'unitPrice': it.unitPrice,
+          'lineTotal': it.lineTotal,
+        });
+      }
+
+      final remote = await _salesOrderRemote.createOrder({
+        'localId': local.id,
+        'number': local.number,
+        'customerId': int.parse(customer.serverId!),
+        'notes': local.notes,
+        'orderedAt': local.orderedAt,
+        'subtotal': local.subtotal,
+        'total': local.total,
+        'version': local.version,
+        if (local.deviceId != null) 'deviceId': local.deviceId,
+        'items': remoteItems,
+      });
+
+      await _salesOrderLocal.applyRemoteSalesOrderSnapshot(
+        shopId,
+        local.id,
+        Map<String, dynamic>.from(remote),
       );
       return true;
     } catch (_) {

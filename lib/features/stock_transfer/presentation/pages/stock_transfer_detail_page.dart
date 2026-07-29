@@ -10,6 +10,8 @@ import '../../../../core/sync/sync_snapshot.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../domain/entities/stock_transfer.dart';
 import '../../domain/repositories/stock_transfer_repository.dart';
 import '../../domain/utils/stock_transfer_cloud_gate.dart';
@@ -191,7 +193,7 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
                 transfer?.reference ?? 'Transfert',
               ),
             ),
-            body: const Center(child: CircularProgressIndicator()),
+            body: const SaleListSkeleton(),
           );
         }
         if (transfer == null) {
@@ -281,7 +283,10 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
             cloudEnabled && StockTransferCloudGate.isAwaitingCloudConfirmation(transfer);
 
         return Scaffold(
-          appBar: AppBar(title: Text(transfer.reference)),
+          appBar: AppBar(
+            title: Text(transfer.reference),
+            actions: const [AppHeaderActions()],
+          ),
           body: ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [

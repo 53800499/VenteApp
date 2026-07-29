@@ -10,6 +10,8 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
 import '../../../dashboard/presentation/widgets/kpi_card.dart';
@@ -113,6 +115,7 @@ class _ReportsView extends StatelessWidget {
               );
             },
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: Column(
@@ -132,13 +135,7 @@ class _ReportsView extends StatelessWidget {
             },
             child: switch (state.status) {
               ReportStatus.initial || ReportStatus.loading =>
-                ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: const [
-                    SizedBox(height: 120),
-                    Center(child: CircularProgressIndicator()),
-                  ],
-                ),
+                const DashboardSkeleton(),
               ReportStatus.failure => ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(AppSpacing.lg),

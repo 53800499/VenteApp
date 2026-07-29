@@ -8,6 +8,8 @@ import '../../../../core/sync/sync_conflict_service.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
@@ -63,7 +65,10 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Conflits de synchronisation'),
-          actions: const [ModuleHelpButton(articleId: 'sync_offline')],
+          actions: const [
+            ModuleHelpButton(articleId: 'sync_offline'),
+            AppHeaderActions(),
+          ],
         ),
         body: const Center(
           child: Padding(
@@ -80,7 +85,10 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Conflits de synchronisation'),
-        actions: const [ModuleHelpButton(articleId: 'sync_offline')],
+        actions: const [
+          ModuleHelpButton(articleId: 'sync_offline'),
+          AppHeaderActions(),
+        ],
       ),
       body: _buildBody(),
     );
@@ -88,7 +96,7 @@ class _SyncConflictsPageState extends State<SyncConflictsPage> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SaleListSkeleton();
     }
     if (_error != null) {
       return Center(

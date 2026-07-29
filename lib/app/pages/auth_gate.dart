@@ -10,6 +10,7 @@ import '../../features/auth/presentation/pages/shop_selection_page.dart';
 import '../../features/auth/presentation/pages/lock_screen_page.dart';
 import '../../features/auth/presentation/pages/recovery_token_page.dart';
 import '../../features/dashboard/presentation/pages/home_shell_page.dart';
+import '../../features/onboarding/presentation/pages/splash_page.dart';
 
 /// Route l'utilisateur vers l'écran d'authentification approprié.
 class AuthGate extends StatelessWidget {
@@ -20,9 +21,9 @@ class AuthGate extends StatelessWidget {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         return switch (state) {
-          AuthInitial() || AuthLoading() => const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
+          // Pendant la résolution de l'auth, on affiche le splash branded
+          // plutôt qu'un spinner vide — meilleure UX, pas de flash blanc.
+          AuthInitial() || AuthLoading() => const SplashPage(),
           AuthNeedsSetup() => const FirstLaunchFlow(),
           AuthSetupInProgress() || AuthSetupFailure() => const FirstLaunchFlow(),
           AuthSetupCompleted(:final result) =>

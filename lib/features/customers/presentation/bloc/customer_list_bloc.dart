@@ -195,16 +195,22 @@ class CustomerListBloc extends Bloc<CustomerListEvent, CustomerListState> {
       emit(state.copyWith(isRefreshing: true));
 
       try {
-        await _repository.syncFromRemote(
-          shopId: _session.shop.id,
-          force: forceRemote,
-        );
-        await _saleRepository?.syncFromRemote(
-          shopId: _session.shop.id,
-          force: forceRemote,
-        );
+        await _repository
+            .syncFromRemote(
+              shopId: _session.shop.id,
+              force: forceRemote,
+            )
+            .timeout(const Duration(seconds: 4));
+        await _saleRepository
+            ?.syncFromRemote(
+              shopId: _session.shop.id,
+              force: forceRemote,
+            )
+            .timeout(const Duration(seconds: 4));
       } on Failure {
         // Sync cloud optionnelle — conserver la liste locale affichée.
+      } catch (_) {
+        // Timeout ou erreur réseau : ne pas bloquer la liste locale.
       }
 
       final refreshedCustomers = await _listCustomers(

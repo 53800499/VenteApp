@@ -188,14 +188,16 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
       emit(state.copyWith(isRefreshing: true));
 
       try {
-        await _repository.syncFromRemote(
-          shopId: _session.shop.id,
-          force: forceRemote,
-        );
+        await _repository
+            .syncFromRemote(
+              shopId: _session.shop.id,
+              force: forceRemote,
+            )
+            .timeout(const Duration(seconds: 4));
       } on Failure {
         // Sync cloud optionnelle — conserver le stock local affiché.
       } catch (_) {
-        // Doublons locaux ou données cloud partielles : ne pas bloquer la liste.
+        // Timeout ou doublons locaux : ne pas bloquer la liste.
       }
 
       final refreshedCategories =

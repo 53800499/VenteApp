@@ -7,8 +7,10 @@ import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../rbac/presentation/pages/user_permissions_page.dart';
 import '../../domain/entities/user_entities.dart';
@@ -49,7 +51,10 @@ class UserListPage extends StatelessWidget {
       return Scaffold(
         appBar: AppBar(
           title: const Text('Équipe'),
-          actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+          actions: const [
+          ModuleHelpButton(articleId: 'team_rbac'),
+          AppHeaderActions(),
+        ],
         ),
         body: const Center(
           child: Text('Vous n\'avez pas accès à la gestion de l\'équipe.'),
@@ -101,7 +106,10 @@ class _UserListView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Équipe'),
-        actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+        actions: const [
+          ModuleHelpButton(articleId: 'team_rbac'),
+          AppHeaderActions(),
+        ],
       ),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
@@ -170,16 +178,7 @@ class _UserListView extends StatelessWidget {
               builder: (context, state) {
                 if (state.status == UserListStatus.loading &&
                     !state.isRefreshing) {
-                  return const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: AppSpacing.md),
-                        Text('Chargement de l\'équipe…'),
-                      ],
-                    ),
-                  );
+                  return const SaleListSkeleton();
                 }
 
                 if (state.status == UserListStatus.failure &&

@@ -7,6 +7,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sale_entities.dart';
 import '../../domain/usecases/sale_usecases.dart';
@@ -167,6 +168,7 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
                 ),
               ),
             ),
+          const AppHeaderActions(),
         ],
       ),
       body: _loading

@@ -6,6 +6,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -307,6 +309,7 @@ class _ProcurementViewState extends State<_ProcurementView>
                           includeReport: _tabController.index == 4,
                         ),
               ),
+              const AppHeaderActions(),
             ],
           ),
           body: Column(
@@ -319,7 +322,7 @@ class _ProcurementViewState extends State<_ProcurementView>
                   state.purchaseOrders.isEmpty &&
                   state.directReceipts.isEmpty &&
                   state.suppliers.isEmpty)
-                const Center(child: CircularProgressIndicator())
+                const SaleListSkeleton()
               else
                 TabBarView(
                   controller: _tabController,

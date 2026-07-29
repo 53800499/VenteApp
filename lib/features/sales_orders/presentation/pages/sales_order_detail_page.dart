@@ -6,6 +6,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../sales/presentation/pages/sale_detail_page.dart';
 import '../../domain/entities/sales_order.dart';
@@ -62,6 +63,7 @@ class _SalesOrderDetailPageState extends State<SalesOrderDetailPage> {
             icon: const Icon(Icons.refresh),
             onPressed: _refresh,
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: BlocConsumer<SalesOrderBloc, SalesOrderState>(

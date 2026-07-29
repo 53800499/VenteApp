@@ -10,6 +10,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../procurement/presentation/models/po_form_prefill.dart';
 import '../../../procurement/presentation/utils/procurement_navigation.dart';
@@ -124,6 +125,7 @@ class ProductDetailPage extends StatelessWidget {
                     },
                     icon: const Icon(Icons.edit_outlined),
                   ),
+                const AppHeaderActions(),
               ],
             ),
             body: _buildBody(context, state),

@@ -6,7 +6,6 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/auth/cloud_session_coordinator.dart';
 import '../../../../core/auth/cloud_session_repair_service.dart';
 import '../../../../core/auth/widgets/cloud_session_guard.dart';
-import '../../../../core/auth/widgets/cloud_session_pin_repair_dialog.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/network/remote_api_guard.dart';
@@ -147,15 +146,12 @@ Future<bool> _ensureCloudReadyForShopSwitch(BuildContext context) async {
     return true;
   } on CloudReconnectRequiredFailure {
     if (!context.mounted) return false;
-    final restored = await showCloudSessionPinRepairDialog(context);
-    if (restored) return true;
-    if (!context.mounted) return false;
     await ShopFeedback.showErrorDialog(
       context,
       title: 'Session cloud requise',
       message:
-          'Pour changer de boutique, saisissez votre PIN afin de rétablir '
-          'la session en ligne, puis réessayez.',
+          'Pour changer de boutique, une session cloud active est requise. '
+          'Veuillez vous reconnecter.',
     );
     return false;
   } on Failure catch (e) {

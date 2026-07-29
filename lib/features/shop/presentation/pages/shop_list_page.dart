@@ -9,9 +9,11 @@ import '../../../../core/network/active_shop_context.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/shop_entities.dart';
 import '../bloc/shop_list_bloc.dart';
@@ -84,7 +86,10 @@ class _ShopListView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mes boutiques'),
-        actions: const [ModuleHelpButton(articleId: 'shops')],
+        actions: const [
+          ModuleHelpButton(articleId: 'shops'),
+          AppHeaderActions(),
+        ],
       ),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
@@ -153,16 +158,7 @@ class _ShopListView extends StatelessWidget {
               builder: (context, state) {
                 if (state.status == ShopListStatus.loading &&
                     !state.isRefreshing) {
-                  return const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: AppSpacing.md),
-                        Text('Chargement des boutiques…'),
-                      ],
-                    ),
-                  );
+                  return const SaleListSkeleton();
                 }
 
                 if (state.status == ShopListStatus.failure &&

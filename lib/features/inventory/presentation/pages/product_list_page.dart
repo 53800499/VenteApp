@@ -7,6 +7,7 @@ import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -288,9 +289,7 @@ class _ProductListView extends StatelessWidget {
       builder: (context, state) {
         if (state.status == ProductListStatus.initial &&
             state.products.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const SaleListSkeleton();
         }
 
         if (state.status == ProductListStatus.failure) {

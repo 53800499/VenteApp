@@ -8,6 +8,8 @@ import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/benin_period_range.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/feature_ui.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../customers/presentation/pages/customer_detail_page.dart';
 import '../../domain/entities/sales_analysis_entities.dart';
@@ -149,6 +151,7 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
             icon: const Icon(Icons.refresh),
             onPressed: () => _refreshSalesAnalysis(context),
           ),
+          const AppHeaderActions(),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -180,7 +183,7 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
                             state.status == SalesAnalysisStatus.loading) &&
                         state.products.isEmpty;
                 if (bootstrapping) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const DashboardSkeleton();
                 }
                 if (state.status == SalesAnalysisStatus.failure &&
                     state.products.isEmpty) {

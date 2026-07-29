@@ -13,6 +13,7 @@ import '../../domain/entities/sale_entities.dart';
 import '../../domain/entities/sale_pricing_entities.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/ui_primitives.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../bloc/new_sale_bloc.dart';
 import '../widgets/sale_feedback.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
@@ -216,6 +217,7 @@ class _NewSalePageState extends State<NewSalePage>
                       onCapture: () => _runGuidedVoiceSale(context),
                     ),
                     const ModuleHelpButton(articleId: 'sales'),
+                    const AppHeaderActions(),
                   ],
                 ),
                 body: Column(

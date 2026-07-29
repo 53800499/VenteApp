@@ -6,6 +6,8 @@ import '../../../../core/auth/widgets/cloud_session_guard.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../shared/components/action_feedback.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../../shared/utils/permission_labels.dart';
@@ -99,7 +101,10 @@ class _UserPermissionsPageState extends State<UserPermissionsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Droits — ${widget.userName}')),
+      appBar: AppBar(
+        title: Text('Droits — ${widget.userName}'),
+        actions: const [AppHeaderActions()],
+      ),
       body: Column(
         children: [
           const OfflineModeBanner(
@@ -120,7 +125,7 @@ class _UserPermissionsPageState extends State<UserPermissionsPage> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SaleListSkeleton();
     }
     if (_error != null) {
       return Center(

@@ -2,21 +2,19 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
-import '../../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../auth/cloud_link_status.dart';
 import '../../auth/cloud_session_controller.dart';
 import '../../auth/cloud_session_coordinator.dart';
 import '../../auth/cloud_session_status.dart';
 import '../../auth/cloud_session_repair_service.dart';
-import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
 import '../../security/production_message_policy.dart';
 import '../../sync/sync_display_message.dart';
 import '../../sync/sync_service.dart';
 import '../../sync/sync_snapshot.dart';
+import '../../sync/widgets/sync_status_indicator.dart';
 import '../network_info.dart';
 
 /// Bandeau d'état cloud (connexion + synchronisation), indépendant de l'auth locale.
@@ -172,6 +170,10 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             foreground: Theme.of(context).colorScheme.onSecondaryContainer,
                             icon: Icons.cloud_sync_outlined,
                             emoji: '🔄',
+                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                              context,
+                              snapshot: sync,
+                            ),
                           );
                         }
 
@@ -190,17 +192,10 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             foreground: Theme.of(context).colorScheme.onTertiaryContainer,
                             icon: Icons.cloud_off_outlined,
                             emoji: '🟠',
-                            actions: [
-                              TextButton(
-                                onPressed: () => _retryCloudRepair(context),
-                                child: const Text('Réessayer'),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    showCloudSessionPinRepairDialog(context),
-                                child: const Text('Code PIN'),
-                              ),
-                            ],
+                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                              context,
+                              snapshot: sync,
+                            ),
                           );
                         }
 
@@ -214,6 +209,10 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             foreground: Theme.of(context).colorScheme.onErrorContainer,
                             icon: Icons.gpp_maybe_outlined,
                             emoji: '⛔',
+                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                              context,
+                              snapshot: sync,
+                            ),
                           );
                         }
                         if (session.level == CloudSessionLevel.offlineProlonged) {
@@ -224,6 +223,10 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             foreground: Theme.of(context).colorScheme.onTertiaryContainer,
                             icon: Icons.cloud_off_outlined,
                             emoji: '🟠',
+                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                              context,
+                              snapshot: sync,
+                            ),
                           );
                         }
 
@@ -238,6 +241,11 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             _messageForStatus(status);
                         final foreground = _foregroundForStatus(context, status);
 
+                        final bool canShowDetails = sync.cloudSyncEnabled &&
+                            (sync.blockReason != null ||
+                                sync.pendingQueueCount > 0 ||
+                                status != CloudLinkStatus.connected);
+
                         return _sessionBanner(
                           context,
                           message: message,
@@ -245,6 +253,12 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                           foreground: foreground,
                           icon: _iconForStatus(status),
                           emoji: status.emoji,
+                          onTap: canShowDetails
+                              ? () => SyncStatusIndicator.showDetailsSheet(
+                                    context,
+                                    snapshot: sync,
+                                  )
+                              : null,
                         );
                       },
                     );
@@ -258,34 +272,6 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     );
   }
 
-  Future<void> _retryCloudRepair(BuildContext context) async {
-    final repair = sl<CloudSessionRepairService>();
-    final outcome = await repair.repair(attemptRefresh: true);
-    if (!context.mounted) return;
-
-    if (outcome == CloudRepairOutcome.alreadyValid ||
-        outcome == CloudRepairOutcome.refreshed ||
-        outcome == CloudRepairOutcome.pinLogin) {
-      sl<CloudSessionCoordinator>().markCloudSessionValid();
-      repair.clearAwaitingState();
-      unawaited(sl<CloudSessionController>().refresh());
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(ProductionMessagePolicy.cloudConnectionRestoredMessage()),
-        ),
-      );
-      return;
-    }
-
-    if (outcome == CloudRepairOutcome.offline) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connexion internet requise pour rétablir la session.'),
-        ),
-      );
-    }
-  }
-
   Widget _sessionBanner(
     BuildContext context, {
     required String message,
@@ -293,43 +279,57 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     required Color foreground,
     required IconData icon,
     required String emoji,
+    VoidCallback? onTap,
     List<Widget>? actions,
   }) {
-    return Material(
-      color: background,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: foreground),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    '$emoji $message',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: foreground,
-                        ),
-                  ),
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2.0),
+                child: Icon(icon, size: 18, color: foreground),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  '$emoji $message',
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: foreground,
+                      ),
                 ),
-              ],
-            ),
-            if (actions != null && actions.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Wrap(
-                alignment: WrapAlignment.end,
-                spacing: AppSpacing.xs,
-                children: actions,
               ),
             ],
+          ),
+          if (actions != null && actions.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: AppSpacing.xs,
+              children: actions,
+            ),
           ],
-        ),
+        ],
       ),
+    );
+
+    return Material(
+      color: background,
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              child: content,
+            )
+          : content,
     );
   }
 }

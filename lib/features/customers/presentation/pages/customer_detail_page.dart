@@ -12,6 +12,7 @@ import '../../../../core/sync/sync_service.dart';
 import '../../../../core/sync/sync_snapshot.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../audit/presentation/pages/audit_entity_history_page.dart';
@@ -173,6 +174,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage>
                   : const Icon(Icons.archive_outlined),
               onPressed: _archiving ? null : _archive,
             ),
+          const AppHeaderActions(),
         ],
       ),
       body: Column(

@@ -8,6 +8,7 @@ import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../domain/entities/sale_entities.dart';
@@ -100,7 +101,7 @@ class _SaleListPageState extends State<SaleListPage> {
                       return switch (state.status) {
                         SaleListStatus.initial ||
                         SaleListStatus.loading when state.sales.isEmpty =>
-                          const Center(child: CircularProgressIndicator()),
+                          const SaleListSkeleton(),
                         SaleListStatus.failure when state.sales.isEmpty =>
                           Center(
                             child: Padding(

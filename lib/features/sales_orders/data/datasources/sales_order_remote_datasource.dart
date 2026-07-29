@@ -7,11 +7,31 @@ class SalesOrderRemoteDatasource {
 
   final ApiClient _api;
 
+  dynamic _unwrap(dynamic payload) {
+    if (payload == null) return null;
+    if (payload is Map<String, dynamic>) {
+      if (payload['success'] == true && payload.containsKey('data')) {
+        return payload['data'];
+      }
+      return payload;
+    }
+    if (payload is Map) {
+      final map = Map<String, dynamic>.from(payload);
+      if (map['success'] == true && map.containsKey('data')) {
+        return map['data'];
+      }
+      return map;
+    }
+    return payload;
+  }
+
   Future<Map<String, dynamic>> createOrder(
     Map<String, dynamic> body,
   ) async {
     final response = await _api.post('/sales-orders', data: body);
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<Map<String, dynamic>> confirmOrder(
@@ -22,7 +42,9 @@ class SalesOrderRemoteDatasource {
       '/sales-orders/$serverId/confirm',
       data: body ?? {},
     );
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<Map<String, dynamic>> prepareOrder(
@@ -33,7 +55,9 @@ class SalesOrderRemoteDatasource {
       '/sales-orders/$serverId/prepare',
       data: body ?? {},
     );
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<Map<String, dynamic>> deliver(
@@ -42,7 +66,9 @@ class SalesOrderRemoteDatasource {
   ) async {
     final response =
         await _api.post('/sales-orders/$serverId/deliver', data: body);
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<Map<String, dynamic>> cancelOrder(
@@ -58,7 +84,9 @@ class SalesOrderRemoteDatasource {
         ...?body,
       },
     );
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<Map<String, dynamic>> closeOrder(
@@ -69,12 +97,16 @@ class SalesOrderRemoteDatasource {
       '/sales-orders/$serverId/close',
       data: body ?? {},
     );
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<Map<String, dynamic>> getOrder(String serverId) async {
     final response = await _api.get('/sales-orders/$serverId');
-    return Map<String, dynamic>.from(response.data as Map);
+    final data = _unwrap(response.data);
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
   }
 
   Future<List<Map<String, dynamic>>> listOrders({
@@ -86,7 +118,7 @@ class SalesOrderRemoteDatasource {
         if (updatedAfter != null) 'updatedAfter': '$updatedAfter',
       },
     );
-    final data = response.data;
+    final data = _unwrap(response.data);
     if (data is List) {
       return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }

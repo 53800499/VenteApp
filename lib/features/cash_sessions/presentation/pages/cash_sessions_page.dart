@@ -7,6 +7,8 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -70,6 +72,7 @@ class _CashSessionsView extends StatelessWidget {
                 .read<CashSessionsBloc>()
                 .add(const CashSessionsRefreshRequested()),
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: BlocConsumer<CashSessionsBloc, CashSessionsState>(
@@ -86,7 +89,7 @@ class _CashSessionsView extends StatelessWidget {
           if (state.status == CashSessionsStatus.loading &&
               state.openSession == null &&
               state.history.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const SaleListSkeleton();
           }
 
           return RefreshIndicator(

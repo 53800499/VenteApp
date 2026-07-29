@@ -5,6 +5,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../domain/entities/procurement.dart';
 import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
@@ -51,6 +53,7 @@ class _PoDetailPageState extends State<PoDetailPage> {
             icon: const Icon(Icons.refresh),
             onPressed: _refresh,
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: BlocConsumer<ProcurementBloc, ProcurementState>(
@@ -98,7 +101,7 @@ class _PoDetailPageState extends State<PoDetailPage> {
             return Center(child: Text(state.errorMessage!));
           }
 
-          return const Center(child: CircularProgressIndicator());
+          return const SaleListSkeleton();
         },
       ),
     );

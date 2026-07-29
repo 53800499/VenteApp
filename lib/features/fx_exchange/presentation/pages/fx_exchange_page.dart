@@ -7,6 +7,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/services/fx_calculation_service.dart';
@@ -155,6 +156,7 @@ class _FxExchangeViewState extends State<_FxExchangeView> {
                       .read<FxExchangeBloc>()
                       .add(const FxExchangeRefreshRequested()),
                 ),
+                const AppHeaderActions(),
               ],
             ),
       floatingActionButton: BlocBuilder<FxExchangeBloc, FxExchangeState>(

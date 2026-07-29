@@ -39,17 +39,9 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
     SalesOrderListRequested event,
     Emitter<SalesOrderState> emit,
   ) async {
-    emit(state.copyWith(status: SalesOrderViewStatus.loading, clearError: true));
     try {
-      try {
-        await _repository.syncFromRemote(
-          shopId: _shopId,
-          importUserId: _userId,
-        );
-      } catch (_) {
-        // Pull best-effort : on affiche le local.
-      }
-      final orders = await _repository.listOrders(
+      // Étape 1 : Lire et émettre immédiatement les commandes locales (Cache First - 0 ms)
+      final localOrders = await _repository.listOrders(
         shopId: _shopId,
         status: event.status,
         search: event.search,
@@ -57,12 +49,43 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       emit(
         state.copyWith(
           status: SalesOrderViewStatus.ready,
-          orders: orders,
+          orders: localOrders,
+          filterStatus: event.status,
+          search: event.search ?? '',
+          clearError: true,
+        ),
+      );
+
+      // Étape 2 : Synchroniser en tâche de fond avec un timeout strict de 4 secondes
+      try {
+        await _repository
+            .syncFromRemote(
+              shopId: _shopId,
+              importUserId: _userId,
+            )
+            .timeout(const Duration(seconds: 4));
+      } catch (_) {
+        // Pull best-effort : on conserve les commandes locales affichées.
+      }
+
+      // Étape 3 : Mettre à jour avec les données rafraîchies
+      final refreshedOrders = await _repository.listOrders(
+        shopId: _shopId,
+        status: event.status,
+        search: event.search,
+      );
+      emit(
+        state.copyWith(
+          status: SalesOrderViewStatus.ready,
+          orders: refreshedOrders,
           filterStatus: event.status,
           search: event.search ?? '',
         ),
       );
     } on Failure catch (e) {
+      if (state.orders.isNotEmpty) {
+        return;
+      }
       emit(
         state.copyWith(
           status: SalesOrderViewStatus.failure,
@@ -70,6 +93,9 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
         ),
       );
     } catch (_) {
+      if (state.orders.isNotEmpty) {
+        return;
+      }
       emit(
         state.copyWith(
           status: SalesOrderViewStatus.failure,

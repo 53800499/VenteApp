@@ -6,6 +6,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -156,6 +158,7 @@ class _SalesOrdersViewState extends State<_SalesOrdersView>
             },
           ),
           const ModuleHelpButton(articleId: 'sales_orders'),
+          const AppHeaderActions(),
         ],
       ),
       floatingActionButton: widget.canWrite && _tabs.index == 0
@@ -278,7 +281,7 @@ class _SalesOrdersViewState extends State<_SalesOrdersView>
             builder: (context, state) {
               if (state.status == SalesOrderViewStatus.loading &&
                   state.orders.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
+                return const SaleListSkeleton();
               }
               if (state.orders.isEmpty) {
                 return EmptyListPlaceholder(

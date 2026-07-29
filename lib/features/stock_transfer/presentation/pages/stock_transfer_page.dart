@@ -6,6 +6,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/sync/sync_policy.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -109,6 +111,7 @@ class _StockTransferViewState extends State<_StockTransferView>
               articleId: 'stock_transfers',
               tooltip: 'Guide transferts inter-boutiques',
             ),
+            AppHeaderActions(),
           ],
           bottom: TabBar(
             controller: _tabController,
@@ -127,7 +130,7 @@ class _StockTransferViewState extends State<_StockTransferView>
                 state.outgoing.isEmpty &&
                 state.incoming.isEmpty &&
                 state.inTransit.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
+              return const SaleListSkeleton();
             }
 
             return TabBarView(

@@ -5,6 +5,8 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -72,12 +74,13 @@ class _ExpensesView extends StatelessWidget {
               icon: const Icon(Icons.add),
               onPressed: () => _openForm(context),
             ),
+          const AppHeaderActions(),
         ],
       ),
       body: BlocBuilder<ExpensesBloc, ExpensesState>(
         builder: (context, state) {
           if (state.status == ExpensesStatus.loading && state.summary == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const SaleListSkeleton();
           }
           if (state.status == ExpensesStatus.failure && state.summary == null) {
             return Center(

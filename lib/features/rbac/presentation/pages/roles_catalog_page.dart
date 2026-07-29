@@ -7,6 +7,8 @@ import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/rbac_entities.dart';
 import '../../domain/usecases/rbac_usecases.dart';
@@ -102,7 +104,10 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rôles & permissions'),
-        actions: const [ModuleHelpButton(articleId: 'team_rbac')],
+        actions: const [
+          ModuleHelpButton(articleId: 'team_rbac'),
+          AppHeaderActions(),
+        ],
       ),
       floatingActionButton: _canManage
           ? FloatingActionButton.extended(
@@ -124,7 +129,7 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SaleListSkeleton();
     }
     if (_error != null) {
       return Center(

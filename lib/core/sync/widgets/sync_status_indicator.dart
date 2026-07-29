@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
@@ -16,6 +16,18 @@ class SyncStatusIndicator extends StatelessWidget {
   const SyncStatusIndicator({super.key, this.session});
 
   final AuthSession? session;
+
+  static void showDetailsSheet(
+    BuildContext context, {
+    required SyncSnapshot snapshot,
+    AuthSession? session,
+  }) {
+    _SyncStatusIcon.showDetailsSheet(
+      context,
+      snapshot: snapshot,
+      session: session,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +81,11 @@ class _SyncStatusIcon extends StatelessWidget {
     }
 
     return IconButton(
-      onPressed: () => _showDetails(context),
+      onPressed: () => showDetailsSheet(
+        context,
+        snapshot: snapshot,
+        session: session,
+      ),
       icon: child,
       tooltip: tooltip,
     );
@@ -112,7 +128,11 @@ class _SyncStatusIcon extends StatelessWidget {
     };
   }
 
-  void _showDetails(BuildContext context) {
+  static void showDetailsSheet(
+    BuildContext context, {
+    required SyncSnapshot snapshot,
+    AuthSession? session,
+  }) {
     if (!snapshot.cloudSyncEnabled) {
       _showLocalOnlySheet(context);
       return;
@@ -177,7 +197,7 @@ class _SyncStatusIcon extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
-                            child: Text(
+                            child: SelectableText(
                               SyncDisplayMessage.dedupe(snapshot.blockReason)!,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: scheme.onErrorContainer,
@@ -293,7 +313,7 @@ class _SyncStatusIcon extends StatelessWidget {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (_) =>
-                                SyncConflictsPage(session: session!),
+                                SyncConflictsPage(session: session),
                           ),
                         );
                       },
@@ -308,7 +328,7 @@ class _SyncStatusIcon extends StatelessWidget {
                     FilledButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
-                        sl<SyncService>().scheduleSync(shopId: session!.shop.id);
+                        sl<SyncService>().scheduleSync(shopId: session.shop.id);
                       },
                       icon: const Icon(Icons.sync_outlined),
                       label: const Text('Relancer la synchronisation'),
@@ -323,7 +343,7 @@ class _SyncStatusIcon extends StatelessWidget {
     );
   }
 
-  void _showLocalOnlySheet(BuildContext context) {
+  static void _showLocalOnlySheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,

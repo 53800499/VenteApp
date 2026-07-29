@@ -6,6 +6,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/utils/benin_day_range.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -77,6 +79,7 @@ class _AuditJournalView extends StatelessWidget {
             onPressed: () => _openFilters(context),
             icon: const Icon(Icons.filter_list),
           ),
+          const AppHeaderActions(),
         ],
       ),
       body: Column(
@@ -99,7 +102,6 @@ class _AuditJournalView extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: InputChip(
                     label: const Text('Filtres actifs'),
-                    deleteIcon: const Icon(Icons.close, size: 18),
                     onDeleted: () => context
                         .read<AuditJournalBloc>()
                         .add(const AuditJournalFiltersCleared()),
@@ -136,7 +138,7 @@ class _AuditJournalView extends StatelessWidget {
               if (state.status == AuditJournalStatus.loading &&
                   state.items.isEmpty) {
                 return const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
+                  child: SaleListSkeleton(),
                 );
               }
 

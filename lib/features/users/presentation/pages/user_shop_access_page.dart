@@ -7,6 +7,8 @@ import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/action_feedback.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -187,7 +189,10 @@ class _UserShopAccessPageState extends State<UserShopAccessPage> {
         access?.roleLabel ?? _roleLabelForCode(widget.globalRoleCode);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Boutiques — ${widget.userName}')),
+      appBar: AppBar(
+        title: Text('Boutiques — ${widget.userName}'),
+        actions: const [AppHeaderActions()],
+      ),
       body: Column(
         children: [
           const OfflineModeBanner(
@@ -209,16 +214,7 @@ class _UserShopAccessPageState extends State<UserShopAccessPage> {
 
   Widget _buildBody(String globalRoleLabel) {
     if (_loading) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: AppSpacing.md),
-            Text('Chargement des accès…'),
-          ],
-        ),
-      );
+      return const SaleListSkeleton();
     }
 
     if (_error != null) {

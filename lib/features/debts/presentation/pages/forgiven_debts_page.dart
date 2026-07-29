@@ -6,6 +6,8 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
+import '../../../../shared/components/app_header_actions.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -24,7 +26,10 @@ class ForgivenDebtsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dettes pardonnées'),
-        actions: const [ModuleHelpButton(articleId: 'debts')],
+        actions: const [
+          ModuleHelpButton(articleId: 'debts'),
+          AppHeaderActions(),
+        ],
       ),
       body: ForgivenDebtsList(session: session),
     );
@@ -123,7 +128,7 @@ class _ForgivenDebtsListState extends State<ForgivenDebtsList> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SaleListSkeleton();
     }
     if (_error != null) {
       return Center(

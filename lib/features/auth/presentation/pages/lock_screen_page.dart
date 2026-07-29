@@ -7,6 +7,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
+import '../../../../features/onboarding/presentation/pages/splash_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../widgets/pin_pad.dart';
 
@@ -93,10 +94,11 @@ class _LockScreenPageState extends State<LockScreenPage> {
       },
       builder: (context, state) {
         if (state is! AuthLocked) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          // Transition vers une autre page — afficher le splash branded
+          // plutôt qu'un spinner vide pour éviter le flash blanc.
+          return const SplashPage();
         }
+
 
         final lockScreen = state.lockScreen;
         _syncSelectedUser(lockScreen);

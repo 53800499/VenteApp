@@ -8,6 +8,7 @@ import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/skeleton_loaders.dart';
 import '../../domain/entities/dashboard_entities.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../widgets/kpi_card.dart';
@@ -47,9 +48,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         return switch (state) {
-          DashboardInitial() || DashboardLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
+          DashboardInitial() || DashboardLoading() => const DashboardSkeleton(),
           DashboardFailure(:final message) => Center(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
