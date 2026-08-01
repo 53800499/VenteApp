@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/app_dropdown.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -242,21 +243,20 @@ class _FxNewOperationPageState extends State<FxNewOperationPage> {
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  DropdownButtonFormField<String>(
-                    // ignore: deprecated_member_use
-                    value: selectedForeign,
-                    decoration: InputDecoration(
-                      labelText: _type == FxOperationType.sell
-                          ? 'Devise remise au client'
-                          : 'Devise apportée par le client',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.currency_exchange),
+                  AppDropdown<String>(
+                    labelText: _type == FxOperationType.sell
+                        ? 'Devise remise au client'
+                        : 'Devise apportée par le client',
+                    hintText: 'Sélectionner ou rechercher une devise',
+                    enableSearch: true,
+                    searchHintText: 'Rechercher une devise (USD, EUR, XOF...)',
+                    items: options,
+                    initialItem: selectedForeign,
+                    headerBuilder: (context, item, enabled) => Text(item, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(item),
                     ),
-                    items: options
-                        .map(
-                          (c) => DropdownMenuItem(value: c, child: Text(c)),
-                        )
-                        .toList(),
                     onChanged: (v) {
                       if (v == null) return;
                       setState(() {

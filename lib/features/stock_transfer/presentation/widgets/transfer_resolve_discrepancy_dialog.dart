@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/app_dropdown.dart';
 
 import '../../../../app/theme/app_tokens.dart';
 import '../../domain/entities/stock_transfer.dart';
@@ -116,51 +117,59 @@ class _TransferResolveDiscrepancyDialogState
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<String>(
-              initialValue: _reason,
-              decoration: const InputDecoration(
-                labelText: 'Motif',
-                border: OutlineInputBorder(),
-              ),
+            AppDropdown<String>(
+              labelText: 'Motif',
+              initialItem: _reason,
               items: const [
-                DropdownMenuItem(
-                  value: StockTransferDiscrepancyReason.loss,
-                  child: Text('Perte'),
-                ),
-                DropdownMenuItem(
-                  value: StockTransferDiscrepancyReason.breakage,
-                  child: Text('Casse'),
-                ),
-                DropdownMenuItem(
-                  value: StockTransferDiscrepancyReason.theft,
-                  child: Text('Vol'),
-                ),
-                DropdownMenuItem(
-                  value: StockTransferDiscrepancyReason.other,
-                  child: Text('Autre'),
-                ),
+                StockTransferDiscrepancyReason.loss,
+                StockTransferDiscrepancyReason.breakage,
+                StockTransferDiscrepancyReason.theft,
+                StockTransferDiscrepancyReason.other,
               ],
+              headerBuilder: (context, item, isExpanded) {
+                String label = 'Autre';
+                if (item == StockTransferDiscrepancyReason.loss) label = 'Perte';
+                if (item == StockTransferDiscrepancyReason.breakage) label = 'Casse';
+                if (item == StockTransferDiscrepancyReason.theft) label = 'Vol';
+                return Text(label, style: const TextStyle(fontWeight: FontWeight.w600));
+              },
+              listItemBuilder: (context, item, isSelected, onItemSelect) {
+                String label = 'Autre';
+                if (item == StockTransferDiscrepancyReason.loss) label = 'Perte';
+                if (item == StockTransferDiscrepancyReason.breakage) label = 'Casse';
+                if (item == StockTransferDiscrepancyReason.theft) label = 'Vol';
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(label),
+                );
+              },
               onChanged: (value) {
                 if (value != null) setState(() => _reason = value);
               },
             ),
             const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<String>(
-              initialValue: _resolution,
-              decoration: const InputDecoration(
-                labelText: 'Résolution',
-                border: OutlineInputBorder(),
-              ),
+            AppDropdown<String>(
+              labelText: 'Résolution',
+              initialItem: _resolution,
               items: const [
-                DropdownMenuItem(
-                  value: StockTransferDiscrepancyResolution.writeOff,
-                  child: Text('Perte acceptée (sans restock)'),
-                ),
-                DropdownMenuItem(
-                  value: StockTransferDiscrepancyResolution.restockSource,
-                  child: Text('Restocker la boutique source'),
-                ),
+                StockTransferDiscrepancyResolution.writeOff,
+                StockTransferDiscrepancyResolution.restockSource,
               ],
+              headerBuilder: (context, item, isExpanded) {
+                final label = item == StockTransferDiscrepancyResolution.writeOff
+                    ? 'Perte acceptée (sans restock)'
+                    : 'Restocker la boutique source';
+                return Text(label, style: const TextStyle(fontWeight: FontWeight.w600));
+              },
+              listItemBuilder: (context, item, isSelected, onItemSelect) {
+                final label = item == StockTransferDiscrepancyResolution.writeOff
+                    ? 'Perte acceptée (sans restock)'
+                    : 'Restocker la boutique source';
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(label),
+                );
+              },
               onChanged: (value) {
                 if (value != null) setState(() => _resolution = value);
               },

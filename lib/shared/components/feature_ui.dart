@@ -97,6 +97,8 @@ class ModuleActionTile extends StatelessWidget {
     required this.onTap,
     this.accentColor,
     this.destructive = false,
+    this.isLocked = false,
+    this.lockedBadgeText,
   });
 
   final IconData icon;
@@ -105,6 +107,8 @@ class ModuleActionTile extends StatelessWidget {
   final VoidCallback onTap;
   final Color? accentColor;
   final bool destructive;
+  final bool isLocked;
+  final String? lockedBadgeText;
 
   @override
   Widget build(BuildContext context) {
@@ -162,6 +166,34 @@ class ModuleActionTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (isLocked) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: Colors.amber.shade700.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock, size: 14, color: Colors.amber.shade800),
+                        if (lockedBadgeText != null) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            lockedBadgeText!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
                 Icon(
                   Icons.chevron_right,
                   size: AppSizes.iconLg,

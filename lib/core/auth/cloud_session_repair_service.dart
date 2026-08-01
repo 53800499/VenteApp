@@ -8,6 +8,7 @@ import '../constants/api_config.dart';
 import '../network/api_client.dart';
 import '../network/network_info.dart';
 import '../storage/auth_credentials_storage.dart';
+import '../security/device_identity_service.dart';
 import 'recent_pin_proof.dart';
 
 /// Résultat d'une tentative de réparation de session cloud.
@@ -21,8 +22,11 @@ enum CloudRepairOutcome {
   /// Nouveaux JWT obtenus via login serveur par PIN.
   pinLogin,
 
-  /// Refresh impossible et aucun PIN récent — attendre le prochain déverrouillage.
+  /// Refresh impossible et aucun PIN récent — la synchronisation cloud attend une ré-authentification.
   awaitingPinUnlock,
+
+  /// Reconnexion cloud en attente (alias explicite de awaitingPinUnlock).
+  cloudAuthenticationRequired,
 
   /// PIN récent fourni mais réparation impossible (refresh + login PIN échoués).
   failed,
@@ -32,31 +36,37 @@ enum CloudRepairOutcome {
 }
 
 typedef PinLoginRepairCallback = Future<bool> Function(RecentPinCredential proof);
+typedef DeviceRestoreRepairCallback = Future<bool> Function();
 
-/// Répare la session cloud : PIN récent → refresh → attente déverrouillage.
+/// Répare la session cloud : refresh → empreinte cryptographique d'appareil → preuve PIN récente en RAM si présente → attente reconnexion cloud.
 ///
-/// WhatsApp reste le mécanisme de récupération ultime, pas le renouvellement normal.
+/// Ne verrouille jamais l'application locale et n'exige pas de PIN pour continuer à travailler en local.
 class CloudSessionRepairService {
   CloudSessionRepairService({
     required AuthCredentialsStorage credentials,
     required ApiClient apiClient,
     required NetworkInfo networkInfo,
     required RecentPinProof recentPinProof,
+    DeviceIdentityService? deviceIdentityService,
   })  : _credentials = credentials,
         _apiClient = apiClient,
         _networkInfo = networkInfo,
-        _recentPinProof = recentPinProof;
+        _recentPinProof = recentPinProof,
+        _deviceIdentityService = deviceIdentityService;
 
   static const awaitingPinUnlockMessage =
-      'Votre session en ligne a expiré. Connectez-vous à Internet pour '
-      'poursuivre la synchronisation, ou saisissez votre code PIN.';
+      'Synchronisation cloud en pause — vos données restent sauvegardées sur cet appareil.';
+
+  static const awaitingCloudReconnectMessage = awaitingPinUnlockMessage;
 
   final AuthCredentialsStorage _credentials;
   final ApiClient _apiClient;
   final NetworkInfo _networkInfo;
   final RecentPinProof _recentPinProof;
+  final DeviceIdentityService? _deviceIdentityService;
 
   PinLoginRepairCallback? onPinLoginRepair;
+  DeviceRestoreRepairCallback? onDeviceRestoreRepair;
   Future<void> Function()? onSessionRestored;
   void Function()? onAwaitingPinUnlock;
   Future<void> Function()? onRepairExhausted;
@@ -64,9 +74,11 @@ class CloudSessionRepairService {
   bool _awaitingPinUnlock = false;
 
   bool get isAwaitingPinUnlock => _awaitingPinUnlock;
+  bool get isAwaitingCloudReconnect => _awaitingPinUnlock;
 
-  /// Notifie la UI quand l'état « en attente de déverrouillage PIN » change.
+  /// Notifie la UI quand l'état « en attente de reconnexion cloud » change.
   final ValueNotifier<bool> awaitingPinUnlockNotifier = ValueNotifier(false);
+  ValueNotifier<bool> get awaitingCloudReconnectNotifier => awaitingPinUnlockNotifier;
 
   /// Notifie la UI quand la réparation/reconnexion de session est en cours.
   final ValueNotifier<bool> repairInProgressNotifier = ValueNotifier(false);
@@ -126,12 +138,34 @@ class CloudSessionRepairService {
       }
     }
 
+    // Tenter la restauration silencieuse via l'identité/empreinte cryptographique de l'appareil
+    final deviceRestored = await _tryDeviceRestore();
+    if (deviceRestored) {
+      _clearAwaiting();
+      await onSessionRestored?.call();
+      return CloudRepairOutcome.refreshed;
+    }
+
     if (proof != null) {
       return CloudRepairOutcome.failed;
     }
 
     _markAwaiting();
     return CloudRepairOutcome.awaitingPinUnlock;
+  }
+
+  Future<bool> _tryDeviceRestore() async {
+    final identity = _deviceIdentityService;
+    final callback = onDeviceRestoreRepair;
+    if (identity == null && callback == null) return false;
+    try {
+      if (callback != null) {
+        return await callback().timeout(ApiConfig.recentPinRepairTimeout);
+      }
+      return false;
+    } on Object {
+      return false;
+    }
   }
 
   Future<bool> _tryRefresh() async {

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/services/fx_calculation_service.dart';
 import '../../domain/usecases/fx_exchange_usecases.dart';
@@ -168,7 +169,7 @@ class _FxRatesHistoryPageState extends State<FxRatesHistoryPage> {
                       denominator: rate.sellRateDenominator,
                     ),
                   );
-                  final when = DateFormat('dd/MM/yyyy HH:mm').format(
+                  final when = AppDateFormatter.formatDateTime(
                     DateTime.fromMillisecondsSinceEpoch(rate.effectiveAt),
                   );
 

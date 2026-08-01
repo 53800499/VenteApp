@@ -6,6 +6,7 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -269,7 +270,7 @@ class _SaleReceiptPageState extends State<SaleReceiptPage> {
                           borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                         child: Text(
-                          sale.receiptNumber ?? 'Vente #${sale.id}',
+                          sale.receiptNumber?.replaceAll('/', '') ?? 'Vente #${sale.id}',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -406,11 +407,7 @@ class _SaleReceiptPageState extends State<SaleReceiptPage> {
 
   String _formatDisplayDate(int ms) {
     final dt = DateTime.fromMillisecondsSinceEpoch(ms);
-    final d = dt.day.toString().padLeft(2, '0');
-    final m = dt.month.toString().padLeft(2, '0');
-    final h = dt.hour.toString().padLeft(2, '0');
-    final min = dt.minute.toString().padLeft(2, '0');
-    return '$d/$m/${dt.year} à $h:$min';
+    return AppDateFormatter.formatDateTime(dt);
   }
 }
 

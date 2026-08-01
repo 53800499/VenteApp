@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../../../shared/components/app_dropdown.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -657,26 +659,21 @@ class _ProductFormPageState extends State<ProductFormPage> {
                                 : null,
                           ),
                           const SizedBox(height: AppSpacing.md),
-                          DropdownButtonFormField<int>(
-                            value: _categoryId,
-                            decoration: const InputDecoration(
-                              labelText: 'Catégorie',
-                              prefixIcon: Icon(Icons.category_outlined),
+                          AppDropdown<ProductCategory>(
+                            labelText: 'Catégorie',
+                            hintText: 'Sélectionner ou rechercher une catégorie',
+                            enableSearch: true,
+                            searchHintText: 'Rechercher une catégorie...',
+                            items: _categories,
+                            initialItem: _categories.where((c) => c.id == _categoryId).firstOrNull,
+                            headerBuilder: (context, item, enabled) => Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                            listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(item.name),
                             ),
-                            items: _categories
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c.id,
-                                    child: Text(c.name),
-                                  ),
-                                )
-                                .toList(),
                             onChanged: _isLoading
-                                ? null
-                                : (value) =>
-                                    setState(() => _categoryId = value),
-                            validator: (v) =>
-                                v == null ? 'Catégorie requise' : null,
+                                ? (v) {}
+                                : (v) => setState(() => _categoryId = v?.id),
                           ),
                           const SizedBox(height: AppSpacing.md),
                           TextFormField(

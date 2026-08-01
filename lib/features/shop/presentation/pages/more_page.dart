@@ -6,6 +6,7 @@ import '../../../../shared/components/feature_ui.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
+import '../../../../core/licensing/domain/module_access_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/widgets/identity_context_card.dart';
@@ -30,6 +31,10 @@ import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
+import '../../../subscription/presentation/pages/subscription_page.dart';
+import '../../../subscription/domain/entities/subscription_details.dart';
+import '../../../subscription/domain/services/subscription_controller.dart';
+import '../../../subscription/presentation/widgets/module_upsell_dialog.dart';
 import 'shop_list_page.dart';
 
 class MorePage extends StatelessWidget {
@@ -115,253 +120,400 @@ class MorePage extends StatelessWidget {
         Permission.fxExchangeRead,
       );
 
+  bool get _canManageSubscription => session.user.role == UserRole.owner;
+
+  void _openModuleIfAuthorized(
+    BuildContext context, {
+    required ArikeModule module,
+    required String moduleTitle,
+    required VoidCallback onNavigate,
+  }) {
+    ensureSubscriptionDependencies();
+    final controller = sl<SubscriptionController>();
+
+    if (controller.isModuleGranted(module)) {
+      onNavigate();
+    } else {
+      final requiredPlan = controller.getRequiredPlanForModule(module);
+      final currentPlan = controller.details.planName;
+      ModuleUpsellDialog.show(
+        context,
+        moduleName: moduleTitle,
+        requiredPlanName: requiredPlan,
+        currentPlanName: currentPlan,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    ensureSubscriptionDependencies();
+    final subController = sl<SubscriptionController>();
+
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final activeSession =
             state is AuthAuthenticated ? state.session : session;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                children: [
-              IdentityContextCard(
-                session: activeSession,
-                onChangeIdentity: () => _confirmChangeIdentity(context),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              ModuleActionTile(
-                icon: Icons.menu_book_outlined,
-                title: 'Aide & guides',
-                subtitle:
-                    'Guides pas à pas pour chaque action de chaque module',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const HelpHubPage()),
-                ),
-              ),
-              if (_canManageShops)
-                ModuleActionTile(
-                  icon: Icons.store_mall_directory_outlined,
-                  title: 'Mes boutiques',
-                  subtitle:
-                      'Gérer vos boutiques ou touchez le nom en haut pour changer',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ShopListPage(session: activeSession),
+        return ValueListenableBuilder<SubscriptionDetails>(
+          valueListenable: subController,
+          builder: (context, subDetails, _) {
+            final reportsGranted = subController.isModuleGranted(ArikeModule.reports);
+            final expensesGranted = subController.isModuleGranted(ArikeModule.expenses);
+            final procurementGranted = subController.isModuleGranted(ArikeModule.purchases);
+            final salesOrdersGranted = subController.isModuleGranted(ArikeModule.purchases);
+            final multiShopGranted = subController.isModuleGranted(ArikeModule.multiShop);
+            final fxGranted = subController.isModuleGranted(ArikeModule.fxExchange);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    children: [
+                      IdentityContextCard(
+                        session: activeSession,
+                        onChangeIdentity: () => _confirmChangeIdentity(context),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+
+                  // ⭐ Section 1: Abonnement ARIKE (Owner Only)
+                  if (_canManageSubscription) ...[
+                    const _SectionHeader(
+                      title: 'Abonnement ARIKE',
+                      icon: Icons.workspace_premium_outlined,
+                    ),
+                    ModuleActionTile(
+                      icon: Icons.workspace_premium_outlined,
+                      title: 'Mon abonnement',
+                      subtitle:
+                          'Forfait ARIKE, modules débloqués, quotas et paiements',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const SubscriptionPage(),
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // 🏢 Section 2: Mon Entreprise & Équipe
+                  if (_canManageShops || _canManageUsers || _canViewRoles) ...[
+                    const _SectionHeader(
+                      title: 'Mon Entreprise & Équipe',
+                      icon: Icons.domain_outlined,
+                    ),
+                    if (_canManageShops)
+                      ModuleActionTile(
+                        icon: Icons.store_mall_directory_outlined,
+                        title: 'Mes boutiques',
+                        subtitle:
+                            'Gérer vos boutiques ou touchez le nom en haut pour changer',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ShopListPage(session: activeSession),
+                          ),
+                        ),
+                      ),
+                    if (_canManageUsers)
+                      ModuleActionTile(
+                        icon: Icons.people_outline,
+                        title: 'Équipe',
+                        subtitle: 'Vendeurs, lecteurs et droits',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => UserListPage(session: activeSession),
+                          ),
+                        ),
+                      ),
+                    if (_canViewRoles)
+                      ModuleActionTile(
+                        icon: Icons.admin_panel_settings_outlined,
+                        title: 'Rôles & permissions',
+                        subtitle: 'Catalogue des rôles et droits',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => RolesCatalogPage(session: activeSession),
+                          ),
+                        ),
+                      ),
+                  ],
+
+                  // 📊 Section 3: Gestion Commerciale & Analyses
+                  if (_canViewReports ||
+                      _canViewExpenses ||
+                      _canViewProcurement ||
+                      _canViewSalesOrders ||
+                      _canViewStockTransfer) ...[
+                    const _SectionHeader(
+                      title: 'Gestion Commerciale & Analyses',
+                      icon: Icons.analytics_outlined,
+                    ),
+                    if (_canViewReports)
+                      ModuleActionTile(
+                        icon: Icons.insights_outlined,
+                        title: 'Statistiques',
+                        subtitle: 'CA, bénéfice, top produits et recouvrement',
+                        isLocked: !reportsGranted,
+                        lockedBadgeText: 'PRO',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.reports,
+                          moduleTitle: 'Statistiques & Analyses',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ReportsPage(session: activeSession),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canViewReports)
+                      ModuleActionTile(
+                        icon: Icons.analytics_outlined,
+                        title: 'Analyse des ventes',
+                        subtitle: 'Prix pratiqués, produits vendus et écarts',
+                        isLocked: !reportsGranted,
+                        lockedBadgeText: 'PRO',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.reports,
+                          moduleTitle: 'Analyse des Ventes',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SalesAnalysisPage(session: activeSession),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canViewExpenses)
+                      ModuleActionTile(
+                        icon: Icons.payments_outlined,
+                        title: 'Dépenses',
+                        subtitle: 'Charges, caisse et bénéfice réel',
+                        isLocked: !expensesGranted,
+                        lockedBadgeText: 'ESSENTIEL',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.expenses,
+                          moduleTitle: 'Dépenses & Charges',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ExpensesPage(session: activeSession),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canViewProcurement)
+                      ModuleActionTile(
+                        icon: Icons.local_shipping_outlined,
+                        title: 'Approvisionnement',
+                        subtitle: 'Commandes fournisseurs, réceptions et stocks',
+                        isLocked: !procurementGranted,
+                        lockedBadgeText: 'ESSENTIEL',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.purchases,
+                          moduleTitle: 'Approvisionnement & Commandes',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ProcurementPage(session: activeSession),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canViewSalesOrders)
+                      ModuleActionTile(
+                        icon: Icons.assignment_outlined,
+                        title: 'Commandes clients',
+                        subtitle: 'Commandes, livraisons partielles et refus',
+                        isLocked: !salesOrdersGranted,
+                        lockedBadgeText: 'ESSENTIEL',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.purchases,
+                          moduleTitle: 'Commandes Clients',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => SalesOrdersPage(session: activeSession),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canViewStockTransfer)
+                      ModuleActionTile(
+                        icon: Icons.swap_horiz_outlined,
+                        title: 'Transferts inter-boutiques',
+                        subtitle: 'Envoyer ou recevoir du stock entre vos boutiques',
+                        isLocked: !multiShopGranted,
+                        lockedBadgeText: 'PRO',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.multiShop,
+                          moduleTitle: 'Transferts Inter-boutiques',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const StockTransferPage(),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+
+                  // 💰 Section 4: Finance & Outils
+                  if (_canViewCashSessions ||
+                      _canUseCalculators ||
+                      _canViewFxExchange ||
+                      _canViewDebts) ...[
+                    const _SectionHeader(
+                      title: 'Finance & Outils',
+                      icon: Icons.account_balance_wallet_outlined,
+                    ),
+                    if (_canViewCashSessions)
+                      ModuleActionTile(
+                        icon: Icons.point_of_sale_outlined,
+                        title: 'Gestion de caisse',
+                        subtitle: 'Ouverture, suivi et clôture de caisse',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                CashSessionsPage(session: activeSession),
+                          ),
+                        ),
+                      ),
+                    if (_canViewFxExchange &&
+                        !sl<FxWorkspaceModeController>().useFxPrimaryShell)
+                      ModuleActionTile(
+                        icon: Icons.currency_exchange,
+                        title: 'Bureau de change',
+                        subtitle: 'Opérations multi-devises, taux et caisses FX',
+                        isLocked: !fxGranted,
+                        lockedBadgeText: 'PRO',
+                        onTap: () => _openModuleIfAuthorized(
+                          context,
+                          module: ArikeModule.fxExchange,
+                          moduleTitle: 'Bureau de Change FX',
+                          onNavigate: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => FxExchangePage(session: activeSession),
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canUseCalculators)
+                      ModuleActionTile(
+                        icon: Icons.calculate_outlined,
+                        title: 'Calculateurs métiers',
+                        subtitle: 'Calculateur de carrelage, peinture, béton, etc.',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                CalculatorsPage(session: activeSession),
+                          ),
+                        ),
+                      ),
+                    if (_canViewDebts)
+                      ModuleActionTile(
+                        icon: Icons.volunteer_activism_outlined,
+                        title: 'Dettes pardonnées',
+                        subtitle: 'Motif, date et montant annulé',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ForgivenDebtsPage(session: activeSession),
+                          ),
+                        ),
+                      ),
+                  ],
+
+                  // ⚙️ Section 5: Administration & Sécurité
+                  const _SectionHeader(
+                    title: 'Administration & Assistance',
+                    icon: Icons.settings_outlined,
+                  ),
+                  ModuleActionTile(
+                    icon: Icons.menu_book_outlined,
+                    title: 'Aide & guides',
+                    subtitle:
+                        'Guides pas à pas pour chaque action de chaque module',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const HelpHubPage()),
                     ),
                   ),
-                ),
-              if (_canManageUsers)
-                ModuleActionTile(
-                  icon: Icons.people_outline,
-                  title: 'Équipe',
-                  subtitle: 'Vendeurs, lecteurs et droits',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => UserListPage(session: activeSession),
+                  if (_canManageSettings)
+                    ModuleActionTile(
+                      icon: Icons.tune_outlined,
+                      title: 'Paramètres',
+                      subtitle: 'Boutique, sécurité, reçus et sauvegarde',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SettingsPage(session: activeSession),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (_canViewRoles)
-                ModuleActionTile(
-                  icon: Icons.admin_panel_settings_outlined,
-                  title: 'Rôles & permissions',
-                  subtitle: 'Catalogue des rôles et droits',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => RolesCatalogPage(session: activeSession),
+                  if (_canManageSync)
+                    ModuleActionTile(
+                      icon: Icons.sync_problem_outlined,
+                      title: 'Conflits de synchronisation',
+                      subtitle: 'Résoudre les différences local / cloud',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              SyncConflictsPage(session: activeSession),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (_canViewReports)
-                ModuleActionTile(
-                  icon: Icons.insights_outlined,
-                  title: 'Statistiques',
-                  subtitle: 'CA, bénéfice, top produits et recouvrement',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ReportsPage(session: activeSession),
+                  if (_canManageAlerts)
+                    ModuleActionTile(
+                      icon: Icons.notifications_outlined,
+                      title: 'Alertes',
+                      subtitle: 'Stock, dettes, résumé du jour et sauvegarde',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              NotificationSettingsPage(session: activeSession),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (_canViewReports)
-                ModuleActionTile(
-                  icon: Icons.analytics_outlined,
-                  title: 'Analyse des ventes',
-                  subtitle: 'Prix pratiqués, produits vendus et écarts',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          SalesAnalysisPage(session: activeSession),
+                  if (_canViewAudit)
+                    ModuleActionTile(
+                      icon: Icons.history_outlined,
+                      title: 'Journal d\'audit',
+                      subtitle: 'Actions sensibles — patron uniquement',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AuditJournalPage(session: activeSession),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              if (_canViewExpenses)
-                ModuleActionTile(
-                  icon: Icons.payments_outlined,
-                  title: 'Dépenses',
-                  subtitle: 'Charges, caisse et bénéfice réel',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ExpensesPage(session: activeSession),
+                  if (ProductionMessagePolicy.showServerConfiguration)
+                    ModuleActionTile(
+                      icon: Icons.cloud_outlined,
+                      title: 'Connexion cloud (dev)',
+                      subtitle: 'Configuration avancée du service en ligne',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ApiSettingsPage()),
+                      ),
                     ),
+
+                  // 🔐 Section 6: Session
+                  const _SectionHeader(
+                    title: 'Session & Compte',
+                    icon: Icons.lock_person_outlined,
                   ),
-                ),
-              if (_canViewProcurement)
-                ModuleActionTile(
-                  icon: Icons.local_shipping_outlined,
-                  title: 'Approvisionnement',
-                  subtitle: 'Commandes fournisseurs, réceptions et stocks',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ProcurementPage(session: activeSession),
-                    ),
+                  ModuleActionTile(
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Verrouiller',
+                    subtitle: 'Retour à l\'écran PIN (session conservée)',
+                    onTap: () =>
+                        context.read<AuthBloc>().add(const AuthAppLockedRequested()),
                   ),
-                ),
-              if (_canViewSalesOrders)
-                ModuleActionTile(
-                  icon: Icons.assignment_outlined,
-                  title: 'Commandes clients',
-                  subtitle: 'Commandes, livraisons partielles et refus',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SalesOrdersPage(session: activeSession),
-                    ),
+                  ModuleActionTile(
+                    icon: Icons.logout_rounded,
+                    title: 'Déconnexion',
+                    subtitle: 'Quitter cette identité — reconnexion WhatsApp',
+                    destructive: true,
+                    onTap: () => _confirmLogout(context, activeSession),
                   ),
-                ),
-              if (_canViewStockTransfer)
-                ModuleActionTile(
-                  icon: Icons.swap_horiz_outlined,
-                  title: 'Transferts inter-boutiques',
-                  subtitle: 'Envoyer ou recevoir du stock entre vos boutiques',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const StockTransferPage(),
-                    ),
-                  ),
-                ),
-              if (_canViewCashSessions)
-                ModuleActionTile(
-                  icon: Icons.point_of_sale_outlined,
-                  title: 'Gestion de caisse',
-                  subtitle: 'Ouverture, suivi et clôture de caisse',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          CashSessionsPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canUseCalculators)
-                ModuleActionTile(
-                  icon: Icons.calculate_outlined,
-                  title: 'Calculateurs métiers',
-                  subtitle: 'Calculateur de carrelage, peinture, béton, etc.',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          CalculatorsPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canViewFxExchange &&
-                  !sl<FxWorkspaceModeController>().useFxPrimaryShell)
-                ModuleActionTile(
-                  icon: Icons.currency_exchange,
-                  title: 'Bureau de change',
-                  subtitle: 'Opérations multi-devises, taux et caisses FX',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          FxExchangePage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canViewDebts)
-                ModuleActionTile(
-                  icon: Icons.volunteer_activism_outlined,
-                  title: 'Dettes pardonnées',
-                  subtitle: 'Motif, date et montant annulé',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          ForgivenDebtsPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canManageSettings)
-                ModuleActionTile(
-                  icon: Icons.tune_outlined,
-                  title: 'Paramètres',
-                  subtitle: 'Boutique, sécurité, reçus et sauvegarde',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SettingsPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canManageSync)
-                ModuleActionTile(
-                  icon: Icons.sync_problem_outlined,
-                  title: 'Conflits de synchronisation',
-                  subtitle: 'Résoudre les différences local / cloud',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          SyncConflictsPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canManageAlerts)
-                ModuleActionTile(
-                  icon: Icons.notifications_outlined,
-                  title: 'Alertes',
-                  subtitle: 'Stock, dettes, résumé du jour et sauvegarde',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          NotificationSettingsPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (_canViewAudit)
-                ModuleActionTile(
-                  icon: Icons.history_outlined,
-                  title: 'Journal d\'audit',
-                  subtitle: 'Actions sensibles — patron uniquement',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => AuditJournalPage(session: activeSession),
-                    ),
-                  ),
-                ),
-              if (ProductionMessagePolicy.showServerConfiguration)
-                ModuleActionTile(
-                  icon: Icons.cloud_outlined,
-                  title: 'Connexion cloud (dev)',
-                  subtitle: 'Configuration avancée du service en ligne',
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ApiSettingsPage()),
-                  ),
-                ),
-              ModuleActionTile(
-                icon: Icons.lock_outline_rounded,
-                title: 'Verrouiller',
-                subtitle: 'Retour à l\'écran PIN (session conservée)',
-                onTap: () =>
-                    context.read<AuthBloc>().add(const AuthAppLockedRequested()),
-              ),
-              ModuleActionTile(
-                icon: Icons.logout_rounded,
-                title: 'Déconnexion',
-                subtitle: 'Quitter cette identité — reconnexion WhatsApp',
-                destructive: true,
-                onTap: () => _confirmLogout(context, activeSession),
-              ),
                 ],
               ),
             ),
@@ -369,6 +521,8 @@ class MorePage extends StatelessWidget {
         );
       },
     );
+  },
+);
   }
 
   Future<void> _confirmChangeIdentity(BuildContext context) async {
@@ -426,5 +580,40 @@ class MorePage extends StatelessWidget {
     if (confirmed == true && context.mounted) {
       context.read<AuthBloc>().add(const AuthLogoutRequested());
     }
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.icon,
+  });
+
+  final String title;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.md,
+        bottom: AppSpacing.xs,
+        left: 4,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colorScheme.primary),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+          ),
+        ],
+      ),
+    );
   }
 }

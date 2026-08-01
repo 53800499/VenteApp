@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/cash_session_entities.dart';
 import '../../domain/usecases/cash_session_usecases.dart';
@@ -115,7 +116,6 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
   }
 
   Widget _buildBody(BuildContext context, CashSession s) {
-    final dateFmt = DateFormat('dd/MM/yyyy HH:mm');
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
@@ -126,14 +126,14 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Session du ${dateFmt.format(DateTime.fromMillisecondsSinceEpoch(s.openedAt))}',
+                  'Session du ${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.openedAt))}',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 Text('Ouverte par ${s.openedByName}'),
                 if (s.closedByName != null && s.closedAt != null)
                   Text(
                     'Clôturée par ${s.closedByName} le '
-                    '${dateFmt.format(DateTime.fromMillisecondsSinceEpoch(s.closedAt!))}',
+                    '${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.closedAt!))}',
                   ),
                 const Divider(),
                 _row('Fond initial espèces', s.openingCash),

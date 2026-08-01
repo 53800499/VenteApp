@@ -3,6 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../app/di/injection_container.dart';
+import '../../../../core/licensing/domain/module_access_guard.dart';
+import '../../../subscription/domain/services/subscription_controller.dart';
+import '../../../subscription/presentation/widgets/module_upsell_dialog.dart';
+
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../help/presentation/pages/help_article_page.dart';
@@ -63,8 +68,8 @@ class VoiceListenStatusPanel extends StatelessWidget {
       headline = 'Analyse…';
       subtitle = 'Patientez un instant.';
     } else if (listening) {
-      bannerBg = scheme.errorContainer;
-      bannerFg = scheme.onErrorContainer;
+      bannerBg = scheme.primaryContainer;
+      bannerFg = scheme.onPrimaryContainer;
       icon = Icons.mic;
       headline = 'Parlez maintenant';
       subtitle = hasPartial
@@ -110,7 +115,7 @@ class VoiceListenStatusPanel extends StatelessWidget {
             color: bannerBg,
             borderRadius: BorderRadius.circular(14),
             border: listening
-                ? Border.all(color: scheme.error.withValues(alpha: 0.55), width: 2)
+                ? Border.all(color: scheme.primary.withValues(alpha: 0.55), width: 2)
                 : null,
           ),
           child: Column(
@@ -837,12 +842,27 @@ class VoiceCaptureButton extends StatelessWidget {
           tooltip: listening
               ? 'Écoute en cours…'
               : 'Saisie vocale',
-          onPressed: busy
-              ? () => context.read<VoiceInputCubit>().cancelListening()
-              : () => onCapture(),
+          onPressed: () {
+            ensureSubscriptionDependencies();
+            final controller = sl<SubscriptionController>();
+            if (!controller.isModuleGranted(ArikeModule.assistant)) {
+              ModuleUpsellDialog.show(
+                context,
+                moduleName: 'Assistant Vocal ARIKE',
+                requiredPlanName: 'ARIKE Pro (ou Option à la carte)',
+                currentPlanName: controller.details.planName,
+              );
+              return;
+            }
+            if (busy) {
+              context.read<VoiceInputCubit>().cancelListening();
+            } else {
+              onCapture();
+            }
+          },
           icon: Icon(
             listening ? Icons.mic : Icons.mic_none,
-            color: listening ? Theme.of(context).colorScheme.error : null,
+            color: listening ? Theme.of(context).colorScheme.primary : null,
           ),
         );
       },
@@ -869,12 +889,12 @@ class VoiceListeningBanner extends StatelessWidget {
         final preparing = state.status == VoiceInputStatus.preparing;
         final scheme = Theme.of(context).colorScheme;
         final bg = listening
-            ? scheme.errorContainer
+            ? scheme.primaryContainer
             : preparing
                 ? scheme.surfaceContainerHighest
                 : scheme.primaryContainer;
         final fg = listening
-            ? scheme.onErrorContainer
+            ? scheme.onPrimaryContainer
             : preparing
                 ? scheme.onSurfaceVariant
                 : scheme.onPrimaryContainer;

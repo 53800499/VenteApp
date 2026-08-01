@@ -348,7 +348,7 @@ class _ProductListView extends StatelessWidget {
           child: ResponsiveBuilder(
             builder: (context, screenType) {
               final horizontal = Breakpoints.horizontalPadding(screenType);
-              final bottomPadding = screenType.isTablet ? AppSpacing.lg : 100.0;
+              final bottomPadding = 110.0;
 
               if (screenType.isCompact) {
                 return ListView.separated(

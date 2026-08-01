@@ -88,7 +88,7 @@ abstract final class ProductionMessagePolicy {
       'ou utilisez la bannière de synchronisation.';
 
   static String cloudReconnectRequiredMessage() =>
-      'Connexion cloud requise. Saisissez votre PIN via la bannière '
+      'Connexion cloud requise. Cliquez sur la bannière cloud '
       'pour rétablir la synchronisation.';
 
   static String onlineRequiredMessage() =>

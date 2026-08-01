@@ -85,7 +85,7 @@ class SaleFeedback {
       title: 'Vente enregistrée',
       details: [
         if (sale.receiptNumber != null)
-          Text('Reçu : ${sale.receiptNumber}')
+          Text('Reçu : ${sale.receiptNumber!.replaceAll('/', '')}')
         else
           Text('Vente #${sale.id}'),
         Text('Total : ${formatFcfa(sale.totalAmount)}'),

@@ -59,7 +59,7 @@ class RemoteApiGuard {
     } on TimeoutException {
       throw const NetworkFailure(
         'Le service met trop de temps à répondre. Données locales affichées — '
-        'saisissez votre PIN via la bannière cloud pour rétablir la synchronisation.',
+        'cliquez sur la bannière cloud pour vérifier la synchronisation.',
       );
     }
   }

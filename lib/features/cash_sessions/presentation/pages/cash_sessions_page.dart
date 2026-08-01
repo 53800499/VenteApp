@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection_container.dart';
+import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/components/app_header_actions.dart';
@@ -280,7 +281,6 @@ class _ActiveSessionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = totals;
-    final dateFmt = DateFormat('dd/MM/yyyy HH:mm');
 
     return Card(
       child: Padding(
@@ -299,7 +299,7 @@ class _ActiveSessionCard extends StatelessWidget {
                   ),
                 ),
                 Chip(
-                  label: Text(dateFmt.format(
+                  label: Text(AppDateFormatter.formatDateTime(
                     DateTime.fromMillisecondsSinceEpoch(session.openedAt),
                   )),
                 ),
@@ -609,7 +609,6 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFmt = DateFormat('dd/MM/yyyy');
     final diff = row.totalDifference;
     final diffColor = diff == 0
         ? Colors.green
@@ -631,7 +630,7 @@ class _HistoryTile extends StatelessWidget {
             size: 20,
           ),
         ),
-        title: Text(dateFmt.format(
+        title: Text(AppDateFormatter.formatDate(
           DateTime.fromMillisecondsSinceEpoch(row.openedAt),
         )),
         subtitle: Text(

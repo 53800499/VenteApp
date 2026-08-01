@@ -104,6 +104,12 @@ class _IdentityContextCardState extends State<IdentityContextCard> {
             ] else ...[
               const SizedBox(height: AppSpacing.md),
               _InfoRow(
+                icon: Icons.workspace_premium_outlined,
+                label: 'Offre ARIKE',
+                value: '⭐ PREMIUM PRO',
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _InfoRow(
                 icon: Icons.badge_outlined,
                 label: 'Rôle',
                 value: showEffectiveRole

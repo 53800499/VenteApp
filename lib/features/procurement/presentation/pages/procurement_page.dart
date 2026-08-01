@@ -703,7 +703,7 @@ class _OrdersList extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 80),
+        padding: const EdgeInsets.only(bottom: 110),
         itemCount: orders.length + 1, // +1 for summary banner
         itemBuilder: (context, index) {
           if (index == 0) {

@@ -4,7 +4,7 @@ class ReceiptNumberService {
   const ReceiptNumberService();
 
   String generate(int shopDayCount, int timestamp) {
-    final datePart = formatBeninDate(timestamp).replaceAll('-', '');
+    final datePart = beninDayKey(timestamp);
     final seq = (shopDayCount + 1).toString().padLeft(4, '0');
     return 'REC-$datePart-$seq';
   }

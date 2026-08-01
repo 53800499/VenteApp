@@ -4,6 +4,7 @@ import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
@@ -310,15 +311,13 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
 
   Widget _buildContent(BuildContext context, Sale sale) {
     final dt = DateTime.fromMillisecondsSinceEpoch(sale.createdAt);
-    final date =
-        '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final date = AppDateFormatter.formatDateTime(dt);
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         ListTile(
-          title: Text(sale.receiptNumber ?? 'Vente #${sale.id}'),
+          title: Text(sale.receiptNumber?.replaceAll('/', '') ?? 'Vente #${sale.id}'),
           subtitle: Text(date),
           trailing: Text(
             formatFcfa(sale.totalAmount),

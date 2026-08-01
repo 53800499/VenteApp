@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/app_dropdown.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
@@ -305,29 +306,24 @@ class _UserShopAccessPageState extends State<UserShopAccessPage> {
                 AppSpacing.md,
                 AppSpacing.md,
               ),
-              child: DropdownButtonFormField<String?>(
+              child: AppDropdown<AssignableRole?>(
                 key: ValueKey('role-${row.shopId}-${row.accessRole}'),
-                initialValue: row.accessRole,
-                decoration: InputDecoration(
-                  labelText: 'Rôle dans cette boutique',
-                  helperText: row.accessRole == null
-                      ? 'Hérite du rôle global ($globalRoleLabel)'
-                      : 'Rôle spécifique : ${_roleLabelForCode(row.accessRole!)}',
+                labelText: 'Rôle dans cette boutique',
+                hintText: 'Sélectionner un rôle',
+                enableSearch: true,
+                searchHintText: 'Rechercher un rôle...',
+                items: [null, ..._assignableRoles.where((r) => r.code != widget.globalRoleCode)],
+                initialItem: _assignableRoles.where((r) => r.code == row.accessRole).firstOrNull,
+                headerBuilder: (context, item, enabled) => Text(
+                  item == null ? 'Rôle global ($globalRoleLabel)' : item.label,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('Rôle global ($globalRoleLabel)'),
-                  ),
-                  for (final role in _assignableRoles)
-                    if (role.code != widget.globalRoleCode)
-                      DropdownMenuItem<String?>(
-                        value: role.code,
-                        child: Text(role.label),
-                      ),
-                ],
+                listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(item == null ? 'Rôle global ($globalRoleLabel)' : item.label),
+                ),
                 onChanged: (value) {
-                  setState(() => row.accessRole = value);
+                  setState(() => row.accessRole = value?.code);
                 },
               ),
             ),

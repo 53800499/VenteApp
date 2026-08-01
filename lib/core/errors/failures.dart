@@ -87,10 +87,10 @@ class OfflineGraceExpiredFailure extends Failure {
         );
 }
 
-/// Session cloud expirée sans preuve PIN récente en mémoire.
+/// Session cloud expirée sans preuve ou jeton valide.
 class CloudReconnectRequiredFailure extends Failure {
   static const _defaultMessage =
-      'Connexion cloud requise. Saisissez votre PIN via la bannière '
+      'Connexion cloud requise. Cliquez sur la bannière cloud '
       'pour rétablir la synchronisation.';
 
   const CloudReconnectRequiredFailure([

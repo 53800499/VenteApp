@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/app_dropdown.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -240,28 +241,23 @@ class _PoFormPageState extends State<PoFormPage> {
                   validator: (v) => v == null || v.trim().isEmpty ? 'Requis' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
-
-                DropdownButtonFormField<int>(
-                  isExpanded: true,
-                  value: _selectedSupplierId,
-                  hint: const Text('Sélectionner un fournisseur'),
-                  decoration: const InputDecoration(
-                    labelText: 'Fournisseur *',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.storefront_outlined),
+                AppDropdown<Supplier>(
+                  labelText: 'Fournisseur *',
+                  hintText: 'Sélectionner ou rechercher un fournisseur',
+                  enableSearch: true,
+                  searchHintText: 'Rechercher un fournisseur...',
+                  items: suppliers,
+                  initialItem: suppliers.where((s) => s.id == _selectedSupplierId).firstOrNull,
+                  headerBuilder: (context, item, enabled) => Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(item.name),
                   ),
-                  items: suppliers.map((s) {
-                    return DropdownMenuItem<int>(
-                      value: s.id,
-                      child: Text(s.name),
-                    );
-                  }).toList(),
                   onChanged: (val) {
                     setState(() {
-                      _selectedSupplierId = val;
+                      _selectedSupplierId = val?.id;
                     });
                   },
-                  validator: (v) => v == null ? 'Requis' : null,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 OutlinedButton.icon(
@@ -517,20 +513,18 @@ class _PoFormPageState extends State<PoFormPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<dynamic>(
-                isExpanded: true,
-                value: selectedProduct,
-                hint: const Text('Sélectionner un produit'),
-                decoration: const InputDecoration(
-                  labelText: 'Produit *',
-                  border: OutlineInputBorder(),
+              AppDropdown<dynamic>(
+                labelText: 'Produit *',
+                hintText: 'Sélectionner ou rechercher un produit',
+                enableSearch: true,
+                searchHintText: 'Rechercher un produit...',
+                items: _allProducts,
+                initialItem: selectedProduct,
+                headerBuilder: (context, item, enabled) => Text(item.name as String, style: const TextStyle(fontWeight: FontWeight.w600)),
+                listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(item.name as String),
                 ),
-                items: _allProducts.map((p) {
-                  return DropdownMenuItem(
-                    value: p,
-                    child: Text(p.name as String),
-                  );
-                }).toList(),
                 onChanged: (val) async {
                   setStateDialog(() => selectedProduct = val);
                   if (val != null) {

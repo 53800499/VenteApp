@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../data/datasources/local/product_pricing_local_datasource.dart';
 import '../../domain/entities/product_pricing_entities.dart';
 
 String _formatDate(int ms) {
   final d = DateTime.fromMillisecondsSinceEpoch(ms).toLocal();
-  final day = d.day.toString().padLeft(2, '0');
-  final month = d.month.toString().padLeft(2, '0');
-  return '$day/$month/${d.year}';
+  return AppDateFormatter.formatDate(d);
 }
 
 class ProductPriceHistorySection extends StatefulWidget {

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -14,6 +14,7 @@ import 'pages/app_bootstrap_page.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
+import '../features/auth/presentation/pages/lock_screen_page.dart';
 import 'di/injection_container.dart';
 
 
@@ -31,7 +32,7 @@ class _ArikeAppState extends State<ArikeApp> with WidgetsBindingObserver {
   StreamSubscription<AuthState>? _authSub;
   final _navigatorKey = GlobalKey<NavigatorState>();
 
-
+  bool _isLockOverlayOpen = false;
 
   @override
 
@@ -47,6 +48,27 @@ class _ArikeAppState extends State<ArikeApp> with WidgetsBindingObserver {
     _authSub = _authBloc.stream.listen((state) {
       if (state is AuthAuthenticated) {
         unawaited(_cloudSession.refresh());
+        if (_isLockOverlayOpen) {
+          _isLockOverlayOpen = false;
+          if (_navigatorKey.currentState?.canPop() ?? false) {
+            _navigatorKey.currentState?.pop();
+          }
+        }
+      }
+      if (state is AuthLocked) {
+        if (!_isLockOverlayOpen) {
+          _isLockOverlayOpen = true;
+          _navigatorKey.currentState
+              ?.push(
+            MaterialPageRoute(
+              settings: const RouteSettings(name: '/lock-overlay'),
+              builder: (_) => const LockScreenPage(),
+            ),
+          )
+              .then((_) {
+            _isLockOverlayOpen = false;
+          });
+        }
       }
     });
 

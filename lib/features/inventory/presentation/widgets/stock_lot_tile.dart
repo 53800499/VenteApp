@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/inventory_lot_entities.dart';
 
 class StockLotTile extends StatelessWidget {
@@ -65,9 +66,6 @@ class StockLotTile extends StatelessWidget {
 
   String _formatTime(int timestampMs) {
     final time = DateTime.fromMillisecondsSinceEpoch(timestampMs);
-    return '${time.day.toString().padLeft(2, '0')}/'
-        '${time.month.toString().padLeft(2, '0')} '
-        '${time.hour.toString().padLeft(2, '0')}:'
-        '${time.minute.toString().padLeft(2, '0')}';
+    return AppDateFormatter.formatDateTimeShort(time);
   }
 }

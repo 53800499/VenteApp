@@ -20,6 +20,8 @@ import '../bloc/shop_list_bloc.dart';
 import '../widgets/shop_feedback.dart';
 import '../widgets/shop_switcher_sheet.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../subscription/domain/services/subscription_controller.dart';
+import '../../../subscription/presentation/widgets/module_upsell_dialog.dart';
 import 'shop_form_page.dart';
 
 class ShopListPage extends StatelessWidget {
@@ -279,6 +281,21 @@ class _ShopListView extends StatelessWidget {
   }
 
   Future<void> _openForm(BuildContext context, {ManagedShop? shop}) async {
+    if (shop == null) {
+      ensureSubscriptionDependencies();
+      final controller = sl<SubscriptionController>();
+      final state = context.read<ShopListBloc>().state;
+      final currentShops = state.shops.length;
+      if (currentShops >= controller.details.maxShops) {
+        ModuleUpsellDialog.show(
+          context,
+          moduleName: 'Boutiques Supplémentaires (${controller.details.maxShops} max autorisée(s))',
+          requiredPlanName: 'ARIKE Pro ou Business',
+          currentPlanName: controller.details.planName,
+        );
+        return;
+      }
+    }
     final bloc = context.read<ShopListBloc>();
     final result = await Navigator.of(context).push<ShopFormResult>(
       MaterialPageRoute(

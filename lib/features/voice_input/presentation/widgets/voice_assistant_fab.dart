@@ -24,9 +24,13 @@ class VoiceAssistantFab extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final theme = Theme.of(context);
     return FloatingActionButton.small(
       heroTag: heroTag,
       tooltip: 'Assistant vocal ARIKE',
+      backgroundColor: theme.colorScheme.primary,
+      foregroundColor: theme.colorScheme.onPrimary,
+      elevation: 4,
       onPressed: () {
         VoiceAssistantCoordinator(
           session: session,

@@ -91,6 +91,9 @@ class _LockScreenPageState extends State<LockScreenPage> {
         if (state is AuthLocked && state.errorMessage != null) {
           setState(() => _pin = '');
         }
+        if (state is AuthAuthenticated && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(true);
+        }
       },
       builder: (context, state) {
         if (state is! AuthLocked) {

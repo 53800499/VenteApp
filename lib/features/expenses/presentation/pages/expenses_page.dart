@@ -108,7 +108,12 @@ class _ExpensesView extends StatelessWidget {
                   context.read<ExpensesBloc>().add(const ExpensesLoadRequested());
                 },
                 child: ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    AppSpacing.md,
+                    110,
+                  ),
                   children: [
                     if (summary != null) ...[
                       _SummaryCards(summary: summary),

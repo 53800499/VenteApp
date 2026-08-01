@@ -19,6 +19,8 @@ import '../widgets/assignable_role_picker.dart';
 import '../widgets/user_feedback.dart';
 import '../pages/user_shop_access_page.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../subscription/domain/services/subscription_controller.dart';
+import '../../../subscription/presentation/widgets/module_upsell_dialog.dart';
 import 'user_form_page.dart';
 
 class UserListPage extends StatelessWidget {
@@ -274,6 +276,20 @@ class _UserListView extends StatelessWidget {
   }
 
   Future<void> _openCreateForm(BuildContext context) async {
+    ensureSubscriptionDependencies();
+    final controller = sl<SubscriptionController>();
+    final state = context.read<UserListBloc>().state;
+    final currentUsers = state.users.length;
+    if (currentUsers >= controller.details.maxUsers) {
+      ModuleUpsellDialog.show(
+        context,
+        moduleName: 'Membres d\'équipe supplémentaires (${controller.details.maxUsers} max autorisé(s))',
+        requiredPlanName: 'ARIKE Pro ou Business',
+        currentPlanName: controller.details.planName,
+      );
+      return;
+    }
+
     if (!await ensureCloudTrustedOperation(
       context,
       actionLabel: "Ajouter un membre d'équipe",

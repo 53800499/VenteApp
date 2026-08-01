@@ -18,10 +18,12 @@ import 'tables/stock_transfer_tables.dart';
 import 'tables/fx_exchange_tables.dart';
 import 'tables/sales_order_tables.dart';
 import 'tables/sale_replacement_tables.dart';
+import 'tables/license_tables.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(tables: [
+  LocalLicenses,
   Shops,
   Users,
   Settings,

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import '../../../../shared/components/app_dropdown.dart';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -319,49 +321,49 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                       },
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    DropdownButtonFormField<int>(
-                      value: _categoryId,
-                      decoration:
-                          const InputDecoration(labelText: 'Catégorie'),
-                      items: widget.categories
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.name),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _categoryId = v),
+                    AppDropdown<ExpenseCategory>(
+                      labelText: 'Catégorie',
+                      hintText: 'Sélectionner une catégorie',
+                      enableSearch: true,
+                      searchHintText: 'Rechercher une catégorie...',
+                      items: widget.categories,
+                      initialItem: widget.categories.where((c) => c.id == _categoryId).firstOrNull,
+                      headerBuilder: (context, item, enabled) => Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(item.name),
+                      ),
+                      onChanged: (v) => setState(() => _categoryId = v?.id),
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    DropdownButtonFormField<ExpensePaymentMethod>(
-                      value: _paymentMethod,
-                      decoration:
-                          const InputDecoration(labelText: 'Paiement'),
-                      items: ExpensePaymentMethod.values
-                          .map(
-                            (m) => DropdownMenuItem(
-                              value: m,
-                              child: Text(m.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _paymentMethod = v!),
+                    AppDropdown<ExpensePaymentMethod>(
+                      labelText: 'Paiement',
+                      hintText: 'Mode de paiement',
+                      items: ExpensePaymentMethod.values,
+                      initialItem: _paymentMethod,
+                      headerBuilder: (context, item, enabled) => Text(item.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(item.label),
+                      ),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _paymentMethod = v);
+                      },
                     ),
                     const SizedBox(height: AppSpacing.sm),
-                    DropdownButtonFormField<ExpenseRepeatSchedule>(
-                      value: _repeat,
-                      decoration:
-                          const InputDecoration(labelText: 'Récurrence'),
-                      items: ExpenseRepeatSchedule.values
-                          .map(
-                            (r) => DropdownMenuItem(
-                              value: r,
-                              child: Text(r.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _repeat = v!),
+                    AppDropdown<ExpenseRepeatSchedule>(
+                      labelText: 'Récurrence',
+                      hintText: 'Sélectionner récurrence',
+                      items: ExpenseRepeatSchedule.values,
+                      initialItem: _repeat,
+                      headerBuilder: (context, item, enabled) => Text(item.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(item.label),
+                      ),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _repeat = v);
+                      },
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     ListTile(

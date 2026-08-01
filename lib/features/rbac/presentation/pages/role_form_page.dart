@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/app_dropdown.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -233,23 +234,19 @@ class _RoleFormPageState extends State<RoleFormPage> {
           ),
           if (!widget.isEditing && parents.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.md),
-            DropdownButtonFormField<String?>(
-              initialValue: _parentRoleCode,
-              decoration: const InputDecoration(
-                labelText: 'Hériter d\'un rôle (optionnel)',
+            AppDropdown<RoleCatalogItem?>(
+              labelText: 'Hériter d\'un rôle (optionnel)',
+              hintText: 'Sélectionner un rôle parent',
+              enableSearch: true,
+              searchHintText: 'Rechercher un rôle...',
+              items: [null, ...parents],
+              initialItem: parents.where((r) => r.code == _parentRoleCode).firstOrNull,
+              headerBuilder: (context, item, enabled) => Text(item == null ? 'Aucun' : item.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(item == null ? 'Aucun' : item.label),
               ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Aucun'),
-                ),
-                for (final role in parents)
-                  DropdownMenuItem<String?>(
-                    value: role.code,
-                    child: Text(role.label),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _parentRoleCode = value),
+              onChanged: (value) => setState(() => _parentRoleCode = value?.code),
             ),
           ],
           const SizedBox(height: AppSpacing.lg),

@@ -149,9 +149,11 @@ class _SaleListPageState extends State<SaleListPage> {
                                     title: 'Aucune vente enregistrée',
                                   )
                                 : ListView.separated(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.md,
-                                      vertical: AppSpacing.sm,
+                                    padding: const EdgeInsets.fromLTRB(
+                                      AppSpacing.md,
+                                      AppSpacing.sm,
+                                      AppSpacing.md,
+                                      110,
                                     ),
                                     itemCount: state.sales.length,
                                     separatorBuilder: (_, __) =>
@@ -184,14 +186,24 @@ class _SaleListPageState extends State<SaleListPage> {
                       FloatingActionButton.extended(
                         heroTag: 'quick_sale',
                         onPressed: () => _openQuickSale(context),
-                        icon: const Icon(Icons.flash_on_outlined),
-                        label: const Text('Rapide'),
+                        backgroundColor: const Color(0xFFF59E0B),
+                        foregroundColor: Colors.white,
+                        icon: const Icon(Icons.flash_on_rounded),
+                        label: const Text(
+                          'Rapide',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                       FloatingActionButton.extended(
                         heroTag: 'new_sale',
                         onPressed: () => _openNewSale(context),
-                        icon: const Icon(Icons.add_shopping_cart_outlined),
-                        label: const Text('Nouvelle vente'),
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        icon: const Icon(Icons.add_shopping_cart_rounded),
+                        label: const Text(
+                          'Nouvelle vente',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ]
                   : const [],
@@ -250,7 +262,7 @@ class _SaleListTile extends StatelessWidget {
     final isCompact = context.isCompactScreen;
 
     final titleWidget = Text(
-      sale.receiptNumber ?? 'Vente #${sale.id}',
+      sale.receiptNumber?.replaceAll('/', '') ?? 'Vente #${sale.id}',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(

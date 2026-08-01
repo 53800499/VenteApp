@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/inventory_entities.dart';
 
 class StockMovementTile extends StatelessWidget {
@@ -62,9 +63,6 @@ class StockMovementTile extends StatelessWidget {
 
   String _formatTime(int timestampMs) {
     final time = DateTime.fromMillisecondsSinceEpoch(timestampMs);
-    return '${time.day.toString().padLeft(2, '0')}/'
-        '${time.month.toString().padLeft(2, '0')} '
-        '${time.hour.toString().padLeft(2, '0')}:'
-        '${time.minute.toString().padLeft(2, '0')}';
+    return AppDateFormatter.formatDateTimeShort(time);
   }
 }

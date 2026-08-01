@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/fx_exchange_entities.dart';
 import '../../domain/services/fx_calculation_service.dart';
 
@@ -35,7 +36,7 @@ String? fxAppliedRateLabel(FxOperation op) {
 
 String fxFormatDateTime(int ms, {bool full = true}) {
   final dt = DateTime.fromMillisecondsSinceEpoch(ms);
-  return DateFormat(full ? 'dd/MM/yyyy HH:mm' : 'HH:mm').format(dt);
+  return full ? AppDateFormatter.formatDateTime(dt) : AppDateFormatter.formatTime(dt);
 }
 
 class FxOperationHistoryTile extends StatelessWidget {

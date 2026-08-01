@@ -46,5 +46,5 @@ String formatBeninDate([int? now]) {
   final y = local.year;
   final m = local.month.toString().padLeft(2, '0');
   final d = local.day.toString().padLeft(2, '0');
-  return '$y-$m-$d';
+  return '$d/$m/$y';
 }

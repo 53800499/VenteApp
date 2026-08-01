@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/app_dropdown.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -71,16 +72,21 @@ class _SalesOrderFormPageState extends State<SalesOrderFormPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<Product>(
-                decoration: const InputDecoration(labelText: 'Produit'),
-                items: _products
-                    .map(
-                      (p) => DropdownMenuItem(
-                        value: p,
-                        child: Text('${p.name} (stock ${p.quantityInStock})'),
-                      ),
-                    )
-                    .toList(),
+              AppDropdown<Product>(
+                labelText: 'Produit',
+                hintText: 'Sélectionner ou rechercher un produit',
+                enableSearch: true,
+                searchHintText: 'Rechercher un produit...',
+                items: _products,
+                initialItem: selected,
+                headerBuilder: (context, item, enabled) => Text(
+                  '${item.name} (stock ${item.quantityInStock})',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text('${item.name} — ${item.priceSell} FCFA (stock ${item.quantityInStock})'),
+                ),
                 onChanged: (p) {
                   selected = p;
                   if (p != null) {

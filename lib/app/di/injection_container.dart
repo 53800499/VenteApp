@@ -2,6 +2,9 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../features/subscription/domain/services/subscription_controller.dart';
+import '../../features/subscription/data/services/fedapay_remote_service.dart';
+
 import '../../core/audit/local_audit_writer.dart';
 import '../../core/backup/google_drive_backup_service.dart';
 import '../../core/backup/shop_backup_service.dart';
@@ -27,6 +30,7 @@ import '../../features/fx_exchange/data/repositories/fx_exchange_repository_impl
 import '../../features/fx_exchange/domain/repositories/fx_exchange_repository.dart';
 import '../../features/fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../features/fx_exchange/presentation/fx_workspace_mode_controller.dart';
+import '../../core/security/device_identity_service.dart';
 import '../../core/auth/app_lock_controller.dart';
 import '../../core/auth/cloud_session_coordinator.dart';
 import '../../core/auth/cloud_session_controller.dart';
@@ -807,6 +811,7 @@ Future<void> initDependencies() async {
         credentials: sl<AuthCredentialsStorage>(),
         activeShop: sl<ActiveShopContext>(),
       ));
+  sl.registerLazySingleton(() => FedaPayRemoteService(client: sl()));
   sl.registerLazySingleton(
     () => RemoteApiGuard(
       networkInfo: sl(),
@@ -821,11 +826,15 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton(RecentPinProof.new);
   sl.registerLazySingleton(
+    () => DeviceIdentityService(deviceIdStorage: sl()),
+  );
+  sl.registerLazySingleton(
     () => CloudSessionRepairService(
       credentials: sl(),
       apiClient: sl(),
       networkInfo: sl(),
       recentPinProof: sl(),
+      deviceIdentityService: sl(),
     ),
   );
   sl.registerLazySingleton(
@@ -1294,4 +1303,13 @@ Future<void> initDependencies() async {
 Future<void> initDeferredServices() async {
   await sl<NotificationOrchestrator>().initialize();
   sl<SyncService>().start();
+}
+
+/// Enregistre le contrôleur d'abonnement si absent.
+void ensureSubscriptionDependencies() {
+  if (!sl.isRegistered<SubscriptionController>()) {
+    sl.registerLazySingleton<SubscriptionController>(
+      () => SubscriptionController(),
+    );
+  }
 }
