@@ -30,6 +30,7 @@ import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
 import '../../../fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../subscription/presentation/widgets/trial_exploration_modal.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../bloc/dashboard_bloc.dart';
 import 'dashboard_page.dart';
@@ -69,6 +70,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
       await _loadFxWorkspaceMode();
       if (mounted) {
         await maybeShowCloudSessionStartupNotice(context);
+        if (widget.session.user.role == UserRole.owner) {
+          await TrialExplorationModal.show(context);
+        }
       }
     });
   }

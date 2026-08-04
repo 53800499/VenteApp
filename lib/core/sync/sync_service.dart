@@ -284,6 +284,14 @@ class SyncService {
       apiFailure = NetworkFailure('$error');
     }
 
+    if (apiFailure != null) {
+      indicator = _resolveIndicator(
+        pendingCount: pendingCount,
+        conflictCount: conflictCount,
+        hasAuthFailure: true,
+      );
+    }
+
     if (_ports.isEmpty && apiFailure != null) {
       _emit(
         SyncSnapshot(
@@ -392,6 +400,7 @@ class SyncService {
           pendingCount: pendingCount,
           conflictCount: conflictsAfter,
           hasPullFailures: hasFailures,
+          hasAuthFailure: apiFailure != null,
         ),
         pendingQueueCount: pendingCount,
         shopId: shopId,
@@ -405,25 +414,18 @@ class SyncService {
 
 
   SyncIndicatorState _resolveIndicator({
-
     required int pendingCount,
-
     required int conflictCount,
-
     bool hasPullFailures = false,
-
+    bool hasAuthFailure = false,
   }) {
-
     if (conflictCount > 0) return SyncIndicatorState.conflict;
 
-    if (pendingCount > 0 || hasPullFailures) {
-
+    if (pendingCount > 0 || hasPullFailures || hasAuthFailure) {
       return SyncIndicatorState.pending;
-
     }
 
     return SyncIndicatorState.synced;
-
   }
 
 

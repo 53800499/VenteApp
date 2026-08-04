@@ -39,6 +39,8 @@ import '../../../auth/data/datasources/local/biometric_local_datasource.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import '../../../auth/presentation/widgets/pin_pad.dart';
 
+import 'settings_hub_page.dart';
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, required this.session});
 
@@ -78,7 +80,7 @@ class SettingsPage extends StatelessWidget {
         updateSyncSettings: sl<UpdateShopSyncSettings>(),
         shopId: session.shop.id,
       )..add(const SettingsLoadRequested()),
-      child: _SettingsView(canWrite: _canWrite, session: session),
+      child: SettingsHubPage(canWrite: _canWrite, session: session),
     );
   }
 }

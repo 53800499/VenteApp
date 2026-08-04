@@ -10,6 +10,8 @@ import '../app_release_tier.dart';
 import '../sync_display_message.dart';
 import '../sync_service.dart';
 import '../sync_snapshot.dart';
+import '../../auth/cloud_session_repair_service.dart';
+import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
 
 /// Indicateur cloud SFD §13.3 — branché sur [SyncService.snapshots].
 class SyncStatusIndicator extends StatelessWidget {
@@ -319,6 +321,20 @@ class _SyncStatusIcon extends StatelessWidget {
                       },
                       icon: const Icon(Icons.merge_type_outlined),
                       label: const Text('Résoudre les conflits'),
+                    ),
+                  ],
+                  if (sl<CloudSessionRepairService>().isAwaitingPinUnlock ||
+                      (snapshot.blockReason != null &&
+                          (snapshot.blockReason!.contains('cloud') ||
+                           snapshot.blockReason!.contains('session')))) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        showCloudSessionPinRepairDialog(context);
+                      },
+                      icon: const Icon(Icons.lock_open_outlined),
+                      label: const Text('Rétablir la session cloud (PIN)'),
                     ),
                   ],
                   if (session != null &&

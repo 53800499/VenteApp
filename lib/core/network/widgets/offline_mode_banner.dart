@@ -10,6 +10,7 @@ import '../../auth/cloud_session_controller.dart';
 import '../../auth/cloud_session_coordinator.dart';
 import '../../auth/cloud_session_status.dart';
 import '../../auth/cloud_session_repair_service.dart';
+import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
 import '../../security/production_message_policy.dart';
 import '../../sync/sync_display_message.dart';
 import '../../sync/sync_service.dart';
@@ -192,10 +193,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                             foreground: Theme.of(context).colorScheme.onTertiaryContainer,
                             icon: Icons.cloud_off_outlined,
                             emoji: '🟠',
-                            onTap: () => SyncStatusIndicator.showDetailsSheet(
-                              context,
-                              snapshot: sync,
-                            ),
+                            onTap: () => showCloudSessionPinRepairDialog(context),
                           );
                         }
 

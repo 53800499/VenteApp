@@ -66,7 +66,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     );
 
     final fedapayService = sl<FedaPayRemoteService>();
-    await fedapayService.initializePayment(
+    final result = await fedapayService.initializePayment(
       amount: price,
       description: isAddon
           ? 'Option $targetPlanName'
@@ -82,13 +82,42 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       Navigator.pop(context);
     }
 
-    if (isAddon) {
-      _executeAddonPayment(addonTitle: targetPlanName, price: price);
-    } else if (targetPlanCode != null) {
-      _executePlanPayment(
-        targetPlanCode: targetPlanCode,
-        targetPlanName: targetPlanName,
-        price: price,
+    if (!result.success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            content: Text('Paiement FedaPay non validé : ${result.message}'),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (result.transactionId != null) {
+      final status = await fedapayService.checkTransactionStatus(result.transactionId!);
+      if (status == 'approved') {
+        if (isAddon) {
+          _executeAddonPayment(addonTitle: targetPlanName, price: price);
+        } else if (targetPlanCode != null) {
+          _executePlanPayment(
+            targetPlanCode: targetPlanCode,
+            targetPlanName: targetPlanName,
+            price: price,
+          );
+        }
+        return;
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 5),
+          content: Text(
+            'Demande FedaPay transmise pour $targetPlanName. Veuillez valider le push USSD sur votre mobile pour activer l\'abonnement.',
+          ),
+        ),
       );
     }
   }

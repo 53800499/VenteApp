@@ -344,3 +344,74 @@ class DeviceSession {
   String get displayName =>
       deviceLabel?.trim().isNotEmpty == true ? deviceLabel!.trim() : deviceId;
 }
+
+/// Contexte d'accès local complet pour l'exécution offline-first (Identity → Membership → Organization → ShopAccess → Shop).
+class LocalAccessContext {
+  const LocalAccessContext({
+    required this.identityId,
+    required this.organizationId,
+    required this.membershipId,
+    required this.activeShopId,
+    required this.activeShopName,
+    required this.role,
+    required this.roleLabel,
+    required this.permissions,
+    required this.permissionsVersion,
+    this.identityContext,
+  });
+
+  final int identityId;
+  final int organizationId;
+  final int membershipId;
+  final int activeShopId;
+  final String activeShopName;
+  final UserRole role;
+  final String roleLabel;
+  final Set<Permission> permissions;
+  final int permissionsVersion;
+  final AuthIdentityContext? identityContext;
+
+  Map<String, dynamic> toJson() => {
+        'identityId': identityId,
+        'organizationId': organizationId,
+        'membershipId': membershipId,
+        'activeShopId': activeShopId,
+        'activeShopName': activeShopName,
+        'role': role.name,
+        'roleLabel': roleLabel,
+        'permissions': permissions.map((p) => p.name).toList(),
+        'permissionsVersion': permissionsVersion,
+        'identityContext': identityContext?.toJson(),
+      };
+
+  factory LocalAccessContext.fromJson(Map<String, dynamic> json) {
+    final roleStr = json['role'] as String? ?? 'seller';
+    final role = UserRole.values.firstWhere(
+      (r) => r.name.toLowerCase() == roleStr.toLowerCase(),
+      orElse: () => UserRole.seller,
+    );
+
+    final rawPerms = json['permissions'] as List<dynamic>? ?? [];
+    final permissions = rawPerms
+        .map((p) => Permission.values.firstWhere(
+              (perm) => perm.name.toLowerCase() == p.toString().toLowerCase(),
+              orElse: () => Permission.salesRead,
+            ))
+        .toSet();
+
+    return LocalAccessContext(
+      identityId: json['identityId'] as int? ?? 0,
+      organizationId: json['organizationId'] as int? ?? 0,
+      membershipId: json['membershipId'] as int? ?? 0,
+      activeShopId: json['activeShopId'] as int? ?? 0,
+      activeShopName: json['activeShopName'] as String? ?? '',
+      role: role,
+      roleLabel: json['roleLabel'] as String? ?? '',
+      permissions: permissions,
+      permissionsVersion: json['permissionsVersion'] as int? ?? 0,
+      identityContext: json['identityContext'] != null
+          ? AuthIdentityContext.fromJson(json['identityContext'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
