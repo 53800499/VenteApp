@@ -44,6 +44,28 @@ class SettingsPricingTiersChanged extends SettingsEvent {
   List<Object?> get props => [enabled];
 }
 
+class SettingsPricingGridModeChanged extends SettingsEvent {
+  const SettingsPricingGridModeChanged(this.mode);
+
+  final String mode; // 'STANDARD', 'RETAIL_WHOLESALE', 'MULTI_TIER'
+
+  @override
+  List<Object?> get props => [mode];
+}
+
+class SettingsModuleActivityToggled extends SettingsEvent {
+  const SettingsModuleActivityToggled({
+    required this.moduleKey,
+    required this.enabled,
+  });
+
+  final String moduleKey;
+  final bool enabled;
+
+  @override
+  List<Object?> get props => [moduleKey, enabled];
+}
+
 class SettingsAutoLockChanged extends SettingsEvent {
   const SettingsAutoLockChanged(this.minutes);
 

@@ -30,7 +30,8 @@ import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
 import '../../../fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
-import '../../../subscription/presentation/widgets/trial_exploration_modal.dart';
+import '../../../subscription/domain/services/subscription_controller.dart';
+import '../../../subscription/presentation/pages/subscription_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../bloc/dashboard_bloc.dart';
 import 'dashboard_page.dart';
@@ -56,6 +57,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
   bool get _useFxPrimary =>
       _canViewFx && (_fxWorkspace?.useFxPrimaryShell ?? false);
 
+  SubscriptionController? _subController;
+
   @override
   void initState() {
     super.initState();
@@ -65,21 +68,47 @@ class _HomeShellPageState extends State<HomeShellPage> {
       _fxWorkspace = workspace;
       workspace.addListener(_onFxWorkspaceChanged);
     } catch (_) {}
+    try {
+      ensureSubscriptionDependencies();
+      final subCtrl = sl<SubscriptionController>();
+      _subController = subCtrl;
+      subCtrl.addListener(_onSubscriptionChanged);
+    } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _bootstrapNotifications();
       await _loadFxWorkspaceMode();
       if (mounted) {
         await maybeShowCloudSessionStartupNotice(context);
-        if (widget.session.user.role == UserRole.owner) {
-          await TrialExplorationModal.show(context);
-        }
+        await _verifyMandatorySubscription();
       }
     });
+  }
+
+  void _onSubscriptionChanged() {
+    if (!mounted) return;
+    final controller = _subController;
+    if (controller != null && (!controller.details.isActive || controller.details.isRevoked)) {
+      _verifyMandatorySubscription();
+    }
+  }
+
+  Future<void> _verifyMandatorySubscription() async {
+    ensureSubscriptionDependencies();
+    final controller = sl<SubscriptionController>();
+    await controller.refreshFromRemote();
+    if ((!controller.details.isActive || controller.details.isRevoked) && mounted) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const SubscriptionPage(mandatoryGate: true),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _fxWorkspace?.removeListener(_onFxWorkspaceChanged);
+    _subController?.removeListener(_onSubscriptionChanged);
     super.dispose();
   }
 

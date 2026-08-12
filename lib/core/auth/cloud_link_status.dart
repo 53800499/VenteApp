@@ -13,6 +13,9 @@ enum CloudLinkStatus {
 
   /// Erreur ou conflit de synchronisation.
   syncError,
+
+  /// Synchronisation cloud désactivée intentionnellement (mode local).
+  localOnly,
 }
 
 extension CloudLinkStatusLabels on CloudLinkStatus {
@@ -21,6 +24,7 @@ extension CloudLinkStatusLabels on CloudLinkStatus {
         CloudLinkStatus.disconnected => 'Cloud indisponible',
         CloudLinkStatus.syncing => 'Synchronisation en cours',
         CloudLinkStatus.syncError => 'Erreur de synchronisation',
+        CloudLinkStatus.localOnly => 'Mode local',
       };
 
   String get emoji => switch (this) {
@@ -28,6 +32,7 @@ extension CloudLinkStatusLabels on CloudLinkStatus {
         CloudLinkStatus.disconnected => '🔴',
         CloudLinkStatus.syncing => '🟡',
         CloudLinkStatus.syncError => '🔴',
+        CloudLinkStatus.localOnly => '⚫',
       };
 }
 
@@ -36,7 +41,7 @@ CloudLinkStatus resolveCloudLinkStatus({
   required SyncSnapshot sync,
 }) {
   if (!sync.cloudSyncEnabled) {
-    return isConnected ? CloudLinkStatus.connected : CloudLinkStatus.disconnected;
+    return CloudLinkStatus.localOnly;
   }
 
   if (!isConnected) return CloudLinkStatus.disconnected;

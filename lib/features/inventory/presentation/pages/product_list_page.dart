@@ -20,6 +20,7 @@ import 'product_detail_page.dart';
 import 'product_form_page.dart';
 import 'category_list_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
+import '../../../../shared/guards/module_activity_guard.dart';
 
 class ProductListPage extends StatefulWidget {
   const ProductListPage({
@@ -51,13 +52,19 @@ class _ProductListPageState extends State<ProductListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scaffold = _buildScaffold(context);
+    final guard = ModuleActivityGuard(
+      moduleKey: 'INVENTORY',
+      session: widget.session,
+      moduleName: 'Produits & Stock',
+      moduleIcon: Icons.inventory_2_outlined,
+      child: _buildScaffold(context),
+    );
 
     final hasBloc =
         context.findAncestorWidgetOfExactType<BlocProvider<ProductListBloc>>() !=
             null;
     if (hasBloc) {
-      return scaffold;
+      return guard;
     }
 
     return BlocProvider(
@@ -72,7 +79,7 @@ class _ProductListPageState extends State<ProductListPage> {
         ),
         syncService: sl(),
       )..add(const ProductListLoadRequested()),
-      child: scaffold,
+      child: guard,
     );
   }
 

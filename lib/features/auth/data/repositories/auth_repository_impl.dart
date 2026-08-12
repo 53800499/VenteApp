@@ -508,6 +508,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
+    String? planCode,
   }) async {
     if (!isValidPhone(ownerPhone)) {
       throw const ValidationFailure(
@@ -545,6 +546,7 @@ class AuthRepositoryImpl implements AuthRepository {
           ownerPhone: ownerPhone,
           shopAddress: shopAddress,
           shopPhone: shopPhone,
+          planCode: planCode,
         );
 
         await _persistSetupLocally(

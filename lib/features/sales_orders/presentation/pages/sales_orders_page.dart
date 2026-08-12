@@ -16,6 +16,7 @@ import '../../domain/entities/sales_order.dart';
 import '../bloc/sales_order_bloc.dart';
 import 'sales_order_detail_page.dart';
 import 'sales_order_form_page.dart';
+import '../../../../shared/guards/module_activity_guard.dart';
 
 class SalesOrdersPage extends StatelessWidget {
   const SalesOrdersPage({super.key, required this.session});
@@ -30,12 +31,18 @@ class SalesOrdersPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     ensureSalesOrderDependencies();
-    return BlocProvider(
-      create: (_) => SalesOrderBloc(
-        repository: sl(),
-        session: session,
-      )..add(const SalesOrderListRequested()),
-      child: _SalesOrdersView(session: session, canWrite: _canWrite),
+    return ModuleActivityGuard(
+      moduleKey: 'ORDERS_DELIVERIES',
+      session: session,
+      moduleName: 'Commandes & Livraisons',
+      moduleIcon: Icons.assignment_outlined,
+      child: BlocProvider(
+        create: (_) => SalesOrderBloc(
+          repository: sl(),
+          session: session,
+        )..add(const SalesOrderListRequested()),
+        child: _SalesOrdersView(session: session, canWrite: _canWrite),
+      ),
     );
   }
 }

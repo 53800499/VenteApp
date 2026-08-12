@@ -1,14 +1,15 @@
-import 'package:drift/drift.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../../core/database/app_database.dart' as db;
 import '../../../../../core/utils/time.dart';
 import '../../../domain/entities/settings_entities.dart';
 import '../../../domain/services/settings_validation_service.dart';
-
+import 'package:drift/drift.dart';
 class SettingsLocalDatasource {
-  SettingsLocalDatasource(this._database);
+  SettingsLocalDatasource(this._database, [this._prefs]);
 
   final db.AppDatabase _database;
+  final SharedPreferences? _prefs;
 
   static bool _readSqlBool(Object? value, {bool defaultValue = true}) {
     if (value == null) return defaultValue;
@@ -61,6 +62,17 @@ class SettingsLocalDatasource {
     final backupOverdue = backupLastAt == null ||
         timestamp - backupLastAt >= backupReminderAgeMs;
 
+    final gridMode = _prefs?.getString('setting_pricing_grid_mode') ?? 'STANDARD';
+    final modules = {
+      'SALES': _prefs?.getBool('setting_module_SALES') ?? true,
+      'INVENTORY': _prefs?.getBool('setting_module_INVENTORY') ?? true,
+      'PROCUREMENT': _prefs?.getBool('setting_module_PROCUREMENT') ?? true,
+      'ORDERS_DELIVERIES': _prefs?.getBool('setting_module_ORDERS_DELIVERIES') ?? true,
+      'DEBTS': _prefs?.getBool('setting_module_DEBTS') ?? true,
+      'CASH_SESSIONS': _prefs?.getBool('setting_module_CASH_SESSIONS') ?? true,
+      'FX_EXCHANGE': _prefs?.getBool('setting_module_FX_EXCHANGE') ?? true,
+    };
+
     return ShopConfiguration(
       shop: ShopSettings(
         name: _readSqlString(data['shop_name'], defaultValue: 'Ma Boutique'),
@@ -83,6 +95,8 @@ class SettingsLocalDatasource {
           data['pricing_tiers_enabled'],
           defaultValue: false,
         ),
+        pricingGridMode: gridMode,
+        enabledModules: modules,
       ),
       security: SecuritySettings(
         autoLockMinutes: const SettingsValidationService()
@@ -186,6 +200,13 @@ class SettingsLocalDatasource {
         updatedAt: Value(timestamp),
       ),
     );
+
+    if (input.pricingGridMode != null) {
+      await _prefs?.setString('setting_pricing_grid_mode', input.pricingGridMode!);
+    }
+    if (input.toggledModuleKey != null && input.isModuleEnabled != null) {
+      await _prefs?.setBool('setting_module_${input.toggledModuleKey}', input.isModuleEnabled!);
+    }
 
     if (input.shopName != null ||
         input.shopPhone != null ||

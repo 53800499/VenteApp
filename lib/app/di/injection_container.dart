@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/subscription/domain/services/subscription_controller.dart';
 import '../../features/subscription/data/services/fedapay_remote_service.dart';
+import '../../features/subscription/data/services/subscription_remote_service.dart';
 
 import '../../core/audit/local_audit_writer.dart';
 import '../../core/backup/google_drive_backup_service.dart';
@@ -685,7 +686,7 @@ void ensureSettingsDependencies() {
     sl.registerLazySingleton(() => const SettingsValidationService());
   }
   if (!sl.isRegistered<SettingsLocalDatasource>()) {
-    sl.registerLazySingleton(() => SettingsLocalDatasource(sl()));
+    sl.registerLazySingleton(() => SettingsLocalDatasource(sl(), sl()));
   }
   if (!sl.isRegistered<SettingsRemoteDatasource>()) {
     sl.registerLazySingleton(() => SettingsRemoteDatasource(sl()));
@@ -865,7 +866,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(LocalAuthentication.new);
   sl.registerLazySingleton(() => BiometricLocalDatasource(sl()));
 
-  sl.registerLazySingleton(() => SettingsLocalDatasource(sl()));
+  sl.registerLazySingleton(() => SettingsLocalDatasource(sl(), sl()));
   sl.registerLazySingleton(() => CloudSyncPreferences(sl()));
   sl.registerLazySingleton(
     () => CloudSyncEnabler(
@@ -1307,9 +1308,12 @@ Future<void> initDeferredServices() async {
 
 /// Enregistre le contrôleur d'abonnement si absent.
 void ensureSubscriptionDependencies() {
+  if (!sl.isRegistered<SubscriptionRemoteService>()) {
+    sl.registerLazySingleton(() => SubscriptionRemoteService(sl()));
+  }
   if (!sl.isRegistered<SubscriptionController>()) {
     sl.registerLazySingleton<SubscriptionController>(
-      () => SubscriptionController(),
+      () => SubscriptionController(remoteService: sl<SubscriptionRemoteService>()),
     );
   }
 }

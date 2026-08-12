@@ -20,6 +20,7 @@ import '../../domain/usecases/cash_session_usecases.dart';
 import '../bloc/cash_sessions_bloc.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 import 'cash_session_detail_page.dart';
+import '../../../../shared/guards/module_activity_guard.dart';
 
 class CashSessionsPage extends StatelessWidget {
   const CashSessionsPage({super.key, required this.session});
@@ -30,20 +31,26 @@ class CashSessionsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     ensureCashSessionDependencies();
 
-    return BlocProvider(
-      create: (_) => CashSessionsBloc(
-        findOpenSession: sl<FindOpenCashSession>(),
-        listSessions: sl<ListCashSessions>(),
-        getLiveTotals: sl<GetCashSessionLiveTotals>(),
-        listMovements: sl<ListCashMovements>(),
-        openSession: sl<OpenCashSession>(),
-        closeSession: sl<CloseCashSession>(),
-        recordMovement: sl<RecordCashMovement>(),
-        syncFromRemote: sl<SyncCashSessionsFromRemote>(),
-        session: session,
-        syncService: sl(),
-      )..add(const CashSessionsLoadRequested()),
-      child: const _CashSessionsView(),
+    return ModuleActivityGuard(
+      moduleKey: 'CASH_SESSIONS',
+      session: session,
+      moduleName: 'Gestion de Caisse',
+      moduleIcon: Icons.point_of_sale_outlined,
+      child: BlocProvider(
+        create: (_) => CashSessionsBloc(
+          findOpenSession: sl<FindOpenCashSession>(),
+          listSessions: sl<ListCashSessions>(),
+          getLiveTotals: sl<GetCashSessionLiveTotals>(),
+          listMovements: sl<ListCashMovements>(),
+          openSession: sl<OpenCashSession>(),
+          closeSession: sl<CloseCashSession>(),
+          recordMovement: sl<RecordCashMovement>(),
+          syncFromRemote: sl<SyncCashSessionsFromRemote>(),
+          session: session,
+          syncService: sl(),
+        )..add(const CashSessionsLoadRequested()),
+        child: const _CashSessionsView(),
+      ),
     );
   }
 }

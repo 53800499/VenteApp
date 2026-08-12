@@ -78,7 +78,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   List<ProductCategory> _categories = [];
   int? _categoryId;
   bool _isLoading = false;
-  bool _pricingTiersEnabled = false;
+  String _pricingGridMode = 'STANDARD'; // 'STANDARD', 'RETAIL_WHOLESALE', 'MULTI_TIER'
   bool _calculatorsModuleEnabled = false;
   String? _errorMessage;
   bool _draftRestored = false;
@@ -249,7 +249,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     final config =
         await sl<SettingsLocalDatasource>().loadConfiguration(widget.session.shop.id);
     if (mounted) {
-      setState(() => _pricingTiersEnabled = config.commerce.pricingTiersEnabled);
+      setState(() => _pricingGridMode = config.commerce.pricingGridMode);
     }
   }
 
@@ -479,11 +479,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
             priceBuy: _priceBuyController.text.trim().isEmpty
                 ? null
                 : _parseInt(_priceBuyController.text),
-            priceSemiWholesale: _pricingTiersEnabled &&
+            priceSemiWholesale: _pricingGridMode == 'MULTI_TIER' &&
                     _priceSemiWholesaleController.text.trim().isNotEmpty
                 ? _parseInt(_priceSemiWholesaleController.text)
                 : null,
-            priceWholesale: _pricingTiersEnabled &&
+            priceWholesale: (_pricingGridMode == 'RETAIL_WHOLESALE' || _pricingGridMode == 'MULTI_TIER') &&
                     _priceWholesaleController.text.trim().isNotEmpty
                 ? _parseInt(_priceWholesaleController.text)
                 : null,
@@ -510,11 +510,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
             priceBuy: _priceBuyController.text.trim().isEmpty
                 ? null
                 : _parseInt(_priceBuyController.text),
-            priceSemiWholesale: _pricingTiersEnabled &&
+            priceSemiWholesale: _pricingGridMode == 'MULTI_TIER' &&
                     _priceSemiWholesaleController.text.trim().isNotEmpty
                 ? _parseInt(_priceSemiWholesaleController.text)
                 : null,
-            priceWholesale: _pricingTiersEnabled &&
+            priceWholesale: (_pricingGridMode == 'RETAIL_WHOLESALE' || _pricingGridMode == 'MULTI_TIER') &&
                     _priceWholesaleController.text.trim().isNotEmpty
                 ? _parseInt(_priceWholesaleController.text)
                 : null,
@@ -698,7 +698,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     return null;
                   },
                 ),
-                if (_pricingTiersEnabled) ...[
+                // Champ demi-gros : visible uniquement en mode MULTI_TIER
+                if (_pricingGridMode == 'MULTI_TIER') ...[
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
                     controller: _priceSemiWholesaleController,
@@ -709,12 +710,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
+                ],
+                // Champ gros : visible en mode RETAIL_WHOLESALE ou MULTI_TIER
+                if (_pricingGridMode == 'RETAIL_WHOLESALE' || _pricingGridMode == 'MULTI_TIER') ...[
                   const SizedBox(height: AppSpacing.md),
                   TextFormField(
                     controller: _priceWholesaleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Prix gros (optionnel)',
-                      prefixIcon: Icon(Icons.warehouse_outlined),
+                    decoration: InputDecoration(
+                      labelText: _pricingGridMode == 'MULTI_TIER'
+                          ? 'Prix gros (optionnel)'
+                          : 'Prix de vente — gros (FCFA)',
+                      prefixIcon: const Icon(Icons.warehouse_outlined),
                     ),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],

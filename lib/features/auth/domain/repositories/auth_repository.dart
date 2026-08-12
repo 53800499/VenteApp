@@ -23,6 +23,7 @@ abstract class AuthRepository {
     required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
+    String? planCode,
   });
 
   Future<AuthSession> emergencyUnlock({

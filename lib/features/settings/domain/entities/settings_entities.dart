@@ -31,9 +31,25 @@ class InventorySettings {
 }
 
 class CommerceSettings {
-  const CommerceSettings({this.pricingTiersEnabled = false});
+  const CommerceSettings({
+    this.pricingTiersEnabled = false,
+    this.pricingGridMode = 'STANDARD', // 'STANDARD', 'RETAIL_WHOLESALE', 'MULTI_TIER'
+    this.enabledModules = const {
+      'SALES': true,
+      'INVENTORY': true,
+      'PROCUREMENT': true,
+      'ORDERS_DELIVERIES': true,
+      'DEBTS': true,
+      'CASH_SESSIONS': true,
+      'FX_EXCHANGE': true,
+    },
+  });
 
   final bool pricingTiersEnabled;
+  final String pricingGridMode;
+  final Map<String, bool> enabledModules;
+
+  bool isModuleActive(String moduleKey) => enabledModules[moduleKey] ?? true;
 }
 
 class SecuritySettings {
@@ -104,6 +120,9 @@ class UpdateShopSettingsInput {
     this.autoLockMinutes,
     this.receiptFooter,
     this.pricingTiersEnabled,
+    this.pricingGridMode,
+    this.toggledModuleKey,
+    this.isModuleEnabled,
   });
 
   final String? shopName;
@@ -114,6 +133,9 @@ class UpdateShopSettingsInput {
   final int? autoLockMinutes;
   final String? receiptFooter;
   final bool? pricingTiersEnabled;
+  final String? pricingGridMode;
+  final String? toggledModuleKey;
+  final bool? isModuleEnabled;
 
   bool get isEmpty =>
       shopName == null &&
@@ -123,7 +145,10 @@ class UpdateShopSettingsInput {
       defaultAlertThreshold == null &&
       autoLockMinutes == null &&
       receiptFooter == null &&
-      pricingTiersEnabled == null;
+      pricingTiersEnabled == null &&
+      pricingGridMode == null &&
+      toggledModuleKey == null &&
+      isModuleEnabled == null;
 
   /// Champs synchronisés avec l'API cloud (hors préférences locales).
   bool get hasRemoteFields =>

@@ -34,46 +34,85 @@ class _SalesSettingsPageState extends State<SalesSettingsPage> {
       appBar: AppBar(
         title: const Text('Paramètres des Ventes'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header card
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.shopping_cart_outlined, size: 32, color: theme.colorScheme.primary),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Comportement de la caisse',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Règles de validation des ventes, modification des prix, crédit et tickets.',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
+      body: BlocBuilder<SettingsBloc, SettingsState>(
+        builder: (context, state) {
+          final config = state.configuration;
+          final isSalesActive = config?.commerce.isModuleActive('SALES') ?? true;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header card
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.2),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
+                  child: Row(
+                    children: [
+                      Icon(Icons.shopping_cart_outlined, size: 32, color: theme.colorScheme.primary),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Comportement de la caisse',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Règles de validation des ventes, modification des prix, crédit et tickets.',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Module Activity Card
+                Card(
+                  color: isSalesActive
+                      ? theme.colorScheme.surface
+                      : theme.colorScheme.errorContainer.withValues(alpha: 0.2),
+                  child: SwitchListTile(
+                    secondary: Icon(
+                      Icons.power_settings_new,
+                      color: isSalesActive ? Colors.green : theme.colorScheme.error,
+                    ),
+                    title: const Text(
+                      'Activité du Module Ventes & Caisse',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      isSalesActive
+                          ? 'Module actif : la prise de commande et la caisse sont activées'
+                          : 'Module désactivé : l\'enregistrement des nouvelles ventes est bloqué',
+                    ),
+                    value: isSalesActive,
+                    onChanged: widget.canWrite
+                        ? (val) {
+                            context.read<SettingsBloc>().add(
+                                  SettingsModuleActivityToggled(
+                                    moduleKey: 'SALES',
+                                    enabled: val,
+                                  ),
+                                );
+                          }
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
 
             Card(
               child: Padding(
@@ -149,7 +188,9 @@ class _SalesSettingsPageState extends State<SalesSettingsPage> {
             ),
           ],
         ),
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }

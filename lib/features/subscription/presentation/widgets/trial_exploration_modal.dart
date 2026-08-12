@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_tokens.dart';
 import '../pages/subscription_page.dart';
 
 class TrialExplorationModal extends StatelessWidget {
@@ -125,10 +123,9 @@ class TrialExplorationModal extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _buildPlanChip(context, 'STARTER', '10 000 F/an', '1 Boutique • 1 Utilisateur'),
-                  _buildPlanChip(context, 'ESSENTIEL', '25 000 F/an', '1 Boutique • 2 Utilisateurs'),
-                  _buildPlanChip(context, 'PRO ⭐', '50 000 F/an', '5 Utilisateurs + Vocale'),
-                  _buildPlanChip(context, 'BUSINESS 🚀', '150 000 F/an', 'Multi-Boutiques & Réseau'),
+                  _buildPlanChip(context, 'ESSENTIEL', '30 000 FCFA/an', '1 Boutique • 3 Utilisateurs'),
+                  _buildPlanChip(context, 'PRO ⭐', '60 000 FCFA/an', '2 Boutiques • 10 Utilisateurs'),
+                  _buildPlanChip(context, 'BUSINESS 🚀', '100 000 FCFA/an', '5 Boutiques • 30 Utilisateurs'),
                 ],
               ),
               const SizedBox(height: 24),

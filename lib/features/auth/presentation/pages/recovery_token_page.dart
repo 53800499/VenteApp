@@ -131,7 +131,7 @@ class _RecoveryTokenPageState extends State<RecoveryTokenPage> {
                     ),
                     label: Text(_copied ? 'Jeton copié' : 'Copier le jeton'),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: AppSpacing.xl),
                   CheckboxListTile(
                     value: _acknowledged,
                     onChanged: _copied

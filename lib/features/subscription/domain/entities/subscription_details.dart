@@ -77,7 +77,11 @@ class SubscriptionDetails extends Equatable {
     required this.paymentHistory,
   });
 
-  bool get isActive => status == 'ACTIVE' || status == 'GRACE';
+  bool get isActive => status == 'ACTIVE' || status == 'TRIAL' || status == 'GRACE';
+  bool get isTrial => status == 'TRIAL';
+  bool get isPendingActivation => status == 'PENDING_ACTIVATION';
+  bool get isRevoked => status == 'REVOKED' || status == 'SUSPENDED';
+  bool get isExpired => status == 'EXPIRED';
 
   @override
   List<Object?> get props => [

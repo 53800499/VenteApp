@@ -363,70 +363,75 @@ class _SyncStatusIcon extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (context) {
+        final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
         return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.cloud_off_outlined,
-                      color: Theme.of(context).colorScheme.outline,
-                      size: 28,
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        'Mode local uniquement',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: maxHeight),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.cloud_off_outlined,
+                        color: Theme.of(context).colorScheme.outline,
+                        size: 28,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                const Text(
-                  'La synchronisation cloud n\'est pas activée sur cet appareil. '
-                  'Toutes vos ventes, stocks et clients sont enregistrés sur '
-                  'le téléphone. Aucune copie n\'est envoyée au cloud tant '
-                  'que le cloud n\'est pas configuré.',
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                const Text(
-                  'Que faire ?',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                _StepRow(
-                  number: 1,
-                  text: ProductionMessagePolicy.activateCloudInstruction(),
-                ),
-                const _StepRow(
-                  number: 2,
-                  text:
-                      'En attendant, exportez régulièrement une sauvegarde '
-                      '(Plus → Paramètres → Sauvegarde).',
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const HelpArticlePage(articleId: 'sync_offline'),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          'Mode local uniquement',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
                       ),
-                    );
-                  },
-                  icon: const Icon(Icons.menu_book_outlined),
-                  label: const Text('En savoir plus'),
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'La synchronisation cloud n\'est pas activée sur cet appareil. '
+                    'Toutes vos ventes, stocks et clients sont enregistrés sur '
+                    'le téléphone. Aucune copie n\'est envoyée au cloud tant '
+                    'que le cloud n\'est pas configuré.',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const Text(
+                    'Que faire ?',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  _StepRow(
+                    number: 1,
+                    text: ProductionMessagePolicy.activateCloudInstruction(),
+                  ),
+                  const _StepRow(
+                    number: 2,
+                    text:
+                        'En attendant, exportez régulièrement une sauvegarde '
+                        '(Plus → Paramètres → Sauvegarde).',
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const HelpArticlePage(articleId: 'sync_offline'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('En savoir plus'),
+                  ),
+                ],
+              ),
             ),
           ),
         );

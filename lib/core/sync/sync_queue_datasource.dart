@@ -225,8 +225,101 @@ class SyncQueueDatasource {
 
   Future<void> markDeferred(int queueId, String reason) async {
     await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
-      SyncQueueCompanion(lastError: Value(reason)),
+      SyncQueueCompanion(
+        status: const Value('deferred'),
+        lastError: Value(reason),
+      ),
     );
+  }
+
+  Future<void> markBlocked(int queueId, String reason) async {
+    await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
+      SyncQueueCompanion(
+        status: const Value('blocked'),
+        lastError: Value(reason),
+      ),
+    );
+  }
+
+  Future<void> markPermanentFailure(
+    int queueId,
+    String error, {
+    String? errorCode,
+  }) async {
+    await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
+      SyncQueueCompanion(
+        status: const Value('failed_permanent'),
+        lastError: Value(error),
+        errorCode: Value(errorCode),
+        processedAt: Value(nowMs()),
+      ),
+    );
+  }
+
+  Future<void> markRetryWithBackoff(
+    int queueId,
+    String error, {
+    int backoffSeconds = 5,
+  }) async {
+    final row = await (_db.select(_db.syncQueue)
+          ..where((q) => q.id.equals(queueId)))
+        .getSingleOrNull();
+    if (row == null) return;
+
+    final retries = row.retryCount + 1;
+    final nextRetry = nowMs() + (backoffSeconds * 1000);
+
+    if (retries >= maxRetries * 3) {
+      await markPermanentFailure(
+        queueId,
+        'Nombre maximal de tentatives dépassé ($retries retries) : $error',
+        errorCode: 'MAX_RETRIES_EXCEEDED',
+      );
+      return;
+    }
+
+    await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
+      SyncQueueCompanion(
+        status: const Value('pending'),
+        retryCount: Value(retries),
+        nextRetryAt: Value(nextRetry),
+        lastError: Value(error),
+      ),
+    );
+  }
+
+  /// Map une table vers son domaine métier d'isolation logique.
+  static String mapTableToDomain(String tableName) {
+    switch (tableName) {
+      case SyncEntityTable.sales:
+      case SyncEntityTable.salesOrders:
+      case SyncEntityTable.customers:
+      case SyncEntityTable.debts:
+        return 'SALES';
+      case SyncEntityTable.categories:
+      case SyncEntityTable.products:
+        return 'INVENTORY';
+      case SyncEntityTable.cashSessions:
+      case SyncEntityTable.cashMovements:
+      case SyncEntityTable.expenses:
+        return 'CASH';
+      case SyncEntityTable.suppliers:
+      case SyncEntityTable.purchaseOrders:
+      case SyncEntityTable.purchaseReceipts:
+      case SyncEntityTable.supplierInvoices:
+      case SyncEntityTable.supplierPayments:
+        return 'PROCUREMENT';
+      case SyncEntityTable.stockTransfers:
+        return 'TRANSFER';
+      case SyncEntityTable.fxSessions:
+      case SyncEntityTable.fxOperations:
+      case SyncEntityTable.fxMovements:
+      case SyncEntityTable.fxRateSnapshots:
+      case SyncEntityTable.fxShopCurrencies:
+        return 'FX';
+      default:
+        return 'SYSTEM';
+    }
   }
 
   Future<void> enqueue({
@@ -236,6 +329,10 @@ class SyncQueueDatasource {
     required String operation,
     required String payload,
     required int localVersion,
+    String? domain,
+    String? idempotencyKey,
+    String businessCriticality = 'NORMAL',
+    int basePriority = 10,
     SyncContext? context,
   }) async {
     if (context != null && !context.shouldUseSyncQueue) return;
@@ -252,13 +349,20 @@ class SyncQueueDatasource {
         .go();
 
     final timestamp = nowMs();
+    final effectiveDomain = domain ?? mapTableToDomain(tableName);
+    final key = idempotencyKey ?? 'FEDA-SYNC-${timestamp}-${tableName}-${recordId}-${operation}';
+
     await _db.into(_db.syncQueue).insert(
           SyncQueueCompanion.insert(
             shopId: shopId,
+            domain: Value(effectiveDomain),
             entityTable: tableName,
             recordId: recordId,
             operation: operation,
             payload: payload,
+            idempotencyKey: Value(key),
+            businessCriticality: Value(businessCriticality),
+            basePriority: Value(basePriority),
             localVersion: localVersion,
             createdAt: timestamp,
           ),
@@ -276,19 +380,7 @@ class SyncQueueDatasource {
   }
 
   Future<void> markFailed(int queueId, String error) async {
-    final row = await (_db.select(_db.syncQueue)
-          ..where((q) => q.id.equals(queueId)))
-        .getSingleOrNull();
-    if (row == null) return;
-
-    final retries = row.retryCount + 1;
-    await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
-      SyncQueueCompanion(
-        retryCount: Value(retries),
-        lastError: Value(error),
-        status: Value(retries >= maxRetries ? 'failed' : 'pending'),
-      ),
-    );
+    await markRetryWithBackoff(queueId, error, backoffSeconds: 5);
   }
 
   Future<void> markConflict(int queueId, String error) async {

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../app/theme/app_tokens.dart';
-import '../../../../../shared/components/action_feedback.dart';
-import '../../../../../shared/components/ui_primitives.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../../shop/presentation/pages/shop_list_page.dart';
 import '../../../domain/entities/settings_entities.dart';

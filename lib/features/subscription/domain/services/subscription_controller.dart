@@ -1,16 +1,30 @@
 import 'package:flutter/foundation.dart';
 import '../entities/subscription_details.dart';
 import '../../../../core/licensing/domain/module_access_guard.dart';
+import '../../data/services/subscription_remote_service.dart';
 
 /// Contrôleur central de gestion de l'abonnement et du respect des modules actifs.
 /// Permet à toute l'application ARIKE de réagir dynamiquement aux droits de la licence.
 class SubscriptionController extends ValueNotifier<SubscriptionDetails> {
-  SubscriptionController({SubscriptionDetails? initialDetails})
-      : super(initialDetails ?? _defaultDetails);
+  final SubscriptionRemoteService? _remoteService;
+
+  SubscriptionController({
+    SubscriptionDetails? initialDetails,
+    SubscriptionRemoteService? remoteService,
+  })  : _remoteService = remoteService,
+        super(initialDetails ?? _defaultDetails);
+
+  Future<void> refreshFromRemote() async {
+    if (_remoteService == null) return;
+    final remoteDetails = await _remoteService.fetchMySubscription();
+    if (remoteDetails != null) {
+      value = remoteDetails;
+    }
+  }
 
   static final SubscriptionDetails _defaultDetails = SubscriptionDetails(
-    planCode: 'PRO',
-    planName: '⭐ ARIKE Pro',
+    planCode: 'ESSENTIEL',
+    planName: 'ARIKE Essentiel',
     status: 'ACTIVE',
     startedAt: DateTime(2026, 1, 1),
     expiresAt: DateTime(2027, 1, 1),
@@ -18,18 +32,16 @@ class SubscriptionController extends ValueNotifier<SubscriptionDetails> {
     autoRenew: false,
     grantedModules: const [
       'Vente & Encaissement',
-      'Stock Avancé',
-      'Dépenses & Charges',
-      'Approvisionnements & Commandes',
-      'Bureau de Change FX',
-      'Assistant Vocal ARIKE',
-      'Transferts de stock inter-boutiques',
-      'Statistiques & Analyses',
+      'Stock avancé & Alertes rupture',
+      'Dépenses & Charges de caisse',
+      'Approvisionnements & Commandes clients',
+      'Rapports de ventes quotidiens',
+      'Mode 100% Offline',
     ],
-    maxUsers: 10,
-    maxShops: 5,
-    currentUsersCount: 3,
-    currentShopsCount: 2,
+    maxUsers: 3,
+    maxShops: 1,
+    currentUsersCount: 1,
+    currentShopsCount: 1,
     paymentHistory: const [],
   );
 
@@ -47,7 +59,7 @@ class SubscriptionController extends ValueNotifier<SubscriptionDetails> {
       case ArikeModule.sales:
         return _hasAnyModule(['Vente & Encaissement', 'SALES']);
       case ArikeModule.inventory:
-        return _hasAnyModule(['Stock Avancé', 'Stock avancé & Alertes rupture', 'Gestion de Stock simple', 'INVENTORY_SIMPLE', 'INVENTORY_ADVANCED']);
+        return _hasAnyModule(['Stock Avancé', 'Stock avancé & Alertes rupture', 'Gestion de Stock simple', 'INVENTORY', 'INVENTORY_SIMPLE', 'INVENTORY_ADVANCED']);
       case ArikeModule.purchases:
         return _hasAnyModule(['Approvisionnement & Commandes', 'Approvisionnements & Commandes', 'Approvisionnements & Commandes clients', 'PROCUREMENT', 'SALES_ORDERS']);
       case ArikeModule.expenses:
@@ -57,11 +69,11 @@ class SubscriptionController extends ValueNotifier<SubscriptionDetails> {
       case ArikeModule.assistant:
         return _hasAnyModule(['Assistant Vocal ARIKE', 'ASSISTANT']);
       case ArikeModule.reports:
-        return _hasAnyModule(['Statistiques & Analyses', 'Analyses & Statistiques avancées', 'Rapports de ventes quotidiens', 'REPORTS_ADVANCED']);
+        return _hasAnyModule(['Statistiques & Analyses', 'Analyses & Statistiques avancées', 'Rapports de ventes quotidiens', 'REPORTS_BASIC', 'REPORTS_ADVANCED']);
       case ArikeModule.multiShop:
-        return _hasAnyModule(['Transferts Inter-boutiques', 'Transferts de stock inter-boutiques', 'Multi-entreprises & Distributeurs', 'STOCK_TRANSFER']);
+        return _hasAnyModule(['Transferts Inter-boutiques', 'Transferts de stock inter-boutiques', 'Multi-entreprises & Distributeurs', 'STOCK_TRANSFERS', 'MULTI_SHOP']);
       case ArikeModule.apiAccess:
-        return _hasAnyModule(['Accès API dédiée & Export complet', 'MULTI_TENANT_API']);
+        return _hasAnyModule(['Accès API dédiée & Export complet', 'MULTI_TENANT_API', 'ALL_MODULES']);
     }
   }
 

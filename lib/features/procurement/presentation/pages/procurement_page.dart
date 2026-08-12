@@ -30,6 +30,7 @@ import 'po_form_page.dart';
 import 'direct_procurement_page.dart';
 import 'direct_receipt_detail_page.dart';
 import '../models/po_form_prefill.dart';
+import '../../../../shared/guards/module_activity_guard.dart';
 
 class ProcurementPage extends StatelessWidget {
   const ProcurementPage({
@@ -47,18 +48,24 @@ class ProcurementPage extends StatelessWidget {
   Widget build(BuildContext context) {
     ensureProcurementDependencies();
 
-    return BlocProvider(
-      create: (_) => ProcurementBloc(
-        repository: sl<ProcurementRepository>(),
-        session: session,
-      )
-        ..add(const ProcurementSuppliersLoadRequested())
-        ..add(const ProcurementOrdersLoadRequested())
-        ..add(const ProcurementDirectReceiptsLoadRequested())
-        ..add(const ProcurementInvoicesLoadRequested()),
-      child: _ProcurementView(
-        initialTab: initialTab,
-        voicePoPrefill: voicePoPrefill,
+    return ModuleActivityGuard(
+      moduleKey: 'PROCUREMENT',
+      session: session,
+      moduleName: 'Achats & Approvisionnements',
+      moduleIcon: Icons.local_shipping_outlined,
+      child: BlocProvider(
+        create: (_) => ProcurementBloc(
+          repository: sl<ProcurementRepository>(),
+          session: session,
+        )
+          ..add(const ProcurementSuppliersLoadRequested())
+          ..add(const ProcurementOrdersLoadRequested())
+          ..add(const ProcurementDirectReceiptsLoadRequested())
+          ..add(const ProcurementInvoicesLoadRequested()),
+        child: _ProcurementView(
+          initialTab: initialTab,
+          voicePoPrefill: voicePoPrefill,
+        ),
       ),
     );
   }

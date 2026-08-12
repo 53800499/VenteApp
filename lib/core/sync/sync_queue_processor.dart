@@ -37,7 +37,11 @@ import '../errors/failures.dart';
 import '../network/api_client.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
+import 'sync_dependency_graph.dart';
 import 'sync_queue_datasource.dart';
+import 'gates/cloud_session_gate.dart';
+import 'gates/license_gate.dart';
+import 'priority_engine.dart';
 import 'workflow/sync_workflow.dart';
 import 'workflow/sync_workflow_registry.dart';
 import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
@@ -146,15 +150,44 @@ class SyncQueueProcessor {
     var deferred = 0;
     var conflicts = 0;
 
+    const depGraph = SyncDependencyGraph();
+
     while (true) {
       final batch = await _queue.fetchPending(shopId: shopId);
       if (batch.isEmpty) break;
 
+      // Clés de tous les objets pending dans le batch et la base
+      final recordKeyToItem = <String, SyncQueueData>{
+        for (final item in batch) '${item.entityTable}:${item.recordId}': item,
+      };
+
+      // Élévation dynamique de priorité : si un objet B (ex: Vente) attend un objet A (ex: Produit ou Client),
+      // l'objet A prend temporairement une priorité supérieure à B pour passer en premier dans le lot.
+      final effectivePriority = <int, int>{
+        for (final item in batch) item.id: _entityPriority(item.entityTable),
+      };
+
+      for (final item in batch) {
+        final itemPrio = effectivePriority[item.id] ?? _entityPriority(item.entityTable);
+        final prereqs = depGraph.getPrerequisiteKeys(item);
+        for (final prereqKey in prereqs) {
+          final prereqItem = recordKeyToItem[prereqKey];
+          if (prereqItem != null) {
+            final currentPrereqPrio = effectivePriority[prereqItem.id] ?? _entityPriority(prereqItem.entityTable);
+            if (currentPrereqPrio >= itemPrio) {
+              effectivePriority[prereqItem.id] = (itemPrio - 1).clamp(0, 999);
+            }
+          }
+        }
+      }
+
       final sorted = List<SyncQueueData>.from(batch)
         ..sort((a, b) {
-          final priority = _entityPriority(a.entityTable)
-              .compareTo(_entityPriority(b.entityTable));
-          if (priority != 0) return priority;
+          final prioA = effectivePriority[a.id] ?? _entityPriority(a.entityTable);
+          final prioB = effectivePriority[b.id] ?? _entityPriority(b.entityTable);
+          final priorityDiff = prioA.compareTo(prioB);
+          if (priorityDiff != 0) return priorityDiff;
+
           final opPriority = SyncWorkflowRegistry.operationPriority(
             a.entityTable,
             a.operation,
@@ -169,10 +202,10 @@ class SyncQueueProcessor {
         });
 
       // Groupes par priorité d'entité : parallèle limité à l'intérieur,
-      // séquentiel entre groupes (clients → produits → ventes…).
+      // séquentiel entre groupes (P0 → P1 → P2 → P3 → P4 → P5).
       final groups = <int, List<SyncQueueData>>{};
       for (final item in sorted) {
-        final key = _entityPriority(item.entityTable);
+        final key = effectivePriority[item.id] ?? _entityPriority(item.entityTable);
         groups.putIfAbsent(key, () => []).add(item);
       }
       final orderedKeys = groups.keys.toList()..sort();
@@ -188,52 +221,60 @@ class SyncQueueProcessor {
         }
         final chains = byRecord.values.toList();
 
-        final chainResults = await _mapWithConcurrency<
-            List<SyncQueueData>, List<_QueueItemOutcome>>(
-          chains,
-          maxConcurrent: 3,
-          mapper: (chain) async {
-            final outcomes = <_QueueItemOutcome>[];
-            for (final item in chain) {
-              try {
-                final done = await _processItem(shopId: shopId, item: item);
-                if (done) {
-                  await _queue.markProcessed(item.id);
-                  outcomes.add(_QueueItemOutcome.processed);
-                } else {
-                  outcomes.add(_QueueItemOutcome.deferred);
+        try {
+          final chainResults = await _mapWithConcurrency<
+              List<SyncQueueData>, List<_QueueItemOutcome>>(
+            chains,
+            maxConcurrent: 3,
+            mapper: (chain) async {
+              final outcomes = <_QueueItemOutcome>[];
+              for (final item in chain) {
+                try {
+                  final done = await ApiClient.runScopedWithIdempotencyKey(
+                    item.idempotencyKey,
+                    () => _processItem(shopId: shopId, item: item),
+                  );
+                  if (done) {
+                    await _queue.markProcessed(item.id);
+                    outcomes.add(_QueueItemOutcome.processed);
+                  } else {
+                    outcomes.add(_QueueItemOutcome.deferred);
+                  }
+                } on ConflictFailure catch (error) {
+                  await _queue.markConflict(item.id, error.message);
+                  outcomes.add(_QueueItemOutcome.conflict);
+                } on Failure catch (error) {
+                  await _queue.markFailed(item.id, error.message);
+                  outcomes.add(_QueueItemOutcome.failed);
+                } catch (error) {
+                  await _queue.markFailed(item.id, error.toString());
+                  outcomes.add(_QueueItemOutcome.failed);
                 }
-              } on ConflictFailure catch (error) {
-                await _queue.markConflict(item.id, error.message);
-                outcomes.add(_QueueItemOutcome.conflict);
-              } on Failure catch (error) {
-                await _queue.markFailed(item.id, error.message);
-                outcomes.add(_QueueItemOutcome.failed);
-              } catch (error) {
-                await _queue.markFailed(item.id, error.toString());
-                outcomes.add(_QueueItemOutcome.failed);
+                if (!shouldContinueChain(_toPublicOutcome(outcomes.last))) {
+                  break;
+                }
               }
-              if (!shouldContinueChain(_toPublicOutcome(outcomes.last))) {
-                break;
-              }
-            }
-            return outcomes;
-          },
-        );
+              return outcomes;
+            },
+          );
 
-        for (final outcomes in chainResults) {
-          for (final outcome in outcomes) {
-            switch (outcome) {
-              case _QueueItemOutcome.processed:
-                processed++;
-              case _QueueItemOutcome.deferred:
-                deferred++;
-              case _QueueItemOutcome.conflict:
-                conflicts++;
-              case _QueueItemOutcome.failed:
-                break;
+          for (final outcomes in chainResults) {
+            for (final outcome in outcomes) {
+              switch (outcome) {
+                case _QueueItemOutcome.processed:
+                  processed++;
+                case _QueueItemOutcome.deferred:
+                  deferred++;
+                case _QueueItemOutcome.conflict:
+                  conflicts++;
+                case _QueueItemOutcome.failed:
+                  break;
+              }
             }
           }
+        } catch (_) {
+          // Isolation de Domaine : Une exception non gérée dans un groupe (ex: FX)
+          // n'interrompt pas le traitement des autres groupes (ex: Sales, Cash).
         }
       }
 
@@ -247,30 +288,48 @@ class SyncQueueProcessor {
     );
   }
 
+  /// Hiérarchie stricte des entités par classe de priorité (P0 → P5).
+  /// P0 : Config & Modules systeme
+  /// P1 : Référentiels prérequis (Clients, Fournisseurs, Catégories, Produits)
+  /// P2 : Transactions financières & Encaissements critiques (Sessions, Ventes, Créances, Dépenses)
+  /// P3 : Flux métier complexes (Commandes, Achats, Transferts)
+  /// P4 : Secondaire & Calculs
+  /// P5 : Maintenance & Autres
   static int _entityPriority(String table) => switch (table) {
-        SyncEntityTable.customers => 0,
-        SyncEntityTable.categories => 1,
-        SyncEntityTable.products => 2,
-        SyncEntityTable.sales => 3,
-        SyncEntityTable.debts => 4,
-        SyncEntityTable.expenses => 5,
-        SyncEntityTable.cashSessions => 6,
-        SyncEntityTable.cashMovements => 7,
-        SyncEntityTable.tenantModules => 8,
-        SyncEntityTable.calculatorProductData => 9,
-        SyncEntityTable.calculatorHistory => 10,
+        // P0 — Configuration système & modules
+        SyncEntityTable.tenantModules => 0,
+        SyncEntityTable.fxRateSnapshots => 1,
+        SyncEntityTable.fxShopCurrencies => 2,
+
+        // P1 — Référentiels prérequis
+        SyncEntityTable.customers => 10,
         SyncEntityTable.suppliers => 11,
-        SyncEntityTable.purchaseOrders => 12,
-        SyncEntityTable.purchaseReceipts => 13,
-        SyncEntityTable.supplierInvoices => 14,
-        SyncEntityTable.supplierPayments => 15,
-        SyncEntityTable.stockTransfers => 16,
-        SyncEntityTable.salesOrders => 17,
-        SyncEntityTable.fxRateSnapshots => 18,
-        SyncEntityTable.fxShopCurrencies => 19,
-        SyncEntityTable.fxSessions => 20,
-        SyncEntityTable.fxOperations => 21,
-        SyncEntityTable.fxMovements => 22,
+        SyncEntityTable.categories => 12,
+        SyncEntityTable.products => 13,
+        SyncEntityTable.calculatorProductData => 14,
+
+        // P2 — Transactions financières & Encaissements critiques
+        SyncEntityTable.cashSessions => 20,
+        SyncEntityTable.cashMovements => 21,
+        SyncEntityTable.sales => 22,
+        SyncEntityTable.debts => 23,
+        SyncEntityTable.expenses => 24,
+        SyncEntityTable.fxSessions => 25,
+        SyncEntityTable.fxOperations => 26,
+        SyncEntityTable.fxMovements => 27,
+
+        // P3 — Flux métier complexes & Logistique
+        SyncEntityTable.salesOrders => 30,
+        SyncEntityTable.purchaseOrders => 31,
+        SyncEntityTable.purchaseReceipts => 32,
+        SyncEntityTable.supplierInvoices => 33,
+        SyncEntityTable.supplierPayments => 34,
+        SyncEntityTable.stockTransfers => 35,
+
+        // P4 — Secondaire & Historique calculatrice
+        SyncEntityTable.calculatorHistory => 40,
+
+        // P5 — Maintenance & non spécifié
         _ => 99,
       };
 

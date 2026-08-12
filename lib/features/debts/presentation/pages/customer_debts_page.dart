@@ -15,6 +15,7 @@ import 'debt_detail_page.dart';
 import 'forgiven_debts_page.dart';
 import 'paid_debts_page.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../shared/guards/module_activity_guard.dart';
 
 class CustomerDebtsPage extends StatefulWidget {
   const CustomerDebtsPage({
@@ -86,35 +87,41 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Dettes — ${widget.customerName}'),
-        actions: const [ModuleHelpButton(articleId: 'debts')],
-        bottom: TabBar(
+    return ModuleActivityGuard(
+      moduleKey: 'DEBTS',
+      session: widget.session,
+      moduleName: 'Dettes & Crédits',
+      moduleIcon: Icons.handshake_outlined,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Dettes — ${widget.customerName}'),
+          actions: const [ModuleHelpButton(articleId: 'debts')],
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Ouvertes'),
+              Tab(text: 'Remboursées'),
+              Tab(text: 'Pardonnées'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Ouvertes'),
-            Tab(text: 'Remboursées'),
-            Tab(text: 'Pardonnées'),
+          children: [
+            _buildOpenDebtsTab(),
+            PaidDebtsList(
+              session: widget.session,
+              customerId: widget.customerId,
+              customerName: widget.customerName,
+              refreshToken: _debtsRefreshToken,
+            ),
+            ForgivenDebtsList(
+              session: widget.session,
+              customerId: widget.customerId,
+              customerName: widget.customerName,
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildOpenDebtsTab(),
-          PaidDebtsList(
-            session: widget.session,
-            customerId: widget.customerId,
-            customerName: widget.customerName,
-            refreshToken: _debtsRefreshToken,
-          ),
-          ForgivenDebtsList(
-            session: widget.session,
-            customerId: widget.customerId,
-            customerName: widget.customerName,
-          ),
-        ],
       ),
     );
   }

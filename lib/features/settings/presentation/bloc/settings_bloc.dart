@@ -25,6 +25,8 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SettingsShopSaveRequested>(_onShopSave);
     on<SettingsThresholdChanged>(_onThresholdChanged);
     on<SettingsPricingTiersChanged>(_onPricingTiersChanged);
+    on<SettingsPricingGridModeChanged>(_onPricingGridModeChanged);
+    on<SettingsModuleActivityToggled>(_onModuleActivityToggled);
     on<SettingsAutoLockChanged>(_onAutoLockChanged);
     on<SettingsReceiptSaveRequested>(_onReceiptSave);
     on<SettingsBackupRecordRequested>(_onBackupRecord);
@@ -100,6 +102,33 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       successMessage: event.enabled
           ? 'Grilles tarifaires activées.'
           : 'Grilles tarifaires désactivées.',
+    );
+  }
+
+  Future<void> _onPricingGridModeChanged(
+    SettingsPricingGridModeChanged event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _save(
+      emit,
+      UpdateShopSettingsInput(pricingGridMode: event.mode),
+      successMessage: 'Mode de grille tarifaire mis à jour.',
+    );
+  }
+
+  Future<void> _onModuleActivityToggled(
+    SettingsModuleActivityToggled event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _save(
+      emit,
+      UpdateShopSettingsInput(
+        toggledModuleKey: event.moduleKey,
+        isModuleEnabled: event.enabled,
+      ),
+      successMessage: event.enabled
+          ? 'Module ${event.moduleKey} activé.'
+          : 'Module ${event.moduleKey} désactivé.',
     );
   }
 

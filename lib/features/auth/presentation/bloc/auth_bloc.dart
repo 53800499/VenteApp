@@ -812,6 +812,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
         ownerPhone: event.ownerPhone,
         shopAddress: event.shopAddress,
         shopPhone: event.shopPhone,
+        planCode: event.planCode,
       );
       await _lastShopStorage.save(result.shopId);
       emit(AuthSetupCompleted(result));

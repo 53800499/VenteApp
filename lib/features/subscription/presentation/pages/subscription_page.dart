@@ -6,11 +6,14 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/subscription_details.dart';
 import '../../domain/services/subscription_controller.dart';
 import '../../data/services/fedapay_remote_service.dart';
+import '../../data/services/subscription_remote_service.dart';
 
 enum BillingCycle { monthly, quarterly, yearly }
 
 class SubscriptionPage extends StatefulWidget {
-  const SubscriptionPage({super.key});
+  final bool mandatoryGate;
+
+  const SubscriptionPage({super.key, this.mandatoryGate = false});
 
   @override
   State<SubscriptionPage> createState() => _SubscriptionPageState();
@@ -40,25 +43,42 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       _ => 'mtn',
     };
 
+    bool isCancelledByUser = false;
+
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.payment, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('Paiement FedaPay'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              'Demande de paiement envoyée au ${_phoneController.text} ($_selectedProvider)...\n\nVeuillez valider le message USSD reçu sur votre téléphone.',
-              textAlign: TextAlign.center,
+      builder: (dialogCtx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.mobile_friendly, color: Colors.blue),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Paiement FedaPay Mobile Money'),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Demande de paiement transmise au ${_phoneController.text} ($_selectedProvider).\n\n'
+                '📲 Veuillez entrer votre code secret sur le pop-up USSD apparu sur votre téléphone pour confirmer.',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                isCancelledByUser = true;
+                Navigator.pop(dialogCtx);
+              },
+              child: const Text('Fermer / Vérifier plus tard'),
             ),
           ],
         ),
@@ -78,44 +98,71 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       addonCode: isAddon ? targetPlanName : null,
     );
 
-    if (mounted && Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
-
     if (!result.success) {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red.shade700,
-            content: Text('Paiement FedaPay non validé : ${result.message}'),
+            content: Text('Échec FedaPay : ${result.message}'),
           ),
         );
       }
       return;
     }
 
-    if (result.transactionId != null) {
-      final status = await fedapayService.checkTransactionStatus(result.transactionId!);
-      if (status == 'approved') {
-        if (isAddon) {
-          _executeAddonPayment(addonTitle: targetPlanName, price: price);
-        } else if (targetPlanCode != null) {
-          _executePlanPayment(
-            targetPlanCode: targetPlanCode,
-            targetPlanName: targetPlanName,
-            price: price,
-          );
+    final txId = result.transactionId;
+    if (txId != null) {
+      // Boucle de vérification (Polling 45s max)
+      for (int i = 0; i < 15; i++) {
+        if (isCancelledByUser || !mounted) break;
+        await Future<void>.delayed(const Duration(seconds: 3));
+        if (isCancelledByUser || !mounted) break;
+
+        final status = await fedapayService.checkTransactionStatus(txId);
+        if (status == 'approved' || status == 'transferred') {
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          if (isAddon) {
+            _executeAddonPayment(addonTitle: targetPlanName, price: price);
+          } else if (targetPlanCode != null) {
+            _executePlanPayment(
+              targetPlanCode: targetPlanCode,
+              targetPlanName: targetPlanName,
+              price: price,
+            );
+          }
+          return;
+        } else if (status == 'declined' || status == 'canceled') {
+          if (mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.red.shade700,
+                content: Text('Paiement FedaPay annulé ou refusé ($status).'),
+              ),
+            );
+          }
+          return;
         }
-        return;
       }
     }
 
-    if (mounted) {
+    if (mounted && Navigator.canPop(context) && !isCancelledByUser) {
+      Navigator.pop(context);
+    }
+
+    if (mounted && !isCancelledByUser) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          duration: const Duration(seconds: 5),
+          duration: const Duration(seconds: 6),
           content: Text(
-            'Demande FedaPay transmise pour $targetPlanName. Veuillez valider le push USSD sur votre mobile pour activer l\'abonnement.',
+            'Demande FedaPay soumise pour $targetPlanName. Votre abonnement sera activé dès la confirmation du paiement.',
           ),
         ),
       );
@@ -140,186 +187,108 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         BillingCycle.yearly => 365,
       };
 
-  double _getPlanPrice(String planCode) => switch (planCode) {
-        'STARTER' => switch (_billingCycle) {
-            BillingCycle.monthly => 1000,
-            BillingCycle.quarterly => 3000,
-            BillingCycle.yearly => 10000,
-          },
-        'ESSENTIEL' => switch (_billingCycle) {
-            BillingCycle.monthly => 2500,
-            BillingCycle.quarterly => 7500,
-            BillingCycle.yearly => 25000,
-          },
-        'PRO' => switch (_billingCycle) {
-            BillingCycle.monthly => 5000,
-            BillingCycle.quarterly => 15000,
-            BillingCycle.yearly => 50000,
-          },
-        'BUSINESS' => switch (_billingCycle) {
-            BillingCycle.monthly => 15000,
-            BillingCycle.quarterly => 45000,
-            BillingCycle.yearly => 150000,
-          },
-        _ => 0,
-      };
+  double _getPlanPrice(String planCode) {
+    final pkg = _packages.firstWhere(
+      (p) => p['code']?.toString().toUpperCase() == planCode.toUpperCase(),
+      orElse: () => <String, dynamic>{},
+    );
+    if (pkg.isEmpty) return 0.0;
+
+    final monthlyPrice = (pkg['monthlyPrice'] as num?)?.toDouble() ?? (pkg['price'] as num?)?.toDouble() ?? 0.0;
+    final annualPrice = (pkg['annualPrice'] as num?)?.toDouble() ?? (monthlyPrice * 10.0);
+
+    return switch (_billingCycle) {
+      BillingCycle.monthly => monthlyPrice,
+      BillingCycle.quarterly => monthlyPrice * 3.0,
+      BillingCycle.yearly => annualPrice,
+    };
+  }
 
   late SubscriptionDetails _details;
+  List<Map<String, dynamic>> _paidOptions = [];
+  List<Map<String, dynamic>> _packages = [];
+
+  IconData _getOptionIcon(String code) {
+    switch (code) {
+      case 'EXTRA_SHOP':
+        return Icons.store_outlined;
+      case 'USER_PACK_5':
+        return Icons.group_add_outlined;
+      case 'AI_ASSISTANT':
+        return Icons.auto_awesome;
+      case 'FX_CHANGE':
+        return Icons.currency_exchange;
+      case 'INITIAL_TRAINING':
+        return Icons.school_outlined;
+      case 'PREMIUM_SUPPORT':
+        return Icons.support_agent_outlined;
+      default:
+        return Icons.extension_outlined;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _details = SubscriptionDetails(
-      planCode: 'PRO',
-      planName: '⭐ ARIKE Pro',
-      status: 'ACTIVE',
-      startedAt: DateTime(2026, 7, 30),
-      expiresAt: DateTime(2027, 7, 30),
-      graceUntil: DateTime(2027, 8, 6),
-      autoRenew: false,
-      grantedModules: const [
-        'Vente & Encaissement',
-        'Stock Avancé',
-        'Dépenses & Charges',
-        'Approvisionnements & Commandes',
-        'Bureau de Change FX',
-        'Assistant Vocal ARIKE',
-        'Statistiques & Analyses',
-      ],
-      maxUsers: 10,
-      maxShops: 5,
-      currentUsersCount: 3,
-      currentShopsCount: 2,
-      paymentHistory: [
-        PaymentTransactionRecord(
-          id: 'tx_pay_2026_9942',
-          date: DateTime(2026, 7, 30),
-          planName: 'ARIKE Pro Annuel',
-          amount: 50000,
-          currency: 'FCFA',
-          provider: 'MTN Mobile Money',
-          status: 'PAYÉ',
-        ),
-        PaymentTransactionRecord(
-          id: 'tx_pay_2025_1102',
-          date: DateTime(2025, 7, 30),
-          planName: 'ARIKE Essentiel Annuel',
-          amount: 25000,
-          currency: 'FCFA',
-          provider: 'Wave',
-          status: 'PAYÉ',
-        ),
-      ],
-    );
     ensureSubscriptionDependencies();
-    sl<SubscriptionController>().updateSubscription(_details);
+    _details = sl<SubscriptionController>().details;
+    _loadSubscriptionFromDatabase();
+  }
+
+  void _loadSubscriptionFromDatabase() async {
+    await sl<SubscriptionController>().refreshFromRemote();
+    List<Map<String, dynamic>> options = [];
+    List<Map<String, dynamic>> pkgs = [];
+    if (sl.isRegistered<SubscriptionRemoteService>()) {
+      final remote = sl<SubscriptionRemoteService>();
+      final res = await Future.wait([
+        remote.fetchPaidOptions(),
+        remote.fetchPackages(),
+      ]);
+      options = res[0];
+      pkgs = res[1];
+    }
+    if (mounted) {
+      setState(() {
+        _details = sl<SubscriptionController>().details;
+        _paidOptions = options;
+        _packages = pkgs;
+      });
+    }
   }
 
   void _executePlanPayment({
     required String targetPlanCode,
     required String targetPlanName,
     required double price,
-  }) {
-    List<String> modules;
-    int maxUsers;
-    int maxShops;
+  }) async {
+    final remoteService = sl.isRegistered<SubscriptionRemoteService>()
+        ? sl<SubscriptionRemoteService>()
+        : null;
 
-    switch (targetPlanCode) {
-      case 'STARTER':
-        modules = ['Vente & Encaissement', 'Gestion de Stock simple', 'Fichier Clients & Dettes simples', 'Mode 100% Offline'];
-        maxUsers = 1;
-        maxShops = 1;
-        break;
-      case 'ESSENTIEL':
-        modules = [
-          'Vente & Encaissement',
-          'Stock avancé & Alertes rupture',
-          'Dépenses & Charges de caisse',
-          'Approvisionnements & Commandes clients',
-          'Rapports de ventes quotidiens',
-          'Mode 100% Offline',
-        ];
-        maxUsers = 3;
-        maxShops = 2;
-        break;
-      case 'PRO':
-        modules = [
-          'Vente & Encaissement',
-          'Stock Avancé',
-          'Dépenses & Charges',
-          'Approvisionnements & Commandes',
-          'Bureau de Change FX',
-          'Assistant Vocal ARIKE',
-          'Transferts de stock inter-boutiques',
-          'Analyses & Statistiques avancées',
-          'Mode 100% Offline',
-        ];
-        maxUsers = 10;
-        maxShops = 5;
-        break;
-      case 'BUSINESS':
-      default:
-        modules = [
-          'Vente & Encaissement',
-          'Stock Avancé',
-          'Dépenses & Charges',
-          'Approvisionnements & Commandes',
-          'Bureau de Change FX',
-          'Assistant Vocal ARIKE',
-          'Transferts de stock inter-boutiques',
-          'Analyses & Statistiques avancées',
-          'Multi-entreprises & Distributeurs',
-          'Accès API dédiée & Export complet',
-          'Mode 100% Offline',
-        ];
-        maxUsers = 999;
-        maxShops = 999;
-        break;
+    if (remoteService != null) {
+      await remoteService.subscribe(
+        planCode: targetPlanCode,
+        durationDays: _durationDays,
+        provider: _selectedProvider,
+        paymentReference: 'FEDA-${DateTime.now().millisecondsSinceEpoch}',
+        amount: price,
+      );
+      await sl<SubscriptionController>().refreshFromRemote();
     }
 
-    final newTx = PaymentTransactionRecord(
-      id: 'tx_pay_${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
-      date: DateTime.now(),
-      planName: '$targetPlanName ($_billingCycleLabel)',
-      amount: price,
-      currency: 'FCFA',
-      provider: _selectedProvider,
-      status: 'PAYÉ',
-    );
+    if (mounted) {
+      setState(() {
+        _details = sl<SubscriptionController>().details;
+      });
 
-    final durationDays = _durationDays;
-    final now = DateTime.now();
-    final baseDate = _details.expiresAt.isAfter(now) ? _details.expiresAt : now;
-    final newExpiresAt = baseDate.add(Duration(days: durationDays));
-    final newGraceUntil = newExpiresAt.add(const Duration(days: 7));
-
-    setState(() {
-      _details = SubscriptionDetails(
-        planCode: targetPlanCode,
-        planName: targetPlanName,
-        status: 'ACTIVE',
-        startedAt: now,
-        expiresAt: newExpiresAt,
-        graceUntil: newGraceUntil,
-        autoRenew: false,
-        grantedModules: modules,
-        maxUsers: maxUsers,
-        maxShops: maxShops,
-        currentUsersCount: _details.currentUsersCount,
-        currentShopsCount: _details.currentShopsCount,
-        paymentHistory: [newTx, ..._details.paymentHistory],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Paiement de ${price.toStringAsFixed(0)} FCFA réussi via $_selectedProvider ! Le forfait $targetPlanName est actif.'),
+          backgroundColor: Colors.green,
+        ),
       );
-    });
-
-    ensureSubscriptionDependencies();
-    sl<SubscriptionController>().updateSubscription(_details);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Paiement de ${price.toStringAsFixed(0)} FCFA réussi via $_selectedProvider ! Le forfait $targetPlanName est actif.'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    }
   }
 
   void _executeAddonPayment({
@@ -531,88 +500,149 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Abonnement & Facturation ARIKE'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
-          // 📡 Bannière Offline-First Value Proposition
+    final statusBgColor = switch (_details.status.toUpperCase()) {
+      'ACTIVE' || 'TRIAL' => Colors.green,
+      'GRACE' || 'PENDING_ACTIVATION' => Colors.amber.shade800,
+      'REVOKED' || 'SUSPENDED' || 'EXPIRED' => Colors.red.shade700,
+      _ => Colors.blueGrey,
+    };
+
+    final statusIcon = switch (_details.status.toUpperCase()) {
+      'ACTIVE' || 'TRIAL' => Icons.check_circle,
+      'GRACE' || 'PENDING_ACTIVATION' => Icons.access_time_filled,
+      'REVOKED' || 'SUSPENDED' || 'EXPIRED' => Icons.block,
+      _ => Icons.info,
+    };
+
+    final bodyContent = ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        if (_details.isRevoked) ...[
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [colorScheme.primaryContainer, colorScheme.surfaceContainerHighest],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Colors.red.shade100,
+              border: Border.all(color: Colors.red.shade700),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Row(
               children: [
-                Icon(Icons.wifi_off_rounded, color: colorScheme.primary, size: 28),
-                const SizedBox(width: AppSpacing.md),
+                Icon(Icons.block_rounded, color: Colors.red.shade900, size: 28),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Fonctionne 100% Hors-Ligne',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Même sans connexion internet ni réseau, votre boutique continue d\'encaisser et de gérer son stock.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
+                  child: Text(
+                    '🚫 Accès Révoqué : Votre licence a été révoquée par l\'administration. Veuillez souscrire à un forfait pour rétablir vos accès.',
+                    style: TextStyle(
+                      color: Colors.red.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-
-          // 🟢 Carte 1: Carte de Forfait Actuel
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Votre forfait actuel',
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: colorScheme.outline,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _details.planName,
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
-                                ),
-                          ),
-                        ],
-                      ),
-                      Chip(
-                        avatar: const Icon(Icons.check_circle, color: Colors.white, size: 16),
-                        label: Text(_details.status),
-                        backgroundColor: Colors.green,
-                        labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
-                    ],
+        ] else if (widget.mandatoryGate) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade100,
+              border: Border.all(color: Colors.amber.shade700),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 28),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Abonnement requis : Veuillez souscrire au moins au forfait ARIKE Essentiel pour commencer à utiliser le système.',
+                    style: TextStyle(
+                      color: Colors.amber.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        // 📡 Bannière Offline-First Value Proposition
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [colorScheme.primaryContainer, colorScheme.surfaceContainerHighest],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, color: colorScheme.primary, size: 28),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Fonctionne 100% Hors-Ligne',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Même sans connexion internet ni réseau, votre boutique continue d\'encaisser et de gérer son stock.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+
+        // 🟢 Carte 1: Carte de Forfait Actuel
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Votre forfait actuel',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                color: colorScheme.outline,
+                              ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _details.planName,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                        ),
+                      ],
+                    ),
+                    Chip(
+                      avatar: Icon(statusIcon, color: Colors.white, size: 16),
+                      label: Text(_details.status),
+                      backgroundColor: statusBgColor,
+                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
                   const Divider(height: AppSpacing.lg),
                   Row(
                     children: [
@@ -667,8 +697,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           const SizedBox(height: AppSpacing.lg),
 
           // 🔄 Section 3: Catalogue des Forfaits Adaptés au Marché
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Forfaits ARIKE',
@@ -676,106 +706,66 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                       fontWeight: FontWeight.bold,
                     ),
               ),
-              // Bascule 3 Périodes: Mensuel / Trimestriel / Annuel
-              Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Row(
-                  children: [
-                    _BillingCycleTab(
-                      label: 'Mensuel',
-                      selected: _billingCycle == BillingCycle.monthly,
-                      onTap: () => setState(() => _billingCycle = BillingCycle.monthly),
-                    ),
-                    _BillingCycleTab(
-                      label: 'Trimestriel (3 mois)',
-                      selected: _billingCycle == BillingCycle.quarterly,
-                      onTap: () => setState(() => _billingCycle = BillingCycle.quarterly),
-                    ),
-                    _BillingCycleTab(
-                      label: 'Annuel (-20%)',
-                      selected: _billingCycle == BillingCycle.yearly,
-                      onTap: () => setState(() => _billingCycle = BillingCycle.yearly),
-                    ),
-                  ],
+              const SizedBox(height: AppSpacing.sm),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Row(
+                    children: [
+                      _BillingCycleTab(
+                        label: 'Mensuel',
+                        selected: _billingCycle == BillingCycle.monthly,
+                        onTap: () => setState(() => _billingCycle = BillingCycle.monthly),
+                      ),
+                      _BillingCycleTab(
+                        label: 'Trimestriel',
+                        selected: _billingCycle == BillingCycle.quarterly,
+                        onTap: () => setState(() => _billingCycle = BillingCycle.quarterly),
+                      ),
+                      _BillingCycleTab(
+                        label: 'Annuel (-20%)',
+                        selected: _billingCycle == BillingCycle.yearly,
+                        onTap: () => setState(() => _billingCycle = BillingCycle.yearly),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // 1. ARIKE Starter
-          _PlanCard(
-            title: 'ARIKE Starter',
-            price: _getPlanPrice('STARTER'),
-            billingSuffix: _billingSuffix,
-            quotas: '1 Utilisateur · 1 Appareil · 1 Boutique',
-            features: const [
-              'Gestion des Ventes & Encaissement',
-              'Gestion de Stock simple',
-              'Fichier Clients & Dettes simples',
-              'Mode 100% Offline',
-            ],
-            isCurrent: _details.planCode == 'STARTER',
-            onSelect: () => _showChangePlanDialog(context, 'STARTER', 'ARIKE Starter', _getPlanPrice('STARTER')),
-          ),
-          const SizedBox(height: AppSpacing.sm),
+          // 🔄 Cartes de forfaits générées dynamiquement depuis la base de données
+          ..._packages.map((pkg) {
+            final code = pkg['code']?.toString() ?? '';
+            final name = pkg['name']?.toString() ?? 'Formule';
+            final isPopular = pkg['isPopular'] == true || code == 'PRO';
+            final title = isPopular && !name.contains('⭐') ? '⭐ $name' : name;
+            final maxUsers = pkg['maxUsers'] ?? 1;
+            final maxStores = pkg['maxStores'] ?? pkg['maxShops'] ?? 1;
+            final quotas = '$maxUsers Utilisateur${maxUsers > 1 ? 's' : ''} · $maxStores Boutique${maxStores > 1 ? 's' : ''}';
+            final price = _getPlanPrice(code);
+            final modules = (pkg['includedModules'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
-          // 2. ARIKE Essentiel
-          _PlanCard(
-            title: 'ARIKE Essentiel',
-            price: _getPlanPrice('ESSENTIEL'),
-            billingSuffix: _billingSuffix,
-            quotas: '3 Utilisateurs · 2 Boutiques',
-            features: const [
-              'Tout le plan Starter',
-              'Stock avancé & Alertes rupture',
-              'Dépenses & Charges de caisse',
-              'Approvisionnements & Commandes clients',
-              'Rapports de ventes quotidiens',
-            ],
-            isCurrent: _details.planCode == 'ESSENTIEL',
-            onSelect: () => _showChangePlanDialog(context, 'ESSENTIEL', 'ARIKE Essentiel', _getPlanPrice('ESSENTIEL')),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
-          // 3. ⭐ ARIKE Pro
-          _PlanCard(
-            title: '⭐ ARIKE Pro',
-            price: _getPlanPrice('PRO'),
-            billingSuffix: _billingSuffix,
-            quotas: '10 Utilisateurs · 5 Boutiques',
-            features: const [
-              'Tout le plan Essentiel',
-              'Bureau de Change FX (Devises)',
-              'Assistant Vocal ARIKE',
-              'Transferts de stock inter-boutiques',
-              'Analyses & Statistiques avancées',
-            ],
-            isCurrent: _details.planCode == 'PRO',
-            isPopular: true,
-            onSelect: () => _showChangePlanDialog(context, 'PRO', '⭐ ARIKE Pro', _getPlanPrice('PRO')),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-
-          // 4. ARIKE Business
-          _PlanCard(
-            title: 'ARIKE Business',
-            price: _getPlanPrice('BUSINESS'),
-            billingSuffix: _billingSuffix,
-            quotas: 'Utilisateurs & Boutiques Illimités',
-            features: const [
-              'Tout le plan Pro',
-              'Multi-entreprises & Distributeurs',
-              'Accès API dédiée & Export complet',
-              'Support prioritaire 24/7 & Configuration sur-mesure',
-            ],
-            isCurrent: _details.planCode == 'BUSINESS',
-            onSelect: () => _showChangePlanDialog(context, 'BUSINESS', 'ARIKE Business', _getPlanPrice('BUSINESS')),
-          ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _PlanCard(
+                title: title,
+                price: price,
+                billingSuffix: _billingSuffix,
+                quotas: quotas,
+                features: modules,
+                isCurrent: _details.planCode == code,
+                isPopular: isPopular,
+                onSelect: () => _showChangePlanDialog(context, code, title, price),
+              ),
+            );
+          }),
           const SizedBox(height: AppSpacing.lg),
 
           // ➕ Section 4: Options À la Carte (Add-ons)
@@ -791,89 +781,31 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.sm),
-          _AddonCard(
-            title: 'Statistiques & Analyses',
-            priceText: '1 500 FCFA / mois',
-            subtitle: 'Calcul du bénéfice net réel, graphiques d’analyse & top ventes',
-            icon: Icons.insights_outlined,
-            isGranted: _details.grantedModules.contains('Statistiques & Analyses'),
-            onAdd: () => _showMobileMoneyPaymentModal(
-              context,
-              targetPlanName: 'Statistiques & Analyses',
-              price: 1500,
-              isAddon: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _AddonCard(
-            title: 'Dépenses & Charges',
-            priceText: '1 000 FCFA / mois',
-            subtitle: 'Gestion des charges d’exploitation, caisse & frais récurrents',
-            icon: Icons.payments_outlined,
-            isGranted: _details.grantedModules.contains('Dépenses & Charges'),
-            onAdd: () => _showMobileMoneyPaymentModal(
-              context,
-              targetPlanName: 'Dépenses & Charges',
-              price: 1000,
-              isAddon: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _AddonCard(
-            title: 'Approvisionnement & Commandes',
-            priceText: '1 000 FCFA / mois',
-            subtitle: 'Bons de commande fournisseurs, réceptions & livraisons clients',
-            icon: Icons.local_shipping_outlined,
-            isGranted: _details.grantedModules.contains('Approvisionnement & Commandes'),
-            onAdd: () => _showMobileMoneyPaymentModal(
-              context,
-              targetPlanName: 'Approvisionnement & Commandes',
-              price: 1000,
-              isAddon: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _AddonCard(
-            title: 'Transferts Inter-boutiques',
-            priceText: '1 500 FCFA / mois',
-            subtitle: 'Expédition & réception de mouvements de stock multi-boutiques',
-            icon: Icons.swap_horiz_outlined,
-            isGranted: _details.grantedModules.contains('Transferts Inter-boutiques'),
-            onAdd: () => _showMobileMoneyPaymentModal(
-              context,
-              targetPlanName: 'Transferts Inter-boutiques',
-              price: 1500,
-              isAddon: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _AddonCard(
-            title: 'Bureau de Change FX',
-            priceText: '1 500 FCFA / mois',
-            subtitle: 'Calculateur de change, gestion devises & reçu cambiste',
-            icon: Icons.currency_exchange,
-            isGranted: _details.grantedModules.contains('Bureau de Change FX'),
-            onAdd: () => _showMobileMoneyPaymentModal(
-              context,
-              targetPlanName: 'Bureau de Change FX',
-              price: 1500,
-              isAddon: true,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          _AddonCard(
-            title: 'Assistant Vocal ARIKE',
-            priceText: '2 000 FCFA / mois',
-            subtitle: 'Saisie vocale intelligente de vente et de stock',
-            icon: Icons.mic_rounded,
-            isGranted: _details.grantedModules.contains('Assistant Vocal ARIKE'),
-            onAdd: () => _showMobileMoneyPaymentModal(
-              context,
-              targetPlanName: 'Assistant Vocal ARIKE',
-              price: 2000,
-              isAddon: true,
-            ),
-          ),
+          ..._paidOptions.map((opt) {
+            final title = opt['name']?.toString() ?? 'Option payante';
+            final priceDisplay = opt['priceDisplay']?.toString() ?? '${opt['price']} FCFA';
+            final description = opt['description']?.toString() ?? '';
+            final code = opt['code']?.toString() ?? '';
+            final price = (opt['price'] as num?)?.toDouble() ?? 0.0;
+            final isGranted = _details.grantedModules.contains(title) || _details.grantedModules.contains(code);
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+              child: _AddonCard(
+                title: title,
+                priceText: priceDisplay,
+                subtitle: description,
+                icon: _getOptionIcon(code),
+                isGranted: isGranted,
+                onAdd: () => _showMobileMoneyPaymentModal(
+                  context,
+                  targetPlanName: title,
+                  price: price,
+                  isAddon: true,
+                ),
+              ),
+            );
+          }),
           const SizedBox(height: AppSpacing.lg),
 
           // 💳 Carte 5: Historique des Paiements
@@ -942,14 +874,25 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             ),
           ),
         ],
+      );
+
+    final scaffold = Scaffold(
+      appBar: AppBar(
+        title: const Text('Abonnement & Facturation ARIKE'),
+        automaticallyImplyLeading: !widget.mandatoryGate,
       ),
+      body: bodyContent,
+    );
+
+    return PopScope(
+      canPop: !widget.mandatoryGate,
+      child: scaffold,
     );
   }
 }
 
 class _PlanCard extends StatelessWidget {
   const _PlanCard({
-    super.key,
     required this.title,
     required this.price,
     required this.billingSuffix,

@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../../app/di/injection_container.dart';
 import '../../../../../app/theme/app_tokens.dart';
 import '../../../../../core/auth/app_lock_controller.dart';
-import '../../../../../core/auth/pin_cold_start_policy.dart';
 import '../../../../auth/data/datasources/local/biometric_local_datasource.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../domain/entities/settings_entities.dart';
@@ -31,13 +30,11 @@ class SecurityDeviceSettingsPage extends StatefulWidget {
 
 class _SecurityDeviceSettingsPageState extends State<SecurityDeviceSettingsPage> {
   bool _biometricEnabled = false;
-  late PinColdStartPolicy _pinColdStartPolicy;
 
   @override
   void initState() {
     super.initState();
     _biometricEnabled = widget.session.user.biometricEnabled;
-    _pinColdStartPolicy = sl<AppLockController>().pinColdStartPolicy;
   }
 
   @override

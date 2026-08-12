@@ -11,6 +11,10 @@ import 'active_shop_context.dart';
 /// serveur précise pour toutes les requêtes émises dans un contexte donné.
 const Object _scopedServerShopIdZoneKey = #venteAppScopedServerShopId;
 
+/// Clé de zone servant à épingler l'en-tête `X-Idempotency-Key` sur une clé
+/// d'idempotence stable pour toutes les requêtes de mutation émises dans un contexte donné.
+const Object _scopedIdempotencyKeyZoneKey = #venteAppScopedIdempotencyKey;
+
 class ApiClient {
   ApiClient({
     String? baseUrl,
@@ -105,6 +109,19 @@ class ApiClient {
     );
   }
 
+  /// Exécute [action] en épinglant la clé d'idempotence [idempotencyKey]
+  /// pour toutes les requêtes émettant des mutations HTTP dans ce contexte.
+  static Future<T> runScopedWithIdempotencyKey<T>(
+    String? idempotencyKey,
+    Future<T> Function() action,
+  ) {
+    if (idempotencyKey == null || idempotencyKey.trim().isEmpty) return action();
+    return runZoned(
+      action,
+      zoneValues: {_scopedIdempotencyKeyZoneKey: idempotencyKey.trim()},
+    );
+  }
+
   Future<Response<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -186,6 +203,12 @@ class ApiClient {
     final shopId = scopedShopId is int ? scopedShopId : _activeShop?.serverShopId;
     if (shopId != null) {
       options.headers['X-Shop-Id'] = '$shopId';
+    }
+
+    final scopedIdempotencyKey = Zone.current[_scopedIdempotencyKeyZoneKey];
+    if (scopedIdempotencyKey is String && scopedIdempotencyKey.isNotEmpty) {
+      options.headers['x-idempotency-key'] = scopedIdempotencyKey;
+      options.headers['X-Idempotency-Key'] = scopedIdempotencyKey;
     }
   }
 

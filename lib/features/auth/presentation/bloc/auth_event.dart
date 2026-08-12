@@ -132,6 +132,7 @@ class AuthSetupRequested extends AuthEvent {
     required this.ownerPhone,
     this.shopAddress,
     this.shopPhone,
+    this.planCode = 'ESSENTIEL',
   });
 
   final String ownerName;
@@ -140,10 +141,11 @@ class AuthSetupRequested extends AuthEvent {
   final String ownerPhone;
   final String? shopAddress;
   final String? shopPhone;
+  final String planCode;
 
   @override
   List<Object?> get props =>
-      [ownerName, shopName, pin, ownerPhone, shopAddress, shopPhone];
+      [ownerName, shopName, pin, ownerPhone, shopAddress, shopPhone, planCode];
 }
 
 class AuthEmergencyUnlockRequested extends AuthEvent {

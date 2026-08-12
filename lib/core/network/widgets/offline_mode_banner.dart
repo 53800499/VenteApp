@@ -7,11 +7,9 @@ import '../../../app/di/injection_container.dart';
 import '../../../app/theme/app_tokens.dart';
 import '../../auth/cloud_link_status.dart';
 import '../../auth/cloud_session_controller.dart';
-import '../../auth/cloud_session_coordinator.dart';
 import '../../auth/cloud_session_status.dart';
 import '../../auth/cloud_session_repair_service.dart';
 import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
-import '../../security/production_message_policy.dart';
 import '../../sync/sync_display_message.dart';
 import '../../sync/sync_service.dart';
 import '../../sync/sync_snapshot.dart';
@@ -107,6 +105,8 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
         'Synchronisation en cours...',
       CloudLinkStatus.syncError =>
         'Erreur de synchronisation. Vérifiez votre connexion.',
+      CloudLinkStatus.localOnly =>
+        'Mode local activé — données stockées uniquement sur cet appareil.',
     };
   }
 
@@ -117,6 +117,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
       CloudLinkStatus.disconnected => scheme.tertiaryContainer,
       CloudLinkStatus.syncing => scheme.secondaryContainer,
       CloudLinkStatus.syncError => scheme.errorContainer,
+      CloudLinkStatus.localOnly => scheme.surfaceContainerHighest,
     };
   }
 
@@ -127,6 +128,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
       CloudLinkStatus.disconnected => scheme.onTertiaryContainer,
       CloudLinkStatus.syncing => scheme.onSecondaryContainer,
       CloudLinkStatus.syncError => scheme.onErrorContainer,
+      CloudLinkStatus.localOnly => scheme.onSurfaceVariant,
     };
   }
 
@@ -135,6 +137,7 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
         CloudLinkStatus.disconnected => Icons.cloud_off_outlined,
         CloudLinkStatus.syncing => Icons.cloud_sync_outlined,
         CloudLinkStatus.syncError => Icons.warning_amber_outlined,
+        CloudLinkStatus.localOnly => Icons.storage_outlined,
       };
 
   @override
@@ -229,6 +232,12 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                         }
 
                         _handleSyncedVisibility(status);
+
+                        // Masquer en mode local si showWhenSynced est false
+                        if (status == CloudLinkStatus.localOnly &&
+                            !widget.showWhenSynced) {
+                          return const SizedBox.shrink();
+                        }
 
                         if (status == CloudLinkStatus.connected &&
                             (!widget.showWhenSynced || _syncedDismissed)) {

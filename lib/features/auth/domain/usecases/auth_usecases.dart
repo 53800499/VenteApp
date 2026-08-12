@@ -82,6 +82,7 @@ class SetupOwner {
     required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
+    String? planCode,
   }) =>
       _repository.setupOwner(
         ownerName: ownerName,
@@ -90,6 +91,7 @@ class SetupOwner {
         ownerPhone: ownerPhone,
         shopAddress: shopAddress,
         shopPhone: shopPhone,
+        planCode: planCode,
       );
 }
 

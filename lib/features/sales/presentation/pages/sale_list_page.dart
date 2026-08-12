@@ -17,6 +17,7 @@ import 'new_sale_page.dart';
 import 'sale_detail_page.dart';
 import 'quick_sale_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
+import '../../../../shared/guards/module_activity_guard.dart';
 
 class SaleListPage extends StatefulWidget {
   const SaleListPage({super.key, required this.session});
@@ -43,16 +44,21 @@ class _SaleListPageState extends State<SaleListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          BlocBuilder<SaleListBloc, SaleListState>(
-                  buildWhen: (prev, curr) =>
-                      prev.isRefreshing != curr.isRefreshing,
-                  builder: (context, state) {
-                    if (!state.isRefreshing) {
-                      return const SizedBox.shrink();
-                    }
+    return ModuleActivityGuard(
+      moduleKey: 'SALES',
+      session: widget.session,
+      moduleName: 'Ventes & Caisse',
+      moduleIcon: Icons.point_of_sale_outlined,
+      child: Scaffold(
+        body: Column(
+          children: [
+            BlocBuilder<SaleListBloc, SaleListState>(
+                    buildWhen: (prev, curr) =>
+                        prev.isRefreshing != curr.isRefreshing,
+                    builder: (context, state) {
+                      if (!state.isRefreshing) {
+                        return const SizedBox.shrink();
+                      }
                     return const LinearProgressIndicator();
                   },
                 ),
@@ -208,6 +214,7 @@ class _SaleListPageState extends State<SaleListPage> {
                     ]
                   : const [],
             ),
+      ),
     );
   }
 

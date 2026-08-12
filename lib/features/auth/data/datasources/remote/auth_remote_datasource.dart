@@ -42,6 +42,7 @@ class AuthRemoteDatasource {
     required String ownerPhone,
     String? shopAddress,
     String? shopPhone,
+    String? planCode,
   }) async {
     final data = await _postData(
       '/auth/setup',
@@ -52,6 +53,7 @@ class AuthRemoteDatasource {
         'ownerPhone': ownerPhone,
         if (shopAddress != null) 'shopAddress': shopAddress,
         if (shopPhone != null) 'shopPhone': shopPhone,
+        if (planCode != null) 'planCode': planCode,
       },
     );
     return SetupOwnerData.fromJson(data);

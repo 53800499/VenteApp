@@ -3,6 +3,732 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
+class $LocalLicensesTable extends LocalLicenses
+    with TableInfo<$LocalLicensesTable, LocalLicenseData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalLicensesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tenantIdMeta = const VerificationMeta(
+    'tenantId',
+  );
+  @override
+  late final GeneratedColumn<String> tenantId = GeneratedColumn<String>(
+    'tenant_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _planCodeMeta = const VerificationMeta(
+    'planCode',
+  );
+  @override
+  late final GeneratedColumn<String> planCode = GeneratedColumn<String>(
+    'plan_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _maxUsersMeta = const VerificationMeta(
+    'maxUsers',
+  );
+  @override
+  late final GeneratedColumn<int> maxUsers = GeneratedColumn<int>(
+    'max_users',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _maxShopsMeta = const VerificationMeta(
+    'maxShops',
+  );
+  @override
+  late final GeneratedColumn<int> maxShops = GeneratedColumn<int>(
+    'max_shops',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _grantedModulesJsonMeta =
+      const VerificationMeta('grantedModulesJson');
+  @override
+  late final GeneratedColumn<String> grantedModulesJson =
+      GeneratedColumn<String>(
+        'granted_modules_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _validUntilMeta = const VerificationMeta(
+    'validUntil',
+  );
+  @override
+  late final GeneratedColumn<DateTime> validUntil = GeneratedColumn<DateTime>(
+    'valid_until',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _graceUntilMeta = const VerificationMeta(
+    'graceUntil',
+  );
+  @override
+  late final GeneratedColumn<DateTime> graceUntil = GeneratedColumn<DateTime>(
+    'grace_until',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastKnownTimestampMeta =
+      const VerificationMeta('lastKnownTimestamp');
+  @override
+  late final GeneratedColumn<DateTime> lastKnownTimestamp =
+      GeneratedColumn<DateTime>(
+        'last_known_timestamp',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _signatureMeta = const VerificationMeta(
+    'signature',
+  );
+  @override
+  late final GeneratedColumn<String> signature = GeneratedColumn<String>(
+    'signature',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+    'last_synced_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    tenantId,
+    planCode,
+    status,
+    maxUsers,
+    maxShops,
+    grantedModulesJson,
+    validUntil,
+    graceUntil,
+    lastKnownTimestamp,
+    signature,
+    lastSyncedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'local_licenses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalLicenseData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('tenant_id')) {
+      context.handle(
+        _tenantIdMeta,
+        tenantId.isAcceptableOrUnknown(data['tenant_id']!, _tenantIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tenantIdMeta);
+    }
+    if (data.containsKey('plan_code')) {
+      context.handle(
+        _planCodeMeta,
+        planCode.isAcceptableOrUnknown(data['plan_code']!, _planCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_planCodeMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('max_users')) {
+      context.handle(
+        _maxUsersMeta,
+        maxUsers.isAcceptableOrUnknown(data['max_users']!, _maxUsersMeta),
+      );
+    }
+    if (data.containsKey('max_shops')) {
+      context.handle(
+        _maxShopsMeta,
+        maxShops.isAcceptableOrUnknown(data['max_shops']!, _maxShopsMeta),
+      );
+    }
+    if (data.containsKey('granted_modules_json')) {
+      context.handle(
+        _grantedModulesJsonMeta,
+        grantedModulesJson.isAcceptableOrUnknown(
+          data['granted_modules_json']!,
+          _grantedModulesJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_grantedModulesJsonMeta);
+    }
+    if (data.containsKey('valid_until')) {
+      context.handle(
+        _validUntilMeta,
+        validUntil.isAcceptableOrUnknown(data['valid_until']!, _validUntilMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_validUntilMeta);
+    }
+    if (data.containsKey('grace_until')) {
+      context.handle(
+        _graceUntilMeta,
+        graceUntil.isAcceptableOrUnknown(data['grace_until']!, _graceUntilMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_graceUntilMeta);
+    }
+    if (data.containsKey('last_known_timestamp')) {
+      context.handle(
+        _lastKnownTimestampMeta,
+        lastKnownTimestamp.isAcceptableOrUnknown(
+          data['last_known_timestamp']!,
+          _lastKnownTimestampMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastKnownTimestampMeta);
+    }
+    if (data.containsKey('signature')) {
+      context.handle(
+        _signatureMeta,
+        signature.isAcceptableOrUnknown(data['signature']!, _signatureMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_signatureMeta);
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_lastSyncedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  LocalLicenseData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalLicenseData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      tenantId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tenant_id'],
+      )!,
+      planCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plan_code'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      maxUsers: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_users'],
+      )!,
+      maxShops: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_shops'],
+      )!,
+      grantedModulesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}granted_modules_json'],
+      )!,
+      validUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}valid_until'],
+      )!,
+      graceUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}grace_until'],
+      )!,
+      lastKnownTimestamp: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_known_timestamp'],
+      )!,
+      signature: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signature'],
+      )!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_synced_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalLicensesTable createAlias(String alias) {
+    return $LocalLicensesTable(attachedDatabase, alias);
+  }
+}
+
+class LocalLicenseData extends DataClass
+    implements Insertable<LocalLicenseData> {
+  final String id;
+  final String tenantId;
+  final String planCode;
+  final String status;
+  final int maxUsers;
+  final int maxShops;
+  final String grantedModulesJson;
+  final DateTime validUntil;
+  final DateTime graceUntil;
+  final DateTime lastKnownTimestamp;
+  final String signature;
+  final DateTime lastSyncedAt;
+  const LocalLicenseData({
+    required this.id,
+    required this.tenantId,
+    required this.planCode,
+    required this.status,
+    required this.maxUsers,
+    required this.maxShops,
+    required this.grantedModulesJson,
+    required this.validUntil,
+    required this.graceUntil,
+    required this.lastKnownTimestamp,
+    required this.signature,
+    required this.lastSyncedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['tenant_id'] = Variable<String>(tenantId);
+    map['plan_code'] = Variable<String>(planCode);
+    map['status'] = Variable<String>(status);
+    map['max_users'] = Variable<int>(maxUsers);
+    map['max_shops'] = Variable<int>(maxShops);
+    map['granted_modules_json'] = Variable<String>(grantedModulesJson);
+    map['valid_until'] = Variable<DateTime>(validUntil);
+    map['grace_until'] = Variable<DateTime>(graceUntil);
+    map['last_known_timestamp'] = Variable<DateTime>(lastKnownTimestamp);
+    map['signature'] = Variable<String>(signature);
+    map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    return map;
+  }
+
+  LocalLicensesCompanion toCompanion(bool nullToAbsent) {
+    return LocalLicensesCompanion(
+      id: Value(id),
+      tenantId: Value(tenantId),
+      planCode: Value(planCode),
+      status: Value(status),
+      maxUsers: Value(maxUsers),
+      maxShops: Value(maxShops),
+      grantedModulesJson: Value(grantedModulesJson),
+      validUntil: Value(validUntil),
+      graceUntil: Value(graceUntil),
+      lastKnownTimestamp: Value(lastKnownTimestamp),
+      signature: Value(signature),
+      lastSyncedAt: Value(lastSyncedAt),
+    );
+  }
+
+  factory LocalLicenseData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalLicenseData(
+      id: serializer.fromJson<String>(json['id']),
+      tenantId: serializer.fromJson<String>(json['tenantId']),
+      planCode: serializer.fromJson<String>(json['planCode']),
+      status: serializer.fromJson<String>(json['status']),
+      maxUsers: serializer.fromJson<int>(json['maxUsers']),
+      maxShops: serializer.fromJson<int>(json['maxShops']),
+      grantedModulesJson: serializer.fromJson<String>(
+        json['grantedModulesJson'],
+      ),
+      validUntil: serializer.fromJson<DateTime>(json['validUntil']),
+      graceUntil: serializer.fromJson<DateTime>(json['graceUntil']),
+      lastKnownTimestamp: serializer.fromJson<DateTime>(
+        json['lastKnownTimestamp'],
+      ),
+      signature: serializer.fromJson<String>(json['signature']),
+      lastSyncedAt: serializer.fromJson<DateTime>(json['lastSyncedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'tenantId': serializer.toJson<String>(tenantId),
+      'planCode': serializer.toJson<String>(planCode),
+      'status': serializer.toJson<String>(status),
+      'maxUsers': serializer.toJson<int>(maxUsers),
+      'maxShops': serializer.toJson<int>(maxShops),
+      'grantedModulesJson': serializer.toJson<String>(grantedModulesJson),
+      'validUntil': serializer.toJson<DateTime>(validUntil),
+      'graceUntil': serializer.toJson<DateTime>(graceUntil),
+      'lastKnownTimestamp': serializer.toJson<DateTime>(lastKnownTimestamp),
+      'signature': serializer.toJson<String>(signature),
+      'lastSyncedAt': serializer.toJson<DateTime>(lastSyncedAt),
+    };
+  }
+
+  LocalLicenseData copyWith({
+    String? id,
+    String? tenantId,
+    String? planCode,
+    String? status,
+    int? maxUsers,
+    int? maxShops,
+    String? grantedModulesJson,
+    DateTime? validUntil,
+    DateTime? graceUntil,
+    DateTime? lastKnownTimestamp,
+    String? signature,
+    DateTime? lastSyncedAt,
+  }) => LocalLicenseData(
+    id: id ?? this.id,
+    tenantId: tenantId ?? this.tenantId,
+    planCode: planCode ?? this.planCode,
+    status: status ?? this.status,
+    maxUsers: maxUsers ?? this.maxUsers,
+    maxShops: maxShops ?? this.maxShops,
+    grantedModulesJson: grantedModulesJson ?? this.grantedModulesJson,
+    validUntil: validUntil ?? this.validUntil,
+    graceUntil: graceUntil ?? this.graceUntil,
+    lastKnownTimestamp: lastKnownTimestamp ?? this.lastKnownTimestamp,
+    signature: signature ?? this.signature,
+    lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+  );
+  LocalLicenseData copyWithCompanion(LocalLicensesCompanion data) {
+    return LocalLicenseData(
+      id: data.id.present ? data.id.value : this.id,
+      tenantId: data.tenantId.present ? data.tenantId.value : this.tenantId,
+      planCode: data.planCode.present ? data.planCode.value : this.planCode,
+      status: data.status.present ? data.status.value : this.status,
+      maxUsers: data.maxUsers.present ? data.maxUsers.value : this.maxUsers,
+      maxShops: data.maxShops.present ? data.maxShops.value : this.maxShops,
+      grantedModulesJson: data.grantedModulesJson.present
+          ? data.grantedModulesJson.value
+          : this.grantedModulesJson,
+      validUntil: data.validUntil.present
+          ? data.validUntil.value
+          : this.validUntil,
+      graceUntil: data.graceUntil.present
+          ? data.graceUntil.value
+          : this.graceUntil,
+      lastKnownTimestamp: data.lastKnownTimestamp.present
+          ? data.lastKnownTimestamp.value
+          : this.lastKnownTimestamp,
+      signature: data.signature.present ? data.signature.value : this.signature,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalLicenseData(')
+          ..write('id: $id, ')
+          ..write('tenantId: $tenantId, ')
+          ..write('planCode: $planCode, ')
+          ..write('status: $status, ')
+          ..write('maxUsers: $maxUsers, ')
+          ..write('maxShops: $maxShops, ')
+          ..write('grantedModulesJson: $grantedModulesJson, ')
+          ..write('validUntil: $validUntil, ')
+          ..write('graceUntil: $graceUntil, ')
+          ..write('lastKnownTimestamp: $lastKnownTimestamp, ')
+          ..write('signature: $signature, ')
+          ..write('lastSyncedAt: $lastSyncedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    tenantId,
+    planCode,
+    status,
+    maxUsers,
+    maxShops,
+    grantedModulesJson,
+    validUntil,
+    graceUntil,
+    lastKnownTimestamp,
+    signature,
+    lastSyncedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalLicenseData &&
+          other.id == this.id &&
+          other.tenantId == this.tenantId &&
+          other.planCode == this.planCode &&
+          other.status == this.status &&
+          other.maxUsers == this.maxUsers &&
+          other.maxShops == this.maxShops &&
+          other.grantedModulesJson == this.grantedModulesJson &&
+          other.validUntil == this.validUntil &&
+          other.graceUntil == this.graceUntil &&
+          other.lastKnownTimestamp == this.lastKnownTimestamp &&
+          other.signature == this.signature &&
+          other.lastSyncedAt == this.lastSyncedAt);
+}
+
+class LocalLicensesCompanion extends UpdateCompanion<LocalLicenseData> {
+  final Value<String> id;
+  final Value<String> tenantId;
+  final Value<String> planCode;
+  final Value<String> status;
+  final Value<int> maxUsers;
+  final Value<int> maxShops;
+  final Value<String> grantedModulesJson;
+  final Value<DateTime> validUntil;
+  final Value<DateTime> graceUntil;
+  final Value<DateTime> lastKnownTimestamp;
+  final Value<String> signature;
+  final Value<DateTime> lastSyncedAt;
+  final Value<int> rowid;
+  const LocalLicensesCompanion({
+    this.id = const Value.absent(),
+    this.tenantId = const Value.absent(),
+    this.planCode = const Value.absent(),
+    this.status = const Value.absent(),
+    this.maxUsers = const Value.absent(),
+    this.maxShops = const Value.absent(),
+    this.grantedModulesJson = const Value.absent(),
+    this.validUntil = const Value.absent(),
+    this.graceUntil = const Value.absent(),
+    this.lastKnownTimestamp = const Value.absent(),
+    this.signature = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalLicensesCompanion.insert({
+    required String id,
+    required String tenantId,
+    required String planCode,
+    required String status,
+    this.maxUsers = const Value.absent(),
+    this.maxShops = const Value.absent(),
+    required String grantedModulesJson,
+    required DateTime validUntil,
+    required DateTime graceUntil,
+    required DateTime lastKnownTimestamp,
+    required String signature,
+    required DateTime lastSyncedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       tenantId = Value(tenantId),
+       planCode = Value(planCode),
+       status = Value(status),
+       grantedModulesJson = Value(grantedModulesJson),
+       validUntil = Value(validUntil),
+       graceUntil = Value(graceUntil),
+       lastKnownTimestamp = Value(lastKnownTimestamp),
+       signature = Value(signature),
+       lastSyncedAt = Value(lastSyncedAt);
+  static Insertable<LocalLicenseData> custom({
+    Expression<String>? id,
+    Expression<String>? tenantId,
+    Expression<String>? planCode,
+    Expression<String>? status,
+    Expression<int>? maxUsers,
+    Expression<int>? maxShops,
+    Expression<String>? grantedModulesJson,
+    Expression<DateTime>? validUntil,
+    Expression<DateTime>? graceUntil,
+    Expression<DateTime>? lastKnownTimestamp,
+    Expression<String>? signature,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (tenantId != null) 'tenant_id': tenantId,
+      if (planCode != null) 'plan_code': planCode,
+      if (status != null) 'status': status,
+      if (maxUsers != null) 'max_users': maxUsers,
+      if (maxShops != null) 'max_shops': maxShops,
+      if (grantedModulesJson != null)
+        'granted_modules_json': grantedModulesJson,
+      if (validUntil != null) 'valid_until': validUntil,
+      if (graceUntil != null) 'grace_until': graceUntil,
+      if (lastKnownTimestamp != null)
+        'last_known_timestamp': lastKnownTimestamp,
+      if (signature != null) 'signature': signature,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalLicensesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? tenantId,
+    Value<String>? planCode,
+    Value<String>? status,
+    Value<int>? maxUsers,
+    Value<int>? maxShops,
+    Value<String>? grantedModulesJson,
+    Value<DateTime>? validUntil,
+    Value<DateTime>? graceUntil,
+    Value<DateTime>? lastKnownTimestamp,
+    Value<String>? signature,
+    Value<DateTime>? lastSyncedAt,
+    Value<int>? rowid,
+  }) {
+    return LocalLicensesCompanion(
+      id: id ?? this.id,
+      tenantId: tenantId ?? this.tenantId,
+      planCode: planCode ?? this.planCode,
+      status: status ?? this.status,
+      maxUsers: maxUsers ?? this.maxUsers,
+      maxShops: maxShops ?? this.maxShops,
+      grantedModulesJson: grantedModulesJson ?? this.grantedModulesJson,
+      validUntil: validUntil ?? this.validUntil,
+      graceUntil: graceUntil ?? this.graceUntil,
+      lastKnownTimestamp: lastKnownTimestamp ?? this.lastKnownTimestamp,
+      signature: signature ?? this.signature,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (tenantId.present) {
+      map['tenant_id'] = Variable<String>(tenantId.value);
+    }
+    if (planCode.present) {
+      map['plan_code'] = Variable<String>(planCode.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (maxUsers.present) {
+      map['max_users'] = Variable<int>(maxUsers.value);
+    }
+    if (maxShops.present) {
+      map['max_shops'] = Variable<int>(maxShops.value);
+    }
+    if (grantedModulesJson.present) {
+      map['granted_modules_json'] = Variable<String>(grantedModulesJson.value);
+    }
+    if (validUntil.present) {
+      map['valid_until'] = Variable<DateTime>(validUntil.value);
+    }
+    if (graceUntil.present) {
+      map['grace_until'] = Variable<DateTime>(graceUntil.value);
+    }
+    if (lastKnownTimestamp.present) {
+      map['last_known_timestamp'] = Variable<DateTime>(
+        lastKnownTimestamp.value,
+      );
+    }
+    if (signature.present) {
+      map['signature'] = Variable<String>(signature.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalLicensesCompanion(')
+          ..write('id: $id, ')
+          ..write('tenantId: $tenantId, ')
+          ..write('planCode: $planCode, ')
+          ..write('status: $status, ')
+          ..write('maxUsers: $maxUsers, ')
+          ..write('maxShops: $maxShops, ')
+          ..write('grantedModulesJson: $grantedModulesJson, ')
+          ..write('validUntil: $validUntil, ')
+          ..write('graceUntil: $graceUntil, ')
+          ..write('lastKnownTimestamp: $lastKnownTimestamp, ')
+          ..write('signature: $signature, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -10726,6 +11452,16 @@ class $SyncQueueTable extends SyncQueue
       'REFERENCES shops (id)',
     ),
   );
+  static const VerificationMeta _domainMeta = const VerificationMeta('domain');
+  @override
+  late final GeneratedColumn<String> domain = GeneratedColumn<String>(
+    'domain',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('SALES'),
+  );
   static const VerificationMeta _entityTableMeta = const VerificationMeta(
     'entityTable',
   );
@@ -10770,6 +11506,53 @@ class $SyncQueueTable extends SyncQueue
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
+    'idempotencyKey',
+  );
+  @override
+  late final GeneratedColumn<String> idempotencyKey = GeneratedColumn<String>(
+    'idempotency_key',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _businessCriticalityMeta =
+      const VerificationMeta('businessCriticality');
+  @override
+  late final GeneratedColumn<String> businessCriticality =
+      GeneratedColumn<String>(
+        'business_criticality',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('NORMAL'),
+      );
+  static const VerificationMeta _basePriorityMeta = const VerificationMeta(
+    'basePriority',
+  );
+  @override
+  late final GeneratedColumn<int> basePriority = GeneratedColumn<int>(
+    'base_priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(10),
+  );
+  static const VerificationMeta _dependencyBoostMeta = const VerificationMeta(
+    'dependencyBoost',
+  );
+  @override
+  late final GeneratedColumn<int> dependencyBoost = GeneratedColumn<int>(
+    'dependency_boost',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _localVersionMeta = const VerificationMeta(
     'localVersion',
   );
@@ -10793,12 +11576,34 @@ class $SyncQueueTable extends SyncQueue
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _nextRetryAtMeta = const VerificationMeta(
+    'nextRetryAt',
+  );
+  @override
+  late final GeneratedColumn<int> nextRetryAt = GeneratedColumn<int>(
+    'next_retry_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastErrorMeta = const VerificationMeta(
     'lastError',
   );
   @override
   late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
     'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _errorCodeMeta = const VerificationMeta(
+    'errorCode',
+  );
+  @override
+  late final GeneratedColumn<String> errorCode = GeneratedColumn<String>(
+    'error_code',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -10840,13 +11645,20 @@ class $SyncQueueTable extends SyncQueue
   List<GeneratedColumn> get $columns => [
     id,
     shopId,
+    domain,
     entityTable,
     recordId,
     operation,
     payload,
+    idempotencyKey,
+    businessCriticality,
+    basePriority,
+    dependencyBoost,
     localVersion,
     retryCount,
+    nextRetryAt,
     lastError,
+    errorCode,
     status,
     createdAt,
     processedAt,
@@ -10873,6 +11685,12 @@ class $SyncQueueTable extends SyncQueue
       );
     } else if (isInserting) {
       context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('domain')) {
+      context.handle(
+        _domainMeta,
+        domain.isAcceptableOrUnknown(data['domain']!, _domainMeta),
+      );
     }
     if (data.containsKey('table_name')) {
       context.handle(
@@ -10909,6 +11727,42 @@ class $SyncQueueTable extends SyncQueue
     } else if (isInserting) {
       context.missing(_payloadMeta);
     }
+    if (data.containsKey('idempotency_key')) {
+      context.handle(
+        _idempotencyKeyMeta,
+        idempotencyKey.isAcceptableOrUnknown(
+          data['idempotency_key']!,
+          _idempotencyKeyMeta,
+        ),
+      );
+    }
+    if (data.containsKey('business_criticality')) {
+      context.handle(
+        _businessCriticalityMeta,
+        businessCriticality.isAcceptableOrUnknown(
+          data['business_criticality']!,
+          _businessCriticalityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('base_priority')) {
+      context.handle(
+        _basePriorityMeta,
+        basePriority.isAcceptableOrUnknown(
+          data['base_priority']!,
+          _basePriorityMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dependency_boost')) {
+      context.handle(
+        _dependencyBoostMeta,
+        dependencyBoost.isAcceptableOrUnknown(
+          data['dependency_boost']!,
+          _dependencyBoostMeta,
+        ),
+      );
+    }
     if (data.containsKey('local_version')) {
       context.handle(
         _localVersionMeta,
@@ -10926,10 +11780,25 @@ class $SyncQueueTable extends SyncQueue
         retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
       );
     }
+    if (data.containsKey('next_retry_at')) {
+      context.handle(
+        _nextRetryAtMeta,
+        nextRetryAt.isAcceptableOrUnknown(
+          data['next_retry_at']!,
+          _nextRetryAtMeta,
+        ),
+      );
+    }
     if (data.containsKey('last_error')) {
       context.handle(
         _lastErrorMeta,
         lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
+      );
+    }
+    if (data.containsKey('error_code')) {
+      context.handle(
+        _errorCodeMeta,
+        errorCode.isAcceptableOrUnknown(data['error_code']!, _errorCodeMeta),
       );
     }
     if (data.containsKey('status')) {
@@ -10972,6 +11841,10 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.int,
         data['${effectivePrefix}shop_id'],
       )!,
+      domain: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}domain'],
+      )!,
       entityTable: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}table_name'],
@@ -10988,6 +11861,22 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.string,
         data['${effectivePrefix}payload'],
       )!,
+      idempotencyKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}idempotency_key'],
+      ),
+      businessCriticality: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}business_criticality'],
+      )!,
+      basePriority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}base_priority'],
+      )!,
+      dependencyBoost: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dependency_boost'],
+      )!,
       localVersion: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}local_version'],
@@ -10996,9 +11885,17 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.int,
         data['${effectivePrefix}retry_count'],
       )!,
+      nextRetryAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}next_retry_at'],
+      ),
       lastError: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}last_error'],
+      ),
+      errorCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_code'],
       ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -11024,26 +11921,40 @@ class $SyncQueueTable extends SyncQueue
 class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   final int id;
   final int shopId;
+  final String domain;
   final String entityTable;
   final int recordId;
   final String operation;
   final String payload;
+  final String? idempotencyKey;
+  final String businessCriticality;
+  final int basePriority;
+  final int dependencyBoost;
   final int localVersion;
   final int retryCount;
+  final int? nextRetryAt;
   final String? lastError;
+  final String? errorCode;
   final String status;
   final int createdAt;
   final int? processedAt;
   const SyncQueueData({
     required this.id,
     required this.shopId,
+    required this.domain,
     required this.entityTable,
     required this.recordId,
     required this.operation,
     required this.payload,
+    this.idempotencyKey,
+    required this.businessCriticality,
+    required this.basePriority,
+    required this.dependencyBoost,
     required this.localVersion,
     required this.retryCount,
+    this.nextRetryAt,
     this.lastError,
+    this.errorCode,
     required this.status,
     required this.createdAt,
     this.processedAt,
@@ -11053,14 +11964,27 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['shop_id'] = Variable<int>(shopId);
+    map['domain'] = Variable<String>(domain);
     map['table_name'] = Variable<String>(entityTable);
     map['record_id'] = Variable<int>(recordId);
     map['operation'] = Variable<String>(operation);
     map['payload'] = Variable<String>(payload);
+    if (!nullToAbsent || idempotencyKey != null) {
+      map['idempotency_key'] = Variable<String>(idempotencyKey);
+    }
+    map['business_criticality'] = Variable<String>(businessCriticality);
+    map['base_priority'] = Variable<int>(basePriority);
+    map['dependency_boost'] = Variable<int>(dependencyBoost);
     map['local_version'] = Variable<int>(localVersion);
     map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || nextRetryAt != null) {
+      map['next_retry_at'] = Variable<int>(nextRetryAt);
+    }
     if (!nullToAbsent || lastError != null) {
       map['last_error'] = Variable<String>(lastError);
+    }
+    if (!nullToAbsent || errorCode != null) {
+      map['error_code'] = Variable<String>(errorCode);
     }
     map['status'] = Variable<String>(status);
     map['created_at'] = Variable<int>(createdAt);
@@ -11074,15 +11998,28 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     return SyncQueueCompanion(
       id: Value(id),
       shopId: Value(shopId),
+      domain: Value(domain),
       entityTable: Value(entityTable),
       recordId: Value(recordId),
       operation: Value(operation),
       payload: Value(payload),
+      idempotencyKey: idempotencyKey == null && nullToAbsent
+          ? const Value.absent()
+          : Value(idempotencyKey),
+      businessCriticality: Value(businessCriticality),
+      basePriority: Value(basePriority),
+      dependencyBoost: Value(dependencyBoost),
       localVersion: Value(localVersion),
       retryCount: Value(retryCount),
+      nextRetryAt: nextRetryAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextRetryAt),
       lastError: lastError == null && nullToAbsent
           ? const Value.absent()
           : Value(lastError),
+      errorCode: errorCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorCode),
       status: Value(status),
       createdAt: Value(createdAt),
       processedAt: processedAt == null && nullToAbsent
@@ -11099,13 +12036,22 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     return SyncQueueData(
       id: serializer.fromJson<int>(json['id']),
       shopId: serializer.fromJson<int>(json['shopId']),
+      domain: serializer.fromJson<String>(json['domain']),
       entityTable: serializer.fromJson<String>(json['entityTable']),
       recordId: serializer.fromJson<int>(json['recordId']),
       operation: serializer.fromJson<String>(json['operation']),
       payload: serializer.fromJson<String>(json['payload']),
+      idempotencyKey: serializer.fromJson<String?>(json['idempotencyKey']),
+      businessCriticality: serializer.fromJson<String>(
+        json['businessCriticality'],
+      ),
+      basePriority: serializer.fromJson<int>(json['basePriority']),
+      dependencyBoost: serializer.fromJson<int>(json['dependencyBoost']),
       localVersion: serializer.fromJson<int>(json['localVersion']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
+      nextRetryAt: serializer.fromJson<int?>(json['nextRetryAt']),
       lastError: serializer.fromJson<String?>(json['lastError']),
+      errorCode: serializer.fromJson<String?>(json['errorCode']),
       status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       processedAt: serializer.fromJson<int?>(json['processedAt']),
@@ -11117,13 +12063,20 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'shopId': serializer.toJson<int>(shopId),
+      'domain': serializer.toJson<String>(domain),
       'entityTable': serializer.toJson<String>(entityTable),
       'recordId': serializer.toJson<int>(recordId),
       'operation': serializer.toJson<String>(operation),
       'payload': serializer.toJson<String>(payload),
+      'idempotencyKey': serializer.toJson<String?>(idempotencyKey),
+      'businessCriticality': serializer.toJson<String>(businessCriticality),
+      'basePriority': serializer.toJson<int>(basePriority),
+      'dependencyBoost': serializer.toJson<int>(dependencyBoost),
       'localVersion': serializer.toJson<int>(localVersion),
       'retryCount': serializer.toJson<int>(retryCount),
+      'nextRetryAt': serializer.toJson<int?>(nextRetryAt),
       'lastError': serializer.toJson<String?>(lastError),
+      'errorCode': serializer.toJson<String?>(errorCode),
       'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<int>(createdAt),
       'processedAt': serializer.toJson<int?>(processedAt),
@@ -11133,26 +12086,42 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   SyncQueueData copyWith({
     int? id,
     int? shopId,
+    String? domain,
     String? entityTable,
     int? recordId,
     String? operation,
     String? payload,
+    Value<String?> idempotencyKey = const Value.absent(),
+    String? businessCriticality,
+    int? basePriority,
+    int? dependencyBoost,
     int? localVersion,
     int? retryCount,
+    Value<int?> nextRetryAt = const Value.absent(),
     Value<String?> lastError = const Value.absent(),
+    Value<String?> errorCode = const Value.absent(),
     String? status,
     int? createdAt,
     Value<int?> processedAt = const Value.absent(),
   }) => SyncQueueData(
     id: id ?? this.id,
     shopId: shopId ?? this.shopId,
+    domain: domain ?? this.domain,
     entityTable: entityTable ?? this.entityTable,
     recordId: recordId ?? this.recordId,
     operation: operation ?? this.operation,
     payload: payload ?? this.payload,
+    idempotencyKey: idempotencyKey.present
+        ? idempotencyKey.value
+        : this.idempotencyKey,
+    businessCriticality: businessCriticality ?? this.businessCriticality,
+    basePriority: basePriority ?? this.basePriority,
+    dependencyBoost: dependencyBoost ?? this.dependencyBoost,
     localVersion: localVersion ?? this.localVersion,
     retryCount: retryCount ?? this.retryCount,
+    nextRetryAt: nextRetryAt.present ? nextRetryAt.value : this.nextRetryAt,
     lastError: lastError.present ? lastError.value : this.lastError,
+    errorCode: errorCode.present ? errorCode.value : this.errorCode,
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     processedAt: processedAt.present ? processedAt.value : this.processedAt,
@@ -11161,19 +12130,36 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     return SyncQueueData(
       id: data.id.present ? data.id.value : this.id,
       shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      domain: data.domain.present ? data.domain.value : this.domain,
       entityTable: data.entityTable.present
           ? data.entityTable.value
           : this.entityTable,
       recordId: data.recordId.present ? data.recordId.value : this.recordId,
       operation: data.operation.present ? data.operation.value : this.operation,
       payload: data.payload.present ? data.payload.value : this.payload,
+      idempotencyKey: data.idempotencyKey.present
+          ? data.idempotencyKey.value
+          : this.idempotencyKey,
+      businessCriticality: data.businessCriticality.present
+          ? data.businessCriticality.value
+          : this.businessCriticality,
+      basePriority: data.basePriority.present
+          ? data.basePriority.value
+          : this.basePriority,
+      dependencyBoost: data.dependencyBoost.present
+          ? data.dependencyBoost.value
+          : this.dependencyBoost,
       localVersion: data.localVersion.present
           ? data.localVersion.value
           : this.localVersion,
       retryCount: data.retryCount.present
           ? data.retryCount.value
           : this.retryCount,
+      nextRetryAt: data.nextRetryAt.present
+          ? data.nextRetryAt.value
+          : this.nextRetryAt,
       lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      errorCode: data.errorCode.present ? data.errorCode.value : this.errorCode,
       status: data.status.present ? data.status.value : this.status,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       processedAt: data.processedAt.present
@@ -11187,13 +12173,20 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     return (StringBuffer('SyncQueueData(')
           ..write('id: $id, ')
           ..write('shopId: $shopId, ')
+          ..write('domain: $domain, ')
           ..write('entityTable: $entityTable, ')
           ..write('recordId: $recordId, ')
           ..write('operation: $operation, ')
           ..write('payload: $payload, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('businessCriticality: $businessCriticality, ')
+          ..write('basePriority: $basePriority, ')
+          ..write('dependencyBoost: $dependencyBoost, ')
           ..write('localVersion: $localVersion, ')
           ..write('retryCount: $retryCount, ')
+          ..write('nextRetryAt: $nextRetryAt, ')
           ..write('lastError: $lastError, ')
+          ..write('errorCode: $errorCode, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('processedAt: $processedAt')
@@ -11205,13 +12198,20 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   int get hashCode => Object.hash(
     id,
     shopId,
+    domain,
     entityTable,
     recordId,
     operation,
     payload,
+    idempotencyKey,
+    businessCriticality,
+    basePriority,
+    dependencyBoost,
     localVersion,
     retryCount,
+    nextRetryAt,
     lastError,
+    errorCode,
     status,
     createdAt,
     processedAt,
@@ -11222,13 +12222,20 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       (other is SyncQueueData &&
           other.id == this.id &&
           other.shopId == this.shopId &&
+          other.domain == this.domain &&
           other.entityTable == this.entityTable &&
           other.recordId == this.recordId &&
           other.operation == this.operation &&
           other.payload == this.payload &&
+          other.idempotencyKey == this.idempotencyKey &&
+          other.businessCriticality == this.businessCriticality &&
+          other.basePriority == this.basePriority &&
+          other.dependencyBoost == this.dependencyBoost &&
           other.localVersion == this.localVersion &&
           other.retryCount == this.retryCount &&
+          other.nextRetryAt == this.nextRetryAt &&
           other.lastError == this.lastError &&
+          other.errorCode == this.errorCode &&
           other.status == this.status &&
           other.createdAt == this.createdAt &&
           other.processedAt == this.processedAt);
@@ -11237,26 +12244,40 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
 class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   final Value<int> id;
   final Value<int> shopId;
+  final Value<String> domain;
   final Value<String> entityTable;
   final Value<int> recordId;
   final Value<String> operation;
   final Value<String> payload;
+  final Value<String?> idempotencyKey;
+  final Value<String> businessCriticality;
+  final Value<int> basePriority;
+  final Value<int> dependencyBoost;
   final Value<int> localVersion;
   final Value<int> retryCount;
+  final Value<int?> nextRetryAt;
   final Value<String?> lastError;
+  final Value<String?> errorCode;
   final Value<String> status;
   final Value<int> createdAt;
   final Value<int?> processedAt;
   const SyncQueueCompanion({
     this.id = const Value.absent(),
     this.shopId = const Value.absent(),
+    this.domain = const Value.absent(),
     this.entityTable = const Value.absent(),
     this.recordId = const Value.absent(),
     this.operation = const Value.absent(),
     this.payload = const Value.absent(),
+    this.idempotencyKey = const Value.absent(),
+    this.businessCriticality = const Value.absent(),
+    this.basePriority = const Value.absent(),
+    this.dependencyBoost = const Value.absent(),
     this.localVersion = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.nextRetryAt = const Value.absent(),
     this.lastError = const Value.absent(),
+    this.errorCode = const Value.absent(),
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.processedAt = const Value.absent(),
@@ -11264,13 +12285,20 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   SyncQueueCompanion.insert({
     this.id = const Value.absent(),
     required int shopId,
+    this.domain = const Value.absent(),
     required String entityTable,
     required int recordId,
     required String operation,
     required String payload,
+    this.idempotencyKey = const Value.absent(),
+    this.businessCriticality = const Value.absent(),
+    this.basePriority = const Value.absent(),
+    this.dependencyBoost = const Value.absent(),
     required int localVersion,
     this.retryCount = const Value.absent(),
+    this.nextRetryAt = const Value.absent(),
     this.lastError = const Value.absent(),
+    this.errorCode = const Value.absent(),
     this.status = const Value.absent(),
     required int createdAt,
     this.processedAt = const Value.absent(),
@@ -11284,13 +12312,20 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   static Insertable<SyncQueueData> custom({
     Expression<int>? id,
     Expression<int>? shopId,
+    Expression<String>? domain,
     Expression<String>? entityTable,
     Expression<int>? recordId,
     Expression<String>? operation,
     Expression<String>? payload,
+    Expression<String>? idempotencyKey,
+    Expression<String>? businessCriticality,
+    Expression<int>? basePriority,
+    Expression<int>? dependencyBoost,
     Expression<int>? localVersion,
     Expression<int>? retryCount,
+    Expression<int>? nextRetryAt,
     Expression<String>? lastError,
+    Expression<String>? errorCode,
     Expression<String>? status,
     Expression<int>? createdAt,
     Expression<int>? processedAt,
@@ -11298,13 +12333,21 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (shopId != null) 'shop_id': shopId,
+      if (domain != null) 'domain': domain,
       if (entityTable != null) 'table_name': entityTable,
       if (recordId != null) 'record_id': recordId,
       if (operation != null) 'operation': operation,
       if (payload != null) 'payload': payload,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (businessCriticality != null)
+        'business_criticality': businessCriticality,
+      if (basePriority != null) 'base_priority': basePriority,
+      if (dependencyBoost != null) 'dependency_boost': dependencyBoost,
       if (localVersion != null) 'local_version': localVersion,
       if (retryCount != null) 'retry_count': retryCount,
+      if (nextRetryAt != null) 'next_retry_at': nextRetryAt,
       if (lastError != null) 'last_error': lastError,
+      if (errorCode != null) 'error_code': errorCode,
       if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
       if (processedAt != null) 'processed_at': processedAt,
@@ -11314,13 +12357,20 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   SyncQueueCompanion copyWith({
     Value<int>? id,
     Value<int>? shopId,
+    Value<String>? domain,
     Value<String>? entityTable,
     Value<int>? recordId,
     Value<String>? operation,
     Value<String>? payload,
+    Value<String?>? idempotencyKey,
+    Value<String>? businessCriticality,
+    Value<int>? basePriority,
+    Value<int>? dependencyBoost,
     Value<int>? localVersion,
     Value<int>? retryCount,
+    Value<int?>? nextRetryAt,
     Value<String?>? lastError,
+    Value<String?>? errorCode,
     Value<String>? status,
     Value<int>? createdAt,
     Value<int?>? processedAt,
@@ -11328,13 +12378,20 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     return SyncQueueCompanion(
       id: id ?? this.id,
       shopId: shopId ?? this.shopId,
+      domain: domain ?? this.domain,
       entityTable: entityTable ?? this.entityTable,
       recordId: recordId ?? this.recordId,
       operation: operation ?? this.operation,
       payload: payload ?? this.payload,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+      businessCriticality: businessCriticality ?? this.businessCriticality,
+      basePriority: basePriority ?? this.basePriority,
+      dependencyBoost: dependencyBoost ?? this.dependencyBoost,
       localVersion: localVersion ?? this.localVersion,
       retryCount: retryCount ?? this.retryCount,
+      nextRetryAt: nextRetryAt ?? this.nextRetryAt,
       lastError: lastError ?? this.lastError,
+      errorCode: errorCode ?? this.errorCode,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       processedAt: processedAt ?? this.processedAt,
@@ -11350,6 +12407,9 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     if (shopId.present) {
       map['shop_id'] = Variable<int>(shopId.value);
     }
+    if (domain.present) {
+      map['domain'] = Variable<String>(domain.value);
+    }
     if (entityTable.present) {
       map['table_name'] = Variable<String>(entityTable.value);
     }
@@ -11362,14 +12422,32 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     if (payload.present) {
       map['payload'] = Variable<String>(payload.value);
     }
+    if (idempotencyKey.present) {
+      map['idempotency_key'] = Variable<String>(idempotencyKey.value);
+    }
+    if (businessCriticality.present) {
+      map['business_criticality'] = Variable<String>(businessCriticality.value);
+    }
+    if (basePriority.present) {
+      map['base_priority'] = Variable<int>(basePriority.value);
+    }
+    if (dependencyBoost.present) {
+      map['dependency_boost'] = Variable<int>(dependencyBoost.value);
+    }
     if (localVersion.present) {
       map['local_version'] = Variable<int>(localVersion.value);
     }
     if (retryCount.present) {
       map['retry_count'] = Variable<int>(retryCount.value);
     }
+    if (nextRetryAt.present) {
+      map['next_retry_at'] = Variable<int>(nextRetryAt.value);
+    }
     if (lastError.present) {
       map['last_error'] = Variable<String>(lastError.value);
+    }
+    if (errorCode.present) {
+      map['error_code'] = Variable<String>(errorCode.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -11388,13 +12466,20 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     return (StringBuffer('SyncQueueCompanion(')
           ..write('id: $id, ')
           ..write('shopId: $shopId, ')
+          ..write('domain: $domain, ')
           ..write('entityTable: $entityTable, ')
           ..write('recordId: $recordId, ')
           ..write('operation: $operation, ')
           ..write('payload: $payload, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('businessCriticality: $businessCriticality, ')
+          ..write('basePriority: $basePriority, ')
+          ..write('dependencyBoost: $dependencyBoost, ')
           ..write('localVersion: $localVersion, ')
           ..write('retryCount: $retryCount, ')
+          ..write('nextRetryAt: $nextRetryAt, ')
           ..write('lastError: $lastError, ')
+          ..write('errorCode: $errorCode, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
           ..write('processedAt: $processedAt')
@@ -45867,6 +46952,7 @@ class SaleReplacementItemsCompanion
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
+  late final $LocalLicensesTable localLicenses = $LocalLicensesTable(this);
   late final $ShopsTable shops = $ShopsTable(this);
   late final $UsersTable users = $UsersTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
@@ -45978,6 +47064,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
+    localLicenses,
     shops,
     users,
     settings,
@@ -46043,6 +47130,353 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
 }
 
+typedef $$LocalLicensesTableCreateCompanionBuilder =
+    LocalLicensesCompanion Function({
+      required String id,
+      required String tenantId,
+      required String planCode,
+      required String status,
+      Value<int> maxUsers,
+      Value<int> maxShops,
+      required String grantedModulesJson,
+      required DateTime validUntil,
+      required DateTime graceUntil,
+      required DateTime lastKnownTimestamp,
+      required String signature,
+      required DateTime lastSyncedAt,
+      Value<int> rowid,
+    });
+typedef $$LocalLicensesTableUpdateCompanionBuilder =
+    LocalLicensesCompanion Function({
+      Value<String> id,
+      Value<String> tenantId,
+      Value<String> planCode,
+      Value<String> status,
+      Value<int> maxUsers,
+      Value<int> maxShops,
+      Value<String> grantedModulesJson,
+      Value<DateTime> validUntil,
+      Value<DateTime> graceUntil,
+      Value<DateTime> lastKnownTimestamp,
+      Value<String> signature,
+      Value<DateTime> lastSyncedAt,
+      Value<int> rowid,
+    });
+
+class $$LocalLicensesTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalLicensesTable> {
+  $$LocalLicensesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tenantId => $composableBuilder(
+    column: $table.tenantId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get planCode => $composableBuilder(
+    column: $table.planCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxUsers => $composableBuilder(
+    column: $table.maxUsers,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxShops => $composableBuilder(
+    column: $table.maxShops,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get grantedModulesJson => $composableBuilder(
+    column: $table.grantedModulesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get validUntil => $composableBuilder(
+    column: $table.validUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get graceUntil => $composableBuilder(
+    column: $table.graceUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastKnownTimestamp => $composableBuilder(
+    column: $table.lastKnownTimestamp,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signature => $composableBuilder(
+    column: $table.signature,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalLicensesTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalLicensesTable> {
+  $$LocalLicensesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tenantId => $composableBuilder(
+    column: $table.tenantId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get planCode => $composableBuilder(
+    column: $table.planCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxUsers => $composableBuilder(
+    column: $table.maxUsers,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxShops => $composableBuilder(
+    column: $table.maxShops,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get grantedModulesJson => $composableBuilder(
+    column: $table.grantedModulesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get validUntil => $composableBuilder(
+    column: $table.validUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get graceUntil => $composableBuilder(
+    column: $table.graceUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastKnownTimestamp => $composableBuilder(
+    column: $table.lastKnownTimestamp,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signature => $composableBuilder(
+    column: $table.signature,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalLicensesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalLicensesTable> {
+  $$LocalLicensesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get tenantId =>
+      $composableBuilder(column: $table.tenantId, builder: (column) => column);
+
+  GeneratedColumn<String> get planCode =>
+      $composableBuilder(column: $table.planCode, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get maxUsers =>
+      $composableBuilder(column: $table.maxUsers, builder: (column) => column);
+
+  GeneratedColumn<int> get maxShops =>
+      $composableBuilder(column: $table.maxShops, builder: (column) => column);
+
+  GeneratedColumn<String> get grantedModulesJson => $composableBuilder(
+    column: $table.grantedModulesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get validUntil => $composableBuilder(
+    column: $table.validUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get graceUntil => $composableBuilder(
+    column: $table.graceUntil,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastKnownTimestamp => $composableBuilder(
+    column: $table.lastKnownTimestamp,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get signature =>
+      $composableBuilder(column: $table.signature, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalLicensesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalLicensesTable,
+          LocalLicenseData,
+          $$LocalLicensesTableFilterComposer,
+          $$LocalLicensesTableOrderingComposer,
+          $$LocalLicensesTableAnnotationComposer,
+          $$LocalLicensesTableCreateCompanionBuilder,
+          $$LocalLicensesTableUpdateCompanionBuilder,
+          (
+            LocalLicenseData,
+            BaseReferences<
+              _$AppDatabase,
+              $LocalLicensesTable,
+              LocalLicenseData
+            >,
+          ),
+          LocalLicenseData,
+          PrefetchHooks Function()
+        > {
+  $$LocalLicensesTableTableManager(_$AppDatabase db, $LocalLicensesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalLicensesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalLicensesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalLicensesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> tenantId = const Value.absent(),
+                Value<String> planCode = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> maxUsers = const Value.absent(),
+                Value<int> maxShops = const Value.absent(),
+                Value<String> grantedModulesJson = const Value.absent(),
+                Value<DateTime> validUntil = const Value.absent(),
+                Value<DateTime> graceUntil = const Value.absent(),
+                Value<DateTime> lastKnownTimestamp = const Value.absent(),
+                Value<String> signature = const Value.absent(),
+                Value<DateTime> lastSyncedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalLicensesCompanion(
+                id: id,
+                tenantId: tenantId,
+                planCode: planCode,
+                status: status,
+                maxUsers: maxUsers,
+                maxShops: maxShops,
+                grantedModulesJson: grantedModulesJson,
+                validUntil: validUntil,
+                graceUntil: graceUntil,
+                lastKnownTimestamp: lastKnownTimestamp,
+                signature: signature,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String tenantId,
+                required String planCode,
+                required String status,
+                Value<int> maxUsers = const Value.absent(),
+                Value<int> maxShops = const Value.absent(),
+                required String grantedModulesJson,
+                required DateTime validUntil,
+                required DateTime graceUntil,
+                required DateTime lastKnownTimestamp,
+                required String signature,
+                required DateTime lastSyncedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalLicensesCompanion.insert(
+                id: id,
+                tenantId: tenantId,
+                planCode: planCode,
+                status: status,
+                maxUsers: maxUsers,
+                maxShops: maxShops,
+                grantedModulesJson: grantedModulesJson,
+                validUntil: validUntil,
+                graceUntil: graceUntil,
+                lastKnownTimestamp: lastKnownTimestamp,
+                signature: signature,
+                lastSyncedAt: lastSyncedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalLicensesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalLicensesTable,
+      LocalLicenseData,
+      $$LocalLicensesTableFilterComposer,
+      $$LocalLicensesTableOrderingComposer,
+      $$LocalLicensesTableAnnotationComposer,
+      $$LocalLicensesTableCreateCompanionBuilder,
+      $$LocalLicensesTableUpdateCompanionBuilder,
+      (
+        LocalLicenseData,
+        BaseReferences<_$AppDatabase, $LocalLicensesTable, LocalLicenseData>,
+      ),
+      LocalLicenseData,
+      PrefetchHooks Function()
+    >;
 typedef $$ShopsTableCreateCompanionBuilder =
     ShopsCompanion Function({
       Value<int> id,
@@ -62390,13 +63824,20 @@ typedef $$SyncQueueTableCreateCompanionBuilder =
     SyncQueueCompanion Function({
       Value<int> id,
       required int shopId,
+      Value<String> domain,
       required String entityTable,
       required int recordId,
       required String operation,
       required String payload,
+      Value<String?> idempotencyKey,
+      Value<String> businessCriticality,
+      Value<int> basePriority,
+      Value<int> dependencyBoost,
       required int localVersion,
       Value<int> retryCount,
+      Value<int?> nextRetryAt,
       Value<String?> lastError,
+      Value<String?> errorCode,
       Value<String> status,
       required int createdAt,
       Value<int?> processedAt,
@@ -62405,13 +63846,20 @@ typedef $$SyncQueueTableUpdateCompanionBuilder =
     SyncQueueCompanion Function({
       Value<int> id,
       Value<int> shopId,
+      Value<String> domain,
       Value<String> entityTable,
       Value<int> recordId,
       Value<String> operation,
       Value<String> payload,
+      Value<String?> idempotencyKey,
+      Value<String> businessCriticality,
+      Value<int> basePriority,
+      Value<int> dependencyBoost,
       Value<int> localVersion,
       Value<int> retryCount,
+      Value<int?> nextRetryAt,
       Value<String?> lastError,
+      Value<String?> errorCode,
       Value<String> status,
       Value<int> createdAt,
       Value<int?> processedAt,
@@ -62453,6 +63901,11 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get domain => $composableBuilder(
+    column: $table.domain,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get entityTable => $composableBuilder(
     column: $table.entityTable,
     builder: (column) => ColumnFilters(column),
@@ -62473,6 +63926,26 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get businessCriticality => $composableBuilder(
+    column: $table.businessCriticality,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get basePriority => $composableBuilder(
+    column: $table.basePriority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dependencyBoost => $composableBuilder(
+    column: $table.dependencyBoost,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get localVersion => $composableBuilder(
     column: $table.localVersion,
     builder: (column) => ColumnFilters(column),
@@ -62483,8 +63956,18 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get nextRetryAt => $composableBuilder(
+    column: $table.nextRetryAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get lastError => $composableBuilder(
     column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorCode => $composableBuilder(
+    column: $table.errorCode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -62541,6 +64024,11 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get domain => $composableBuilder(
+    column: $table.domain,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get entityTable => $composableBuilder(
     column: $table.entityTable,
     builder: (column) => ColumnOrderings(column),
@@ -62561,6 +64049,26 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get businessCriticality => $composableBuilder(
+    column: $table.businessCriticality,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get basePriority => $composableBuilder(
+    column: $table.basePriority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dependencyBoost => $composableBuilder(
+    column: $table.dependencyBoost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get localVersion => $composableBuilder(
     column: $table.localVersion,
     builder: (column) => ColumnOrderings(column),
@@ -62571,8 +64079,18 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get nextRetryAt => $composableBuilder(
+    column: $table.nextRetryAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get lastError => $composableBuilder(
     column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorCode => $composableBuilder(
+    column: $table.errorCode,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -62627,6 +64145,9 @@ class $$SyncQueueTableAnnotationComposer
   GeneratedColumn<int> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<String> get domain =>
+      $composableBuilder(column: $table.domain, builder: (column) => column);
+
   GeneratedColumn<String> get entityTable => $composableBuilder(
     column: $table.entityTable,
     builder: (column) => column,
@@ -62641,6 +64162,26 @@ class $$SyncQueueTableAnnotationComposer
   GeneratedColumn<String> get payload =>
       $composableBuilder(column: $table.payload, builder: (column) => column);
 
+  GeneratedColumn<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get businessCriticality => $composableBuilder(
+    column: $table.businessCriticality,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get basePriority => $composableBuilder(
+    column: $table.basePriority,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dependencyBoost => $composableBuilder(
+    column: $table.dependencyBoost,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get localVersion => $composableBuilder(
     column: $table.localVersion,
     builder: (column) => column,
@@ -62651,8 +64192,16 @@ class $$SyncQueueTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get nextRetryAt => $composableBuilder(
+    column: $table.nextRetryAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get lastError =>
       $composableBuilder(column: $table.lastError, builder: (column) => column);
+
+  GeneratedColumn<String> get errorCode =>
+      $composableBuilder(column: $table.errorCode, builder: (column) => column);
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -62719,26 +64268,40 @@ class $$SyncQueueTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<int> shopId = const Value.absent(),
+                Value<String> domain = const Value.absent(),
                 Value<String> entityTable = const Value.absent(),
                 Value<int> recordId = const Value.absent(),
                 Value<String> operation = const Value.absent(),
                 Value<String> payload = const Value.absent(),
+                Value<String?> idempotencyKey = const Value.absent(),
+                Value<String> businessCriticality = const Value.absent(),
+                Value<int> basePriority = const Value.absent(),
+                Value<int> dependencyBoost = const Value.absent(),
                 Value<int> localVersion = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<int?> nextRetryAt = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
+                Value<String?> errorCode = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int?> processedAt = const Value.absent(),
               }) => SyncQueueCompanion(
                 id: id,
                 shopId: shopId,
+                domain: domain,
                 entityTable: entityTable,
                 recordId: recordId,
                 operation: operation,
                 payload: payload,
+                idempotencyKey: idempotencyKey,
+                businessCriticality: businessCriticality,
+                basePriority: basePriority,
+                dependencyBoost: dependencyBoost,
                 localVersion: localVersion,
                 retryCount: retryCount,
+                nextRetryAt: nextRetryAt,
                 lastError: lastError,
+                errorCode: errorCode,
                 status: status,
                 createdAt: createdAt,
                 processedAt: processedAt,
@@ -62747,26 +64310,40 @@ class $$SyncQueueTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required int shopId,
+                Value<String> domain = const Value.absent(),
                 required String entityTable,
                 required int recordId,
                 required String operation,
                 required String payload,
+                Value<String?> idempotencyKey = const Value.absent(),
+                Value<String> businessCriticality = const Value.absent(),
+                Value<int> basePriority = const Value.absent(),
+                Value<int> dependencyBoost = const Value.absent(),
                 required int localVersion,
                 Value<int> retryCount = const Value.absent(),
+                Value<int?> nextRetryAt = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
+                Value<String?> errorCode = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 required int createdAt,
                 Value<int?> processedAt = const Value.absent(),
               }) => SyncQueueCompanion.insert(
                 id: id,
                 shopId: shopId,
+                domain: domain,
                 entityTable: entityTable,
                 recordId: recordId,
                 operation: operation,
                 payload: payload,
+                idempotencyKey: idempotencyKey,
+                businessCriticality: businessCriticality,
+                basePriority: basePriority,
+                dependencyBoost: dependencyBoost,
                 localVersion: localVersion,
                 retryCount: retryCount,
+                nextRetryAt: nextRetryAt,
                 lastError: lastError,
+                errorCode: errorCode,
                 status: status,
                 createdAt: createdAt,
                 processedAt: processedAt,
@@ -97265,6 +98842,8 @@ typedef $$SaleReplacementItemsTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
+  $$LocalLicensesTableTableManager get localLicenses =>
+      $$LocalLicensesTableTableManager(_db, _db.localLicenses);
   $$ShopsTableTableManager get shops =>
       $$ShopsTableTableManager(_db, _db.shops);
   $$UsersTableTableManager get users =>

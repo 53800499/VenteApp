@@ -186,9 +186,10 @@ class MorePage extends StatelessWidget {
                     ),
                     ModuleActionTile(
                       icon: Icons.workspace_premium_outlined,
-                      title: 'Mon abonnement',
-                      subtitle:
-                          'Forfait ARIKE, modules débloqués, quotas et paiements',
+                      title: 'Mon abonnement — ${subDetails.planName}',
+                      subtitle: subDetails.isRevoked
+                          ? '🚫 ACCÈS RÉVOQUÉ — Touchez pour réactiver votre offre'
+                          : 'Offre active : ${subDetails.planName} (${subDetails.status}) · Expire le ${subDetails.expiresAt.day}/${subDetails.expiresAt.month}/${subDetails.expiresAt.year}',
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => const SubscriptionPage(),

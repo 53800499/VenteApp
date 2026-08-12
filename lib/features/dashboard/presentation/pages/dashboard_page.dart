@@ -245,19 +245,43 @@ class _GreetingHeader extends StatelessWidget {
   }
 }
 
-class _NetworkStatusBadge extends StatelessWidget {
+class _NetworkStatusBadge extends StatefulWidget {
   const _NetworkStatusBadge();
+
+  @override
+  State<_NetworkStatusBadge> createState() => _NetworkStatusBadgeState();
+}
+
+class _NetworkStatusBadgeState extends State<_NetworkStatusBadge> {
+  bool? _isOnline;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialConnectivity();
+  }
+
+  Future<void> _checkInitialConnectivity() async {
+    final results = await Connectivity().checkConnectivity();
+    if (mounted) {
+      setState(() {
+        _isOnline = !results.every((r) => r == ConnectivityResult.none);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ConnectivityResult>>(
       stream: Connectivity().onConnectivityChanged,
       builder: (context, snapshot) {
-        final isOffline = snapshot.hasData
-            ? snapshot.data!.every((r) => r == ConnectivityResult.none)
-            : false;
+        final bool isOnline;
+        if (snapshot.hasData) {
+          isOnline = !snapshot.data!.every((r) => r == ConnectivityResult.none);
+        } else {
+          isOnline = _isOnline ?? true;
+        }
 
-        final isOnline = !isOffline;
         final color = isOnline ? Colors.green : Colors.amber.shade800;
         final bg = isOnline
             ? Colors.green.withValues(alpha: 0.12)
