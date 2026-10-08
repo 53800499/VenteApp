@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../core/storage/form_draft_storage.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
@@ -34,12 +35,14 @@ class ProductFormPage extends StatefulWidget {
     required this.session,
     this.product,
     this.voiceSeed,
+    this.initialPayload,
     this.startGuidedVoiceProduct = false,
   });
 
   final AuthSession session;
   final Product? product;
   final VoiceProductSeed? voiceSeed;
+  final Map<String, dynamic>? initialPayload;
   final bool startGuidedVoiceProduct;
 
   bool get isEditing => product != null;
@@ -75,8 +78,17 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final _sandController = TextEditingController(text: '400');
   final _gravelController = TextEditingController(text: '800');
 
-  List<ProductCategory> _categories = [];
+  final _densityController = TextEditingController(text: '2.5');
+
   int? _categoryId;
+  List<ProductCategory> _categories = [];
+  bool _loadingCategories = true;
+
+  // Mode de tarification V2
+  ProductPricingMode _pricingMode = ProductPricingMode.manual;
+  final _marginValueController = TextEditingController();
+  late final String _draftKey;
+
   bool _isLoading = false;
   String _pricingGridMode = 'STANDARD'; // 'STANDARD', 'RETAIL_WHOLESALE', 'MULTI_TIER'
   bool _calculatorsModuleEnabled = false;
@@ -86,9 +98,6 @@ class _ProductFormPageState extends State<ProductFormPage> {
   bool _voiceSeedApplied = false;
   bool _guidedVoiceStarted = false;
   bool _pendingGuidedVoice = false;
-  ProductPricingMode _pricingMode = ProductPricingMode.manual;
-  final _marginValueController = TextEditingController();
-  late final String _draftKey;
 
   @override
   void initState() {
@@ -98,6 +107,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       productId: widget.product?.id,
     );
     final product = widget.product;
+    final payload = widget.initialPayload;
     if (product != null) {
       _nameController.text = product.name;
       _skuController.text = product.sku ?? '';
@@ -120,6 +130,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
       }
       _alertThresholdController.text = '${product.alertThreshold}';
       _categoryId = product.categoryId;
+    } else if (payload != null) {
+      if (payload['name'] is String) _nameController.text = payload['name'] as String;
+      if (payload['sku'] is String) _skuController.text = payload['sku'] as String;
+      if (payload['priceSell'] != null) _priceSellController.text = '${payload['priceSell']}';
+      if (payload['priceBuy'] != null) _priceBuyController.text = '${payload['priceBuy']}';
+      if (payload['localCategoryId'] is int) _categoryId = payload['localCategoryId'] as int;
+      if (payload['initialQuantity'] != null) {
+        _quantityController.text = '${payload['initialQuantity']}';
+      }
     }
     _loadCategories();
     _loadPricingSettings();
@@ -582,20 +601,21 @@ class _ProductFormPageState extends State<ProductFormPage> {
       }
     } on Failure catch (e) {
       if (mounted) {
+        final msg = friendlyErrorMessage(e);
         await InventoryFeedback.showErrorDialog(
           context,
           title: 'Enregistrement impossible',
-          message: e.message,
+          message: msg,
         );
         setState(() {
-          _errorMessage = e.message;
+          _errorMessage = msg;
           _isLoading = false;
         });
         await _persistDraftIfNeeded();
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        const message = 'Enregistrement impossible.';
+        final message = 'Enregistrement impossible : ${friendlyErrorMessage(e)}';
         await InventoryFeedback.showErrorDialog(
           context,
           title: 'Enregistrement impossible',

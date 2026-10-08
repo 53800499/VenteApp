@@ -1,11 +1,23 @@
 import 'package:equatable/equatable.dart';
 
+import '../security/production_message_policy.dart';
 import 'app_release_tier.dart';
 
 enum SyncRunPhase {
   idle,
   running,
   completed,
+}
+
+/// Déclencheurs formels d'un cycle de synchronisation ARIKE.
+enum SyncTrigger {
+  appStarted,
+  appResumed,
+  networkRestored,
+  shopChanged,
+  manualRefresh,
+  outboxEnqueued,
+  periodicFallback,
 }
 
 /// État indicateur SFD §13.3 (V2/V3 uniquement si cloud activé).
@@ -18,6 +30,10 @@ enum SyncIndicatorState {
   pending,
   /// Conflit à résoudre manuellement (V2/V3)
   conflict,
+  /// Hors connexion réseau totale
+  offline,
+  /// Réseau actif (Wi-Fi/4G) mais Internet ou serveur ARIKE inaccessible
+  waitingForConnection,
 }
 
 class SyncModuleResult extends Equatable {
@@ -30,6 +46,44 @@ class SyncModuleResult extends Equatable {
   final String module;
   final bool success;
   final String? errorMessage;
+
+  /// Libellé français lisible et professionnel pour l'utilisateur
+  String get moduleLabel => formatModuleName(module);
+
+  /// Message d'erreur assaini, débarrassé de tout jargon technique (DioException...)
+  String? get cleanErrorMessage =>
+      errorMessage != null ? ProductionMessagePolicy.sanitize(errorMessage!) : null;
+
+  static String formatModuleName(String module) {
+    final lower = module.trim().toLowerCase();
+    return switch (lower) {
+      'calculators' || 'calculator' => 'Calculateurs & Devis',
+      'procurement' || 'procurements' => 'Approvisionnements & Achats',
+      'stock_transfers' || 'stock_transfer' => 'Transferts de stock',
+      'fx_exchange' || 'fx' || 'exchange_rates' => 'Devises & Taux de change',
+      'sales_orders' || 'sales_order' => 'Commandes clients & Livraisons',
+      'customers' || 'customer' => 'Clients & Répertoire',
+      'inventory' || 'products' || 'product' => 'Produits & Inventaire',
+      'sales' || 'sale' => 'Ventes & Encaissements',
+      'debts' || 'debt' => 'Dettes & Crédits clients',
+      'expenses' || 'expense' => 'Dépenses & Charges',
+      'cash_sessions' || 'cash_session' => 'Sessions de caisse',
+      'users' || 'user' => 'Utilisateurs & Équipe',
+      'shops' || 'shop' => 'Boutiques & Points de vente',
+      'auth' || 'authentication' => 'Authentification & Accès',
+      'settings' || 'setting' => 'Paramètres & Configuration',
+      'audit' || 'audit_logs' => 'Journal d’audit',
+      _ => module.isEmpty
+          ? 'Module'
+          : module
+              .replaceAll('_', ' ')
+              .split(' ')
+              .map((w) => w.isNotEmpty
+                  ? '${w[0].toUpperCase()}${w.substring(1)}'
+                  : '')
+              .join(' '),
+    };
+  }
 
   @override
   List<Object?> get props => [module, success, errorMessage];

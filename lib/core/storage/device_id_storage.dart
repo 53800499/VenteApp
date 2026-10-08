@@ -27,6 +27,21 @@ class DeviceIdStorage {
     return id;
   }
 
+  /// Retourne le deviceId mis en cache s'il existe déjà.
+  String? get cachedDeviceId => _readSync(_deviceIdKey);
+
+  /// Tag court d'identification d'appareil (4 caractères alphanumériques)
+  /// pour les numéros de reçus en mode déconnecté multi-terminaux.
+  String get shortDeviceTag {
+    var raw = cachedDeviceId;
+    if (raw == null || raw.length < 8) {
+      raw = _uuid.v4();
+      _write(_deviceIdKey, raw);
+    }
+    final sanitized = raw.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
+    return sanitized.length >= 4 ? sanitized.substring(0, 4) : sanitized;
+  }
+
   Future<({String deviceId, String deviceLabel})> getAuthDevice() async {
     final deviceId = await getOrCreate();
     return (deviceId: deviceId, deviceLabel: AppConstants.deviceLabel);

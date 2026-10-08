@@ -11,6 +11,7 @@ import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../domain/usecases/auth_usecases.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/auth_split_layout.dart';
 
 class EmergencyUnlockPage extends StatefulWidget {
   const EmergencyUnlockPage({super.key});
@@ -51,11 +52,9 @@ class _EmergencyUnlockPageState extends State<EmergencyUnlockPage>
     final state = context.read<AuthBloc>().state;
     return switch (state) {
       AuthLocked(:final lockScreen) => (
-          shopId: lockScreen.shopId,
-          userId: lockScreen.users.length == 1
-              ? lockScreen.users.first.id
-              : null,
-        ),
+        shopId: lockScreen.shopId,
+        userId: lockScreen.users.length == 1 ? lockScreen.users.first.id : null,
+      ),
       _ => (shopId: 1, userId: null),
     };
   }
@@ -66,12 +65,12 @@ class _EmergencyUnlockPageState extends State<EmergencyUnlockPage>
 
     final ids = _contextIds();
     context.read<AuthBloc>().add(
-          AuthEmergencyUnlockRequested(
-            recoveryToken: token,
-            shopId: ids.shopId,
-            userId: ids.userId,
-          ),
-        );
+      AuthEmergencyUnlockRequested(
+        recoveryToken: token,
+        shopId: ids.shopId,
+        userId: ids.userId,
+      ),
+    );
   }
 
   Future<void> _requestOtp() async {
@@ -114,13 +113,13 @@ class _EmergencyUnlockPageState extends State<EmergencyUnlockPage>
 
     final ids = _contextIds();
     context.read<AuthBloc>().add(
-          AuthEmergencyUnlockWhatsappRequested(
-            phone: phone,
-            code: code,
-            shopId: ids.shopId,
-            userId: ids.userId,
-          ),
-        );
+      AuthEmergencyUnlockWhatsappRequested(
+        phone: phone,
+        code: code,
+        shopId: ids.shopId,
+        userId: ids.userId,
+      ),
+    );
   }
 
   @override
@@ -138,30 +137,48 @@ class _EmergencyUnlockPageState extends State<EmergencyUnlockPage>
       ),
       body: GradientBackground(
         child: SafeArea(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _TokenTab(
-                controller: _tokenController,
-                onSubmit: _submitToken,
+          child: AuthSplitLayout(
+            heroIcon: Icons.health_and_safety_outlined,
+            heroTitle: 'Déblocage d\'urgence',
+            heroSubtitle:
+                'Récupérez l\'accès à ce poste avec votre jeton de récupération '
+                'ou une vérification WhatsApp.',
+            points: const [
+              AuthHeroPoint(
+                icon: Icons.key_outlined,
+                title: 'Jeton de récupération',
+                subtitle:
+                    'Collez le jeton sauvegardé lors de la création de la boutique.',
               ),
-              _WhatsappTab(
-                phoneController: _phoneController,
-                codeController: _codeController,
-                otpSent: _otpSent,
-                otpSubmitting: _otpSubmitting,
-                otpError: _otpError,
-                maskedPhone: _maskedPhone,
-                devCode: _devCode,
-                onRequestOtp: _requestOtp,
-                onSubmitOtp: _submitOtp,
-                onEditPhone: () => setState(() {
-                  _otpSent = false;
-                  _codeController.clear();
-                  _otpError = null;
-                }),
+              AuthHeroPoint(
+                icon: Icons.chat_outlined,
+                title: 'Vérification WhatsApp',
+                subtitle:
+                    'Recevez un code sur le numéro du patron pour débloquer.',
               ),
             ],
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _TokenTab(controller: _tokenController, onSubmit: _submitToken),
+                _WhatsappTab(
+                  phoneController: _phoneController,
+                  codeController: _codeController,
+                  otpSent: _otpSent,
+                  otpSubmitting: _otpSubmitting,
+                  otpError: _otpError,
+                  maskedPhone: _maskedPhone,
+                  devCode: _devCode,
+                  onRequestOtp: _requestOtp,
+                  onSubmitOtp: _submitOtp,
+                  onEditPhone: () => setState(() {
+                    _otpSent = false;
+                    _codeController.clear();
+                    _otpError = null;
+                  }),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -170,10 +187,7 @@ class _EmergencyUnlockPageState extends State<EmergencyUnlockPage>
 }
 
 class _TokenTab extends StatelessWidget {
-  const _TokenTab({
-    required this.controller,
-    required this.onSubmit,
-  });
+  const _TokenTab({required this.controller, required this.onSubmit});
 
   final TextEditingController controller;
   final VoidCallback onSubmit;
@@ -318,9 +332,11 @@ class _WhatsappTab extends StatelessWidget {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Icon(otpSent
-                        ? Icons.lock_open_outlined
-                        : Icons.send_outlined),
+                    : Icon(
+                        otpSent
+                            ? Icons.lock_open_outlined
+                            : Icons.send_outlined,
+                      ),
                 label: Text(otpSent ? 'Débloquer' : 'Envoyer le code'),
               );
             },

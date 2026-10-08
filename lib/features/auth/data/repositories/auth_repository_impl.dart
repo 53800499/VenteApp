@@ -193,6 +193,15 @@ class AuthRepositoryImpl implements AuthRepository {
     final serverShopId = await _resolveServerShopId(shopId);
     final localShopId = await _resolveLocalShopId(serverShopId);
 
+    // Sécurité stricte : Aucun utilisateur ne peut accéder au compte d'un autre sans WhatsApp.
+    final sessionUser = await _sessionStorage.getUser();
+    final sessionUserId = sessionUser?['id'] as int? ?? sessionUser?['localUserId'] as int?;
+    if (sessionUserId != null && userId != null && userId != sessionUserId) {
+      throw const UnauthorizedFailure(
+        'Connexion refusée : l\'accès au panel d\'un autre utilisateur exige une authentification par WhatsApp.',
+      );
+    }
+
     final localUsers = await _activeUsersForShop(localShopId);
 
     if (localUsers.isNotEmpty) {
@@ -356,8 +365,10 @@ class AuthRepositoryImpl implements AuthRepository {
         _onOnlineSessionReady?.call(localShopId);
         _recentPinProof.clear();
       } else if (outcome == CloudRepairOutcome.failed) {
-        _recentPinProof.clear();
-        await repair.onRepairExhausted?.call();
+        if (!_recentPinProof.hasRecentProof) {
+          _recentPinProof.clear();
+          await repair.onRepairExhausted?.call();
+        }
       }
     } on Object {
       // La session locale est déjà ouverte ; la synchro API peut attendre.
@@ -482,6 +493,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     final localShopId =
         await _resolveLocalShopId(await _resolveServerShopId(shopId));
+
+    // Sécurité stricte : Aucun utilisateur ne peut accéder au compte d'un autre sans WhatsApp.
+    final sessionUser = await _sessionStorage.getUser();
+    final sessionUserId = sessionUser?['id'] as int? ?? sessionUser?['localUserId'] as int?;
+    if (sessionUserId != null && userId != null && userId != sessionUserId) {
+      throw const UnauthorizedFailure(
+        'Connexion refusée : l\'accès au panel d\'un autre utilisateur exige une authentification par WhatsApp.',
+      );
+    }
+
     final localUsers = await (_db.select(_db.users)
           ..where((u) => u.shopId.equals(localShopId) & u.isActive.equals(true)))
         .get();
@@ -2694,7 +2715,18 @@ class AuthRepositoryImpl implements AuthRepository {
           ..where((s) => s.shopId.equals(shopId)))
         .getSingleOrNull();
 
-    final users = await _activeUsersForShop(shopId);
+    var users = await _activeUsersForShop(shopId);
+
+    // Sécurité stricte : Aucun utilisateur ne peut accéder au compte d'un autre sans WhatsApp.
+    // L'écran de verrouillage d'une session locale ne cible que l'utilisateur connecté.
+    final sessionUser = await _sessionStorage.getUser();
+    final sessionUserId = sessionUser?['id'] as int? ?? sessionUser?['localUserId'] as int?;
+    if (sessionUserId != null) {
+      final sessionMatching = users.where((u) => u.id == sessionUserId).toList();
+      if (sessionMatching.isNotEmpty) {
+        users = sessionMatching;
+      }
+    }
 
     return LockScreenData(
       shopId: shop.id,

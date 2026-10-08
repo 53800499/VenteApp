@@ -12,6 +12,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/expense_entities.dart';
 import '../../domain/usecases/expense_usecases.dart';
 import 'expense_form_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class ExpenseDetailPage extends StatefulWidget {
   const ExpenseDetailPage({
@@ -66,7 +67,7 @@ class _ExpenseDetailPageState extends State<ExpenseDetailPage> {
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     } catch (_) {
@@ -127,9 +128,10 @@ class _ExpenseDetailPageState extends State<ExpenseDetailPage> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        children: [
+      child: AppPageContainer(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          children: [
           Card(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -222,6 +224,7 @@ class _ExpenseDetailPageState extends State<ExpenseDetailPage> {
               ),
             ),
         ],
+        ),
       ),
     );
   }

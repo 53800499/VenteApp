@@ -35,6 +35,7 @@ import '../../../subscription/presentation/pages/subscription_page.dart';
 import '../../../subscription/domain/entities/subscription_details.dart';
 import '../../../subscription/domain/services/subscription_controller.dart';
 import '../../../subscription/presentation/widgets/module_upsell_dialog.dart';
+import '../../../../shared/components/adaptive_modal.dart';
 import 'shop_list_page.dart';
 
 class MorePage extends StatelessWidget {
@@ -161,16 +162,14 @@ class MorePage extends StatelessWidget {
             final reportsGranted = subController.isModuleGranted(ArikeModule.reports);
             final expensesGranted = subController.isModuleGranted(ArikeModule.expenses);
             final procurementGranted = subController.isModuleGranted(ArikeModule.purchases);
-            final salesOrdersGranted = subController.isModuleGranted(ArikeModule.purchases);
+            final salesOrdersGranted = subController.isModuleGranted(ArikeModule.salesOrders);
             final multiShopGranted = subController.isModuleGranted(ArikeModule.multiShop);
             final fxGranted = subController.isModuleGranted(ArikeModule.fxExchange);
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+            return SizedBox(
+              width: double.infinity,
+              child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
                     children: [
                       IdentityContextCard(
                         session: activeSession,
@@ -328,10 +327,10 @@ class MorePage extends StatelessWidget {
                         title: 'Commandes clients',
                         subtitle: 'Commandes, livraisons partielles et refus',
                         isLocked: !salesOrdersGranted,
-                        lockedBadgeText: 'ESSENTIEL',
+                        lockedBadgeText: salesOrdersGranted ? null : 'ESSENTIEL',
                         onTap: () => _openModuleIfAuthorized(
                           context,
-                          module: ArikeModule.purchases,
+                          module: ArikeModule.salesOrders,
                           moduleTitle: 'Commandes Clients',
                           onNavigate: () => Navigator.of(context).push(
                             MaterialPageRoute(
@@ -517,9 +516,7 @@ class MorePage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ],
-        );
+            );
       },
     );
   },
@@ -527,58 +524,37 @@ class MorePage extends StatelessWidget {
   }
 
   Future<void> _confirmChangeIdentity(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAdaptiveConfirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Changer d\'identité'),
-        content: const Text(
-          'Vous allez quitter l\'identité courante.\n\n'
+      title: 'Changer d\'identité',
+      message: 'Vous allez quitter l\'identité courante.\n\n'
           'Reconnectez-vous via WhatsApp pour choisir une autre entreprise '
           'ou un autre rôle.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Continuer'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Continuer',
+      cancelLabel: 'Annuler',
+      icon: Icons.switch_account_outlined,
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       context.read<AuthBloc>().add(const AuthLogoutRequested());
     }
   }
 
   Future<void> _confirmLogout(BuildContext context, AuthSession session) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showAdaptiveConfirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Déconnexion'),
-        content: Text(
-          'Quitter l\'identité « ${session.user.name} » sur '
+      title: 'Déconnexion',
+      message: 'Quitter l\'identité « ${session.user.name} » sur '
           '« ${session.shop.name} » ?\n\n'
           'Votre session sera fermée. Reconnectez-vous via WhatsApp pour '
           'accéder à nouveau à votre identité.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Déconnexion'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Déconnexion',
+      cancelLabel: 'Annuler',
+      icon: Icons.logout_rounded,
+      destructive: true,
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed && context.mounted) {
       context.read<AuthBloc>().add(const AuthLogoutRequested());
     }
   }

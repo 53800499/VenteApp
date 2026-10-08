@@ -19,6 +19,7 @@ import '../bloc/stock_transfer_bloc.dart';
 import 'stock_transfer_detail_page.dart';
 import 'stock_transfer_form_page.dart';
 import 'stock_transfer_qr_scan_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class StockTransferPage extends StatelessWidget {
   const StockTransferPage({super.key, this.session});
@@ -313,21 +314,23 @@ class _TransferList extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: transfers.length,
-        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final t = transfers[index];
-          return _TransferTile(
-            transfer: t,
-            onTap: onTap == null ? null : () => onTap!(t),
-            shopLine: shopLabelPrefix != null && shopLabelFor != null
-                ? '$shopLabelPrefix : ${shopLabelFor!(t)}'
-                : null,
-          );
-        },
+      child: AppPageContainer(
+        child: ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: transfers.length,
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final t = transfers[index];
+            return _TransferTile(
+              transfer: t,
+              onTap: onTap == null ? null : () => onTap!(t),
+              shopLine: shopLabelPrefix != null && shopLabelFor != null
+                  ? '$shopLabelPrefix : ${shopLabelFor!(t)}'
+                  : null,
+            );
+          },
+        ),
       ),
     );
   }
@@ -386,62 +389,64 @@ class _ReportTab extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          _StatCard(
-            title: 'Transferts',
-            value: '${r.totalTransfers}',
-            icon: Icons.swap_horiz,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _StatCard(
-            title: 'En transit',
-            value: '${r.inTransitCount}',
-            icon: Icons.local_shipping_outlined,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _StatCard(
-            title: 'Écarts détectés',
-            value: '${r.discrepancyCount}',
-            icon: Icons.warning_amber_outlined,
-            highlight: r.discrepancyCount > 0,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          _StatCard(
-            title: 'Unités expédiées / reçues',
-            value: '${r.totalUnitsShipped} / ${r.totalUnitsReceived}',
-            icon: Icons.inventory_2_outlined,
-          ),
-          if (r.discrepancies.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'Alertes écart',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+      child: AppPageContainer(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            _StatCard(
+              title: 'Transferts',
+              value: '${r.totalTransfers}',
+              icon: Icons.swap_horiz,
             ),
             const SizedBox(height: AppSpacing.sm),
-            ...r.discrepancies.map(
-              (d) => Card(
-                child: ListTile(
-                  onTap: () => onOpenTransfer(d.transferId),
-                  title: Text(d.reference),
-                  subtitle: Text('${d.productName} · manque ${d.gap} u'),
-                  trailing: Text(
-                    StockTransferStatus.label(d.status),
-                    style: const TextStyle(fontSize: 11),
-                    textAlign: TextAlign.end,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+            _StatCard(
+              title: 'En transit',
+              value: '${r.inTransitCount}',
+              icon: Icons.local_shipping_outlined,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _StatCard(
+              title: 'Écarts détectés',
+              value: '${r.discrepancyCount}',
+              icon: Icons.warning_amber_outlined,
+              highlight: r.discrepancyCount > 0,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _StatCard(
+              title: 'Unités expédiées / reçues',
+              value: '${r.totalUnitsShipped} / ${r.totalUnitsReceived}',
+              icon: Icons.inventory_2_outlined,
+            ),
+            if (r.discrepancies.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Alertes écart',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ...r.discrepancies.map(
+                (d) => Card(
+                  child: ListTile(
+                    onTap: () => onOpenTransfer(d.transferId),
+                    title: Text(d.reference),
+                    subtitle: Text('${d.productName} · manque ${d.gap} u'),
+                    trailing: Text(
+                      StockTransferStatus.label(d.status),
+                      style: const TextStyle(fontSize: 11),
+                      textAlign: TextAlign.end,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    isThreeLine: true,
                   ),
-                  isThreeLine: true,
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
@@ -115,13 +116,14 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
       if (mounted) Navigator.of(context).pop(true);
     } on Failure catch (e) {
       if (mounted) {
+        final msg = friendlyErrorMessage(e);
         await InventoryFeedback.showErrorDialog(
           context,
           title: 'Ajustement impossible',
-          message: e.message,
+          message: msg,
         );
         setState(() {
-          _errorMessage = e.message;
+          _errorMessage = msg;
           _isLoading = false;
         });
       }

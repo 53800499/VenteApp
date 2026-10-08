@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/components/app_dropdown.dart';
+import '../../../../shared/components/app_page_container.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -217,10 +218,11 @@ class _PoFormPageState extends State<PoFormPage> {
         builder: (context, state) {
           final suppliers = state.suppliers;
 
-          return Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+          return AppPageContainer(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
               children: [
                 // Section: Informations générales
                 Text(
@@ -493,7 +495,8 @@ class _PoFormPageState extends State<PoFormPage> {
                 ),
               ],
             ),
-          );
+          ),
+        );
         },
       ),
     ),

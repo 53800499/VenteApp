@@ -16,6 +16,7 @@ import '../models/calculation_intent.dart';
 import '../services/calculator_pdf_exporter.dart';
 import '../utils/calculator_form_validators.dart';
 import '../widgets/calculator_product_picker_button.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class TileCalculatorPage extends StatefulWidget {
   const TileCalculatorPage({
@@ -105,17 +106,19 @@ class _TileCalculatorPageState extends State<TileCalculatorPage> {
             ]
           ],
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              _buildProductSearchCard(),
-              const SizedBox(height: 16),
-              _buildInputsCard(),
-              const SizedBox(height: 16),
-              if (_result != null) _buildResultsCard(),
-            ],
+        body: AppPageContainer(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
+                _buildProductSearchCard(),
+                const SizedBox(height: 16),
+                _buildInputsCard(),
+                const SizedBox(height: 16),
+                if (_result != null) _buildResultsCard(),
+              ],
+            ),
           ),
         ),
       ),

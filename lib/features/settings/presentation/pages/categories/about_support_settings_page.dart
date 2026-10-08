@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_tokens.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../../help/presentation/pages/help_hub_page.dart';
 
@@ -20,10 +21,11 @@ class AboutSupportSettingsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('À Propos & Assistance'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: AppPageContainer(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -92,6 +94,7 @@ class AboutSupportSettingsPage extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

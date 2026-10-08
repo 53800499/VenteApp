@@ -9,6 +9,7 @@ import '../../data/help_catalog.dart';
 import '../../domain/entities/help_entities.dart';
 import '../widgets/help_topic_card.dart';
 import 'help_article_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 /// Hub central de documentation utilisateur.
 class HelpHubPage extends StatefulWidget {
@@ -59,8 +60,9 @@ class _HelpHubPageState extends State<HelpHubPage> {
       appBar: AppBar(
         title: const Text('Aide & guides'),
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: AppPageContainer(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ResponsiveBuilder(
             builder: (context, screenType) {
@@ -167,7 +169,8 @@ class _HelpHubPageState extends State<HelpHubPage> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }
 

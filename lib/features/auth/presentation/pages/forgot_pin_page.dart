@@ -12,6 +12,7 @@ import '../../../../shared/components/ui_primitives.dart';
 import '../../domain/entities/auth_entities.dart';
 import '../../domain/usecases/auth_usecases.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/auth_split_layout.dart';
 import '../widgets/pin_pad.dart';
 
 /// Récupération PIN : WhatsApp OTP puis définition d'un nouveau code.
@@ -116,8 +117,9 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         membership = candidate;
         break;
       }
-      membership ??=
-          result.memberships.length == 1 ? result.memberships.first : null;
+      membership ??= result.memberships.length == 1
+          ? result.memberships.first
+          : null;
       if (membership == null) {
         throw const UnauthorizedFailure(
           'Ce numéro n\'a pas accès à cette boutique.',
@@ -212,7 +214,9 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         });
         return;
       }
-      setState(() => _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1));
+      setState(
+        () => _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1),
+      );
       return;
     }
     if (_pin.isEmpty) return;
@@ -223,19 +227,40 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        title: const Text('PIN oublié'),
-      ),
+      appBar: AppBar(title: const Text('PIN oublié')),
       body: GradientBackground(
         child: SafeArea(
-          child: ResponsivePage(
-            maxWidth: 480,
-            expandHeight: true,
-            child: switch (_step) {
-              _ForgotPinStep.phone => _buildPhoneStep(context),
-              _ForgotPinStep.code => _buildCodeStep(context),
-              _ForgotPinStep.newPin => _buildNewPinStep(context),
-            },
+          child: AuthSplitLayout(
+            heroIcon: Icons.lock_reset_outlined,
+            heroTitle: 'Réinitialiser votre PIN',
+            heroSubtitle:
+                'Vérifiez votre identité via WhatsApp puis choisissez un nouveau code.',
+            points: const [
+              AuthHeroPoint(
+                icon: Icons.phone_android_outlined,
+                title: '1. Numéro WhatsApp',
+                subtitle: 'Saisissez le numéro lié à votre compte.',
+              ),
+              AuthHeroPoint(
+                icon: Icons.sms_outlined,
+                title: '2. Code de vérification',
+                subtitle: 'Entrez le code reçu sur WhatsApp.',
+              ),
+              AuthHeroPoint(
+                icon: Icons.pin_outlined,
+                title: '3. Nouveau PIN',
+                subtitle: 'Définissez et confirmez votre nouveau code.',
+              ),
+            ],
+            child: ResponsivePage(
+              maxWidth: 480,
+              expandHeight: true,
+              child: switch (_step) {
+                _ForgotPinStep.phone => _buildPhoneStep(context),
+                _ForgotPinStep.code => _buildCodeStep(context),
+                _ForgotPinStep.newPin => _buildNewPinStep(context),
+              },
+            ),
           ),
         ),
       ),
@@ -333,7 +358,10 @@ class _ForgotPinPageState extends State<ForgotPinPage> {
         ),
         if (_devCode != null) ...[
           const SizedBox(height: AppSpacing.sm),
-          Text('Code dev : $_devCode', style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            'Code dev : $_devCode',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
         const SizedBox(height: AppSpacing.md),
         TextField(

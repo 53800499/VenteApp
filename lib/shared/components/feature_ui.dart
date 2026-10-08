@@ -353,19 +353,43 @@ class FeatureSurfaceCard extends StatelessWidget {
   }
 }
 
-/// Encart astuce unifié.
-class FeatureTipBanner extends StatelessWidget {
-  const FeatureTipBanner({super.key, required this.message});
+/// Encart astuce unifié avec icône de fermeture.
+class FeatureTipBanner extends StatefulWidget {
+  const FeatureTipBanner({
+    super.key,
+    required this.message,
+    this.onDismiss,
+  });
 
   final String message;
+  final VoidCallback? onDismiss;
+
+  @override
+  State<FeatureTipBanner> createState() => _FeatureTipBannerState();
+}
+
+class _FeatureTipBannerState extends State<FeatureTipBanner> {
+  bool _dismissed = false;
+
+  @override
+  void didUpdateWidget(covariant FeatureTipBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.message != widget.message) {
+      _dismissed = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: scheme.secondaryContainer.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(AppRadius.md),
@@ -374,7 +398,7 @@ class FeatureTipBanner extends StatelessWidget {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             Icons.lightbulb_outline,
@@ -384,11 +408,26 @@ class FeatureTipBanner extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              message,
+              widget.message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     height: AppSizes.lineHeightBody,
                   ),
             ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              size: AppSizes.iconSm,
+              color: scheme.onSurfaceVariant,
+            ),
+            tooltip: 'Fermer',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: () {
+              setState(() => _dismissed = true);
+              widget.onDismiss?.call();
+            },
           ),
         ],
       ),

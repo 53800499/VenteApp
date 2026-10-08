@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
+import '../../features/subscription/domain/services/subscription_controller.dart';
 import 'app_release_tier.dart';
 import 'cloud_sync_enabler.dart';
 import 'sync_pull_entity.dart';
@@ -9,29 +10,40 @@ import 'sync_pull_entity.dart';
 class SyncPolicy {
   SyncPolicy(
     this._db,
-    this._cloudSyncEnabler,
-  );
+    this._cloudSyncEnabler, [
+    this._subscriptionController,
+  ]);
 
   final AppDatabase _db;
   final CloudSyncEnabler _cloudSyncEnabler;
+  final SubscriptionController? _subscriptionController;
 
   Future<SyncContext> resolve({required int shopId}) async {
-    await _cloudSyncEnabler.activateForShop(shopId);
+    final sub = _subscriptionController?.details;
+    final planHasCloudSync = sub?.hasCloudSync ?? true;
+
+    if (planHasCloudSync) {
+      await _cloudSyncEnabler.activateForShop(shopId);
+    }
 
     final settings = await (_db.select(_db.settings)
           ..where((s) => s.shopId.equals(shopId)))
         .getSingleOrNull();
 
-    final cloudSyncEnabled = settings?.cloudSyncEnabled ?? true;
+    // Si le forfait actif n'autorise pas la synchronisation cloud (ex: plan FREE permanent),
+    // cloudSyncEnabled est forcé à false et le tier passe à V1 local.
+    final cloudSyncEnabled = planHasCloudSync && (settings?.cloudSyncEnabled ?? true);
     final activeShops = await (_db.select(_db.shops)
           ..where((s) => s.isActive.equals(true)))
         .get();
 
-    final tier = activeShops.length > 1
-        ? AppReleaseTier.v3
-        : cloudSyncEnabled
-            ? AppReleaseTier.v2
-            : AppReleaseTier.v1;
+    final tier = !planHasCloudSync
+        ? AppReleaseTier.v1
+        : (activeShops.length > 1
+            ? AppReleaseTier.v3
+            : cloudSyncEnabled
+                ? AppReleaseTier.v2
+                : AppReleaseTier.v1);
 
     return SyncContext(
       tier: tier,

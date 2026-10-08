@@ -34,16 +34,15 @@ import '../database/app_database.dart'
         SalesOrder,
         SalesOrderItem;
 import '../errors/failures.dart';
+import '../errors/exception_mapper.dart';
 import '../network/api_client.dart';
 import '../network/remote_api_guard.dart';
 import 'sync_constants.dart';
 import 'sync_dependency_graph.dart';
 import 'sync_queue_datasource.dart';
-import 'gates/cloud_session_gate.dart';
-import 'gates/license_gate.dart';
-import 'priority_engine.dart';
 import 'workflow/sync_workflow.dart';
 import 'workflow/sync_workflow_registry.dart';
+import '../../features/subscription/domain/services/subscription_controller.dart';
 import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
 import '../../features/calculators/data/datasources/remote/calculators_remote_datasource.dart';
 import '../../features/procurement/data/datasources/procurement_local_datasource.dart';
@@ -87,6 +86,7 @@ class SyncQueueProcessor {
     required FxExchangeRemoteDatasource fxExchangeRemote,
     required SalesOrderLocalDatasource salesOrderLocal,
     required SalesOrderRemoteDatasource salesOrderRemote,
+    SubscriptionController? subscriptionController,
   })  : _queue = queue,
         _apiGuard = apiGuard,
         _customersLocal = customersLocal,
@@ -110,7 +110,8 @@ class SyncQueueProcessor {
         _fxExchangeLocal = fxExchangeLocal,
         _fxExchangeRemote = fxExchangeRemote,
         _salesOrderLocal = salesOrderLocal,
-        _salesOrderRemote = salesOrderRemote;
+        _salesOrderRemote = salesOrderRemote,
+        _subscriptionController = subscriptionController;
 
   final SyncQueueDatasource _queue;
   final RemoteApiGuard _apiGuard;
@@ -136,6 +137,7 @@ class SyncQueueProcessor {
   final FxExchangeRemoteDatasource _fxExchangeRemote;
   final SalesOrderLocalDatasource _salesOrderLocal;
   final SalesOrderRemoteDatasource _salesOrderRemote;
+  final SubscriptionController? _subscriptionController;
 
   StockTransferCloudSyncHelper get _stockTransferCloudSync =>
       StockTransferCloudSyncHelper(
@@ -240,14 +242,25 @@ class SyncQueueProcessor {
                   } else {
                     outcomes.add(_QueueItemOutcome.deferred);
                   }
+                } on ActionRequiredFailure catch (error) {
+                  await _queue.markActionRequired(
+                    item.id,
+                    error: error.message,
+                    suggestedAction: error.suggestedAction,
+                  );
+                  outcomes.add(_QueueItemOutcome.deferred);
                 } on ConflictFailure catch (error) {
-                  await _queue.markConflict(item.id, error.message);
+                  await _queue.markActionRequired(
+                    item.id,
+                    error: error.message,
+                    suggestedAction: 'EDIT_OPERATION',
+                  );
                   outcomes.add(_QueueItemOutcome.conflict);
                 } on Failure catch (error) {
-                  await _queue.markFailed(item.id, error.message);
+                  await _queue.markFailed(item.id, friendlyErrorMessage(error));
                   outcomes.add(_QueueItemOutcome.failed);
                 } catch (error) {
-                  await _queue.markFailed(item.id, error.toString());
+                  await _queue.markFailed(item.id, friendlyErrorMessage(error));
                   outcomes.add(_QueueItemOutcome.failed);
                 }
                 if (!shouldContinueChain(_toPublicOutcome(outcomes.last))) {
@@ -338,6 +351,11 @@ class SyncQueueProcessor {
     required SyncQueueData item,
   }) async {
     final payload = _decodePayload(item.payload);
+
+    if (_subscriptionController != null && !_subscriptionController.isModuleNameGranted(item.entityTable)) {
+      await _queue.markBlocked(item.id, 'Module ${item.entityTable} non inclus dans votre forfait d\'abonnement actif.');
+      return false;
+    }
 
     if (!await _deferIfWorkflowPrerequisitesPending(shopId: shopId, item: item)) {
       return false;
@@ -658,7 +676,11 @@ class SyncQueueProcessor {
         return true;
 
       case SyncOperation.archive:
-        if (product.serverId == null) return false;
+        if (product.serverId == null) {
+          // Si le produit n'a jamais été synchronisé au cloud (serverId null),
+          // l'archivage local suffit et l'opération cloud est validée.
+          return true;
+        }
         await _inventoryRemote.archiveProduct(int.parse(product.serverId!));
         return true;
 
@@ -708,6 +730,7 @@ class SyncQueueProcessor {
         final quickServerId = await _salesLocal.findSaleServerId(shopId, sale.id);
         if (quickServerId != null) return true;
         final remote = await _salesRemote.createQuickSale({
+          'receiptNumber': payload['receiptNumber'] ?? sale.receiptNumber,
           'totalAmount': payload['totalAmount'] ?? sale.totalAmount,
           'payment': payload['payment'],
           if (payload['note'] != null) 'note': payload['note'],
@@ -1460,6 +1483,7 @@ class SyncQueueProcessor {
         amountCredit: sale.amountCredit,
       ),
       note: sale.note,
+      receiptNumber: sale.receiptNumber,
     );
   }
 

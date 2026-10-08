@@ -15,6 +15,8 @@ import '../../domain/usecases/rbac_usecases.dart';
 import 'role_detail_page.dart';
 import 'role_form_page.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../shared/components/offline_feature_placeholder.dart';
+import '../../../../core/responsive/responsive_builder.dart';
 
 class RolesCatalogPage extends StatefulWidget {
   const RolesCatalogPage({super.key, required this.session});
@@ -132,57 +134,58 @@ class _RolesCatalogPageState extends State<RolesCatalogPage> {
       return const SaleListSkeleton();
     }
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(_error!),
-            const SizedBox(height: AppSpacing.md),
-            FilledButton(onPressed: _load, child: const Text('Réessayer')),
-          ],
-        ),
+      return OfflineFeaturePlaceholder(
+        featureName: 'le catalogue des rôles & permissions',
+        customMessage:
+            'Le catalogue des rôles avancés nécessite une synchronisation '
+            'avec le serveur pour garantir des permissions cohérentes.',
+        onRetry: _load,
+        isRetrying: _loading,
       );
     }
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: _roles.length,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-        itemBuilder: (context, index) {
-          final role = _roles[index];
-          return Card(
-            child: ListTile(
-              leading: Icon(
-                role.isSystem ? Icons.shield_outlined : Icons.tune_outlined,
-              ),
-              title: Text(role.label),
-              subtitle: Text(
-                [
-                  role.code,
-                  if (role.parentRoles.isNotEmpty)
-                    'Hérite de : ${role.parentRoles.join(', ')}',
-                  '${role.permissions.length} permission(s)',
-                ].join('\n'),
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () async {
-                final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) => RoleDetailPage(
-                      session: widget.session,
-                      roleCode: role.code,
-                      initialRole: role,
-                      assignableParentRoles: _parentRoleOptions,
+      child: ResponsivePage(
+        padding: EdgeInsets.zero,
+        child: ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: _roles.length,
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final role = _roles[index];
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  role.isSystem ? Icons.shield_outlined : Icons.tune_outlined,
+                ),
+                title: Text(role.label),
+                subtitle: Text(
+                  [
+                    role.code,
+                    if (role.parentRoles.isNotEmpty)
+                      'Hérite de : ${role.parentRoles.join(', ')}',
+                    '${role.permissions.length} permission(s)',
+                  ].join('\n'),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final changed = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => RoleDetailPage(
+                        session: widget.session,
+                        roleCode: role.code,
+                        initialRole: role,
+                        assignableParentRoles: _parentRoleOptions,
+                      ),
                     ),
-                  ),
-                );
-                if (changed == true && mounted) await _load();
-              },
-            ),
-          );
-        },
+                  );
+                  if (changed == true && mounted) await _load();
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }

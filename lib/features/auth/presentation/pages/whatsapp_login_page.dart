@@ -8,13 +8,11 @@ import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/auth_split_layout.dart';
 
 /// Connexion par numéro WhatsApp et code OTP.
 class WhatsappLoginPage extends StatefulWidget {
-  const WhatsappLoginPage({
-    super.key,
-    this.showBackButton = true,
-  });
+  const WhatsappLoginPage({super.key, this.showBackButton = true});
 
   final bool showBackButton;
 
@@ -42,11 +40,11 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
   void _verifyOtp(String phone) {
     if (_codeController.text.trim().length < 4) return;
     context.read<AuthBloc>().add(
-          AuthWhatsappOtpVerifyRequested(
-            phone: phone,
-            code: _codeController.text.trim(),
-          ),
-        );
+      AuthWhatsappOtpVerifyRequested(
+        phone: phone,
+        code: _codeController.text.trim(),
+      ),
+    );
   }
 
   @override
@@ -65,179 +63,206 @@ class _WhatsappLoginPageState extends State<WhatsappLoginPage> {
         return Scaffold(
           body: GradientBackground(
             child: SafeArea(
-              child: ResponsivePage(
-                maxWidth: Breakpoints.formMaxWidth,
-                padding: EdgeInsets.zero,
-                expandHeight: true,
-                child: Column(
-                  children: [
-                    if (widget.showBackButton)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          onPressed: state.isSubmitting
-                              ? null
-                              : () => context
-                                  .read<AuthBloc>()
-                                  .add(const AuthWhatsappLoginCancelled()),
-                          icon: const Icon(Icons.arrow_back),
+              child: AuthSplitLayout(
+                heroIcon: Icons.chat_outlined,
+                heroTitle: 'Connexion sécurisée par WhatsApp',
+                heroSubtitle:
+                    'Retrouvez vos boutiques et vos données en quelques secondes, sans mot de passe.',
+                points: const [
+                  AuthHeroPoint(
+                    icon: Icons.verified_user_outlined,
+                    title: 'Code à usage unique',
+                    subtitle:
+                        'Un code de vérification est envoyé sur votre numéro WhatsApp.',
+                  ),
+                  AuthHeroPoint(
+                    icon: Icons.storefront_outlined,
+                    title: 'Toutes vos boutiques',
+                    subtitle:
+                        'Accédez à chaque entreprise et rôle liés à votre numéro.',
+                  ),
+                  AuthHeroPoint(
+                    icon: Icons.pin_outlined,
+                    title: 'PIN local ensuite',
+                    subtitle:
+                        'Après la première connexion, déverrouillez simplement avec votre PIN.',
+                  ),
+                ],
+                child: ResponsivePage(
+                  maxWidth: Breakpoints.formMaxWidth,
+                  padding: EdgeInsets.zero,
+                  expandHeight: true,
+                  child: Column(
+                    children: [
+                      if (widget.showBackButton)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            onPressed: state.isSubmitting
+                                ? null
+                                : () => context.read<AuthBloc>().add(
+                                    const AuthWhatsappLoginCancelled(),
+                                  ),
+                            icon: const Icon(Icons.arrow_back),
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.md,
+                          AppSpacing.lg,
+                          0,
+                        ),
+                        child: PageHeader(
+                          icon: Icons.chat_outlined,
+                          title: isCodeStep
+                              ? 'Vérifiez votre code'
+                              : 'Connexion WhatsApp',
+                          subtitle: isCodeStep
+                              ? 'Entrez le code reçu sur WhatsApp au ${state.maskedPhone ?? phone}.'
+                              : 'Nous enverrons un code de vérification sur votre numéro WhatsApp.',
                         ),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.md,
-                        AppSpacing.lg,
-                        0,
-                      ),
-                      child: PageHeader(
-                        icon: Icons.chat_outlined,
-                        title: isCodeStep
-                            ? 'Vérifiez votre code'
-                            : 'Connexion WhatsApp',
-                        subtitle: isCodeStep
-                            ? 'Entrez le code reçu sur WhatsApp au ${state.maskedPhone ?? phone}.'
-                            : 'Nous enverrons un code de vérification sur votre numéro WhatsApp.',
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (!isCodeStep) ...[
-                                TextFormField(
-                                  controller: _phoneController,
-                                  enabled: !state.isSubmitting,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Numéro WhatsApp',
-                                    hintText: '+229 01 97 00 00 00',
-                                    prefixIcon: Icon(Icons.phone_outlined),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (!isCodeStep) ...[
+                                  TextFormField(
+                                    controller: _phoneController,
+                                    enabled: !state.isSubmitting,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Numéro WhatsApp',
+                                      hintText: '+229 01 97 00 00 00',
+                                      prefixIcon: Icon(Icons.phone_outlined),
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) {
+                                      final value = _phoneController.text
+                                          .trim();
+                                      if (value.isNotEmpty) {
+                                        _requestOtp(value);
+                                      }
+                                    },
+                                    validator: (value) {
+                                      if (value == null ||
+                                          value.trim().isEmpty) {
+                                        return 'Le numéro est requis.';
+                                      }
+                                      if (!isValidPhone(value)) {
+                                        return 'Numéro invalide (indicatif pays requis, ex. +229…).';
+                                      }
+                                      return null;
+                                    },
                                   ),
-                                  keyboardType: TextInputType.phone,
-                                  textInputAction: TextInputAction.done,
-                                  onFieldSubmitted: (_) {
-                                    final value = _phoneController.text.trim();
-                                    if (value.isNotEmpty) {
-                                      _requestOtp(value);
-                                    }
-                                  },
-                                  validator: (value) {
-                                    if (value == null ||
-                                        value.trim().isEmpty) {
-                                      return 'Le numéro est requis.';
-                                    }
-                                    if (!isValidPhone(value)) {
-                                      return 'Numéro invalide (indicatif pays requis, ex. +229…).';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ] else ...[
-                                TextFormField(
-                                  controller: _codeController,
-                                  enabled: !state.isSubmitting,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Code de vérification',
-                                    prefixIcon: Icon(Icons.sms_outlined),
+                                ] else ...[
+                                  TextFormField(
+                                    controller: _codeController,
+                                    enabled: !state.isSubmitting,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Code de vérification',
+                                      prefixIcon: Icon(Icons.sms_outlined),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    textInputAction: TextInputAction.done,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                      LengthLimitingTextInputFormatter(8),
+                                    ],
+                                    onFieldSubmitted: (_) => _verifyOtp(phone),
                                   ),
-                                  keyboardType: TextInputType.number,
-                                  textInputAction: TextInputAction.done,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(8),
-                                  ],
-                                  onFieldSubmitted: (_) => _verifyOtp(phone),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: state.isSubmitting
-                                        ? null
-                                        : () => context.read<AuthBloc>().add(
+                                  const SizedBox(height: AppSpacing.sm),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton(
+                                      onPressed: state.isSubmitting
+                                          ? null
+                                          : () => context.read<AuthBloc>().add(
                                               AuthWhatsappOtpResendRequested(
                                                 phone: phone,
                                               ),
                                             ),
-                                    child: const Text('Renvoyer le code'),
+                                      child: const Text('Renvoyer le code'),
+                                    ),
                                   ),
-                                ),
-                                TextButton(
+                                  TextButton(
+                                    onPressed: state.isSubmitting
+                                        ? null
+                                        : () {
+                                            _codeController.clear();
+                                            context.read<AuthBloc>().add(
+                                              const AuthWhatsappPhoneEditRequested(),
+                                            );
+                                          },
+                                    child: const Text('Modifier le numéro'),
+                                  ),
+                                ],
+                                if (state.devCode != null) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  _DevOtpCard(code: state.devCode!),
+                                ] else if (state.deliveryWarning != null) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  ErrorBanner(message: state.deliveryWarning!),
+                                ],
+                                if (state.infoMessage != null) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  _InfoMessage(text: state.infoMessage!),
+                                ],
+                                if (state.errorMessage != null) ...[
+                                  const SizedBox(height: AppSpacing.md),
+                                  ErrorBanner(message: state.errorMessage!),
+                                ],
+                                const SizedBox(height: AppSpacing.lg),
+                                FilledButton(
                                   onPressed: state.isSubmitting
                                       ? null
                                       : () {
-                                          _codeController.clear();
-                                          context.read<AuthBloc>().add(
-                                                const AuthWhatsappPhoneEditRequested(),
-                                              );
+                                          if (isCodeStep) {
+                                            _verifyOtp(phone);
+                                          } else {
+                                            _requestOtp(
+                                              _phoneController.text.trim(),
+                                            );
+                                          }
                                         },
-                                  child: const Text('Modifier le numéro'),
-                                ),
-                              ],
-                              if (state.devCode != null) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                _DevOtpCard(code: state.devCode!),
-                              ] else if (state.deliveryWarning != null) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                ErrorBanner(message: state.deliveryWarning!),
-                              ],
-                              if (state.infoMessage != null) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                _InfoMessage(text: state.infoMessage!),
-                              ],
-                              if (state.errorMessage != null) ...[
-                                const SizedBox(height: AppSpacing.md),
-                                ErrorBanner(message: state.errorMessage!),
-                              ],
-                              const SizedBox(height: AppSpacing.lg),
-                              FilledButton(
-                                onPressed: state.isSubmitting
-                                    ? null
-                                    : () {
-                                        if (isCodeStep) {
-                                          _verifyOtp(phone);
-                                        } else {
-                                          _requestOtp(
-                                            _phoneController.text.trim(),
-                                          );
-                                        }
-                                      },
-                                child: state.isSubmitting
-                                    ? const SizedBox(
-                                        height: 22,
-                                        width: 22,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                                  child: state.isSubmitting
+                                      ? const SizedBox(
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(
+                                          isCodeStep
+                                              ? 'Vérifier'
+                                              : 'Recevoir le code',
                                         ),
-                                      )
-                                    : Text(
-                                        isCodeStep
-                                            ? 'Vérifier'
-                                            : 'Recevoir le code',
-                                      ),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              TextButton.icon(
-                                onPressed: state.isSubmitting
-                                    ? null
-                                    : () => context.read<AuthBloc>().add(
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                TextButton.icon(
+                                  onPressed: state.isSubmitting
+                                      ? null
+                                      : () => context.read<AuthBloc>().add(
                                           const AuthProceedToPinLoginRequested(),
                                         ),
-                                icon: const Icon(Icons.pin_outlined),
-                                label: const Text(
-                                  'Utiliser le PIN local à la place',
+                                  icon: const Icon(Icons.pin_outlined),
+                                  label: const Text(
+                                    'Utiliser le PIN local à la place',
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -277,9 +302,9 @@ class _DevOtpCard extends StatelessWidget {
             code,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  letterSpacing: 6,
-                  fontWeight: FontWeight.w700,
-                ),
+              letterSpacing: 6,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -313,9 +338,9 @@ class _InfoMessage extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colorScheme.onPrimaryContainer,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: colorScheme.onPrimaryContainer),
       ),
     );
   }

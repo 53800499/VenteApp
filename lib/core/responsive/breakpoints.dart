@@ -6,11 +6,17 @@ abstract final class Breakpoints {
 
   static const contentMaxCompact = double.infinity;
   static const contentMaxMedium = 720.0;
-  static const contentMaxExpanded = 960.0;
+  static const contentMaxExpanded = double.infinity;
 
   static const formMaxWidth = 560.0;
   static const pinPadMaxWidth = 420.0;
   static const authMaxWidth = 480.0;
+
+  /// Largeur à partir de laquelle on bascule en ergonomie desktop
+  /// (DataTable au lieu de cartes, dialogues centrés au lieu de bottom sheets).
+  static const desktopMin = 840.0;
+
+  static bool isDesktopWidth(double width) => width >= desktopMin;
 
   static ScreenType screenTypeOf(double width) {
     if (width <= compactMax) return ScreenType.compact;

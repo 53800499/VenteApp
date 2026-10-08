@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/components/app_header_actions.dart';
@@ -18,6 +20,7 @@ import 'expense_detail_page.dart';
 import 'expense_form_page.dart';
 import '../services/expense_pdf_exporter.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../core/responsive/responsive_builder.dart';
 
 class ExpensesPage extends StatelessWidget {
   const ExpensesPage({super.key, required this.session});
@@ -107,41 +110,44 @@ class _ExpensesView extends StatelessWidget {
                 onRefresh: () async {
                   context.read<ExpensesBloc>().add(const ExpensesLoadRequested());
                 },
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    AppSpacing.md,
-                    110,
-                  ),
-                  children: [
-                    if (summary != null) ...[
-                      _SummaryCards(summary: summary),
-                      const SizedBox(height: AppSpacing.md),
-                    ],
-                    Text(
-                      'Dépenses récentes',
-                      style: Theme.of(context).textTheme.titleMedium,
+                child: ResponsivePage(
+                  padding: EdgeInsets.zero,
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      AppSpacing.md,
+                      context.isCompactScreen ? 110.0 : AppSpacing.md,
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    if (state.expenses.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.xl,
-                        ),
-                        child: EmptyListPlaceholder(
-                          icon: Icons.receipt_outlined,
-                          title: 'Aucune dépense enregistrée',
-                        ),
-                      )
-                    else
-                      ...state.expenses.map(
-                        (expense) => _ExpenseTile(
-                          expense: expense,
-                          session: context.read<ExpensesBloc>().session,
-                        ),
+                    children: [
+                      if (summary != null) ...[
+                        _SummaryCards(summary: summary),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      Text(
+                        'Dépenses récentes',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                  ],
+                      const SizedBox(height: AppSpacing.sm),
+                      if (state.expenses.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xl,
+                          ),
+                          child: EmptyListPlaceholder(
+                            icon: Icons.receipt_outlined,
+                            title: 'Aucune dépense enregistrée',
+                          ),
+                        )
+                      else
+                        ...state.expenses.map(
+                          (expense) => _ExpenseTile(
+                            expense: expense,
+                            session: context.read<ExpensesBloc>().session,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
               if (state.status == ExpensesStatus.refreshing)
@@ -203,8 +209,9 @@ class _ExpensesView extends StatelessWidget {
       );
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export impossible : $error')),
+      ActionFeedback.showErrorMessage(
+        context,
+        'Export impossible : ${friendlyErrorMessage(error)}',
       );
     }
   }

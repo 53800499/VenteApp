@@ -13,6 +13,7 @@ class TrialExplorationModal extends StatelessWidget {
   static Future<void> show(BuildContext context, {int trialDaysRemaining = 14}) {
     return showDialog<void>(
       context: context,
+      useRootNavigator: true,
       barrierDismissible: true,
       builder: (ctx) => TrialExplorationModal(trialDaysRemaining: trialDaysRemaining),
     );
@@ -22,8 +23,14 @@ class TrialExplorationModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isDesktop = screenWidth >= 680;
 
     return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 32 : 14,
+        vertical: isDesktop ? 32 : 18,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -37,25 +44,30 @@ class TrialExplorationModal extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.stars, size: 18, color: colorScheme.primary),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Essai Gratuit : $trialDaysRemaining jours restants',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.stars, size: 18, color: colorScheme.primary),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Essai Gratuit : $trialDaysRemaining jours restants',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   IconButton(
@@ -119,34 +131,35 @@ class TrialExplorationModal extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              Column(
                 children: [
                   _buildPlanChip(context, 'ESSENTIEL', '30 000 FCFA/an', '1 Boutique • 3 Utilisateurs'),
+                  const SizedBox(height: 8),
                   _buildPlanChip(context, 'PRO ⭐', '60 000 FCFA/an', '2 Boutiques • 10 Utilisateurs'),
+                  const SizedBox(height: 8),
                   _buildPlanChip(context, 'BUSINESS 🚀', '100 000 FCFA/an', '5 Boutiques • 30 Utilisateurs'),
                 ],
               ),
               const SizedBox(height: 24),
 
               // Boutons d'action
-              ElevatedButton(
+              ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).pop();
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SubscriptionPage()),
                   );
                 },
+                icon: const Icon(Icons.workspace_premium_rounded),
+                label: const Text(
+                  'Prendre une offre ARIKE',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text(
-                  'Voir les détails & Activer une formule',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ),
               const SizedBox(height: 8),
@@ -202,22 +215,54 @@ class TrialExplorationModal extends StatelessWidget {
 
   Widget _buildPlanChip(BuildContext context, String planName, String price, String details) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          Text(price, style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.primary, fontSize: 12)),
-          const SizedBox(height: 2),
-          Text(details, style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
-        ],
+        onTap: () {
+          Navigator.of(context).pop();
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(planName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 2),
+                    Text(details, style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  price,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

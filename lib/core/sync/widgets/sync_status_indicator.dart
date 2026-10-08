@@ -10,8 +10,8 @@ import '../app_release_tier.dart';
 import '../sync_display_message.dart';
 import '../sync_service.dart';
 import '../sync_snapshot.dart';
-import '../../auth/cloud_session_repair_service.dart';
 import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
+import '../../../shared/components/adaptive_modal.dart';
 
 /// Indicateur cloud SFD §13.3 — branché sur [SyncService.snapshots].
 class SyncStatusIndicator extends StatelessWidget {
@@ -122,6 +122,16 @@ class _SyncStatusIcon extends StatelessWidget {
           colorScheme.error,
           'Conflit de synchronisation — action requise',
         ),
+      SyncIndicatorState.offline => (
+          Icons.cloud_off_outlined,
+          colorScheme.outline,
+          'Hors connexion — enregistrement local',
+        ),
+      SyncIndicatorState.waitingForConnection => (
+          Icons.cloud_queue_outlined,
+          colorScheme.tertiary,
+          'Réseau actif — serveur ARIKE en attente',
+        ),
       SyncIndicatorState.disabled => (
           Icons.cloud_off_outlined,
           colorScheme.outline,
@@ -142,10 +152,11 @@ class _SyncStatusIcon extends StatelessWidget {
 
     final copy = _SyncStatusCopy.fromSnapshot(snapshot);
 
-    showModalBottomSheet<void>(
+    showAdaptiveAppModal<void>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
+      maxWidth: 580,
+      scrollable: false,
+      contentPadding: const EdgeInsets.only(top: AppSpacing.lg),
       builder: (context) {
         final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
         final theme = Theme.of(context);
@@ -277,19 +288,36 @@ class _SyncStatusIcon extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xs),
                     ...snapshot.results.map(
-                      (r) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          r.success
-                              ? Icons.check_circle_outline
-                              : Icons.error_outline,
-                          color: r.success ? scheme.primary : scheme.error,
-                        ),
-                        title: Text(r.module),
-                        subtitle:
-                            r.errorMessage != null ? Text(r.errorMessage!) : null,
-                      ),
+                      (r) {
+                        final errorText = r.cleanErrorMessage ??
+                            (r.errorMessage != null
+                                ? ProductionMessagePolicy.sanitize(r.errorMessage!)
+                                : null);
+                        return ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            r.success
+                                ? Icons.check_circle_outline
+                                : Icons.error_outline,
+                            color: r.success ? scheme.primary : scheme.error,
+                          ),
+                          title: Text(
+                            r.moduleLabel,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: errorText != null
+                              ? Text(
+                                  errorText,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: scheme.error,
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
@@ -323,10 +351,12 @@ class _SyncStatusIcon extends StatelessWidget {
                       label: const Text('Résoudre les conflits'),
                     ),
                   ],
-                  if (sl<CloudSessionRepairService>().isAwaitingPinUnlock ||
-                      (snapshot.blockReason != null &&
-                          (snapshot.blockReason!.contains('cloud') ||
-                           snapshot.blockReason!.contains('session')))) ...[
+                  if (snapshot.blockReason != null &&
+                      (snapshot.blockReason!.toLowerCase().contains('cloud') ||
+                       snapshot.blockReason!.toLowerCase().contains('session') ||
+                       snapshot.blockReason!.toLowerCase().contains('authentification') ||
+                       snapshot.blockReason!.toLowerCase().contains('reconnecter') ||
+                       snapshot.blockReason!.toLowerCase().contains('pin'))) ...[
                     const SizedBox(height: AppSpacing.sm),
                     FilledButton.icon(
                       onPressed: () {
@@ -360,10 +390,11 @@ class _SyncStatusIcon extends StatelessWidget {
   }
 
   static void _showLocalOnlySheet(BuildContext context) {
-    showModalBottomSheet<void>(
+    showAdaptiveAppModal<void>(
       context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
+      maxWidth: 520,
+      scrollable: false,
+      contentPadding: const EdgeInsets.only(top: AppSpacing.lg),
       builder: (context) {
         final maxHeight = MediaQuery.sizeOf(context).height * 0.75;
         return SafeArea(
@@ -533,6 +564,8 @@ class _TechnicalDetailsCard extends StatelessWidget {
       SyncIndicatorState.synced => 'à jour',
       SyncIndicatorState.pending => 'en attente d\'envoi',
       SyncIndicatorState.conflict => 'conflit à résoudre',
+      SyncIndicatorState.offline => 'hors connexion',
+      SyncIndicatorState.waitingForConnection => 'serveur en attente',
       SyncIndicatorState.disabled => 'désactivée',
     };
   }
@@ -661,6 +694,38 @@ class _SyncStatusCopy {
           ],
           tip:
               'Évitez de modifier le même produit ou la même vente sur deux appareils en même temps.',
+        ),
+      SyncIndicatorState.offline => const _SyncStatusCopy(
+          icon: Icons.cloud_off_outlined,
+          accent: _SyncAccent.neutral,
+          title: 'Hors ligne (Mode local sécurisé)',
+          summary:
+              'Aucune connexion réseau n’est détectée. L’application ARIKE continue '
+              'de fonctionner normalement en mode local : vos ventes, vos clients et vos '
+              'articles sont enregistrés dans Drift sur cet appareil.',
+          steps: [
+            'Continuez vos encaissements et ventes sans interruption.',
+            'Vos opérations sont placées en file d’attente locale (Outbox).',
+            'Dès qu’une connexion internet sera rétablie, l’envoi au cloud se fera automatiquement.',
+          ],
+          tip:
+              'ARIKE est offline-first : vous n’avez jamais besoin d’attendre le réseau pour vendre.',
+        ),
+      SyncIndicatorState.waitingForConnection => _SyncStatusCopy(
+          icon: Icons.cloud_queue_outlined,
+          accent: _SyncAccent.warning,
+          title: 'Réseau présent — En attente du serveur',
+          summary:
+              'Votre appareil est connecté au Wi-Fi ou aux données mobiles, mais '
+              'Internet ou le serveur ARIKE est actuellement injoignable (portail captif, '
+              'crédit internet épuisé ou instabilité du signal).',
+          steps: [
+            'Vérifiez si votre accès Internet réel est actif (essayez d’ouvrir un site ou de recharger vos données).',
+            'Vos ventes continuent d’être enregistrées localement sans blocage.',
+            'Dès que le serveur ARIKE répondra, la synchronisation reprendra.',
+          ],
+          tip:
+              'L’indicateur redeviendra vert dès confirmation de la joignabilité du serveur.',
         ),
       SyncIndicatorState.disabled => _SyncStatusCopy(
           icon: Icons.cloud_off_outlined,

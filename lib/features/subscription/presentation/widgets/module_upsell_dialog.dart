@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../shared/utils/module_labels.dart';
 import '../pages/subscription_page.dart';
 
 class ModuleUpsellDialog extends StatelessWidget {
@@ -22,6 +23,7 @@ class ModuleUpsellDialog extends StatelessWidget {
   }) {
     return showDialog<void>(
       context: context,
+      useRootNavigator: true,
       builder: (dialogCtx) => ModuleUpsellDialog(
         moduleName: moduleName,
         requiredPlanName: requiredPlanName,
@@ -33,8 +35,14 @@ class ModuleUpsellDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final friendlyModuleName = formatModuleName(moduleName);
+    final friendlyRequiredPlan = formatPlanName(requiredPlanName);
+    final isNoOffer = currentPlanName.trim().isEmpty ||
+        currentPlanName.toUpperCase() == 'NONE' ||
+        currentPlanName.toUpperCase() == 'NULL';
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.md),
       ),
@@ -44,7 +52,7 @@ class ModuleUpsellDialog extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
-              moduleName,
+              friendlyModuleName,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -55,7 +63,7 @@ class ModuleUpsellDialog extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Ce module nécessite le forfait $requiredPlanName.',
+            'Ce module nécessite le forfait $friendlyRequiredPlan.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -71,7 +79,9 @@ class ModuleUpsellDialog extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
-                    'Votre forfait actuel : $currentPlanName',
+                    isNoOffer
+                        ? 'Vous n\'avez actuellement aucune offre active.'
+                        : 'Votre forfait actuel : ${formatPlanName(currentPlanName)}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -97,7 +107,7 @@ class ModuleUpsellDialog extends StatelessWidget {
             );
           },
           icon: const Icon(Icons.workspace_premium),
-          label: const Text('Voir les forfaits'),
+          label: Text(isNoOffer ? 'Prendre une offre' : 'Changer de forfait'),
         ),
       ],
     );

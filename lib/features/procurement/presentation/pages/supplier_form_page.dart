@@ -5,6 +5,7 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../domain/entities/procurement.dart';
 import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 /// Ouvre le formulaire fournisseur (création ou édition).
 Future<bool?> openSupplierFormPage(
@@ -151,10 +152,11 @@ class _SupplierFormPageState extends State<SupplierFormPage> {
             final isBusy = _submitPending ||
                 state.status == ProcurementStatus.refreshing;
 
-            return Form(
-              key: _formKey,
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
+            return AppPageContainer.form(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   Text(
                     'Informations',
@@ -229,7 +231,8 @@ class _SupplierFormPageState extends State<SupplierFormPage> {
                   ),
                 ],
               ),
-            );
+            ),
+          );
           },
         ),
       ),

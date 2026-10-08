@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_tokens.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../../rbac/presentation/pages/roles_catalog_page.dart';
 import '../../../../users/presentation/pages/user_list_page.dart';
@@ -21,10 +22,11 @@ class TeamAccessSettingsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Équipe & Accès'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: AppPageContainer(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header card
             Container(
@@ -132,6 +134,7 @@ class TeamAccessSettingsPage extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

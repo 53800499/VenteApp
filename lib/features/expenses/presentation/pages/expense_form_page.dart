@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import '../../../../shared/components/action_feedback.dart';
 import '../../../../shared/components/app_dropdown.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -29,12 +31,14 @@ class ExpenseFormPage extends StatefulWidget {
     required this.categories,
     this.expense,
     this.voiceSeed,
+    this.initialPayload,
   });
 
   final AuthSession session;
   final List<ExpenseCategory> categories;
   final Expense? expense;
   final VoiceExpenseSeed? voiceSeed;
+  final Map<String, dynamic>? initialPayload;
 
   @override
   State<ExpenseFormPage> createState() => _ExpenseFormPageState();
@@ -61,6 +65,7 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
     super.initState();
     ensureVoiceInputDependencies();
     final expense = widget.expense;
+    final payload = widget.initialPayload;
     if (expense != null) {
       _titleController.text = expense.title;
       _amountController.text = '${expense.amount}';
@@ -72,6 +77,16 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
       _repeat = expense.repeatSchedule;
       _status = expense.status;
       _expenseDate = DateTime.fromMillisecondsSinceEpoch(expense.expenseDate);
+    } else if (payload != null) {
+      if (payload['title'] is String) _titleController.text = payload['title'] as String;
+      if (payload['amount'] != null) _amountController.text = '${payload['amount']}';
+      if (payload['description'] is String) _descriptionController.text = payload['description'] as String;
+      if (payload['supplier'] is String) _supplierController.text = payload['supplier'] as String;
+      if (payload['invoiceNumber'] is String) _invoiceController.text = payload['invoiceNumber'] as String;
+      if (payload['categoryId'] is int) _categoryId = payload['categoryId'] as int;
+      if (payload['expenseDate'] is int) {
+        _expenseDate = DateTime.fromMillisecondsSinceEpoch(payload['expenseDate'] as int);
+      }
     } else if (widget.categories.isNotEmpty) {
       _categoryId = widget.categories.first.id;
     }
@@ -265,9 +280,7 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
       if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$error')),
-        );
+        ActionFeedback.showError(context, error);
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -295,10 +308,11 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
           children: [
             const VoiceListeningBanner(),
             Expanded(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(AppSpacing.md),
+              child: AppPageContainer.form(
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.md),
                   children: [
                     TextFormField(
                       controller: _titleController,
@@ -439,6 +453,7 @@ class _ExpenseFormPageState extends State<ExpenseFormPage> {
                 ),
               ),
             ),
+          ),
           ],
         ),
       ),

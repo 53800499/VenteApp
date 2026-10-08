@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../../../core/sync/sync_snapshot.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -21,6 +22,7 @@ import '../widgets/stock_transfer_qr_dialog.dart';
 import '../widgets/transfer_missing_products_dialog.dart';
 import '../widgets/transfer_receive_dialog.dart';
 import '../widgets/transfer_resolve_discrepancy_dialog.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class StockTransferDetailPage extends StatefulWidget {
   const StockTransferDetailPage({
@@ -287,9 +289,10 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
             title: Text(transfer.reference),
             actions: const [AppHeaderActions()],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
+          body: AppPageContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              children: [
               _InfoCard(transfer: transfer),
               if (awaitingCloud && shipBlockedMessage != null) ...[
                 const SizedBox(height: AppSpacing.sm),
@@ -614,7 +617,8 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
                   icon: const Icon(Icons.inventory_2_outlined),
                   label: const Text('Réceptionner'),
                 ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -994,7 +998,9 @@ class _StockTransferDetailPageState extends State<StockTransferDetailPage> {
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Partage impossible : $e')),
+        SnackBar(
+          content: Text('Partage impossible : ${friendlyErrorMessage(e)}'),
+        ),
       );
     }
   }

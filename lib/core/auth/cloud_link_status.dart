@@ -40,11 +40,19 @@ CloudLinkStatus resolveCloudLinkStatus({
   required bool isConnected,
   required SyncSnapshot sync,
 }) {
-  if (!sync.cloudSyncEnabled) {
+  // Le statut localOnly ne s'applique que si la boutique a été formellement
+  // évaluée avec la synchronisation cloud désactivée (forfait gratuit permanent ou choix explicite).
+  // Si le shopId est nul (instantané idle initial avant résolution), on ne doit pas
+  // préjuger d'un "Mode local".
+  if (sync.shopId != null && !sync.cloudSyncEnabled) {
     return CloudLinkStatus.localOnly;
   }
 
-  if (!isConnected) return CloudLinkStatus.disconnected;
+  if (!isConnected ||
+      sync.indicatorState == SyncIndicatorState.offline ||
+      sync.indicatorState == SyncIndicatorState.waitingForConnection) {
+    return CloudLinkStatus.disconnected;
+  }
 
   if (sync.phase == SyncRunPhase.running) {
     return CloudLinkStatus.syncing;

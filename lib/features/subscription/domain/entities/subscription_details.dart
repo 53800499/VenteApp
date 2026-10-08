@@ -27,24 +27,45 @@ class PaymentTransactionRecord extends Equatable {
   final String id;
   final DateTime date;
   final String planName;
+  final String? planCode;
   final double amount;
   final String currency;
   final String provider;
+  final String? reference;
   final String status;
+  final int bonusDays;
+  final DateTime? expiresAt;
 
   const PaymentTransactionRecord({
     required this.id,
     required this.date,
     required this.planName,
+    this.planCode,
     required this.amount,
     required this.currency,
     required this.provider,
+    this.reference,
     required this.status,
+    this.bonusDays = 0,
+    this.expiresAt,
   });
 
   @override
-  List<Object?> get props => [id, date, planName, amount, currency, provider, status];
+  List<Object?> get props => [
+        id,
+        date,
+        planName,
+        planCode,
+        amount,
+        currency,
+        provider,
+        reference,
+        status,
+        bonusDays,
+        expiresAt,
+      ];
 }
+
 
 class SubscriptionDetails extends Equatable {
   final String planCode;
@@ -55,6 +76,7 @@ class SubscriptionDetails extends Equatable {
   final DateTime graceUntil;
   final bool autoRenew;
   final List<String> grantedModules;
+  final List<String> capabilities;
   final int maxUsers;
   final int maxShops;
   final int currentUsersCount;
@@ -70,6 +92,7 @@ class SubscriptionDetails extends Equatable {
     required this.graceUntil,
     required this.autoRenew,
     required this.grantedModules,
+    this.capabilities = const [],
     required this.maxUsers,
     required this.maxShops,
     required this.currentUsersCount,
@@ -83,6 +106,20 @@ class SubscriptionDetails extends Equatable {
   bool get isRevoked => status == 'REVOKED' || status == 'SUSPENDED';
   bool get isExpired => status == 'EXPIRED';
 
+  /// Indique si l'utilisateur est sur le forfait permanent gratuit (0 FCFA)
+  bool get isFreePlan => planCode.toUpperCase() == 'FREE' || planCode.toUpperCase() == 'STARTER';
+
+  /// Indique si l'abonnement autorise la sauvegarde et synchronisation Cloud
+  bool get hasCloudSync {
+    if (isFreePlan || isRevoked || isExpired) return false;
+    if (capabilities.contains('CLOUD_SYNC')) return true;
+    // Par défaut pour les forfaits payants actifs (Essentiel, Pro, Business)
+    return isActive && !isFreePlan;
+  }
+
+  /// Indique si les données locales ne sont pas sécurisées par le Cloud (risque en cas de perte/casse)
+  bool get isDataAtRisk => !hasCloudSync;
+
   @override
   List<Object?> get props => [
         planCode,
@@ -93,6 +130,7 @@ class SubscriptionDetails extends Equatable {
         graceUntil,
         autoRenew,
         grantedModules,
+        capabilities,
         maxUsers,
         maxShops,
         currentUsersCount,
@@ -100,3 +138,4 @@ class SubscriptionDetails extends Equatable {
         paymentHistory,
       ];
 }
+

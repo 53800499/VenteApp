@@ -1,227 +1,193 @@
 import 'dart:async';
 
-
-
 import 'package:connectivity_plus/connectivity_plus.dart';
 
-
-
+import '../errors/exception_mapper.dart';
 import '../errors/failures.dart';
-
+import '../security/production_message_policy.dart';
 import '../network/network_info.dart';
-
+import '../network/network_monitor.dart';
 import '../network/remote_api_guard.dart';
-
 import '../network/api_client.dart';
-
 import '../network/active_shop_context.dart';
-
 import '../../features/settings/data/datasources/local/settings_local_datasource.dart';
+import '../../features/subscription/domain/services/subscription_controller.dart';
 import 'remote_sync_port.dart';
 import 'sync_display_message.dart';
 import 'sync_policy.dart';
-
 import 'sync_queue_datasource.dart';
-
 import 'sync_queue_processor.dart';
-
 import 'sync_snapshot.dart';
 
-
-
 /// Synchronisation cloud asynchrone — 3 couches (BDD §3.2) :
-
 ///
-
 /// 1. **V1** : écriture locale Drift uniquement (`cloudSyncEnabled = false`)
-
 /// 2. **V2** : + file `sync_queue` + pull/push cloud parallèle si réseau
-
 /// 3. **V3** : + scope `shop_id` par boutique active (multi-boutiques)
-
 ///
-
 /// [RG-SYNC-02] : jamais bloquant pour l'UI.
-
 class SyncService {
-
   SyncService({
-
     required Connectivity connectivity,
-
     required NetworkInfo networkInfo,
-
     required RemoteApiGuard apiGuard,
-
     required SyncPolicy policy,
-
     required SyncQueueDatasource queue,
-
     required SyncQueueProcessor processor,
-
     required List<RemoteSyncPort> ports,
-
+    NetworkMonitor? networkMonitor,
     SettingsLocalDatasource? settingsLocal,
-
     ActiveShopContext? activeShop,
-
     Future<void> Function()? onServerContact,
-
+    SubscriptionController? subscriptionController,
   })  : _connectivity = connectivity,
-
         _networkInfo = networkInfo,
-
+        _networkMonitor = networkMonitor ?? networkInfo.monitor,
         _apiGuard = apiGuard,
-
         _policy = policy,
-
         _queue = queue,
-
         _processor = processor,
-
         _ports = ports,
-
         _settingsLocal = settingsLocal,
-
         _activeShop = activeShop,
-
-        _onServerContact = onServerContact;
-
-
+        _onServerContact = onServerContact,
+        _subscriptionController = subscriptionController;
 
   final Connectivity _connectivity;
-
   final NetworkInfo _networkInfo;
-
+  final NetworkMonitor? _networkMonitor;
   final RemoteApiGuard _apiGuard;
-
   final SyncPolicy _policy;
-
   final SyncQueueDatasource _queue;
-
   final SyncQueueProcessor _processor;
-
   final List<RemoteSyncPort> _ports;
   final SettingsLocalDatasource? _settingsLocal;
   final ActiveShopContext? _activeShop;
+  final SubscriptionController? _subscriptionController;
 
   /// Notifié à chaque cycle ayant réellement joint le serveur (pull/push OK).
   final Future<void> Function()? _onServerContact;
 
-
-
   final _snapshotController = StreamController<SyncSnapshot>.broadcast();
-
   Stream<SyncSnapshot> get snapshots => _snapshotController.stream;
 
-
-
   SyncSnapshot _snapshot = const SyncSnapshot.idle();
-
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
-
+  StreamSubscription<NetworkState>? _networkMonitorSub;
   Timer? _debounce;
-
+  Timer? _retryTimer;
+  int _retryCount = 0;
   int? _shopId;
-
   var _running = false;
-
   var _started = false;
-
   var _paused = false;
-
-
+  var _pendingSyncRequested = false;
+  SyncTrigger? _pendingSyncTrigger;
 
   SyncSnapshot get currentSnapshot => _snapshot;
 
-
-
   void start() {
-
     if (_started) return;
-
     _started = true;
-
     _emit(_snapshot);
 
-    _connectivitySub = _connectivity.onConnectivityChanged.listen((_) {
-
-      _scheduleSync();
-
+    _networkMonitorSub = _networkMonitor?.onStateChanged.listen((state) {
+      if (state == NetworkState.online) {
+        _retryCount = 0;
+        _retryTimer?.cancel();
+        _scheduleSync(trigger: SyncTrigger.networkRestored);
+      } else if (state == NetworkState.localNetworkOnly) {
+        _handleNetworkStateChange(state);
+      } else if (state == NetworkState.offline) {
+        _handleNetworkStateChange(state);
+      }
     });
 
-    _scheduleSync();
+    _connectivitySub = _connectivity.onConnectivityChanged.listen((_) {
+      _scheduleSync(trigger: SyncTrigger.networkRestored);
+    });
 
+    _scheduleSync(trigger: SyncTrigger.appStarted);
   }
 
-
-
-  void scheduleSync({required int shopId}) {
-
+  void scheduleSync({
+    required int shopId,
+    SyncTrigger trigger = SyncTrigger.manualRefresh,
+  }) {
     _shopId = shopId;
-
-    _scheduleSync();
-
+    if (trigger == SyncTrigger.outboxEnqueued) {
+      unawaited(_notifyQueueProgress(shopId));
+    }
+    _scheduleSync(trigger: trigger);
   }
 
-
+  Future<void> _notifyQueueProgress(int shopId) async {
+    try {
+      final count = await _queue.countPending(shopId: shopId);
+      if (count > 0 && _snapshot.pendingQueueCount != count) {
+        final monitor = _networkMonitor;
+        final indicator = monitor?.isOffline == true
+            ? SyncIndicatorState.offline
+            : (monitor?.isLocalOnly == true
+                ? SyncIndicatorState.waitingForConnection
+                : SyncIndicatorState.pending);
+        _emit(
+          _snapshot.copyWith(
+            pendingQueueCount: count,
+            indicatorState: indicator,
+          ),
+        );
+      }
+    } catch (_) {}
+  }
 
   void clearShop() {
-
     _shopId = null;
     _paused = false;
-
+    _retryTimer?.cancel();
     _emit(const SyncSnapshot.idle());
-
   }
 
   /// Suspend les cycles de synchronisation (changement de boutique, déconnexion…).
   void pauseSync() {
     _paused = true;
     _debounce?.cancel();
+    _retryTimer?.cancel();
   }
 
   /// Relance la synchronisation après une pause.
   void resumeSync({int? shopId}) {
     if (shopId != null) _shopId = shopId;
     _paused = false;
-    _scheduleSync();
+    _scheduleSync(trigger: SyncTrigger.appResumed);
   }
 
   bool get isPaused => _paused;
 
-
-
   void dispose() {
-
     _debounce?.cancel();
-
+    _retryTimer?.cancel();
     _connectivitySub?.cancel();
-
+    _networkMonitorSub?.cancel();
     _snapshotController.close();
-
   }
 
-
-
-  void _scheduleSync() {
-
+  void _scheduleSync({SyncTrigger trigger = SyncTrigger.manualRefresh}) {
     if (_paused) return;
 
     _debounce?.cancel();
-
     _debounce = Timer(const Duration(milliseconds: 400), () {
-
-      unawaited(_runSyncCycle());
-
+      unawaited(_runSyncCycle(trigger));
     });
-
   }
 
-
-
-  Future<void> _runSyncCycle() async {
-    if (_paused || _running) return;
+  Future<void> _runSyncCycle([SyncTrigger trigger = SyncTrigger.manualRefresh]) async {
+    if (_paused) return;
+    if (_running) {
+      _pendingSyncRequested = true;
+      _pendingSyncTrigger = trigger;
+      return;
+    }
 
     final shopId = _shopId;
     if (shopId == null) return;
@@ -232,194 +198,271 @@ class SyncService {
     // boutique côté serveur, même si le contexte global bascule en cours de route.
     await ApiClient.runScopedToServerShop(
       _activeShop?.serverShopId,
-      () => _runSyncCycleBody(shopId),
+      () => _runSyncCycleBody(shopId, trigger),
     );
   }
 
-  Future<void> _runSyncCycleBody(int shopId) async {
-    final context = await _policy.resolve(shopId: shopId);
-    var pendingCount = await _queue.countPending(shopId: shopId);
-    final conflictCount = await _queue.countConflicts(shopId: shopId);
-
-    if (!context.shouldRunCloudPull) {
-      _emit(
-        SyncSnapshot(
-          phase: SyncRunPhase.idle,
-          tier: context.tier,
-          cloudSyncEnabled: context.cloudSyncEnabled,
-          indicatorState: SyncIndicatorState.disabled,
-          pendingQueueCount: pendingCount,
-          shopId: shopId,
-        ),
-      );
-      return;
-    }
-
-    var indicator = _resolveIndicator(
-      pendingCount: pendingCount,
-      conflictCount: conflictCount,
-    );
-
-    if (!await _networkInfo.isConnected) {
-      _emit(
-        SyncSnapshot(
-          phase: SyncRunPhase.idle,
-          tier: context.tier,
-          cloudSyncEnabled: true,
-          indicatorState: indicator,
-          pendingQueueCount: pendingCount,
-          shopId: shopId,
-          blockReason: 'Hors ligne — synchronisation à la reconnexion.',
-        ),
-      );
-      return;
-    }
-
-    Failure? apiFailure;
+  Future<void> _runSyncCycleBody(int shopId, [SyncTrigger trigger = SyncTrigger.manualRefresh]) async {
     try {
-      await _apiGuard.ensureReady();
-    } on Failure catch (error) {
-      apiFailure = error;
-    } catch (error) {
-      apiFailure = NetworkFailure('$error');
-    }
+      final context = await _policy.resolve(shopId: shopId);
+      var pendingCount = await _queue.countPending(shopId: shopId);
+      final conflictCount = await _queue.countConflicts(shopId: shopId);
 
-    if (apiFailure != null) {
-      indicator = _resolveIndicator(
-        pendingCount: pendingCount,
-        conflictCount: conflictCount,
-        hasAuthFailure: true,
-      );
-    }
+      if (!context.shouldRunCloudPull) {
+        _emit(
+          SyncSnapshot(
+            phase: SyncRunPhase.idle,
+            tier: context.tier,
+            cloudSyncEnabled: context.cloudSyncEnabled,
+            indicatorState: SyncIndicatorState.disabled,
+            pendingQueueCount: pendingCount,
+            shopId: shopId,
+          ),
+        );
+        return;
+      }
 
-    if (_ports.isEmpty && apiFailure != null) {
-      _emit(
-        SyncSnapshot(
-          phase: SyncRunPhase.idle,
-          tier: context.tier,
-          cloudSyncEnabled: true,
-          indicatorState: indicator,
-          pendingQueueCount: pendingCount,
-          shopId: shopId,
-          blockReason: SyncDisplayMessage.dedupe(apiFailure.message),
-        ),
-      );
-      return;
-    }
+      // Contrôle préalable par le NetworkMonitor : ne pas gaspiller de batterie ni
+      // encombrer la file si l'accès réel au serveur n'est pas établi.
+      final monitor = _networkMonitor;
+      if (monitor != null) {
+        if (monitor.isOffline) {
+          _emit(
+            SyncSnapshot(
+              phase: SyncRunPhase.idle,
+              tier: context.tier,
+              cloudSyncEnabled: true,
+              indicatorState: SyncIndicatorState.offline,
+              pendingQueueCount: pendingCount,
+              shopId: shopId,
+              blockReason: 'Hors ligne — modifications enregistrées en local.',
+            ),
+          );
+          return;
+        }
+        if (monitor.isLocalOnly) {
+          _emit(
+            SyncSnapshot(
+              phase: SyncRunPhase.idle,
+              tier: context.tier,
+              cloudSyncEnabled: true,
+              indicatorState: SyncIndicatorState.waitingForConnection,
+              pendingQueueCount: pendingCount,
+              shopId: shopId,
+              blockReason: 'Réseau présent, mais serveur ARIKE non joignable.',
+            ),
+          );
+          return;
+        }
+      }
 
-    _running = true;
-    _emit(
-      _snapshot.copyWith(
-        phase: SyncRunPhase.running,
-        tier: context.tier,
-        cloudSyncEnabled: true,
-        shopId: shopId,
-        pendingQueueCount: pendingCount,
-        indicatorState: indicator,
-        blockReason: SyncDisplayMessage.dedupe(apiFailure?.message),
-        clearBlockReason: apiFailure == null,
-      ),
-    );
+      if (!await _networkInfo.isConnected) {
+        _emit(
+          SyncSnapshot(
+            phase: SyncRunPhase.idle,
+            tier: context.tier,
+            cloudSyncEnabled: true,
+            indicatorState: SyncIndicatorState.offline,
+            pendingQueueCount: pendingCount,
+            shopId: shopId,
+            blockReason: 'Hors ligne — synchronisation à la reconnexion.',
+          ),
+        );
+        return;
+      }
 
-    var results = const <SyncModuleResult>[];
-    if (apiFailure == null && _ports.isNotEmpty) {
-      results = await Future.wait(
-        _ports.map((port) async {
-          try {
-            await port.syncFromRemote(shopId: shopId);
-            return SyncModuleResult(module: port.moduleName, success: true);
-          } on Failure catch (error) {
-            return SyncModuleResult(
-              module: port.moduleName,
-              success: false,
-              errorMessage: error.message,
-            );
-          } catch (error) {
-            return SyncModuleResult(
-              module: port.moduleName,
-              success: false,
-              errorMessage: error.toString(),
-            );
-          }
-        }),
-      );
-    }
-
-    SyncQueueProcessResult? queueResult;
-    if (context.shouldUseSyncQueue && apiFailure == null) {
+      Failure? apiFailure;
       try {
-        queueResult = await _processor.process(shopId: shopId);
+        await _apiGuard.ensureReady();
       } on Failure catch (error) {
         apiFailure = error;
+      } catch (error) {
+        apiFailure = NetworkFailure('$error');
+      }
+
+      if (apiFailure != null) {
+        final isNetwork = apiFailure is NetworkFailure ||
+            apiFailure.message.toLowerCase().contains('connect') ||
+            apiFailure.message.toLowerCase().contains('timeout') ||
+            apiFailure.message.toLowerCase().contains('unreachable');
+        if (isNetwork) {
+          _scheduleBackoffRetry();
+          unawaited(_networkMonitor?.checkNow(force: true));
+        }
+
+        final indicator = _resolveIndicator(
+          pendingCount: pendingCount,
+          conflictCount: conflictCount,
+          hasNetworkFailure: isNetwork,
+          hasAuthFailure: !isNetwork,
+        );
+
+        _emit(
+          SyncSnapshot(
+            phase: SyncRunPhase.idle,
+            tier: context.tier,
+            cloudSyncEnabled: true,
+            indicatorState: indicator,
+            pendingQueueCount: pendingCount,
+            shopId: shopId,
+            blockReason: SyncDisplayMessage.dedupe(apiFailure.message),
+          ),
+        );
+        return;
+      }
+
+      _running = true;
+      _emit(
+        _snapshot.copyWith(
+          phase: SyncRunPhase.running,
+          tier: context.tier,
+          cloudSyncEnabled: true,
+          shopId: shopId,
+          pendingQueueCount: pendingCount,
+          indicatorState: _resolveIndicator(
+            pendingCount: pendingCount,
+            conflictCount: conflictCount,
+          ),
+          clearBlockReason: true,
+        ),
+      );
+
+      // 1. PUSH FIRST (Outbox FIFO) : les modifications locales doivent partir en priorité
+      SyncQueueProcessResult? queueResult;
+      if (context.shouldUseSyncQueue) {
+        try {
+          queueResult = await _processor.process(shopId: shopId);
+        } on Failure catch (error) {
+          apiFailure = error;
+        } catch (error) {
+          apiFailure = NetworkFailure('$error');
+        }
+      }
+
+      final pushNetworkFailure = apiFailure != null &&
+          (apiFailure is NetworkFailure ||
+              apiFailure.message.toLowerCase().contains('connect') ||
+              apiFailure.message.toLowerCase().contains('timeout'));
+
+      if (pushNetworkFailure) {
+        _scheduleBackoffRetry();
+        unawaited(_networkMonitor?.checkNow(force: true));
+      }
+
+      // 2. PULL SECOND (Téléchargement des deltas serveur par module)
+      var results = const <SyncModuleResult>[];
+      if (apiFailure == null && _ports.isNotEmpty) {
+        final allowedPorts = _subscriptionController == null
+            ? _ports
+            : _ports.where((port) => _subscriptionController.isModuleNameGranted(port.moduleName)).toList();
+
+        results = await Future.wait(
+          allowedPorts.map((port) async {
+            try {
+              await port.syncFromRemote(shopId: shopId);
+              return SyncModuleResult(module: port.moduleName, success: true);
+            } on Failure catch (error) {
+              return SyncModuleResult(
+                module: port.moduleName,
+                success: false,
+                errorMessage: ProductionMessagePolicy.sanitize(error.message),
+              );
+            } catch (error) {
+              return SyncModuleResult(
+                module: port.moduleName,
+                success: false,
+                errorMessage: ProductionMessagePolicy.sanitize(friendlyErrorMessage(error)),
+              );
+            }
+          }),
+        );
+      }
+
+      pendingCount = await _queue.countPending(shopId: shopId);
+      final conflictsAfter = await _queue.countConflicts(shopId: shopId);
+      final hasFailures = results.any((r) => !r.success);
+
+      String? blockReason = SyncDisplayMessage.dedupe(apiFailure?.message);
+      if (blockReason == null &&
+          (queueResult != null && queueResult.deferred > 0 || pendingCount > 0)) {
+        blockReason = await _queue.describePendingBlock(shopId: shopId) ??
+            '${pendingCount > 0 ? pendingCount : queueResult?.deferred ?? 0} '
+                'élément(s) en attente (dépendances ou données serveur manquantes).';
+      }
+      if (blockReason == null && hasFailures) {
+        blockReason = SyncDisplayMessage.collapse(
+              results
+                  .where((r) => !r.success)
+                  .map((r) => r.errorMessage ?? r.module),
+            ) ??
+            'Échec de synchronisation sur un ou plusieurs modules.';
+      }
+
+      if (apiFailure == null &&
+          !hasFailures &&
+          pendingCount == 0 &&
+          conflictsAfter == 0) {
+        _retryCount = 0;
+        _retryTimer?.cancel();
+        await _settingsLocal?.touchCloudLastSyncAt(shopId);
+      }
+
+      final reachedServer = apiFailure == null &&
+          (results.any((r) => r.success) || queueResult != null);
+      final onServerContact = _onServerContact;
+      if (reachedServer && onServerContact != null) {
+        await onServerContact();
+      }
+
+      _emit(
+        SyncSnapshot(
+          phase: SyncRunPhase.completed,
+          tier: context.tier,
+          cloudSyncEnabled: true,
+          indicatorState: _resolveIndicator(
+            pendingCount: pendingCount,
+            conflictCount: conflictsAfter,
+            hasPullFailures: hasFailures,
+            hasAuthFailure: apiFailure != null && !pushNetworkFailure,
+            hasNetworkFailure: pushNetworkFailure,
+          ),
+          pendingQueueCount: pendingCount,
+          shopId: shopId,
+          results: results,
+          lastCompletedAt: DateTime.now(),
+          blockReason: blockReason,
+        ),
+      );
+    } finally {
+      _running = false;
+      if (_pendingSyncRequested && !_paused) {
+        _pendingSyncRequested = false;
+        final nextTrigger = _pendingSyncTrigger ?? SyncTrigger.manualRefresh;
+        _pendingSyncTrigger = null;
+        _scheduleSync(trigger: nextTrigger);
       }
     }
-
-    pendingCount = await _queue.countPending(shopId: shopId);
-    final conflictsAfter = await _queue.countConflicts(shopId: shopId);
-    final hasFailures = results.any((r) => !r.success);
-
-    String? blockReason = SyncDisplayMessage.dedupe(apiFailure?.message);
-    if (blockReason == null &&
-        (queueResult != null && queueResult.deferred > 0 || pendingCount > 0)) {
-      blockReason = await _queue.describePendingBlock(shopId: shopId) ??
-          '${pendingCount > 0 ? pendingCount : queueResult?.deferred ?? 0} '
-              'élément(s) en attente (dépendances ou données serveur manquantes).';
-    }
-    if (blockReason == null && hasFailures) {
-      blockReason = SyncDisplayMessage.collapse(
-            results
-                .where((r) => !r.success)
-                .map((r) => r.errorMessage ?? r.module),
-          ) ??
-          'Échec de synchronisation sur un ou plusieurs modules.';
-    }
-
-    _running = false;
-    if (apiFailure == null &&
-        !hasFailures &&
-        pendingCount == 0 &&
-        conflictsAfter == 0) {
-      await _settingsLocal?.touchCloudLastSyncAt(shopId);
-    }
-
-    // Contact serveur avéré (au moins un pull réussi ou file traitée sans échec
-    // réseau) : réinitialise l'ancienneté qui pilote la politique 3 niveaux.
-    final reachedServer = apiFailure == null &&
-        (results.any((r) => r.success) || queueResult != null);
-    final onServerContact = _onServerContact;
-    if (reachedServer && onServerContact != null) {
-      await onServerContact();
-    }
-
-    _emit(
-      SyncSnapshot(
-        phase: SyncRunPhase.completed,
-        tier: context.tier,
-        cloudSyncEnabled: true,
-        indicatorState: _resolveIndicator(
-          pendingCount: pendingCount,
-          conflictCount: conflictsAfter,
-          hasPullFailures: hasFailures,
-          hasAuthFailure: apiFailure != null,
-        ),
-        pendingQueueCount: pendingCount,
-        shopId: shopId,
-        results: results,
-        lastCompletedAt: DateTime.now(),
-        blockReason: blockReason,
-      ),
-    );
   }
-
-
 
   SyncIndicatorState _resolveIndicator({
     required int pendingCount,
     required int conflictCount,
     bool hasPullFailures = false,
     bool hasAuthFailure = false,
+    bool hasNetworkFailure = false,
+    bool isOffline = false,
   }) {
     if (conflictCount > 0) return SyncIndicatorState.conflict;
+
+    if (isOffline) return SyncIndicatorState.offline;
+
+    final monitor = _networkMonitor;
+    if (monitor != null) {
+      if (monitor.isOffline) return SyncIndicatorState.offline;
+      if (monitor.isLocalOnly) return SyncIndicatorState.waitingForConnection;
+    }
+
+    if (hasNetworkFailure) return SyncIndicatorState.waitingForConnection;
 
     if (pendingCount > 0 || hasPullFailures || hasAuthFailure) {
       return SyncIndicatorState.pending;
@@ -427,6 +470,40 @@ class SyncService {
 
     return SyncIndicatorState.synced;
   }
+
+  void _scheduleBackoffRetry() {
+    if (_paused || _shopId == null) return;
+    _retryCount++;
+    final delaySeconds = (2 * (1 << (_retryCount - 1))).clamp(2, 60);
+    _retryTimer?.cancel();
+    _retryTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (!_paused && _shopId != null) {
+        _scheduleSync(trigger: SyncTrigger.periodicFallback);
+      }
+    });
+  }
+
+  void _handleNetworkStateChange(NetworkState state) {
+    final shopId = _shopId;
+    if (shopId == null || _running) return;
+
+    final indicator = state == NetworkState.offline
+        ? SyncIndicatorState.offline
+        : SyncIndicatorState.waitingForConnection;
+    final reason = state == NetworkState.offline
+        ? 'Hors ligne — modifications enregistrées en local.'
+        : 'Réseau présent, mais serveur ARIKE non joignable.';
+
+    _emit(
+      _snapshot.copyWith(
+        phase: SyncRunPhase.idle,
+        indicatorState: indicator,
+        blockReason: reason,
+      ),
+    );
+  }
+
+
 
 
 

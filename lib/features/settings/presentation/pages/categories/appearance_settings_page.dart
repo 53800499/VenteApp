@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../app/di/injection_container.dart';
 import '../../../../../app/theme/app_tokens.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../../voice_input/data/voice_input_preferences.dart';
 
@@ -37,10 +38,11 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
       appBar: AppBar(
         title: const Text('Apparence & Utilisation'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: AppPageContainer(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               padding: const EdgeInsets.all(AppSpacing.md),
@@ -126,6 +128,7 @@ class _AppearanceSettingsPageState extends State<AppearanceSettingsPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

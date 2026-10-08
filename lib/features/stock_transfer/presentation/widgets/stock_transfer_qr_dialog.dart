@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../data/utils/stock_transfer_qr_payload.dart';
 import '../services/stock_transfer_qr_sharer.dart';
 
@@ -41,7 +42,9 @@ class _StockTransferQrDialogState extends State<StockTransferQrDialog> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Partage impossible : $e')),
+        SnackBar(
+          content: Text('Partage impossible : ${friendlyErrorMessage(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _sharing = false);

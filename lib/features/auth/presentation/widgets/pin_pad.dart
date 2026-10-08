@@ -36,7 +36,20 @@ class PinPad extends StatelessWidget {
         final veryCompact = constraints.maxHeight < 520;
         final useCompact = compact || veryCompact;
         final colorScheme = Theme.of(context).colorScheme;
-        final keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'];
+        final keys = [
+          '1',
+          '2',
+          '3',
+          '4',
+          '5',
+          '6',
+          '7',
+          '8',
+          '9',
+          '',
+          '0',
+          '⌫',
+        ];
         final gridSpacing = useCompact ? 6.0 : 12.0;
         final aspectRatio = useCompact ? 1.5 : 1.15;
 
@@ -56,7 +69,9 @@ class PinPad extends StatelessWidget {
                     curve: Curves.easeOut,
                     width: filled ? 14 : 12,
                     height: filled ? 14 : 12,
-                    margin: EdgeInsets.symmetric(horizontal: useCompact ? 8 : 10),
+                    margin: EdgeInsets.symmetric(
+                      horizontal: useCompact ? 8 : 10,
+                    ),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: filled ? colorScheme.primary : Colors.transparent,
@@ -96,18 +111,20 @@ class PinPad extends StatelessWidget {
                       customBorder: const CircleBorder(),
                       onTap: enabled
                           ? () => _onKeyTap(() {
-                                if (isBackspace) {
-                                  onBackspace();
-                                } else {
-                                  onDigit(key);
-                                }
-                              })
+                              if (isBackspace) {
+                                onBackspace();
+                              } else {
+                                onDigit(key);
+                              }
+                            })
                           : null,
                       child: Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                            color: colorScheme.outlineVariant.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -126,12 +143,17 @@ class PinPad extends StatelessWidget {
                                 )
                               : Text(
                                   key,
-                                  style: (useCompact
-                                          ? Theme.of(context).textTheme.titleMedium
-                                          : Theme.of(context).textTheme.headlineSmall)
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                  style:
+                                      (useCompact
+                                              ? Theme.of(
+                                                  context,
+                                                ).textTheme.titleMedium
+                                              : Theme.of(
+                                                  context,
+                                                ).textTheme.headlineSmall)
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                 ),
                         ),
                       ),

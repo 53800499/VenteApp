@@ -9,6 +9,7 @@ import '../../../shop/domain/repositories/shop_repository.dart';
 import '../../domain/entities/stock_transfer.dart';
 import '../../domain/repositories/stock_transfer_repository.dart';
 import '../bloc/stock_transfer_bloc.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class StockTransferFormPage extends StatefulWidget {
   const StockTransferFormPage({super.key});
@@ -123,10 +124,11 @@ class _StockTransferFormPageState extends State<StockTransferFormPage> {
       },
       child: Scaffold(
         appBar: AppBar(title: const Text('Nouveau transfert')),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
+        body: AppPageContainer(
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
             children: [
               Text(
                 'Transfert vers une autre boutique',
@@ -277,8 +279,9 @@ class _StockTransferFormPageState extends State<StockTransferFormPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showAddItemDialog() {
     dynamic selectedProduct;

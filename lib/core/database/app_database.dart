@@ -94,13 +94,14 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 45;
+  int get schemaVersion => 47;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         beforeOpen: (details) async {
           await _backfillNotificationSettingsColumns();
           await _backfillFxSchemaColumns();
+          await _backfillSyncQueueColumns();
           try {
             await seedFxCurrencies(this);
           } catch (_) {
@@ -533,8 +534,87 @@ class AppDatabase extends _$AppDatabase {
               salesOrders.deviceId,
             );
           }
+          if (from < 46) {
+            await _backfillSyncQueueColumns();
+          }
+          if (from < 47) {
+            await _backfillSyncQueueColumns();
+          }
         },
       );
+
+  Future<void> _backfillSyncQueueColumns() async {
+    await _ensureSqlColumn(
+      'sync_queue',
+      'domain',
+      "TEXT NOT NULL DEFAULT 'SALES'",
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'idempotency_key',
+      'TEXT NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'business_criticality',
+      "TEXT NOT NULL DEFAULT 'NORMAL'",
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'base_priority',
+      'INTEGER NOT NULL DEFAULT 10',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'dependency_boost',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'local_version',
+      'INTEGER NOT NULL DEFAULT 1',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'next_retry_at',
+      'INTEGER NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'last_error',
+      'TEXT NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'error_code',
+      'TEXT NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'processed_at',
+      'INTEGER NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'suggested_action',
+      'TEXT NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'discarded_at',
+      'INTEGER NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'discarded_by',
+      'INTEGER NULL',
+    );
+    await _ensureSqlColumn(
+      'sync_queue',
+      'discard_reason',
+      'TEXT NULL',
+    );
+  }
 
   Future<void> _addColumnIfMissing(
     Migrator m,

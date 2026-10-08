@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../constants/api_config.dart';
@@ -189,19 +190,35 @@ class AuthCredentialsStorage {
     }
   }
 
+  final Map<String, String> _sessionFallback = {};
+
   Future<void> _write(String key, String value) async {
     final memory = _memory;
     if (memory != null) {
       memory[key] = value;
       return;
     }
-    await _storage!.write(key: key, value: value);
+    _sessionFallback[key] = value;
+    try {
+      await _storage!.write(key: key, value: value);
+    } catch (e) {
+      debugPrint('AuthCredentialsStorage write error for $key: $e');
+    }
   }
 
   Future<String?> _read(String key) async {
     final memory = _memory;
     if (memory != null) return memory[key];
-    return _storage!.read(key: key);
+    try {
+      final value = await _storage!.read(key: key);
+      if (value != null) {
+        _sessionFallback[key] = value;
+        return value;
+      }
+    } catch (e) {
+      debugPrint('AuthCredentialsStorage read error for $key: $e');
+    }
+    return _sessionFallback[key];
   }
 
   Future<void> _delete(String key) async {
@@ -210,6 +227,11 @@ class AuthCredentialsStorage {
       memory.remove(key);
       return;
     }
-    await _storage!.delete(key: key);
+    _sessionFallback.remove(key);
+    try {
+      await _storage!.delete(key: key);
+    } catch (e) {
+      debugPrint('AuthCredentialsStorage delete error for $key: $e');
+    }
   }
 }

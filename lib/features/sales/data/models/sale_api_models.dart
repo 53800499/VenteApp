@@ -7,6 +7,7 @@ class CreateStandardSaleApiRequest {
     this.discountAmount = 0,
     this.customerId,
     this.note,
+    this.receiptNumber,
   });
 
   final List<SaleLineApiRequest> items;
@@ -14,6 +15,7 @@ class CreateStandardSaleApiRequest {
   final int? customerId;
   final SalePaymentApiRequest payment;
   final String? note;
+  final String? receiptNumber;
 
   Map<String, dynamic> toJson() => {
         'items': items.map((i) => i.toJson()).toList(),
@@ -21,6 +23,8 @@ class CreateStandardSaleApiRequest {
         if (customerId != null) 'customerId': customerId,
         'payment': payment.toJson(),
         if (note != null && note!.isNotEmpty) 'note': note,
+        if (receiptNumber != null && receiptNumber!.isNotEmpty)
+          'receiptNumber': receiptNumber,
       };
 }
 

@@ -73,7 +73,7 @@ class _DebtDetailPageState extends State<DebtDetailPage> {
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     } catch (_) {

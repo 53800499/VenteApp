@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/responsive/breakpoints.dart';
+import '../../../../core/responsive/responsive_builder.dart';
 import '../../domain/entities/shop_entities.dart';
 import '../widgets/shop_feedback.dart';
 
@@ -94,49 +96,53 @@ class _ShopFormPageState extends State<ShopFormPage> {
       appBar: AppBar(
         title: Text(_isEdit ? 'Modifier la boutique' : 'Nouvelle boutique'),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nom de la boutique',
-                hintText: 'Boutique Akpakpa',
+      body: ResponsivePage(
+        maxWidth: Breakpoints.formMaxWidth,
+        padding: EdgeInsets.zero,
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Nom de la boutique',
+                  hintText: 'Boutique Akpakpa',
+                ),
+                textCapitalization: TextCapitalization.words,
+                validator: (value) {
+                  if (value == null || value.trim().length < 2) {
+                    return 'Le nom doit contenir au moins 2 caractères.';
+                  }
+                  return null;
+                },
               ),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) {
-                if (value == null || value.trim().length < 2) {
-                  return 'Le nom doit contenir au moins 2 caractères.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'Adresse (optionnel)',
-                hintText: 'Cotonou, Akpakpa',
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Adresse (optionnel)',
+                  hintText: 'Cotonou, Akpakpa',
+                ),
+                textCapitalization: TextCapitalization.sentences,
               ),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextFormField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Téléphone (optionnel)',
-                hintText: '+22990123456',
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Téléphone (optionnel)',
+                  hintText: '+22990123456',
+                ),
+                keyboardType: TextInputType.phone,
               ),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton(
-              onPressed: _submit,
-              child: Text(_isEdit ? 'Enregistrer' : 'Créer la boutique'),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.xl),
+              FilledButton(
+                onPressed: _submit,
+                child: Text(_isEdit ? 'Enregistrer' : 'Créer la boutique'),
+              ),
+            ],
+          ),
         ),
       ),
     );

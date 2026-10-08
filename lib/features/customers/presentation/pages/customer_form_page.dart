@@ -20,10 +20,12 @@ class CustomerFormPage extends StatefulWidget {
     super.key,
     required this.session,
     this.customer,
+    this.initialPayload,
   });
 
   final AuthSession session;
   final Customer? customer;
+  final Map<String, dynamic>? initialPayload;
 
   bool get isEditing => customer != null;
 
@@ -54,12 +56,19 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
       widget.session.shop.id,
       customerId: widget.customer?.id,
     );
-    _nameController = TextEditingController(text: widget.customer?.name ?? '');
-    _phoneController =
-        TextEditingController(text: widget.customer?.phone ?? '');
-    _addressController =
-        TextEditingController(text: widget.customer?.address ?? '');
-    _noteController = TextEditingController(text: widget.customer?.note ?? '');
+    final payload = widget.initialPayload;
+    _nameController = TextEditingController(
+      text: widget.customer?.name ?? (payload?['name'] as String? ?? ''),
+    );
+    _phoneController = TextEditingController(
+      text: widget.customer?.phone ?? (payload?['phone'] as String? ?? ''),
+    );
+    _addressController = TextEditingController(
+      text: widget.customer?.address ?? (payload?['address'] as String? ?? ''),
+    );
+    _noteController = TextEditingController(
+      text: widget.customer?.note ?? (payload?['note'] as String? ?? ''),
+    );
     _isShared = widget.customer?.isShared ?? false;
     unawaited(_restoreDraft());
   }
@@ -305,9 +314,9 @@ class _CustomerFormPageState extends State<CustomerFormPage> {
         _submitting = false;
       });
       await _persistDraftIfNeeded();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      const message = 'Échec de l\'enregistrement.';
+      final message = 'Échec de l\'enregistrement : ${e.toString().replaceAll("Exception: ", "")}';
       await CustomerFeedback.showErrorDialog(
         context,
         title: 'Enregistrement impossible',

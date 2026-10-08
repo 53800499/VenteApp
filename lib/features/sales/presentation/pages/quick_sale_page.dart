@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
@@ -110,15 +111,16 @@ class _QuickSalePageState extends State<QuickSalePage> {
       if (mounted) Navigator.of(context).pop(true);
     } on Failure catch (e) {
       if (!mounted) return;
+      final msg = friendlyErrorMessage(e);
       await SaleFeedback.showErrorDialog(
         context,
         title: 'Vente impossible',
-        message: e.message,
+        message: msg,
       );
-      setState(() => _error = e.message);
-    } catch (_) {
+      setState(() => _error = msg);
+    } catch (e) {
       if (!mounted) return;
-      const message = 'Échec de la vente rapide.';
+      final message = 'Échec de la vente rapide : ${friendlyErrorMessage(e)}';
       await SaleFeedback.showErrorDialog(
         context,
         title: 'Vente impossible',

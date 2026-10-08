@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
@@ -103,7 +104,7 @@ class _PaidDebtsListState extends State<PaidDebtsList> {
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     } catch (_) {

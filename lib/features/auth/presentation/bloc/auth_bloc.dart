@@ -43,30 +43,30 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     required LastShopStorage lastShopStorage,
     required SyncService syncService,
     required AppLockController appLockController,
-  })  : _isSetupComplete = isSetupComplete,
-        _wasLoggedOut = wasLoggedOut,
-        _hasRestorableSession = hasRestorableSession,
-        _getRestorableSessionShopId = getRestorableSessionShopId,
-        _restoreSession = restoreSession,
-        _getLockScreen = getLockScreen,
-        _loginWithPin = loginWithPin,
-        _unlockWithPin = unlockWithPin,
-        _loginWithBiometric = loginWithBiometric,
-        _unlockWithBiometric = unlockWithBiometric,
-        _setupOwner = setupOwner,
-        _emergencyUnlock = emergencyUnlock,
-        _emergencyUnlockWithWhatsappOtp = emergencyUnlockWithWhatsappOtp,
-        _logout = logout,
-        _listOwnedShops = listOwnedShops,
-        _switchShop = switchShop,
-        _tryResolveServerShopId = tryResolveServerShopId,
-        _requestWhatsappOtp = requestWhatsappOtp,
-        _verifyWhatsappOtp = verifyWhatsappOtp,
-        _completeWhatsappLogin = completeWhatsappLogin,
-        _lastShopStorage = lastShopStorage,
-        _syncService = syncService,
-        _appLockController = appLockController,
-        super(const AuthInitial()) {
+  }) : _isSetupComplete = isSetupComplete,
+       _wasLoggedOut = wasLoggedOut,
+       _hasRestorableSession = hasRestorableSession,
+       _getRestorableSessionShopId = getRestorableSessionShopId,
+       _restoreSession = restoreSession,
+       _getLockScreen = getLockScreen,
+       _loginWithPin = loginWithPin,
+       _unlockWithPin = unlockWithPin,
+       _loginWithBiometric = loginWithBiometric,
+       _unlockWithBiometric = unlockWithBiometric,
+       _setupOwner = setupOwner,
+       _emergencyUnlock = emergencyUnlock,
+       _emergencyUnlockWithWhatsappOtp = emergencyUnlockWithWhatsappOtp,
+       _logout = logout,
+       _listOwnedShops = listOwnedShops,
+       _switchShop = switchShop,
+       _tryResolveServerShopId = tryResolveServerShopId,
+       _requestWhatsappOtp = requestWhatsappOtp,
+       _verifyWhatsappOtp = verifyWhatsappOtp,
+       _completeWhatsappLogin = completeWhatsappLogin,
+       _lastShopStorage = lastShopStorage,
+       _syncService = syncService,
+       _appLockController = appLockController,
+       super(const AuthInitial()) {
     on<AuthBootstrapRequested>(_onBootstrap);
     on<AuthProceedToLoginRequested>(_onProceedToLogin);
     on<AuthProceedToPinLoginRequested>(_onProceedToPinLogin);
@@ -135,8 +135,16 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _emitEntryScreen(Emitter<AuthState> emit) async {
-    final localSetupAvailable = await _isSetupComplete();
-    emit(AuthNeedsSetup(localSetupAvailable: localSetupAvailable));
+    final results = await Future.wait([
+      _isSetupComplete(),
+      _wasLoggedOut(),
+      _hasRestorableSession(),
+    ]);
+    final setupComplete = results[0];
+    final loggedOut = results[1];
+    final restorable = results[2];
+    final canPinUnlock = setupComplete && !loggedOut && restorable;
+    emit(AuthNeedsSetup(localSetupAvailable: canPinUnlock));
   }
 
   /// Bootstrap en étapes indépendantes : Installation → Session → Verrouillage.
@@ -180,10 +188,11 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       return const AuthNeedsSetup();
     }
     if (loggedOut) {
-      return const AuthNeedsSetup(localSetupAvailable: true);
+      // L'utilisateur s'est déconnecté : la reconnexion exige WhatsApp.
+      return const AuthNeedsSetup(localSetupAvailable: false);
     }
     if (!restorable) {
-      return const AuthNeedsSetup(localSetupAvailable: true);
+      return const AuthNeedsSetup(localSetupAvailable: false);
     }
     return null;
   }
@@ -253,8 +262,9 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
           step: WhatsappLoginStep.code,
           infoMessage: result.message,
           maskedPhone: result.maskedPhone,
-          deliveryWarning:
-              result.sentViaWhatsapp ? null : result.deliveryWarning,
+          deliveryWarning: result.sentViaWhatsapp
+              ? null
+              : result.deliveryWarning,
           devCode: result.devCode,
         ),
       );
@@ -299,8 +309,9 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
           step: WhatsappLoginStep.code,
           infoMessage: result.message,
           maskedPhone: result.maskedPhone,
-          deliveryWarning:
-              result.sentViaWhatsapp ? null : result.deliveryWarning,
+          deliveryWarning: result.sentViaWhatsapp
+              ? null
+              : result.deliveryWarning,
           devCode: result.devCode,
         ),
       );
@@ -464,10 +475,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     final current = state;
     if (current is! AuthWhatsappLogin) return;
     emit(
-      AuthWhatsappLogin(
-        phone: current.phone,
-        step: WhatsappLoginStep.phone,
-      ),
+      AuthWhatsappLogin(phone: current.phone, step: WhatsappLoginStep.phone),
     );
   }
 
@@ -483,11 +491,13 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       final shopId = event.shopId ?? await _shopIdForUnlockScreen();
       final lockScreen = await _getLockScreen(shopId: shopId);
       final isUnlockOnly = await _hasRestorableSession();
-      emit(AuthLocked(
-        lockScreen,
-        canGoBack: event.canGoBack,
-        isUnlockOnly: isUnlockOnly,
-      ));
+      emit(
+        AuthLocked(
+          lockScreen,
+          canGoBack: event.canGoBack,
+          isUnlockOnly: isUnlockOnly,
+        ),
+      );
     } on NotFoundFailure {
       emit(const AuthNeedsSetup());
     } catch (error) {
@@ -501,12 +511,14 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final current = state;
     if (current is AuthLocked) {
-      emit(AuthLocked(
-        current.lockScreen,
-        isSubmitting: true,
-        canGoBack: current.canGoBack,
-        isUnlockOnly: current.isUnlockOnly,
-      ));
+      emit(
+        AuthLocked(
+          current.lockScreen,
+          isSubmitting: true,
+          canGoBack: current.canGoBack,
+          isUnlockOnly: current.isUnlockOnly,
+        ),
+      );
     } else {
       emit(const AuthLoading());
     }
@@ -532,23 +544,26 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
           AuthLocked(
             current.lockScreen,
             errorMessage: message,
-            requiresEmergencyRecovery: failure is EmergencyRecoveryRequiredFailure,
+            requiresEmergencyRecovery:
+                failure is EmergencyRecoveryRequiredFailure,
             canGoBack: current.canGoBack,
             isUnlockOnly: current.isUnlockOnly,
           ),
         );
       } else {
-      emit(AuthFailure(message));
+        emit(AuthFailure(message));
       }
     } catch (error) {
       final message = friendlyErrorMessage(error);
       if (current is AuthLocked) {
-        emit(AuthLocked(
-          current.lockScreen,
-          errorMessage: message,
-          canGoBack: current.canGoBack,
-          isUnlockOnly: current.isUnlockOnly,
-        ));
+        emit(
+          AuthLocked(
+            current.lockScreen,
+            errorMessage: message,
+            canGoBack: current.canGoBack,
+            isUnlockOnly: current.isUnlockOnly,
+          ),
+        );
       } else {
         emit(AuthFailure(message));
       }
@@ -561,12 +576,14 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     final current = state;
     if (current is AuthLocked) {
-      emit(AuthLocked(
-        current.lockScreen,
-        isSubmitting: true,
-        canGoBack: current.canGoBack,
-        isUnlockOnly: current.isUnlockOnly,
-      ));
+      emit(
+        AuthLocked(
+          current.lockScreen,
+          isSubmitting: true,
+          canGoBack: current.canGoBack,
+          isUnlockOnly: current.isUnlockOnly,
+        ),
+      );
     }
 
     try {
@@ -583,24 +600,28 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       await _completeLogin(session, emit, deferCloudSync: wasUnlock);
     } on Failure catch (failure) {
       if (current is AuthLocked) {
-        emit(AuthLocked(
-          current.lockScreen,
-          errorMessage: humanizeAuthErrorMessage(failure.message),
-          canGoBack: current.canGoBack,
-          isUnlockOnly: current.isUnlockOnly,
-        ));
+        emit(
+          AuthLocked(
+            current.lockScreen,
+            errorMessage: humanizeAuthErrorMessage(failure.message),
+            canGoBack: current.canGoBack,
+            isUnlockOnly: current.isUnlockOnly,
+          ),
+        );
       } else {
-      emit(AuthFailure(humanizeAuthErrorMessage(failure.message)));
+        emit(AuthFailure(humanizeAuthErrorMessage(failure.message)));
       }
     } catch (error) {
       final message = friendlyErrorMessage(error);
       if (current is AuthLocked) {
-        emit(AuthLocked(
-          current.lockScreen,
-          errorMessage: message,
-          canGoBack: current.canGoBack,
-          isUnlockOnly: current.isUnlockOnly,
-        ));
+        emit(
+          AuthLocked(
+            current.lockScreen,
+            errorMessage: message,
+            canGoBack: current.canGoBack,
+            isUnlockOnly: current.isUnlockOnly,
+          ),
+        );
       } else {
         emit(AuthFailure(message));
       }
@@ -658,7 +679,11 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     );
     if (workspaceSession == null) return;
 
-    await _enterWorkspace(workspaceSession, emit, deferCloudSync: deferCloudSync);
+    await _enterWorkspace(
+      workspaceSession,
+      emit,
+      deferCloudSync: deferCloudSync,
+    );
   }
 
   /// Patron multi-boutiques : bascule sur la dernière boutique utilisée si
@@ -690,9 +715,9 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       if (preferredId == session.shop.apiShopId) return session;
 
       try {
-        return await _switchShop(shopId: preferredId).timeout(
-          const Duration(seconds: 15),
-        );
+        return await _switchShop(
+          shopId: preferredId,
+        ).timeout(const Duration(seconds: 15));
       } on Object {
         emit(AuthShopSelection(provisionalSession: session, shops: shops));
         return null;
@@ -712,8 +737,9 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
 
     final activeIds = active.map((shop) => shop.id).toSet();
 
-    final lastServerId =
-        await _tryResolveServerShopId(_lastShopStorage.lastShopId);
+    final lastServerId = await _tryResolveServerShopId(
+      _lastShopStorage.lastShopId,
+    );
     if (lastServerId != null && activeIds.contains(lastServerId)) {
       return lastServerId;
     }
@@ -742,9 +768,10 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     bool deferCloudSync = false,
   }) async {
     await _lastShopStorage.save(session.shop.id);
-    if (!deferCloudSync) {
-      _scheduleBackgroundSync(session);
-    }
+    // Toujours programmer la synchronisation avec la boutique active.
+    // scheduleSync est asynchrone (non-bloquant) et garantit que SyncService
+    // connaît la boutique active pour la reprise réseau et évite le faux "Mode local".
+    _scheduleBackgroundSync(session);
     emit(AuthAuthenticated(session));
   }
 
@@ -755,11 +782,13 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     final current = state;
     if (current is! AuthShopSelection) return;
 
-    emit(AuthShopSelection(
-      provisionalSession: current.provisionalSession,
-      shops: current.shops,
-      isSubmitting: true,
-    ));
+    emit(
+      AuthShopSelection(
+        provisionalSession: current.provisionalSession,
+        shops: current.shops,
+        isSubmitting: true,
+      ),
+    );
 
     try {
       AuthSession session;
@@ -767,9 +796,9 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
         session = current.provisionalSession;
       } else {
         try {
-          session = await _switchShop(shopId: event.shopId).timeout(
-            const Duration(seconds: 15),
-          );
+          session = await _switchShop(
+            shopId: event.shopId,
+          ).timeout(const Duration(seconds: 15));
         } on Object {
           // Hors ligne ou serveur lent : conserver la boutique courante localement.
           session = current.provisionalSession;
@@ -778,17 +807,21 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
 
       await _enterWorkspace(session, emit);
     } on Failure catch (failure) {
-      emit(AuthShopSelection(
-        provisionalSession: current.provisionalSession,
-        shops: current.shops,
-        errorMessage: humanizeAuthErrorMessage(failure.message),
-      ));
+      emit(
+        AuthShopSelection(
+          provisionalSession: current.provisionalSession,
+          shops: current.shops,
+          errorMessage: humanizeAuthErrorMessage(failure.message),
+        ),
+      );
     } catch (error) {
-      emit(AuthShopSelection(
-        provisionalSession: current.provisionalSession,
-        shops: current.shops,
-        errorMessage: friendlyErrorMessage(error),
-      ));
+      emit(
+        AuthShopSelection(
+          provisionalSession: current.provisionalSession,
+          shops: current.shops,
+          errorMessage: friendlyErrorMessage(error),
+        ),
+      );
     }
   }
 
@@ -817,12 +850,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
       await _lastShopStorage.save(result.shopId);
       emit(AuthSetupCompleted(result));
     } on SetupFieldConflictFailure catch (failure) {
-      emit(
-        AuthSetupFailure(
-          failure.message,
-          fieldErrors: failure.fieldErrors,
-        ),
-      );
+      emit(AuthSetupFailure(failure.message, fieldErrors: failure.fieldErrors));
     } on Failure catch (failure) {
       emit(AuthSetupFailure(humanizeAuthErrorMessage(failure.message)));
     } catch (error) {
@@ -883,11 +911,7 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       final lockScreen = await _getLockScreen(shopId: shopId);
-      emit(AuthLocked(
-        lockScreen,
-        canGoBack: false,
-        isUnlockOnly: true,
-      ));
+      emit(AuthLocked(lockScreen, canGoBack: false, isUnlockOnly: true));
     } on NotFoundFailure {
       emit(const AuthNeedsSetup());
     } catch (error) {

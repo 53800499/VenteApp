@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../data/onboarding_slides.dart';
 import '../widgets/onboarding_animated_slide.dart';
+import '../widgets/onboarding_desktop_view.dart';
 
 /// Présentation immersive des modules ARIKE (première installation).
 class OnboardingPage extends StatefulWidget {
@@ -44,6 +45,23 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Mode Grand Écran / Windows Desktop : Vue studio 2 colonnes ultra-moderne
+        if (constraints.maxWidth >= 850) {
+          return OnboardingDesktopView(
+            onComplete: widget.onComplete,
+            slides: onboardingSlides,
+          );
+        }
+
+        // Mode Mobile / Écran compact : Présentation tactile fluide
+        return _buildMobileView(context);
+      },
+    );
+  }
+
+  Widget _buildMobileView(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final slide = onboardingSlides[_currentPage];
     final accent = slide.gradientColors?.first ?? scheme.primary;
@@ -60,17 +78,31 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          '${_currentPage + 1}/${onboardingSlides.length}',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w700,
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                            border: Border.all(
+                              color: accent.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            '${_currentPage + 1} / ${onboardingSlides.length}',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: accent,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
                         ),
                         const Spacer(),
-                        TextButton(
+                        TextButton.icon(
                           onPressed: widget.onComplete,
-                          child: const Text('Passer'),
+                          icon: const Icon(Icons.skip_next_rounded, size: 16),
+                          label: const Text('Passer'),
                         ),
                       ],
                     ),
@@ -115,9 +147,14 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         onPressed: _next,
                         style: FilledButton.styleFrom(
                           backgroundColor: accent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
                         ),
                         child: Text(
-                          _isLastPage ? 'Commencer' : 'Découvrir la suite',
+                          _isLastPage ? 'Commencer maintenant' : 'Découvrir la suite',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),

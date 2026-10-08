@@ -38,4 +38,31 @@ void main() {
 
     await dir.delete(recursive: true);
   });
+
+  test('ensureDatabaseAccessible sauvegarde et réinitialise en cas de mauvaise clé (SQLITE_NOTADB code 26)', () async {
+    final dir = await Directory.systemTemp.createTemp('venteapp_sqlite_corrupt_test_');
+    final dbFile = File(p.join(dir.path, 'encrypted.sqlite'));
+
+    // 1. Créer une base chiffrée avec key-original
+    final db = sqlite.sqlite3.open(dbFile.path);
+    try {
+      applyDatabaseKey(db, 'key-original');
+      db.execute('CREATE TABLE sample (id INTEGER PRIMARY KEY);');
+    } finally {
+      db.close();
+    }
+
+    // 2. Tenter d'accéder avec une mauvaise clé (suite à un reset du SecureStorage)
+    ensureDatabaseAccessible(
+      dbFile: dbFile,
+      passphrase: 'key-different-lost',
+    );
+
+    // 3. Le fichier illisible doit avoir été déplacé en backup corrupted
+    expect(dbFile.existsSync(), isFalse);
+    final backups = dir.listSync().where((f) => f.path.contains('.corrupted.')).toList();
+    expect(backups, isNotEmpty);
+
+    await dir.delete(recursive: true);
+  });
 }

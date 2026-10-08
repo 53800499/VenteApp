@@ -165,20 +165,41 @@ class PageHeader extends StatelessWidget {
   }
 }
 
-class ErrorBanner extends StatelessWidget {
-  const ErrorBanner({super.key, required this.message});
+class ErrorBanner extends StatefulWidget {
+  const ErrorBanner({
+    super.key,
+    required this.message,
+    this.onDismiss,
+  });
 
   final String message;
+  final VoidCallback? onDismiss;
+
+  @override
+  State<ErrorBanner> createState() => _ErrorBannerState();
+}
+
+class _ErrorBannerState extends State<ErrorBanner> {
+  bool _dismissed = false;
+
+  @override
+  void didUpdateWidget(covariant ErrorBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.message != widget.message) {
+      _dismissed = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm + 4,
+        vertical: AppSpacing.xs + 2,
       ),
       decoration: BoxDecoration(
         color: colorScheme.errorContainer,
@@ -194,7 +215,7 @@ class ErrorBanner extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              message,
+              widget.message,
               maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -202,6 +223,21 @@ class ErrorBanner extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
             ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.close,
+              color: colorScheme.onErrorContainer,
+              size: AppSizes.iconSm,
+            ),
+            tooltip: 'Fermer',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: () {
+              setState(() => _dismissed = true);
+              widget.onDismiss?.call();
+            },
           ),
         ],
       ),

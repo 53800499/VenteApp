@@ -337,6 +337,53 @@ class SyncQueueDatasource {
   }) async {
     if (context != null && !context.shouldUseSyncQueue) return;
 
+    try {
+      await _insertQueueItem(
+        shopId: shopId,
+        tableName: tableName,
+        recordId: recordId,
+        operation: operation,
+        payload: payload,
+        localVersion: localVersion,
+        domain: domain,
+        idempotencyKey: idempotencyKey,
+        businessCriticality: businessCriticality,
+        basePriority: basePriority,
+      );
+    } catch (e) {
+      if (e.toString().contains('sync_queue has no column') ||
+          e.toString().contains('no column named')) {
+        await _autoRepairSyncQueueSchema();
+        await _insertQueueItem(
+          shopId: shopId,
+          tableName: tableName,
+          recordId: recordId,
+          operation: operation,
+          payload: payload,
+          localVersion: localVersion,
+          domain: domain,
+          idempotencyKey: idempotencyKey,
+          businessCriticality: businessCriticality,
+          basePriority: basePriority,
+        );
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> _insertQueueItem({
+    required int shopId,
+    required String tableName,
+    required int recordId,
+    required String operation,
+    required String payload,
+    required int localVersion,
+    String? domain,
+    String? idempotencyKey,
+    required String businessCriticality,
+    required int basePriority,
+  }) async {
     await (_db.delete(_db.syncQueue)
           ..where(
             (q) =>
@@ -350,7 +397,8 @@ class SyncQueueDatasource {
 
     final timestamp = nowMs();
     final effectiveDomain = domain ?? mapTableToDomain(tableName);
-    final key = idempotencyKey ?? 'FEDA-SYNC-${timestamp}-${tableName}-${recordId}-${operation}';
+    final key = idempotencyKey ??
+        'FEDA-SYNC-${timestamp}-${tableName}-${recordId}-${operation}';
 
     await _db.into(_db.syncQueue).insert(
           SyncQueueCompanion.insert(
@@ -367,6 +415,34 @@ class SyncQueueDatasource {
             createdAt: timestamp,
           ),
         );
+  }
+
+  Future<void> _autoRepairSyncQueueSchema() async {
+    final columns = [
+      ('domain', "TEXT NOT NULL DEFAULT 'SALES'"),
+      ('idempotency_key', 'TEXT NULL'),
+      ('business_criticality', "TEXT NOT NULL DEFAULT 'NORMAL'"),
+      ('base_priority', 'INTEGER NOT NULL DEFAULT 10'),
+      ('dependency_boost', 'INTEGER NOT NULL DEFAULT 0'),
+      ('local_version', 'INTEGER NOT NULL DEFAULT 1'),
+      ('next_retry_at', 'INTEGER NULL'),
+      ('last_error', 'TEXT NULL'),
+      ('error_code', 'TEXT NULL'),
+      ('processed_at', 'INTEGER NULL'),
+    ];
+
+    for (final col in columns) {
+      try {
+        final rows =
+            await _db.customSelect('PRAGMA table_info(sync_queue)').get();
+        final exists = rows.any((r) => r.read<String>('name') == col.$1);
+        if (!exists) {
+          await _db.customStatement(
+            'ALTER TABLE sync_queue ADD COLUMN ${col.$1} ${col.$2}',
+          );
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> markProcessed(int queueId) async {
@@ -391,5 +467,50 @@ class SyncQueueDatasource {
         processedAt: Value(nowMs()),
       ),
     );
+  }
+
+  Future<void> markActionRequired(
+    int queueId, {
+    required String error,
+    String suggestedAction = 'EDIT_OPERATION',
+  }) async {
+    await _db.customStatement(
+      'UPDATE sync_queue SET status = ?, last_error = ?, suggested_action = ? WHERE id = ?',
+      ['action_required', error, suggestedAction, queueId],
+    );
+  }
+
+  Future<void> markDiscarded(
+    int queueId, {
+    required int userId,
+    required String reason,
+  }) async {
+    final timestamp = nowMs();
+    await _db.customStatement(
+      'UPDATE sync_queue SET status = ?, discarded_at = ?, discarded_by = ?, discard_reason = ? WHERE id = ?',
+      ['discarded', timestamp, userId, reason, queueId],
+    );
+  }
+
+  Future<void> retryQueueItem(int queueId) async {
+    await (_db.update(_db.syncQueue)..where((q) => q.id.equals(queueId))).write(
+      const SyncQueueCompanion(
+        status: Value('pending'),
+        nextRetryAt: Value(null),
+      ),
+    );
+  }
+
+  Future<List<SyncQueueData>> listUnresolvedItems(int shopId) async {
+    return (_db.select(_db.syncQueue)
+          ..where(
+            (q) =>
+                q.shopId.equals(shopId) &
+                (q.status.equals('action_required') |
+                    q.status.equals('failed_permanent') |
+                    q.status.equals('conflict')),
+          )
+          ..orderBy([(q) => OrderingTerm.desc(q.createdAt)]))
+        .get();
   }
 }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/pages/lock_screen_page.dart';
+import 'app_key_button.dart';
+
+export 'app_key_button.dart';
 
 class LockButton extends StatelessWidget {
   const LockButton({
@@ -33,10 +36,9 @@ class LockButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(Icons.lock_outline, size: iconSize, color: color),
-      tooltip: tooltip,
-      onPressed: () => lockSession(context),
+    return AppKeyButton(
+      iconSize: iconSize,
+      onLock: () => lockSession(context),
     );
   }
 }

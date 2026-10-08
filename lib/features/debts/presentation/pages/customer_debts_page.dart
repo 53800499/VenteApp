@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
@@ -73,7 +74,7 @@ class _CustomerDebtsPageState extends State<CustomerDebtsPage>
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _openError = e.message;
+        _openError = friendlyErrorMessage(e);
         _loadingOpen = false;
       });
     } catch (_) {

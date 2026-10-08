@@ -8,6 +8,7 @@ import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/responsive/screen_type.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/ui_primitives.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../../shared/components/app_header_actions.dart';
@@ -186,16 +187,7 @@ class ProductDetailPage extends StatelessWidget {
           ),
           children: [
             if (state.errorMessage != null) ...[
-              MaterialBanner(
-                content: Text(state.errorMessage!),
-                backgroundColor: Theme.of(context).colorScheme.errorContainer,
-                actions: [
-                  TextButton(
-                    onPressed: () {},
-                    child: const SizedBox.shrink(),
-                  ),
-                ],
-              ),
+              ErrorBanner(message: state.errorMessage!),
               const SizedBox(height: AppSpacing.md),
             ],
             Text(

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 
 import '../constants/api_config.dart';
+import '../security/production_message_policy.dart';
 import '../storage/auth_credentials_storage.dart';
 import '../../features/auth/data/models/auth_api_models.dart';
 import 'active_shop_context.dart';
@@ -60,13 +61,57 @@ class ApiClient {
               if (error.response?.statusCode == 401) {
                 unawaited(onRefreshTokenInvalid?.call());
               }
-              return handler.next(error);
+              return handler.next(_sanitizeDioException(error));
             }
           }
-          handler.next(error);
+          handler.next(_sanitizeDioException(error));
         },
       ),
     );
+  }
+
+  static DioException _sanitizeDioException(DioException error) {
+    final statusCode = error.response?.statusCode;
+    String cleanMessage;
+
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.sendTimeout) {
+      cleanMessage =
+          'Le serveur met trop de temps à répondre. Vérifiez votre connexion internet.';
+    } else if (error.type == DioExceptionType.connectionError) {
+      cleanMessage =
+          'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
+    } else if (statusCode == 403) {
+      cleanMessage =
+          'Action non autorisée ou option non incluse dans votre forfait.';
+    } else if (statusCode == 401) {
+      cleanMessage =
+          'Session expirée. Veuillez vous reconnecter avec votre code PIN.';
+    } else if (statusCode == 404) {
+      cleanMessage = 'Élément introuvable sur le service en ligne.';
+    } else if (statusCode == 409) {
+      cleanMessage =
+          'Cette information existe déjà sur le cloud ou entre en conflit.';
+    } else if (statusCode != null && statusCode >= 500) {
+      cleanMessage =
+          'Le service en ligne rencontre une anomalie temporaire. Vos données locales restent en sécurité.';
+    } else {
+      final data = error.response?.data;
+      if (data is Map &&
+          data['message'] is String &&
+          (data['message'] as String).isNotEmpty) {
+        final msg = data['message'] as String;
+        cleanMessage = ProductionMessagePolicy.isTechnicalMessage(msg)
+            ? ProductionMessagePolicy.humanizeTechnicalError(msg)
+            : msg;
+      } else {
+        cleanMessage =
+            'Une anomalie temporaire est survenue. Veuillez réessayer.';
+      }
+    }
+
+    return error.copyWith(message: cleanMessage);
   }
 
   final Dio _dio;
@@ -162,6 +207,8 @@ class ApiClient {
   }
 
   static const _publicAuthPathMarkers = [
+    '/health',
+    '/sync/health',
     '/auth/pin/login',
     '/auth/setup',
     '/auth/setup/validate',
@@ -221,6 +268,7 @@ class ApiClient {
       throw DioException(
         requestOptions: RequestOptions(path: '/auth/refresh'),
         type: DioExceptionType.badResponse,
+        message: 'Session expirée. Veuillez vous reconnecter avec votre code PIN.',
         response: Response(
           requestOptions: RequestOptions(path: '/auth/refresh'),
           statusCode: 401,
@@ -241,6 +289,7 @@ class ApiClient {
       throw DioException(
         requestOptions: RequestOptions(path: '/auth/refresh'),
         type: DioExceptionType.badResponse,
+        message: 'Session expirée. Veuillez vous reconnecter avec votre code PIN.',
       );
     }
     await _refreshTokens();

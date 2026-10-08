@@ -20,6 +20,7 @@ import '../../domain/usecases/cash_session_usecases.dart';
 import '../bloc/cash_sessions_bloc.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 import 'cash_session_detail_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
 
 class CashSessionsPage extends StatelessWidget {
@@ -109,8 +110,9 @@ class _CashSessionsView extends StatelessWidget {
                     (s) => !s.isRefreshing,
                   );
             },
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.md),
+            child: AppPageContainer(
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.md),
               children: [
                 if (state.isRefreshing)
                   const LinearProgressIndicator(minHeight: 2),
@@ -158,7 +160,8 @@ class _CashSessionsView extends StatelessWidget {
                   ),
               ],
             ),
-          );
+          ),
+        );
         },
       ),
     );

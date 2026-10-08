@@ -13,6 +13,7 @@ import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/components/skeleton_loaders.dart';
 import '../../domain/entities/dashboard_entities.dart';
 import '../bloc/dashboard_bloc.dart';
+import '../widgets/desktop_dashboard_view.dart';
 import '../widgets/kpi_card.dart';
 import '../widgets/recent_sales_list.dart';
 
@@ -79,6 +80,35 @@ class _DashboardPageState extends State<DashboardPage> {
           DashboardLoaded(:final data, :final isRefreshing) =>
             ResponsiveBuilder(
               builder: (context, screenType) {
+                final isDesktop = Breakpoints.isDesktopWidth(
+                  MediaQuery.sizeOf(context).width,
+                );
+
+                if (isDesktop) {
+                  return DesktopDashboardView(
+                    session: widget.session,
+                    data: data,
+                    isRefreshing: isRefreshing,
+                    onRefresh: () async {
+                      context
+                          .read<DashboardBloc>()
+                          .add(const DashboardRefreshRequested());
+                      await context
+                          .read<DashboardBloc>()
+                          .stream
+                          .firstWhere(
+                            (s) => s is DashboardLoaded && !s.isRefreshing,
+                          );
+                    },
+                    onLowStockTap: widget.onLowStockTap,
+                    onNewSaleTap: widget.onNewSaleTap,
+                    onSalesHistoryTap: widget.onSalesHistoryTap,
+                    onDebtorsTap: widget.onDebtorsTap,
+                    onFxExchangeTap: widget.onFxExchangeTap,
+                  );
+                }
+
+                // --- RENDU MOBILE STRICTEMENT IDENTIQUE ET PRÉSERVÉ ---
                 final horizontal = Breakpoints.horizontalPadding(screenType);
                 return RefreshIndicator(
                   onRefresh: () async {
@@ -211,23 +241,34 @@ class _GreetingHeader extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
+                runSpacing: 2,
                 children: [
-                  Icon(
-                    Icons.storefront_outlined,
-                    size: 15,
-                    color: Theme.of(context).colorScheme.primary,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.storefront_outlined,
+                        size: 15,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          shopName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    shopName,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   Text(
                     '•  $date',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../subscription/domain/entities/subscription_details.dart';
+import '../../../subscription/domain/services/subscription_controller.dart';
 import '../../domain/entities/auth_entities.dart';
 import '../../domain/usecases/auth_usecases.dart';
 
@@ -26,6 +28,7 @@ class _IdentityContextCardState extends State<IdentityContextCard> {
   @override
   void initState() {
     super.initState();
+    ensureSubscriptionDependencies();
     _loadIdentity();
   }
 
@@ -49,112 +52,143 @@ class _IdentityContextCardState extends State<IdentityContextCard> {
     final identity = _identity;
     final organizationName =
         identity?.organizationName ?? widget.session.shop.name;
-    final roleLabel = identity?.effectiveRoleLabel ?? widget.session.user.roleLabel;
-    final globalRoleLabel = identity?.roleLabel ?? widget.session.user.roleLabel;
-    final activeShopName =
-        identity?.activeShopName ?? widget.session.shop.name;
+    final roleLabel =
+        identity?.effectiveRoleLabel ?? widget.session.user.roleLabel;
+    final globalRoleLabel =
+        identity?.roleLabel ?? widget.session.user.roleLabel;
+    final activeShopName = identity?.activeShopName ?? widget.session.shop.name;
     final shopCount = identity?.accessibleShopCount ?? 1;
     final showEffectiveRole =
         identity != null && identity.effectiveRole != identity.role;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: colorScheme.primaryContainer,
-                  child: Icon(
-                    shopCount > 1
-                        ? Icons.domain_outlined
-                        : Icons.store_outlined,
-                    color: colorScheme.primary,
+    ensureSubscriptionDependencies();
+    final subController = sl.isRegistered<SubscriptionController>()
+        ? sl<SubscriptionController>()
+        : null;
+
+    Widget buildCardWithDetails(SubscriptionDetails? subDetails) {
+      final planName = subDetails?.planName ?? 'ARIKE Essentiel';
+      final offerDisplay = subDetails == null
+          ? planName
+          : subDetails.isRevoked
+          ? '$planName (Accès révoqué)'
+          : subDetails.isExpired
+          ? '$planName (Expiré)'
+          : subDetails.isTrial
+          ? '$planName (Essai gratuit)'
+          : planName;
+
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: colorScheme.primaryContainer,
+                    child: Icon(
+                      shopCount > 1
+                          ? Icons.domain_outlined
+                          : Icons.store_outlined,
+                      color: colorScheme.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Mon identité',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: colorScheme.primary,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        organizationName,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                      ),
-                    ],
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mon identité',
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(color: colorScheme.primary),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          organizationName,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+              if (_loading) ...[
+                const SizedBox(height: AppSpacing.md),
+                const LinearProgressIndicator(minHeight: 2),
+              ] else ...[
+                const SizedBox(height: AppSpacing.md),
+                _InfoRow(
+                  icon: Icons.workspace_premium_outlined,
+                  label: 'Offre ARIKE',
+                  value: offerDisplay,
                 ),
-              ],
-            ),
-            if (_loading) ...[
-              const SizedBox(height: AppSpacing.md),
-              const LinearProgressIndicator(minHeight: 2),
-            ] else ...[
-              const SizedBox(height: AppSpacing.md),
-              _InfoRow(
-                icon: Icons.workspace_premium_outlined,
-                label: 'Offre ARIKE',
-                value: '⭐ PREMIUM PRO',
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _InfoRow(
-                icon: Icons.badge_outlined,
-                label: 'Rôle',
-                value: showEffectiveRole
-                    ? '$roleLabel ($globalRoleLabel)'
-                    : roleLabel,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _InfoRow(
-                icon: Icons.store_mall_directory_outlined,
-                label: 'Boutique active',
-                value: activeShopName,
-              ),
-              if (shopCount > 1) ...[
                 const SizedBox(height: AppSpacing.sm),
                 _InfoRow(
-                  icon: Icons.hub_outlined,
-                  label: 'Boutiques accessibles',
-                  value: '$shopCount',
+                  icon: Icons.person_outline,
+                  label: 'Utilisateur',
+                  value: widget.session.user.name,
                 ),
-                ...identity!.accessibleShops
-                    .where((shop) => shop.accessRole != null)
-                    .map(
-                      (shop) => Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          '${shop.name} · ${shop.roleLabel ?? shop.accessRole}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                const SizedBox(height: AppSpacing.sm),
+                _InfoRow(
+                  icon: Icons.badge_outlined,
+                  label: 'Rôle',
+                  value: showEffectiveRole
+                      ? '$roleLabel ($globalRoleLabel)'
+                      : roleLabel,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _InfoRow(
+                  icon: Icons.store_mall_directory_outlined,
+                  label: 'Boutique active',
+                  value: activeShopName,
+                ),
+                if (shopCount > 1) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  _InfoRow(
+                    icon: Icons.hub_outlined,
+                    label: 'Boutiques accessibles',
+                    value: '$shopCount',
+                  ),
+                  ...identity!.accessibleShops
+                      .where((shop) => shop.accessRole != null)
+                      .map(
+                        (shop) => Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${shop.name} · ${shop.roleLabel ?? shop.accessRole}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         ),
                       ),
-                    ),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: widget.onChangeIdentity,
-                  icon: const Icon(Icons.switch_account_outlined),
-                  label: const Text('Changer d\'identité'),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: widget.onChangeIdentity,
+                    icon: const Icon(Icons.switch_account_outlined),
+                    label: const Text('Changer d\'identité'),
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    }
+
+    if (subController != null) {
+      return ValueListenableBuilder<SubscriptionDetails>(
+        valueListenable: subController,
+        builder: (context, details, _) => buildCardWithDetails(details),
+      );
+    }
+
+    return buildCardWithDetails(null);
   }
 }
 
@@ -176,16 +210,13 @@ class _InfoRow extends StatelessWidget {
         Icon(icon, size: 18, color: Theme.of(context).colorScheme.outline),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
         ),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );

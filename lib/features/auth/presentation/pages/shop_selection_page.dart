@@ -6,6 +6,7 @@ import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../domain/entities/auth_entities.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/auth_split_layout.dart';
 
 /// Liste des boutiques du patron après connexion PIN.
 class ShopSelectionPage extends StatelessWidget {
@@ -26,55 +27,62 @@ class ShopSelectionPage extends StatelessWidget {
         return Scaffold(
           body: GradientBackground(
             child: SafeArea(
-              child: ResponsivePage(
-                expandHeight: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: AppSpacing.lg),
-                    const PageHeader(
-                      icon: Icons.store_mall_directory_outlined,
-                      title: 'Choisissez votre boutique',
-                      subtitle:
-                          'Sélectionnez la boutique avec laquelle vous souhaitez travailler.',
-                    ),
-                    if (state.errorMessage != null) ...[
-                      const SizedBox(height: AppSpacing.md),
-                      ErrorBanner(message: state.errorMessage!),
-                    ],
-                    const SizedBox(height: AppSpacing.lg),
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: shops.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, index) {
-                          final shop = shops[index];
-                          return _ShopTile(
-                            shop: shop,
-                            enabled: !state.isSubmitting,
-                            onTap: () => context.read<AuthBloc>().add(
-                                  AuthShopSelected(shopId: shop.id),
-                                ),
-                          );
-                        },
+              child: AuthSplitLayout(
+                heroIcon: Icons.store_mall_directory_outlined,
+                heroTitle: 'Vos boutiques',
+                heroSubtitle:
+                    'Choisissez le point de vente sur lequel ce poste va travailler. '
+                    'Vous pourrez en changer à tout moment.',
+                child: ResponsivePage(
+                  expandHeight: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: AppSpacing.lg),
+                      const PageHeader(
+                        icon: Icons.store_mall_directory_outlined,
+                        title: 'Choisissez votre boutique',
+                        subtitle:
+                            'Sélectionnez la boutique avec laquelle vous souhaitez travailler.',
                       ),
-                    ),
-                    if (state.isSubmitting)
-                      const Padding(
-                        padding: EdgeInsets.all(AppSpacing.md),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: AppSpacing.md),
-                              Text('Changement de boutique en cours…'),
-                            ],
-                          ),
+                      if (state.errorMessage != null) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        ErrorBanner(message: state.errorMessage!),
+                      ],
+                      const SizedBox(height: AppSpacing.lg),
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: shops.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.sm),
+                          itemBuilder: (context, index) {
+                            final shop = shops[index];
+                            return _ShopTile(
+                              shop: shop,
+                              enabled: !state.isSubmitting,
+                              onTap: () => context.read<AuthBloc>().add(
+                                AuthShopSelected(shopId: shop.id),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                  ],
+                      if (state.isSubmitting)
+                        const Padding(
+                          padding: EdgeInsets.all(AppSpacing.md),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: AppSpacing.md),
+                                Text('Changement de boutique en cours…'),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -120,8 +128,8 @@ class _ShopTile extends StatelessWidget {
                     Text(
                       shop.name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     if (shop.address != null && shop.address!.isNotEmpty) ...[
                       const SizedBox(height: 2),
@@ -135,8 +143,8 @@ class _ShopTile extends StatelessWidget {
                       Text(
                         'Boutique par défaut',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colorScheme.primary,
-                            ),
+                          color: colorScheme.primary,
+                        ),
                       ),
                     ],
                   ],

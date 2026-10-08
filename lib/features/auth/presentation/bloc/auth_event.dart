@@ -59,10 +59,7 @@ class AuthWhatsappPhoneEditRequested extends AuthEvent {
 }
 
 class AuthMembershipSelected extends AuthEvent {
-  const AuthMembershipSelected({
-    required this.shopId,
-    required this.userId,
-  });
+  const AuthMembershipSelected({required this.shopId, required this.userId});
 
   final int shopId;
   final int userId;
@@ -92,11 +89,7 @@ class AuthBiometricLoginRequested extends AuthEvent {
 }
 
 class AuthLoginRequested extends AuthEvent {
-  const AuthLoginRequested({
-    required this.pin,
-    this.shopId = 1,
-    this.userId,
-  });
+  const AuthLoginRequested({required this.pin, this.shopId = 1, this.userId});
 
   final String pin;
   final int shopId;
@@ -144,8 +137,15 @@ class AuthSetupRequested extends AuthEvent {
   final String planCode;
 
   @override
-  List<Object?> get props =>
-      [ownerName, shopName, pin, ownerPhone, shopAddress, shopPhone, planCode];
+  List<Object?> get props => [
+    ownerName,
+    shopName,
+    pin,
+    ownerPhone,
+    shopAddress,
+    shopPhone,
+    planCode,
+  ];
 }
 
 class AuthEmergencyUnlockRequested extends AuthEvent {

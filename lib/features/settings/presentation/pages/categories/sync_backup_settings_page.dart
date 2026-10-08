@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../app/di/injection_container.dart';
 import '../../../../../app/theme/app_tokens.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../../core/backup/google_drive_backup_service.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
@@ -59,10 +60,11 @@ class _SyncBackupSettingsPageState extends State<SyncBackupSettingsPage> {
           }
           final syncEnabled = config.sync.enabled;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          return AppPageContainer(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -228,9 +230,10 @@ class _SyncBackupSettingsPageState extends State<SyncBackupSettingsPage> {
                 ),
               ],
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

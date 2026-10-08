@@ -117,7 +117,7 @@ class CalculatorsBloc extends Bloc<CalculatorsEvent, CalculatorsState> {
         history: history,
       ));
     } on Failure catch (e) {
-      emit(state.copyWith(status: 'failure', errorMessage: e.message));
+      emit(state.copyWith(status: 'failure', errorMessage: friendlyErrorMessage(e)));
     } catch (e) {
       emit(state.copyWith(
         status: 'failure',
@@ -145,7 +145,7 @@ class CalculatorsBloc extends Bloc<CalculatorsEvent, CalculatorsState> {
     } on Failure catch (e) {
       emit(state.copyWith(
         status: 'failure',
-        errorMessage: e.message,
+        errorMessage: friendlyErrorMessage(e),
         isEnabled: !event.enabled,
       ));
     } catch (e) {
@@ -183,7 +183,7 @@ class CalculatorsBloc extends Bloc<CalculatorsEvent, CalculatorsState> {
         clearError: true,
       ));
     } on Failure catch (e) {
-      emit(state.copyWith(status: 'failure', errorMessage: e.message));
+      emit(state.copyWith(status: 'failure', errorMessage: friendlyErrorMessage(e)));
     } catch (e) {
       emit(state.copyWith(
         status: 'failure',

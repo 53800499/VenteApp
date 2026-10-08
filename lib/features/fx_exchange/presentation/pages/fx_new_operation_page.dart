@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/components/adaptive_modal.dart';
 import '../../../../shared/components/app_dropdown.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -71,9 +72,11 @@ class _FxNewOperationPageState extends State<FxNewOperationPage> {
   }
 
   Future<void> _showCreateCustomerSheet() async {
-    final result = await showModalBottomSheet<_FxNewCustomerSheetResult>(
+    final result = await showAdaptiveAppModal<_FxNewCustomerSheetResult>(
       context: context,
-      isScrollControlled: true,
+      title: 'Nouveau client',
+      icon: Icons.person_add_alt_1_outlined,
+      maxWidth: 480,
       builder: (ctx) => const _FxCreateCustomerSheet(),
     );
     if (result == null || !mounted) return;
@@ -547,48 +550,39 @@ class _FxCreateCustomerSheetState extends State<_FxCreateCustomerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: AppSpacing.md,
-        right: AppSpacing.md,
-        top: AppSpacing.md,
-        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.md,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Nouveau client',
-            style: Theme.of(context).textTheme.titleLarge,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _nameController,
+          decoration: const InputDecoration(
+            labelText: 'Nom *',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.person_outline),
           ),
-          const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nom *',
-              border: OutlineInputBorder(),
-            ),
-            textCapitalization: TextCapitalization.words,
-            autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          autofocus: true,
+          onSubmitted: (_) => _submit(),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextField(
+          controller: _phoneController,
+          decoration: const InputDecoration(
+            labelText: 'Téléphone (recommandé)',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.phone_outlined),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _phoneController,
-            decoration: const InputDecoration(
-              labelText: 'Téléphone (recommandé)',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.phone,
-            onSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          FilledButton(
-            onPressed: _submit,
-            child: const Text('Enregistrer'),
-          ),
-        ],
-      ),
+          keyboardType: TextInputType.phone,
+          onSubmitted: (_) => _submit(),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FilledButton.icon(
+          onPressed: _submit,
+          icon: const Icon(Icons.check),
+          label: const Text('Enregistrer'),
+        ),
+      ],
     );
   }
 }

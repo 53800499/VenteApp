@@ -1,5 +1,3 @@
-import '../../database/app_database.dart';
-
 /// Statuts de politique d'abonnement / licence marchand.
 enum MerchantLicenseStatus {
   active,

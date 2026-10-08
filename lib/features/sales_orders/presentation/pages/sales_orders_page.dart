@@ -16,6 +16,7 @@ import '../../domain/entities/sales_order.dart';
 import '../bloc/sales_order_bloc.dart';
 import 'sales_order_detail_page.dart';
 import 'sales_order_form_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
 
 class SalesOrdersPage extends StatelessWidget {
@@ -178,8 +179,8 @@ class _SalesOrdersViewState extends State<_SalesOrdersView>
       body: TabBarView(
         controller: _tabs,
         children: [
-          _buildOrdersTab(),
-          _buildReportsTab(),
+          AppPageContainer(child: _buildOrdersTab()),
+          AppPageContainer(child: _buildReportsTab()),
         ],
       ),
     );

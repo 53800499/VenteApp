@@ -64,11 +64,13 @@ class _SettingsHubPageState extends State<SettingsHubPage> {
         actions: const [AppHeaderActions()],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Search Bar header
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.md),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+              children: [
+                // Search Bar header
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
               child: TextField(
                 controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val.trim()),
@@ -307,8 +309,9 @@ class _SettingsHubPageState extends State<SettingsHubPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildGroupHeader(BuildContext context, String title, IconData icon) {
     if (_searchQuery.isNotEmpty) return const SizedBox.shrink();

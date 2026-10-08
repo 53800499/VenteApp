@@ -98,9 +98,11 @@ class _ArikeAppState extends State<ArikeApp> with WidgetsBindingObserver {
         cloudCoordinator.markCloudSessionValid();
         cloudRepair.clearAwaitingState();
       } else if (outcome == CloudRepairOutcome.failed) {
+        // En cas d'échec du rafraîchissement cloud en arrière-plan, préserver la session
+        // locale SQLite sans effacer les identifiants ni imposer d'écran PIN brutal.
         await cloudCoordinator.handleInvalidRefreshToken(
-          offerWhatsAppReconnect: true,
-          skipGrace: true,
+          offerWhatsAppReconnect: false,
+          skipGrace: false,
         );
       }
     };

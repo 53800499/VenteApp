@@ -147,7 +147,11 @@ class CloudSessionRepairService {
     }
 
     if (proof != null) {
-      return CloudRepairOutcome.failed;
+      // Si une preuve PIN valide est présente en mémoire vive, l'échec immédiat est lié
+      // à l'injoignabilité du réseau/serveur (le PIN local ayant déjà été validé par hash).
+      // On conserve la preuve en RAM sans effacer les identifiants ni re-solliciter l'utilisateur.
+      _clearAwaiting();
+      return CloudRepairOutcome.offline;
     }
 
     _markAwaiting();
@@ -251,10 +255,11 @@ class CloudSessionRepairService {
   }
 
   void _clearAwaiting() {
-    if (!_awaitingPinUnlock) return;
+    if (!_awaitingPinUnlock && !awaitingPinUnlockNotifier.value) return;
     _awaitingPinUnlock = false;
     awaitingPinUnlockNotifier.value = false;
   }
 
   void clearAwaitingState() => _clearAwaiting();
+  void markAwaitingPinUnlock() => _markAwaiting();
 }

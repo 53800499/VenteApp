@@ -74,16 +74,16 @@ String humanizeApiErrorMessage(String raw) {
     return 'Requête refusée par le serveur. Vérifiez les informations saisies.';
   }
 
-  if (lower.contains('forbidden') && !lower.contains(' ')) {
-    return 'Action non autorisée.';
+  if (lower.contains('forbidden') || lower.contains('access denied')) {
+    return 'Cette action n’est pas autorisée ou n’est pas incluse dans votre forfait actuel.';
   }
 
-  if (lower.contains('unauthorized') && !lower.contains(' ')) {
-    return 'Session expirée. Reconnectez-vous avec votre PIN.';
+  if (lower.contains('unauthorized')) {
+    return 'Votre session a expiré. Veuillez vous reconnecter avec votre code PIN.';
   }
 
-  if (lower.contains('not found') && message.length < 40) {
-    return 'Élément introuvable sur le serveur.';
+  if (lower.contains('not found')) {
+    return 'Élément introuvable sur le service en ligne.';
   }
 
   if (lower.startsWith('must be') || lower.contains(' must be ')) {

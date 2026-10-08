@@ -97,3 +97,15 @@ class CloudReconnectRequiredFailure extends Failure {
     super.message = _defaultMessage,
   ]);
 }
+
+class ActionRequiredFailure extends Failure {
+  const ActionRequiredFailure({
+    required String message,
+    this.suggestedAction = 'EDIT_OPERATION',
+  }) : super(message);
+
+  final String suggestedAction;
+
+  @override
+  List<Object?> get props => [message, suggestedAction];
+}

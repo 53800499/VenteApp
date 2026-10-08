@@ -21,6 +21,7 @@ import 'product_form_page.dart';
 import 'category_list_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
+import '../widgets/desktop_product_list_view.dart';
 
 class ProductListPage extends StatefulWidget {
   const ProductListPage({
@@ -84,19 +85,97 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   Widget _buildScaffold(BuildContext context) {
-    return Scaffold(
-            body: Column(
-              children: [
-                BlocBuilder<ProductListBloc, ProductListState>(
-                  buildWhen: (prev, curr) =>
-                      prev.isRefreshing != curr.isRefreshing,
-                  builder: (context, state) {
-                    if (!state.isRefreshing) {
-                      return const SizedBox.shrink();
-                    }
-                    return const LinearProgressIndicator();
+    return ResponsiveBuilder(
+      builder: (context, screenType) {
+        final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+
+        if (isDesktop) {
+          return BlocBuilder<ProductListBloc, ProductListState>(
+            builder: (context, state) {
+              if (state.status == ProductListStatus.initial && state.products.isEmpty) {
+                return const Scaffold(body: SaleListSkeleton());
+              }
+              return Scaffold(
+                body: DesktopProductListView(
+                  session: widget.session,
+                  state: state,
+                  searchController: _searchController,
+                  onSearchChanged: (value) {
+                    setState(() {});
+                    context.read<ProductListBloc>().add(ProductListSearchChanged(value));
                   },
+                  onClearSearch: () {
+                    _searchController.clear();
+                    context.read<ProductListBloc>().add(const ProductListSearchChanged(''));
+                    setState(() {});
+                  },
+                  onRefresh: () async {
+                    context.read<ProductListBloc>().add(const ProductListRefreshRequested());
+                    await context.read<ProductListBloc>().stream.firstWhere((s) => !s.isRefreshing);
+                  },
+                  onNewProduct: () async {
+                    final created = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => ProductFormPage(session: widget.session),
+                      ),
+                    );
+                    if (created == true && context.mounted) {
+                      context.read<ProductListBloc>().add(const ProductListLocalRefreshRequested());
+                    }
+                  },
+                  onManageCategories: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CategoryListPage(session: widget.session),
+                      ),
+                    );
+                    if (context.mounted) {
+                      context.read<ProductListBloc>().add(const ProductListLocalRefreshRequested());
+                    }
+                  },
+                  onProductTap: (product) async {
+                    final changed = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => ProductDetailPage(
+                          session: widget.session,
+                          productId: product.id,
+                        ),
+                      ),
+                    );
+                    if (changed == true && context.mounted) {
+                      context.read<ProductListBloc>().add(const ProductListLocalRefreshRequested());
+                    }
+                  },
+                  onCategorySelected: (catId) {
+                    context.read<ProductListBloc>().add(ProductListCategoryChanged(catId));
+                  },
+                  onLowStockToggled: (lowStock) {
+                    context.read<ProductListBloc>().add(ProductListLowStockToggled(lowStock));
+                  },
+                  onSortSelected: (sort) {
+                    context.read<ProductListBloc>().add(ProductListSortChanged(sort));
+                  },
+                  canWrite: _canWrite,
                 ),
+              );
+            },
+          );
+        }
+
+        // --- RENDU MOBILE STRICTEMENT IDENTIQUE ET PRÉSERVÉ ---
+        return Scaffold(
+          body: Column(
+            children: [
+              BlocBuilder<ProductListBloc, ProductListState>(
+                buildWhen: (prev, curr) =>
+                    prev.isRefreshing != curr.isRefreshing,
+                builder: (context, state) {
+                  if (!state.isRefreshing) {
+                    return const SizedBox.shrink();
+                  }
+                  return const LinearProgressIndicator();
+                },
+              ),
                 ResponsiveBuilder(
                   builder: (context, screenType) {
                     final horizontal =
@@ -199,7 +278,9 @@ class _ProductListPageState extends State<ProductListPage> {
                     ]
                   : const [],
             ),
-    );
+          );
+        },
+      );
   }
 }
 
@@ -355,7 +436,8 @@ class _ProductListView extends StatelessWidget {
           child: ResponsiveBuilder(
             builder: (context, screenType) {
               final horizontal = Breakpoints.horizontalPadding(screenType);
-              final bottomPadding = 110.0;
+              final bottomPadding =
+                  screenType.isCompact ? 110.0 : AppSpacing.md;
 
               if (screenType.isCompact) {
                 return ListView.separated(
@@ -390,7 +472,7 @@ class _ProductListView extends StatelessWidget {
                   crossAxisCount: columns,
                   mainAxisSpacing: AppSpacing.sm,
                   crossAxisSpacing: AppSpacing.sm,
-                  mainAxisExtent: 88,
+                  mainAxisExtent: 96,
                 ),
                 itemCount: state.products.length,
                 itemBuilder: (context, index) =>
@@ -429,7 +511,10 @@ class _ProductListView extends StatelessWidget {
       trailing: canProcure && product.isLowStock
           ? IconButton(
               tooltip: 'Commander ce produit',
-              icon: const Icon(Icons.shopping_cart_outlined),
+              icon: const Icon(Icons.shopping_cart_outlined, size: 20),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               onPressed: () {
                 final deficit =
                     (product.alertThreshold - product.quantityInStock)

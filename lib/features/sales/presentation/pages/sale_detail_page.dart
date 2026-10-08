@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
@@ -84,7 +85,7 @@ class _SaleDetailPageState extends State<SaleDetailPage> {
     } on Failure catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.message;
+          _error = friendlyErrorMessage(e);
           _loading = false;
         });
       }

@@ -43,6 +43,7 @@ import '../../core/network/remote_api_guard.dart';
 import '../../core/network/active_shop_context.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/network_info.dart';
+import '../../core/network/network_monitor.dart';
 import '../../core/security/lockout_policy.dart';
 import '../../core/security/pin_hasher.dart';
 import '../../core/security/recovery_token_service.dart';
@@ -70,6 +71,7 @@ import '../../core/sync/sync_conflict_service.dart';
 import '../../core/sync/sync_queue_datasource.dart';
 import '../../core/sync/sync_queue_processor.dart';
 import '../../core/sync/sync_service.dart';
+import '../../core/sync/sync_snapshot.dart';
 import '../../features/calculators/data/datasources/local/calculators_local_datasource.dart';
 import '../../features/calculators/data/datasources/remote/calculators_remote_datasource.dart';
 import '../../features/calculators/data/repositories/calculators_repository_impl.dart';
@@ -167,6 +169,7 @@ import '../../features/sales/data/datasources/remote/sales_remote_datasource.dar
 import '../../features/sales/data/repositories/sale_repository_impl.dart';
 import '../../features/sales/domain/repositories/sale_repository.dart';
 import '../../features/sales/domain/services/receipt_formatter_service.dart';
+import '../../features/sales/domain/services/receipt_number_service.dart';
 import '../../features/sales/domain/services/sale_validation_service.dart';
 import '../../features/sales/domain/usecases/sale_usecases.dart';
 import '../../features/voice_input/data/speech_recognition_service.dart';
@@ -792,10 +795,17 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => FormDraftStorage(sl()));
   sl.registerLazySingleton(() => DeviceIdStorage(sl()));
   ensureVoiceInputDependencies();
+  ensureSubscriptionDependencies();
   await sl<DeviceIdStorage>().getOrCreate();
   sl.registerLazySingleton(Connectivity.new);
+  final apiBaseUrl = sl<ApiSettingsStorage>().resolveEffectiveUrl();
+  sl.registerLazySingleton(() => NetworkMonitor(
+        connectivity: sl(),
+        baseUrlProvider: () => sl<ApiClient>().baseUrl,
+      )..start());
   sl.registerLazySingleton(() => NetworkInfo(
         sl(),
+        networkMonitor: sl(),
         hostProvider: () {
           try {
             final url = sl<ApiClient>().baseUrl;
@@ -806,7 +816,6 @@ Future<void> initDependencies() async {
         },
       ));
   sl.registerLazySingleton(ActiveShopContext.new);
-  final apiBaseUrl = sl<ApiSettingsStorage>().resolveEffectiveUrl();
   sl.registerLazySingleton(() => ApiClient(
         baseUrl: apiBaseUrl,
         credentials: sl<AuthCredentialsStorage>(),
@@ -1077,7 +1086,12 @@ Future<void> initDependencies() async {
 
   sl.registerLazySingleton(() => const SaleValidationService());
   sl.registerLazySingleton(() => const ReceiptFormatterService());
-  sl.registerLazySingleton(() => SalesLocalDatasource(sl()));
+  sl.registerLazySingleton(
+    () => SalesLocalDatasource(
+      sl(),
+      receipts: ReceiptNumberService(() => sl<DeviceIdStorage>().shortDeviceTag),
+    ),
+  );
   sl.registerLazySingleton(() => CustomerProductPriceLocalDatasource(sl()));
   sl.registerLazySingleton(() => SalesRemoteDatasource(sl()));
   sl.registerLazySingleton(() => const CustomerValidationService());
@@ -1166,7 +1180,13 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(
     () => SalesOrderRemoteSyncAdapter(sl<SalesOrderRepository>()),
   );
-  sl.registerLazySingleton(() => SyncPolicy(sl(), sl()));
+  sl.registerLazySingleton(
+    () => SyncPolicy(
+      sl(),
+      sl(),
+      sl.isRegistered<SubscriptionController>() ? sl<SubscriptionController>() : null,
+    ),
+  );
   sl.registerLazySingleton(() => SyncQueueDatasource(sl()));
   sl.registerLazySingleton(() => LocalAuditWriter(sl()));
   sl.registerLazySingleton(
@@ -1188,7 +1208,10 @@ Future<void> initDependencies() async {
     () => LocalWriteSyncRecorder(
       policy: sl(),
       queue: sl(),
-      onEnqueued: (shopId) => sl<SyncService>().scheduleSync(shopId: shopId),
+      onEnqueued: (shopId) => sl<SyncService>().scheduleSync(
+        shopId: shopId,
+        trigger: SyncTrigger.outboxEnqueued,
+      ),
     ),
   );
   sl.registerLazySingleton(
@@ -1217,12 +1240,14 @@ Future<void> initDependencies() async {
       fxExchangeRemote: sl(),
       salesOrderLocal: sl(),
       salesOrderRemote: sl(),
+      subscriptionController: sl.isRegistered<SubscriptionController>() ? sl<SubscriptionController>() : null,
     ),
   );
   sl.registerLazySingleton(
     () => SyncService(
       connectivity: sl(),
       networkInfo: sl(),
+      networkMonitor: sl(),
       apiGuard: sl(),
       policy: sl(),
       queue: sl(),
@@ -1242,7 +1267,12 @@ Future<void> initDependencies() async {
       ],
       settingsLocal: sl(),
       activeShop: sl(),
-      onServerContact: () => sl<CloudSessionController>().recordContact(),
+      onServerContact: () async {
+        await sl<CloudSessionController>().recordContact();
+        sl<CloudSessionRepairService>().clearAwaitingState();
+        sl<CloudSessionCoordinator>().markCloudSessionValid();
+      },
+      subscriptionController: sl.isRegistered<SubscriptionController>() ? sl<SubscriptionController>() : null,
     ),
   );
 

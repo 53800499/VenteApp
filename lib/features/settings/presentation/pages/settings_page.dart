@@ -35,10 +35,8 @@ import '../../../../core/backup/google_drive_backup_service.dart';
 import '../../../../core/maintenance/product_dedupe_service.dart';
 import 'change_pin_page.dart';
 import 'connected_devices_page.dart';
-import '../../../auth/data/datasources/local/biometric_local_datasource.dart';
-import '../../../auth/domain/usecases/auth_usecases.dart';
-import '../../../auth/presentation/widgets/pin_pad.dart';
-
+import 'enable_biometric_page.dart';
+import 'disable_biometric_page.dart';
 import 'settings_hub_page.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -814,142 +812,25 @@ class _SettingsViewState extends State<_SettingsView> {
   }
 
   Future<void> _openEnableBiometric() async {
-    final pin = await _askPinConfirmation(
-      title: 'Activer la biométrie',
-      subtitle:
-          'Saisissez votre code PIN pour activer le déverrouillage par empreinte.',
-      confirmLabel: 'Activer',
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => EnableBiometricPage(session: widget.session),
+      ),
     );
-    if (pin == null || !mounted) return;
-
-    final canUseBio = await sl<BiometricLocalDatasource>().canCheckBiometrics();
-    if (!canUseBio) {
-      if (!mounted) return;
-      await SettingsFeedback.showErrorDialog(
-        context,
-        title: 'Empreinte indisponible',
-        message:
-            'Aucune empreinte n\'est configurée sur cet appareil. '
-            'Enregistrez-en une dans les réglages du téléphone.',
-      );
-      return;
-    }
-
-    try {
-      final bioOk = await sl<BiometricLocalDatasource>().authenticate();
-      if (!bioOk) {
-        if (!mounted) return;
-        await SettingsFeedback.showErrorDialog(
-          context,
-          title: 'Empreinte non validée',
-          message:
-              'L\'activation a été annulée ou l\'empreinte n\'a pas été reconnue.',
-        );
-        return;
-      }
-    } on Failure catch (e) {
-      if (!mounted) return;
-      await SettingsFeedback.showErrorDialog(
-        context,
-        title: 'Empreinte indisponible',
-        message: friendlyErrorMessage(e),
-      );
-      return;
-    }
-    if (!mounted) return;
-
-    try {
-      final ok = await ActionFeedback.runWithBlockingLoader(
-        context: context,
-        message: 'Activation…',
-        action: () => sl<EnableBiometric>()(
-          userId: widget.session.user.id,
-          sessionToken: widget.session.token,
-          pin: pin,
-        ),
-      );
-      if (ok != true || !mounted) return;
-      await SettingsFeedback.showSuccess(
-        context: context,
-        title: 'Biométrie activée',
-        message: 'Vous pourrez déverrouiller avec votre empreinte.',
-      );
+    if (changed == true) {
       await _refreshBiometricSession();
-    } on Failure catch (e) {
-      if (!mounted) return;
-      await SettingsFeedback.showErrorDialog(
-        context,
-        title: 'Activation impossible',
-        message: friendlyErrorMessage(e),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      await SettingsFeedback.showErrorDialog(
-        context,
-        title: 'Activation impossible',
-        message: friendlyErrorMessage(e),
-      );
     }
   }
 
   Future<void> _openDisableBiometric() async {
-    final pin = await _askPinConfirmation(
-      title: 'Désactiver la biométrie',
-      subtitle:
-          'Saisissez votre code PIN pour désactiver le déverrouillage par empreinte.',
-      confirmLabel: 'Désactiver',
-    );
-    if (pin == null || !mounted) return;
-
-    try {
-      final ok = await ActionFeedback.runWithBlockingLoader(
-        context: context,
-        message: 'Désactivation…',
-        action: () => sl<DisableBiometric>()(
-          userId: widget.session.user.id,
-          sessionToken: widget.session.token,
-          pin: pin,
-        ),
-      );
-      if (ok != true || !mounted) return;
-      await SettingsFeedback.showSuccess(
-        context: context,
-        title: 'Biométrie désactivée',
-        message: 'Le déverrouillage par empreinte est désormais inactif.',
-      );
-      await _refreshBiometricSession();
-    } on Failure catch (e) {
-      if (!mounted) return;
-      await SettingsFeedback.showErrorDialog(
-        context,
-        title: 'Désactivation impossible',
-        message: friendlyErrorMessage(e),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      await SettingsFeedback.showErrorDialog(
-        context,
-        title: 'Désactivation impossible',
-        message: friendlyErrorMessage(e),
-      );
-    }
-  }
-
-  Future<String?> _askPinConfirmation({
-    required String title,
-    required String subtitle,
-    required String confirmLabel,
-  }) {
-    return showModalBottomSheet<String?>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) => _PinConfirmSheet(
-        title: title,
-        subtitle: subtitle,
-        confirmLabel: confirmLabel,
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => DisableBiometricPage(session: widget.session),
       ),
     );
+    if (changed == true) {
+      await _refreshBiometricSession();
+    }
   }
 
   Future<void> _connectGoogleDrive(BuildContext context) async {
@@ -1505,86 +1386,3 @@ class _ReadOnlyField extends StatelessWidget {
   }
 }
 
-class _PinConfirmSheet extends StatefulWidget {
-  const _PinConfirmSheet({
-    required this.title,
-    required this.subtitle,
-    required this.confirmLabel,
-  });
-
-  final String title;
-  final String subtitle;
-  final String confirmLabel;
-
-  @override
-  State<_PinConfirmSheet> createState() => _PinConfirmSheetState();
-}
-
-class _PinConfirmSheetState extends State<_PinConfirmSheet> {
-  static const _minPinLength = 4;
-  static const _maxPinLength = 6;
-
-  String _buffer = '';
-
-  void _onDigit(String digit) {
-    if (_buffer.length >= _maxPinLength) return;
-    setState(() => _buffer += digit);
-    if (_buffer.length == _maxPinLength) {
-      Navigator.pop(context, _buffer);
-    }
-  }
-
-  void _onBackspace() {
-    if (_buffer.isEmpty) return;
-    setState(() => _buffer = _buffer.substring(0, _buffer.length - 1));
-  }
-
-  void _confirm() {
-    if (_buffer.length < _minPinLength) return;
-    Navigator.pop(context, _buffer);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.lg + bottomInset,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.title,
-            style: Theme.of(context).textTheme.titleLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            widget.subtitle,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          PinPad(
-            filledCount: _buffer.length,
-            maxLength: _maxPinLength,
-            onDigit: _onDigit,
-            onBackspace: _onBackspace,
-          ),
-          if (_buffer.length >= _minPinLength &&
-              _buffer.length < _maxPinLength) ...[
-            const SizedBox(height: AppSpacing.sm),
-            FilledButton(
-              onPressed: _confirm,
-              child: Text(widget.confirmLabel),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}

@@ -7,8 +7,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
-import 'package:drift/native.dart';
-
 import '../storage/database_key_storage.dart';
 
 const databaseFileName = 'venteapp.sqlite';
@@ -77,6 +75,45 @@ void applyDatabaseKey(sqlite.Database rawDb, String passphrase) {
   rawDb.execute("PRAGMA key = '${escapeSqlString(passphrase)}';");
 }
 
+void ensureDatabaseAccessible({
+  required File dbFile,
+  required String passphrase,
+}) {
+  if (!dbFile.existsSync() || dbFile.lengthSync() == 0) return;
+
+  migratePlaintextDatabaseToEncrypted(
+    dbFile: dbFile,
+    passphrase: passphrase,
+  );
+
+  // Vérifier si la base peut être lue avec la clé de chiffrement actuelle.
+  try {
+    final testDb = sqlite.sqlite3.open(dbFile.path);
+    try {
+      applyDatabaseKey(testDb, passphrase);
+      testDb.select('PRAGMA user_version;');
+    } finally {
+      testDb.close();
+    }
+  } on sqlite.SqliteException catch (e) {
+    // Code 26 = SQLITE_NOTADB ("file is not a database")
+    // Se produit lorsque la clé dans SecureStorage a été réinitialisée/perdue,
+    // ou si le fichier est corrompu.
+    if (e.resultCode == 26) {
+      final corruptedBackup = File(
+        '${dbFile.path}.corrupted.${DateTime.now().millisecondsSinceEpoch}.bak',
+      );
+      try {
+        dbFile.renameSync(corruptedBackup.path);
+      } catch (_) {
+        try {
+          dbFile.deleteSync();
+        } catch (_) {}
+      }
+    }
+  }
+}
+
 QueryExecutor openEncryptedConnection(DatabaseKeyStorage keyStorage) {
   return LazyDatabase(() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -88,7 +125,7 @@ QueryExecutor openEncryptedConnection(DatabaseKeyStorage keyStorage) {
     return NativeDatabase.createInBackground(
       file,
       isolateSetup: () {
-        migratePlaintextDatabaseToEncrypted(
+        ensureDatabaseAccessible(
           dbFile: file,
           passphrase: passphrase,
         );

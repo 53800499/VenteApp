@@ -40,6 +40,7 @@ class CloudSessionGate {
 
   CloudSessionStatus get currentStatus => _currentStatus;
   bool get isCloudReady => _currentStatus == CloudSessionStatus.cloudReady;
+  DateTime? get lastCheckTime => _lastCheckTime;
 
   /// Évalue l'état de la session cloud de manière totalement silencieuse (zéro écran PIN).
   Future<CloudSessionStatus> evaluateSession() async {

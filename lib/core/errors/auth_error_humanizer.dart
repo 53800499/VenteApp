@@ -150,10 +150,16 @@ String _humanizeDuplicateKey(String lower) {
 
 /// Applique l'humanisation à toute erreur auth (Failure, Dio, SQLite, etc.).
 String friendlyAuthErrorMessage(Object error) {
+  if (ProductionMessagePolicy.isTechnicalMessage(error.toString())) {
+    return ProductionMessagePolicy.sanitize(error.toString());
+  }
   if (error is Exception) {
     final text = error.toString();
     if (text.contains(':')) {
-      return humanizeAuthErrorMessage(text.split(':').last.trim());
+      final part = text.split(':').last.trim();
+      if (part.isNotEmpty && !ProductionMessagePolicy.isTechnicalMessage(part)) {
+        return humanizeAuthErrorMessage(part);
+      }
     }
   }
   return humanizeAuthErrorMessage(error.toString());

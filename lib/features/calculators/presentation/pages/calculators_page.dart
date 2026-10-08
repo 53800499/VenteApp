@@ -15,6 +15,7 @@ import 'tile_calculator_page.dart';
 import 'paint_calculator_page.dart';
 import 'concrete_calculator_page.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class CalculatorsPage extends StatelessWidget {
   const CalculatorsPage({super.key, required this.session});
@@ -101,8 +102,9 @@ class _CalculatorsView extends StatelessWidget {
     String? errorMessage,
   ]) {
     return Center(
-      child: Padding(
+      child: AppPageContainer(
         padding: const EdgeInsets.all(32.0),
+        alignment: Alignment.center,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -173,9 +175,10 @@ class _CalculatorsView extends StatelessWidget {
             .read<CalculatorsBloc>()
             .add(CalculatorsInitRequested(shopId: session.shop.id));
       },
-      child: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
+      child: AppPageContainer(
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
           if (state.errorMessage != null) ...[
             ErrorBanner(message: state.errorMessage!),
             const SizedBox(height: 12),
@@ -295,6 +298,7 @@ class _CalculatorsView extends StatelessWidget {
               },
             ),
         ],
+        ),
       ),
     );
   }

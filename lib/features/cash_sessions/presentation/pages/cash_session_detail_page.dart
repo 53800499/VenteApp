@@ -3,12 +3,14 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/cash_session_entities.dart';
 import '../../domain/usecases/cash_session_usecases.dart';
 import '../services/cash_session_pdf_exporter.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class CashSessionDetailPage extends StatefulWidget {
   const CashSessionDetailPage({
@@ -61,7 +63,7 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     }
@@ -80,7 +82,9 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Export impossible : $e')),
+        SnackBar(
+          content: Text('Export impossible : ${friendlyErrorMessage(e)}'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _exporting = false);
@@ -116,77 +120,79 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
   }
 
   Widget _buildBody(BuildContext context, CashSession s) {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Session du ${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.openedAt))}',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                Text('Ouverte par ${s.openedByName}'),
-                if (s.closedByName != null && s.closedAt != null)
+    return AppPageContainer(
+      child: ListView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   Text(
-                    'Clôturée par ${s.closedByName} le '
-                    '${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.closedAt!))}',
+                    'Session du ${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.openedAt))}',
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
-                const Divider(),
-                _row('Fond initial espèces', s.openingCash),
-                _row('Fond initial MoMo', s.openingMomo),
-                _row('Ventes espèces', s.salesCash),
-                _row('Ventes MoMo', s.salesMomo),
-                _row('Dépenses espèces', s.expensesCash),
-                _row('Dépenses MoMo', s.expensesMomo),
-                _row('Entrées espèces', s.depositsCash),
-                _row('Entrées MoMo', s.depositsMomo),
-                _row('Retraits espèces', s.withdrawalsCash),
-                _row('Retraits MoMo', s.withdrawalsMomo),
-                _row('Nombre de ventes', s.saleCount, money: false),
-                const Divider(),
-                _row('Attendu espèces', s.expectedCash ?? 0, bold: true),
-                _row('Attendu MoMo', s.expectedMomo ?? 0, bold: true),
-                _row('Compté espèces', s.countedCash ?? 0, bold: true),
-                _row('Compté MoMo', s.countedMomo ?? 0, bold: true),
-                _row(
-                  'Écart espèces',
-                  s.differenceCash ?? 0,
-                  bold: true,
-                  highlight: true,
-                ),
-                _row(
-                  'Écart MoMo',
-                  s.differenceMomo ?? 0,
-                  bold: true,
-                  highlight: true,
-                ),
-                if (s.closingNote?.isNotEmpty == true) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Text('Note : ${s.closingNote}'),
+                  Text('Ouverte par ${s.openedByName}'),
+                  if (s.closedByName != null && s.closedAt != null)
+                    Text(
+                      'Clôturée par ${s.closedByName} le '
+                      '${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.closedAt!))}',
+                    ),
+                  const Divider(),
+                  _row('Fond initial espèces', s.openingCash),
+                  _row('Fond initial MoMo', s.openingMomo),
+                  _row('Ventes espèces', s.salesCash),
+                  _row('Ventes MoMo', s.salesMomo),
+                  _row('Dépenses espèces', s.expensesCash),
+                  _row('Dépenses MoMo', s.expensesMomo),
+                  _row('Entrées espèces', s.depositsCash),
+                  _row('Entrées MoMo', s.depositsMomo),
+                  _row('Retraits espèces', s.withdrawalsCash),
+                  _row('Retraits MoMo', s.withdrawalsMomo),
+                  _row('Nombre de ventes', s.saleCount, money: false),
+                  const Divider(),
+                  _row('Attendu espèces', s.expectedCash ?? 0, bold: true),
+                  _row('Attendu MoMo', s.expectedMomo ?? 0, bold: true),
+                  _row('Compté espèces', s.countedCash ?? 0, bold: true),
+                  _row('Compté MoMo', s.countedMomo ?? 0, bold: true),
+                  _row(
+                    'Écart espèces',
+                    s.differenceCash ?? 0,
+                    bold: true,
+                    highlight: true,
+                  ),
+                  _row(
+                    'Écart MoMo',
+                    s.differenceMomo ?? 0,
+                    bold: true,
+                    highlight: true,
+                  ),
+                  if (s.closingNote?.isNotEmpty == true) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Text('Note : ${s.closingNote}'),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
-        if (_movements.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Mouvements manuels',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          ..._movements.map(
-            (m) => ListTile(
-              title: Text('${m.movementType.label} · ${m.registerType.label}'),
-              subtitle: Text(m.note ?? m.createdByName),
-              trailing: Text(formatFcfa(m.amount)),
+          if (_movements.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Mouvements manuels',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-          ),
+            ..._movements.map(
+              (m) => ListTile(
+                title: Text('${m.movementType.label} · ${m.registerType.label}'),
+                subtitle: Text(m.note ?? m.createdByName),
+                trailing: Text(formatFcfa(m.amount)),
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 

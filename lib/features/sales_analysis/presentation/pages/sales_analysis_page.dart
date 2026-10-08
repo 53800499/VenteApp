@@ -18,6 +18,7 @@ import '../bloc/sales_analysis_bloc.dart';
 import '../utils/sales_analysis_formatters.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 import 'product_sales_detail_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 Future<void> _refreshSalesAnalysis(BuildContext context) async {
   final bloc = context.read<SalesAnalysisBloc>();
@@ -160,8 +161,10 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
         ),
       ),
-      body: Column(
-        children: [
+      body: AppPageContainer(
+        maxWidth: 1100.0,
+        child: Column(
+          children: [
           const OfflineModeBanner(
             onlinePreferredMessage: OfflineModeBanner.hybridReadMessage,
           ),
@@ -239,8 +242,9 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
         ],
       ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _PeriodBar extends StatelessWidget {

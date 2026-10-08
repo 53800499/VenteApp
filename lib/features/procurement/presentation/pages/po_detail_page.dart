@@ -13,6 +13,7 @@ import '../widgets/procurement_feedback.dart';
 import 'receive_items_page.dart';
 import 'invoice_form_page.dart';
 import 'po_form_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class PoDetailPage extends StatefulWidget {
   const PoDetailPage({super.key, required this.poId});
@@ -120,9 +121,10 @@ class _PoDetailPageState extends State<PoDetailPage> {
     final receipts = state.orderReceipts;
     final history = state.orderHistory;
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: [
+    return AppPageContainer(
+      child: ListView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        children: [
         _PoHeaderCard(po: po),
         const SizedBox(height: AppSpacing.lg),
         _PoActionButtons(
@@ -228,7 +230,8 @@ class _PoDetailPageState extends State<PoDetailPage> {
               ),
             );
           }),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,3 @@
-import '../enums/permission.enum.dart' if (dart.library.io) '';
-
 /// Représente le résultat d'une évaluation de règle par le Policy Engine.
 class PolicyDecision {
   const PolicyDecision.allow()

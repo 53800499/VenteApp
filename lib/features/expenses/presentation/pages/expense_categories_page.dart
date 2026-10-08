@@ -11,6 +11,7 @@ import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/expense_entities.dart';
 import '../../domain/usecases/expense_usecases.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class ExpenseCategoriesPage extends StatefulWidget {
   const ExpenseCategoriesPage({super.key, required this.session});
@@ -70,7 +71,7 @@ class _ExpenseCategoriesPageState extends State<ExpenseCategoriesPage> {
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     }
@@ -94,8 +95,9 @@ class _ExpenseCategoriesPageState extends State<ExpenseCategoriesPage> {
               ? Center(child: Text(_error!))
               : RefreshIndicator(
                   onRefresh: _load,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                  child: AppPageContainer(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(AppSpacing.md),
                     itemCount: _categories.length,
                     itemBuilder: (context, index) {
                       final category = _categories[index];
@@ -128,6 +130,7 @@ class _ExpenseCategoriesPageState extends State<ExpenseCategoriesPage> {
                     },
                   ),
                 ),
+              ),
       floatingActionButton: _canManage
           ? FloatingActionButton(
               onPressed: _createCategory,

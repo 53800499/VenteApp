@@ -31,6 +31,7 @@ import 'direct_procurement_page.dart';
 import 'direct_receipt_detail_page.dart';
 import '../models/po_form_prefill.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
+import '../../../../core/responsive/responsive_builder.dart';
 
 class ProcurementPage extends StatelessWidget {
   const ProcurementPage({
@@ -323,53 +324,56 @@ class _ProcurementViewState extends State<_ProcurementView>
             children: [
               ProcurementSyncBanner(shopId: _shopId),
               Expanded(
-                child: Stack(
-            children: [
-              if (state.status == ProcurementStatus.loading &&
-                  state.purchaseOrders.isEmpty &&
-                  state.directReceipts.isEmpty &&
-                  state.suppliers.isEmpty)
-                const SaleListSkeleton()
-              else
-                TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _OrdersTab(
-                      orders: state.purchaseOrders,
-                      suppliers: state.suppliers,
-                      canCreate: canCreate,
-                      onRefresh: () async => _refresh(context),
-                    ),
-                    _DirectReceiptsTab(
-                      receipts: state.directReceipts,
-                      suppliers: state.suppliers,
-                      canReceive: canReceive,
-                      onRefresh: () async => _refresh(context),
-                    ),
-                    _SuppliersTab(
-                      suppliers: state.suppliers,
-                      canCreate: canCreate,
-                      onRefresh: () async => _refresh(context),
-                    ),
-                    _InvoicesTab(
-                      invoices: state.invoices,
-                      onRefresh: () async => _refresh(context),
-                    ),
-                    ProcurementReportsTab(
-                      onRefresh: () async => _refresh(context, includeReport: true),
-                    ),
-                  ],
+                child: ResponsivePage(
+                  padding: EdgeInsets.zero,
+                  child: Stack(
+                    children: [
+                      if (state.status == ProcurementStatus.loading &&
+                          state.purchaseOrders.isEmpty &&
+                          state.directReceipts.isEmpty &&
+                          state.suppliers.isEmpty)
+                        const SaleListSkeleton()
+                      else
+                        TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _OrdersTab(
+                              orders: state.purchaseOrders,
+                              suppliers: state.suppliers,
+                              canCreate: canCreate,
+                              onRefresh: () async => _refresh(context),
+                            ),
+                            _DirectReceiptsTab(
+                              receipts: state.directReceipts,
+                              suppliers: state.suppliers,
+                              canReceive: canReceive,
+                              onRefresh: () async => _refresh(context),
+                            ),
+                            _SuppliersTab(
+                              suppliers: state.suppliers,
+                              canCreate: canCreate,
+                              onRefresh: () async => _refresh(context),
+                            ),
+                            _InvoicesTab(
+                              invoices: state.invoices,
+                              onRefresh: () async => _refresh(context),
+                            ),
+                            ProcurementReportsTab(
+                              onRefresh: () async => _refresh(context, includeReport: true),
+                            ),
+                          ],
+                        ),
+                      if (state.status == ProcurementStatus.loading &&
+                          state.purchaseOrders.isNotEmpty)
+                        const Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(),
+                        ),
+                    ],
+                  ),
                 ),
-              if (state.status == ProcurementStatus.loading &&
-                  state.purchaseOrders.isNotEmpty)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: LinearProgressIndicator(),
-                ),
-            ],
-          ),
               ),
             ],
           ),
@@ -710,7 +714,9 @@ class _OrdersList extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 110),
+        padding: EdgeInsets.only(
+          bottom: context.isCompactScreen ? 110.0 : AppSpacing.md,
+        ),
         itemCount: orders.length + 1, // +1 for summary banner
         itemBuilder: (context, index) {
           if (index == 0) {

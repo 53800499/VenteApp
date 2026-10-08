@@ -21,8 +21,12 @@ class SyncQueue extends Table {
   TextColumn get lastError => text().nullable()();
   TextColumn get errorCode => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('pending'))();
+  TextColumn get suggestedAction => text().nullable()();
   IntColumn get createdAt => integer()();
   IntColumn get processedAt => integer().nullable()();
+  IntColumn get discardedAt => integer().nullable()();
+  IntColumn get discardedBy => integer().nullable()();
+  TextColumn get discardReason => text().nullable()();
 }
 
 /// Horodatage du dernier pull cloud par entité (stale time navigation).

@@ -26,12 +26,15 @@ class ProductCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.md),
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: product.isLowStock
                       ? AppColors.warning.withValues(alpha: 0.12)
@@ -45,12 +48,15 @@ class ProductCard extends StatelessWidget {
                   color: product.isLowStock
                       ? AppColors.warning
                       : colorScheme.primary,
+                  size: 22,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       product.name,
@@ -67,14 +73,18 @@ class ProductCard extends StatelessWidget {
                         'Stock : ${product.quantityInStock}',
                       ].join(' · '),
                       style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
               Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (trailing != null) trailing!,
                   Text(
                     formatFcfa(product.priceSell),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -84,9 +94,9 @@ class ProductCard extends StatelessWidget {
                   ),
                   if (product.isLowStock)
                     Container(
-                      margin: const EdgeInsets.only(top: 4),
+                      margin: const EdgeInsets.only(top: 2),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
+                        horizontal: 6,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
@@ -98,11 +108,16 @@ class ProductCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: AppColors.warning,
                               fontWeight: FontWeight.w700,
+                              fontSize: 10,
                             ),
                       ),
                     ),
                 ],
               ),
+              if (trailing != null) ...[
+                const SizedBox(width: AppSpacing.xs),
+                trailing!,
+              ],
             ],
           ),
         ),

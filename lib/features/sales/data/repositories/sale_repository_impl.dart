@@ -250,6 +250,7 @@ class SaleRepositoryImpl implements SaleRepository {
             amountCredit: totals.amountCredit,
           ),
           note: input.note,
+          receiptNumber: sale.receiptNumber,
         ),
       );
 
@@ -293,6 +294,7 @@ class SaleRepositoryImpl implements SaleRepository {
       shopId: shopId,
       saleId: sale.id,
       payload: {
+        'receiptNumber': sale.receiptNumber,
         'totalAmount': input.totalAmount,
         'payment': SalePaymentApiRequest(
           method: input.payment.method,

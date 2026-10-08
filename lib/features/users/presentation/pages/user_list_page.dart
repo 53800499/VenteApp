@@ -11,6 +11,7 @@ import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/guards/permission_guard.dart';
 import '../../../../shared/components/app_header_actions.dart';
+import '../../../../shared/components/offline_feature_placeholder.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../rbac/presentation/pages/user_permissions_page.dart';
 import '../../domain/entities/user_entities.dart';
@@ -185,22 +186,16 @@ class _UserListView extends StatelessWidget {
 
                 if (state.status == UserListStatus.failure &&
                     state.users.isEmpty) {
-                  return ResponsivePage(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(state.errorMessage ?? 'Erreur de chargement'),
-                          const SizedBox(height: AppSpacing.md),
-                          FilledButton(
-                            onPressed: () => context
-                                .read<UserListBloc>()
-                                .add(const UserListLoadRequested()),
-                            child: const Text('Réessayer'),
-                          ),
-                        ],
-                      ),
-                    ),
+                  return OfflineFeaturePlaceholder(
+                    featureName: 'la gestion de l\'équipe',
+                    customMessage:
+                        'La gestion des utilisateurs et des rôles vendeurs nécessite '
+                        'une connexion au serveur pour synchroniser les comptes de votre boutique.',
+                    onRetry: () async {
+                      context
+                          .read<UserListBloc>()
+                          .add(const UserListLoadRequested());
+                    },
                   );
                 }
 

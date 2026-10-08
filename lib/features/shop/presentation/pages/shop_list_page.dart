@@ -9,6 +9,7 @@ import '../../../../core/network/active_shop_context.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
+import '../../../../shared/components/offline_feature_placeholder.dart';
 import '../../../../shared/components/skeleton_loaders.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
@@ -165,22 +166,16 @@ class _ShopListView extends StatelessWidget {
 
                 if (state.status == ShopListStatus.failure &&
                     state.shops.isEmpty) {
-                  return ResponsivePage(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(state.errorMessage ?? 'Erreur de chargement'),
-                          const SizedBox(height: AppSpacing.md),
-                          FilledButton(
-                            onPressed: () => context
-                                .read<ShopListBloc>()
-                                .add(const ShopListLoadRequested()),
-                            child: const Text('Réessayer'),
-                          ),
-                        ],
-                      ),
-                    ),
+                  return OfflineFeaturePlaceholder(
+                    featureName: 'la gestion multi-boutiques',
+                    customMessage:
+                        'La gestion et le basculement des boutiques nécessitent une '
+                        'connexion au serveur pour synchroniser vos accès.',
+                    onRetry: () async {
+                      context
+                          .read<ShopListBloc>()
+                          .add(const ShopListLoadRequested());
+                    },
                   );
                 }
 

@@ -17,6 +17,7 @@ import '../../../rbac/domain/usecases/refresh_session_permissions.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../shop/domain/usecases/shop_usecases.dart';
 import '../widgets/shop_feedback.dart';
+import '../../../../shared/components/adaptive_modal.dart';
 
 /// Bascule la boutique active côté serveur et met à jour la session locale.
 ///
@@ -180,10 +181,11 @@ class ShopSwitcherSheet extends StatefulWidget {
   final AuthSession session;
 
   static Future<void> show(BuildContext context, AuthSession session) {
-    return showModalBottomSheet<void>(
+    return showAdaptiveAppModal<void>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+      maxWidth: 520,
+      scrollable: false,
+      contentPadding: const EdgeInsets.only(top: AppSpacing.md),
       builder: (_) => ShopSwitcherSheet(session: session),
     );
   }

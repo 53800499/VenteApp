@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../sales/domain/entities/sale_entities.dart';
@@ -89,7 +90,7 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       emit(
         state.copyWith(
           status: SalesOrderViewStatus.failure,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     } catch (_) {
@@ -132,7 +133,7 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       emit(
         state.copyWith(
           detailLoading: false,
-          errorMessage: e.message,
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -160,7 +161,7 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       );
       add(const SalesOrderListRequested());
     } on Failure catch (e) {
-      emit(state.copyWith(saving: false, errorMessage: e.message));
+      emit(state.copyWith(saving: false, errorMessage: friendlyErrorMessage(e)));
     } catch (_) {
       emit(
         state.copyWith(
@@ -267,7 +268,7 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       );
       add(const SalesOrderListRequested());
     } on Failure catch (e) {
-      emit(state.copyWith(saving: false, errorMessage: e.message));
+      emit(state.copyWith(saving: false, errorMessage: friendlyErrorMessage(e)));
     } catch (_) {
       emit(
         state.copyWith(
@@ -291,7 +292,7 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       );
       emit(state.copyWith(reportLoading: false, report: report));
     } on Failure catch (e) {
-      emit(state.copyWith(reportLoading: false, errorMessage: e.message));
+      emit(state.copyWith(reportLoading: false, errorMessage: friendlyErrorMessage(e)));
     } catch (_) {
       emit(
         state.copyWith(
@@ -319,7 +320,7 @@ class SalesOrderBloc extends Bloc<SalesOrderEvent, SalesOrderState> {
       );
       add(const SalesOrderListRequested());
     } on Failure catch (e) {
-      emit(state.copyWith(saving: false, errorMessage: e.message));
+      emit(state.copyWith(saving: false, errorMessage: friendlyErrorMessage(e)));
     } catch (_) {
       emit(
         state.copyWith(

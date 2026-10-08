@@ -9,12 +9,13 @@ import '../../auth/cloud_link_status.dart';
 import '../../auth/cloud_session_controller.dart';
 import '../../auth/cloud_session_status.dart';
 import '../../auth/cloud_session_repair_service.dart';
-import '../../auth/widgets/cloud_session_pin_repair_dialog.dart';
+import '../../auth/recent_pin_proof.dart';
 import '../../sync/sync_display_message.dart';
 import '../../sync/sync_service.dart';
 import '../../sync/sync_snapshot.dart';
 import '../../sync/widgets/sync_status_indicator.dart';
 import '../network_info.dart';
+import '../network_monitor.dart';
 
 /// Bandeau d'état cloud (connexion + synchronisation), indépendant de l'auth locale.
 class OfflineModeBanner extends StatefulWidget {
@@ -54,6 +55,9 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
   bool _syncedDismissed = false;
   Timer? _syncedHideTimer;
 
+  /// Message actuellement fermé manuellement par l'utilisateur via l'icône de fermeture.
+  String? _dismissedMessage;
+
   @override
   void initState() {
     super.initState();
@@ -90,10 +94,27 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     }
   }
 
-  String _messageForStatus(CloudLinkStatus status) {
+  String _messageForStatus(CloudLinkStatus status, {SyncSnapshot? sync, NetworkMonitor? monitor}) {
     if (widget.onlinePreferredMessage != null &&
         status == CloudLinkStatus.disconnected) {
       return widget.onlinePreferredMessage!;
+    }
+
+    if (sync != null && sync.pendingQueueCount > 0 && status == CloudLinkStatus.syncing) {
+      return '${sync.pendingQueueCount} modification(s) en attente d\'envoi au cloud...';
+    }
+
+    if (status == CloudLinkStatus.disconnected &&
+        (monitor?.isLocalOnly == true ||
+            sync?.indicatorState == SyncIndicatorState.waitingForConnection)) {
+      if (sync != null && sync.pendingQueueCount > 0) {
+        return 'Serveur ARIKE non joignable — ${sync.pendingQueueCount} modification(s) en attente.';
+      }
+      return 'Réseau présent, mais serveur ARIKE non joignable.';
+    }
+
+    if (status == CloudLinkStatus.disconnected && sync != null && sync.pendingQueueCount > 0) {
+      return 'Hors ligne — ${sync.pendingQueueCount} modification(s) en attente d\'envoi dès la reconnexion.';
     }
 
     return switch (status) {
@@ -142,111 +163,140 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final networkMonitor = sl.isRegistered<NetworkMonitor>()
+        ? sl<NetworkMonitor>()
+        : null;
+
     return ValueListenableBuilder<CloudSessionStatus>(
       valueListenable: sl<CloudSessionController>().notifier,
       builder: (context, session, _) {
         return StreamBuilder<List<ConnectivityResult>>(
           stream: Connectivity().onConnectivityChanged,
           builder: (context, connectivitySnapshot) {
-            final offline = connectivitySnapshot.hasData
-                ? connectivitySnapshot.data!
-                    .every((r) => r == ConnectivityResult.none)
-                : _offline;
+            Widget buildContent(BuildContext context) {
+              final bool isOffline;
+              if (networkMonitor != null) {
+                isOffline = !networkMonitor.isOnline;
+              } else if (connectivitySnapshot.hasData) {
+                isOffline = connectivitySnapshot.data!
+                    .every((r) => r == ConnectivityResult.none);
+              } else {
+                isOffline = _offline ?? false;
+              }
 
-            return StreamBuilder(
-              stream: sl<SyncService>().snapshots,
-              builder: (context, syncSnapshot) {
-                return ValueListenableBuilder<bool>(
-                  valueListenable: sl<CloudSessionRepairService>()
-                      .awaitingPinUnlockNotifier,
-                  builder: (context, isAwaitingPin, child) {
-                    return ValueListenableBuilder<bool>(
-                      valueListenable: sl<CloudSessionRepairService>()
-                          .repairInProgressNotifier,
-                      builder: (context, isRepairing, _) {
-                        final sync = syncSnapshot.data ?? const SyncSnapshot.idle();
+              return StreamBuilder<SyncSnapshot>(
+                initialData: sl<SyncService>().currentSnapshot,
+                stream: sl<SyncService>().snapshots,
+                builder: (context, syncSnapshot) {
+                  return ValueListenableBuilder<bool>(
+                    valueListenable: sl<CloudSessionRepairService>()
+                        .awaitingPinUnlockNotifier,
+                    builder: (context, isAwaitingPin, child) {
+                      return ValueListenableBuilder<bool>(
+                        valueListenable: sl<CloudSessionRepairService>()
+                            .repairInProgressNotifier,
+                        builder: (context, isRepairing, _) {
+                          final sync = syncSnapshot.data ?? const SyncSnapshot.idle();
 
-                        if (isRepairing && sync.blockReason == null && offline != true) {
-                          return _sessionBanner(
-                            context,
-                            message: 'Reconnexion cloud en cours…',
-                            background: Theme.of(context).colorScheme.secondaryContainer,
-                            foreground: Theme.of(context).colorScheme.onSecondaryContainer,
-                            icon: Icons.cloud_sync_outlined,
-                            emoji: '🔄',
-                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                          if (isRepairing && sync.blockReason == null && !isOffline) {
+                            return _sessionBanner(
                               context,
-                              snapshot: sync,
-                            ),
+                              message: 'Reconnexion cloud en cours…',
+                              background: Theme.of(context).colorScheme.secondaryContainer,
+                              foreground: Theme.of(context).colorScheme.onSecondaryContainer,
+                              icon: Icons.cloud_sync_outlined,
+                              emoji: '🔄',
+                              onTap: () => SyncStatusIndicator.showDetailsSheet(
+                                context,
+                                snapshot: sync,
+                              ),
+                            );
+                          }
+
+                          final status = resolveCloudLinkStatus(
+                            isConnected: !isOffline,
+                            sync: sync,
                           );
-                        }
 
-                        final status = resolveCloudLinkStatus(
-                          isConnected: offline != true,
-                          sync: sync,
-                        );
+                          // Si la synchronisation marche très bien (pas de blocage) OU si une preuve PIN est en mémoire,
+                          // effacer tout état d'attente résiduel et ne JAMAIS afficher de bannière PIN ni bloquer.
+                          final hasRecentPin = sl.isRegistered<RecentPinProof>() &&
+                              sl<RecentPinProof>().hasRecentProof;
+                          if ((sync.blockReason == null || hasRecentPin) && isAwaitingPin) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              sl<CloudSessionRepairService>().clearAwaitingState();
+                            });
+                          }
 
-                        if (isAwaitingPin &&
-                            sync.blockReason == null &&
-                            offline != true) {
-                          return _sessionBanner(
-                            context,
-                            message: CloudSessionRepairService.awaitingPinUnlockMessage,
-                            background: Theme.of(context).colorScheme.tertiaryContainer,
-                            foreground: Theme.of(context).colorScheme.onTertiaryContainer,
-                            icon: Icons.cloud_off_outlined,
-                            emoji: '🟠',
-                            onTap: () => showCloudSessionPinRepairDialog(context),
-                          );
-                        }
+                          // Afficher le message d'attente de reconnexion UNIQUEMENT si la synchro est réellement bloquée par la session
+                          final isAuthBlocked = sync.blockReason != null &&
+                              (sync.blockReason!.toLowerCase().contains('session') ||
+                               sync.blockReason!.toLowerCase().contains('authentification') ||
+                               sync.blockReason!.toLowerCase().contains('reconnecter') ||
+                               sync.blockReason!.toLowerCase().contains('pin'));
 
-                        // Niveaux dégradés de session cloud : priment sur l'indicateur de
-                        // synchro, restent visibles (pas de disparition auto).
-                        if (session.level == CloudSessionLevel.actionRequired) {
-                          return _sessionBanner(
-                            context,
-                            message: session.userMessage,
-                            background: Theme.of(context).colorScheme.errorContainer,
-                            foreground: Theme.of(context).colorScheme.onErrorContainer,
-                            icon: Icons.gpp_maybe_outlined,
-                            emoji: '⛔',
-                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                          if (isAwaitingPin && isAuthBlocked && !isOffline && !hasRecentPin) {
+                            return _sessionBanner(
                               context,
-                              snapshot: sync,
-                            ),
-                          );
-                        }
-                        if (session.level == CloudSessionLevel.offlineProlonged) {
-                          return _sessionBanner(
-                            context,
-                            message: session.userMessage,
-                            background: Theme.of(context).colorScheme.tertiaryContainer,
-                            foreground: Theme.of(context).colorScheme.onTertiaryContainer,
-                            icon: Icons.cloud_off_outlined,
-                            emoji: '🟠',
-                            onTap: () => SyncStatusIndicator.showDetailsSheet(
+                              message: CloudSessionRepairService.awaitingPinUnlockMessage,
+                              background: Theme.of(context).colorScheme.tertiaryContainer,
+                              foreground: Theme.of(context).colorScheme.onTertiaryContainer,
+                              icon: Icons.cloud_off_outlined,
+                              emoji: '🟠',
+                              onTap: () => SyncStatusIndicator.showDetailsSheet(
+                                context,
+                                snapshot: sync,
+                              ),
+                            );
+                          }
+
+                          // Niveaux dégradés de session cloud : priment sur l'indicateur de
+                          // synchro, restent visibles (pas de disparition auto).
+                          if (session.level == CloudSessionLevel.actionRequired) {
+                            return _sessionBanner(
                               context,
-                              snapshot: sync,
-                            ),
-                          );
-                        }
+                              message: session.userMessage,
+                              background: Theme.of(context).colorScheme.errorContainer,
+                              foreground: Theme.of(context).colorScheme.onErrorContainer,
+                              icon: Icons.gpp_maybe_outlined,
+                              emoji: '⛔',
+                              onTap: () => SyncStatusIndicator.showDetailsSheet(
+                                context,
+                                snapshot: sync,
+                              ),
+                            );
+                          }
+                          if (session.level == CloudSessionLevel.offlineProlonged) {
+                            return _sessionBanner(
+                              context,
+                              message: session.userMessage,
+                              background: Theme.of(context).colorScheme.tertiaryContainer,
+                              foreground: Theme.of(context).colorScheme.onTertiaryContainer,
+                              icon: Icons.cloud_off_outlined,
+                              emoji: '🟠',
+                              onTap: () => SyncStatusIndicator.showDetailsSheet(
+                                context,
+                                snapshot: sync,
+                              ),
+                            );
+                          }
 
-                        _handleSyncedVisibility(status);
+                          _handleSyncedVisibility(status);
 
-                        // Masquer en mode local si showWhenSynced est false
-                        if (status == CloudLinkStatus.localOnly &&
-                            !widget.showWhenSynced) {
-                          return const SizedBox.shrink();
-                        }
+                          // Masquer en mode local si showWhenSynced est false
+                          if (status == CloudLinkStatus.localOnly &&
+                              !widget.showWhenSynced) {
+                            return const SizedBox.shrink();
+                          }
 
-                        if (status == CloudLinkStatus.connected &&
-                            (!widget.showWhenSynced || _syncedDismissed)) {
-                          return const SizedBox.shrink();
-                        }
+                          if (status == CloudLinkStatus.connected &&
+                              (!widget.showWhenSynced || _syncedDismissed)) {
+                            return const SizedBox.shrink();
+                          }
 
-                        final message = SyncDisplayMessage.dedupe(sync.blockReason) ??
-                            _messageForStatus(status);
-                        final foreground = _foregroundForStatus(context, status);
+                          final message = SyncDisplayMessage.dedupe(sync.blockReason) ??
+                              _messageForStatus(status, sync: sync, monitor: networkMonitor);
+                          final foreground = _foregroundForStatus(context, status);
 
                         final bool canShowDetails = sync.cloudSyncEnabled &&
                             (sync.blockReason != null ||
@@ -273,6 +323,15 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                 );
               },
             );
+          }
+
+            if (networkMonitor != null) {
+              return ValueListenableBuilder<NetworkState>(
+                valueListenable: networkMonitor.stateNotifier,
+                builder: (context, _, child) => buildContent(context),
+              );
+            }
+            return buildContent(context);
           },
         );
       },
@@ -289,6 +348,10 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
     VoidCallback? onTap,
     List<Widget>? actions,
   }) {
+    if (_dismissedMessage == message) {
+      return const SizedBox.shrink();
+    }
+
     final content = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -298,10 +361,10 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Padding(
-                padding: const EdgeInsets.only(top: 2.0),
+                padding: const EdgeInsets.only(top: 1.0),
                 child: Icon(icon, size: 18, color: foreground),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -314,6 +377,18 @@ class _OfflineModeBannerState extends State<OfflineModeBanner> {
                         color: foreground,
                       ),
                 ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, size: 18, color: foreground),
+                tooltip: 'Fermer la bannière',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                onPressed: () {
+                  setState(() {
+                    _dismissedMessage = message;
+                  });
+                },
               ),
             ],
           ),

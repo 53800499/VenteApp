@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../shared/components/app_dropdown.dart';
+import '../../../../shared/utils/module_labels.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../domain/entities/subscription_details.dart';
@@ -22,7 +23,7 @@ class SubscriptionPage extends StatefulWidget {
 class _SubscriptionPageState extends State<SubscriptionPage> {
   BillingCycle _billingCycle = BillingCycle.yearly;
   String _selectedProvider = 'MTN Mobile Money (FedaPay)';
-  final _phoneController = TextEditingController(text: '61000000');
+  final _phoneController = TextEditingController(text: '');
 
   @override
   void dispose() {
@@ -207,6 +208,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   late SubscriptionDetails _details;
   List<Map<String, dynamic>> _paidOptions = [];
   List<Map<String, dynamic>> _packages = [];
+  bool _isLoading = false;
 
   IconData _getOptionIcon(String code) {
     switch (code) {
@@ -235,21 +237,28 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     _loadSubscriptionFromDatabase();
   }
 
-  void _loadSubscriptionFromDatabase() async {
+  Future<void> _loadSubscriptionFromDatabase({bool forceRefresh = false}) async {
+    if (_packages.isEmpty && _paidOptions.isEmpty && mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
     await sl<SubscriptionController>().refreshFromRemote();
     List<Map<String, dynamic>> options = [];
     List<Map<String, dynamic>> pkgs = [];
     if (sl.isRegistered<SubscriptionRemoteService>()) {
       final remote = sl<SubscriptionRemoteService>();
       final res = await Future.wait([
-        remote.fetchPaidOptions(),
-        remote.fetchPackages(),
+        remote.fetchPaidOptions(forceRefresh: forceRefresh),
+        remote.fetchPackages(forceRefresh: forceRefresh),
       ]);
       options = res[0];
       pkgs = res[1];
     }
     if (mounted) {
       setState(() {
+        _isLoading = false;
         _details = sl<SubscriptionController>().details;
         _paidOptions = options;
         _packages = pkgs;
@@ -320,6 +329,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         graceUntil: _details.graceUntil,
         autoRenew: _details.autoRenew,
         grantedModules: updatedModules,
+        capabilities: _details.capabilities,
         maxUsers: _details.maxUsers,
         maxShops: _details.maxShops,
         currentUsersCount: _details.currentUsersCount,
@@ -339,65 +349,200 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     );
   }
 
-  void _showChangePlanDialog(BuildContext context, String targetPlanCode, String targetPlanName, double price) {
-    final isCurrent = _details.planCode == targetPlanCode;
-    final isUpgrade = targetPlanCode == 'PRO' || targetPlanCode == 'BUSINESS';
+  void _showChangePlanDialog(BuildContext context, String targetPlanCode, String targetPlanName, double price) async {
+    final isCurrent = _details.planCode.toUpperCase() == targetPlanCode.toUpperCase();
 
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isCurrent ? 'Renouveler $targetPlanName' : 'Changer pour $targetPlanName'),
-        content: SingleChildScrollView(
-          child: Column(
+    // 1. Cas du forfait permanent GRATUIT (0 FCFA)
+    if (targetPlanCode.toUpperCase() == 'FREE') {
+      if (isCurrent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vous êtes actuellement sur le forfait gratuit local ARIKE.')),
+        );
+        return;
+      }
+
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+          title: const Row(
+            children: [
+              Icon(Icons.offline_bolt_outlined, color: Colors.amber),
+              SizedBox(width: 8),
+              Expanded(child: Text('Passer au Forfait Gratuit')),
+            ],
+          ),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isCurrent
-                    ? 'Renouvellement d\'abonnement :'
-                    : (isUpgrade ? 'Montée en gamme (Upgrade immédiat) :' : 'Changement de formule (Downgrade) :'),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                'Votre abonnement payant actuel reste pleinement actif jusqu\'au ${AppDateFormatter.formatDateLong(_details.expiresAt)}.',
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                isCurrent
-                    ? 'Votre abonnement sera prolongé de $_billingCycleLabel.'
-                    : (isUpgrade
-                        ? 'Votre nouveau forfait s\'activera immédiatement dès confirmation du paiement.'
-                        : 'Votre formule actuelle reste active jusqu\'au ${AppDateFormatter.formatDateLong(_details.expiresAt)}. Le nouveau tarif s\'appliquera à l\'échéance.'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Tarif : ${price.toStringAsFixed(0)} FCFA$_billingSuffix',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'À la fin de cette période, votre compte basculera automatiquement sur le forfait gratuit (100% local, zéro frais à vie). Vos ventes et stocks resteront accessibles mais la sauvegarde Cloud cessera.',
+                style: TextStyle(height: 1.35),
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Annuler'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.amber.shade800),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                Navigator.pop(ctx);
+                final remote = sl.isRegistered<SubscriptionRemoteService>() ? sl<SubscriptionRemoteService>() : null;
+                if (remote != null) {
+                  await remote.subscribe(planCode: 'FREE', durationDays: 3650, amount: 0);
+                  await sl<SubscriptionController>().refreshFromRemote();
+                  if (mounted) {
+                    setState(() => _details = sl<SubscriptionController>().details);
+                  }
+                }
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Votre passage au forfait gratuit a été enregistré avec succès.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Confirmer le passage en Gratuit'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annuler'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showMobileMoneyPaymentModal(
-                context,
-                targetPlanName: targetPlanName,
-                price: price,
-                targetPlanCode: targetPlanCode,
-                isAddon: false,
-              );
-            },
-            child: const Text('Payer via Mobile Money'),
-          ),
-        ],
-      ),
+      );
+      return;
+    }
+
+    // 2. Cas d'un forfait payant (Renouvellement ou Changement)
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return FutureBuilder<Map<String, dynamic>?>(
+          future: sl.isRegistered<SubscriptionRemoteService>()
+              ? sl<SubscriptionRemoteService>().previewSwitch(targetPlanCode: targetPlanCode, durationDays: _durationDays)
+              : null,
+          builder: (dialogCtx, snapshot) {
+            final preview = snapshot.data;
+            final bonusDays = (preview?['bonusDays'] as num?)?.toInt() ?? 0;
+            final transitionType = preview?['transitionType']?.toString() ?? (isCurrent ? 'RENEWAL' : 'UPGRADE');
+            final message = preview?['message']?.toString() ??
+                (isCurrent
+                    ? 'Votre formule actuelle sera prolongée de $_billingCycleLabel sans interruption.'
+                    : 'Votre nouveau forfait s\'activera immédiatement.');
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              title: Text(isCurrent ? 'Renouveler $targetPlanName' : 'Changer pour $targetPlanName'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (snapshot.connectionState == ConnectionState.waiting) ...[
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                    ] else ...[
+                      // Badge de transition
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: transitionType == 'UPGRADE'
+                              ? Colors.purple.shade50
+                              : (transitionType == 'RENEWAL' ? Colors.blue.shade50 : Colors.amber.shade50),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: transitionType == 'UPGRADE'
+                                ? Colors.purple.shade200
+                                : (transitionType == 'RENEWAL' ? Colors.blue.shade200 : Colors.amber.shade200),
+                          ),
+                        ),
+                        child: Text(
+                          transitionType == 'UPGRADE'
+                              ? '🚀 Montée en gamme (Upgrade immédiat)'
+                              : (transitionType == 'RENEWAL'
+                                  ? '🔄 Prolongation de forfait'
+                                  : 'ℹ️ Changement de formule'),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: transitionType == 'UPGRADE'
+                                ? Colors.purple.shade900
+                                : (transitionType == 'RENEWAL' ? Colors.blue.shade900 : Colors.amber.shade900),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(message, style: const TextStyle(height: 1.4)),
+                      if (bonusDays > 0) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.card_giftcard, size: 20, color: Colors.green.shade700),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '+$bonusDays jours bonus offerts grâce au report de votre ancien forfait !',
+                                  style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Tarif : ${price.toStringAsFixed(0)} FCFA$_billingSuffix',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text('Annuler'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(dialogCtx);
+                    _showMobileMoneyPaymentModal(
+                      context,
+                      targetPlanName: targetPlanName,
+                      price: price,
+                      targetPlanCode: targetPlanCode,
+                      isAddon: false,
+                    );
+                  },
+                  child: const Text('Payer via Mobile Money'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -514,10 +659,40 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       _ => Icons.info,
     };
 
-    final bodyContent = ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      children: [
-        if (_details.isRevoked) ...[
+    final bodyContent = RefreshIndicator(
+      onRefresh: () => _loadSubscriptionFromDatabase(forceRefresh: true),
+      child: ListView(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        children: [
+          if (_isLoading && _packages.isEmpty) ...[
+            Card(
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Chargement des offres et options ARIKE...',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Vérification des tarifs et privilèges de votre boutique...',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: colorScheme.outline,
+                          ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (_details.isRevoked) ...[
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -616,28 +791,33 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Votre forfait actuel',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                color: colorScheme.outline,
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _details.planName,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary,
-                              ),
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Votre forfait actuel',
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: colorScheme.outline,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            formatPlanName(_details.planName),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colorScheme.primary,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: AppSpacing.sm),
                     Chip(
                       avatar: Icon(statusIcon, color: Colors.white, size: 16),
-                      label: Text(_details.status),
+                      label: Text(formatSubscriptionStatus(_details.status)),
                       backgroundColor: statusBgColor,
                       labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
@@ -659,6 +839,39 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                       Text('Renouvellement : Manuel'),
                     ],
                   ),
+                  if (_details.grantedModules.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Modules débloqués :',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: colorScheme.outline,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _details.grantedModules.map((m) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: colorScheme.primary.withValues(alpha: 0.2)),
+                          ),
+                          child: Text(
+                            formatModuleName(m),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -740,6 +953,45 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           ),
           const SizedBox(height: AppSpacing.md),
 
+          if (_packages.isEmpty && !_isLoading)
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              margin: const EdgeInsets.only(bottom: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: colorScheme.outlineVariant),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.wifi_off_rounded, size: 36, color: colorScheme.outline),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Souscription en ligne indisponible hors ligne',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Votre forfait actuel reste actif localement. Pour renouveler votre offre ou souscrire à de nouvelles options via Mobile Money, reconnectez votre appareil à Internet.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.outline,
+                          height: 1.35,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton.tonalIcon(
+                    onPressed: () => _loadSubscriptionFromDatabase(forceRefresh: true),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Réessayer la connexion'),
+                  ),
+                ],
+              ),
+            ),
+
           // 🔄 Cartes de forfaits générées dynamiquement depuis la base de données
           ..._packages.map((pkg) {
             final code = pkg['code']?.toString() ?? '';
@@ -808,85 +1060,305 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           }),
           const SizedBox(height: AppSpacing.lg),
 
-          // 💳 Carte 5: Historique des Paiements
+          // 💳 Carte 5: Historique des Abonnements, Paiements & Factures
           Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Historique des paiements & factures',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.receipt_long, color: Theme.of(context).colorScheme.primary, size: 22),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Historique des abonnements',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => _loadSubscriptionFromDatabase(forceRefresh: true),
+                        icon: const Icon(Icons.refresh, size: 20),
+                        tooltip: 'Actualiser l\'historique',
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  ..._details.paymentHistory.map(
-                    (tx) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                      child: Row(
+                  if (_details.paymentHistory.isEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircleAvatar(
-                            child: Icon(Icons.receipt_long, size: 20),
+                          Icon(
+                            Icons.history_toggle_off_rounded,
+                            size: 38,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
                           ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${tx.planName} — ${tx.amount.toStringAsFixed(0)} ${tx.currency}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${AppDateFormatter.formatDate(tx.date)} via ${tx.provider}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Aucune transaction enregistrée',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
                           ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade100,
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
-                            ),
-                            child: Text(
-                              tx.status,
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Vos renouvellements de forfaits et reçus de paiement Mobile Money s\'afficheront ici.',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
-                  ),
+                  ] else ...[
+                    ..._details.paymentHistory.map(
+                      (tx) => Card(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                        elevation: 0,
+                        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          onTap: () => _showReceiptDialog(context, tx),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: tx.status.toUpperCase().contains('PAY')
+                                      ? Colors.green.shade50
+                                      : Colors.amber.shade50,
+                                  child: Icon(
+                                    tx.status.toUpperCase().contains('PAY')
+                                        ? Icons.check_circle_outline
+                                        : Icons.hourglass_top,
+                                    color: tx.status.toUpperCase().contains('PAY')
+                                        ? Colors.green.shade700
+                                        : Colors.amber.shade800,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${tx.planName} — ${tx.amount.toStringAsFixed(0)} ${tx.currency}',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${AppDateFormatter.formatDate(tx.date)} · ${tx.provider}',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                                      ),
+                                      if (tx.reference != null)
+                                        Text(
+                                          'Réf : ${tx.reference}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                fontSize: 10,
+                                                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                                              ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.xs),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: tx.status.toUpperCase().contains('PAY')
+                                            ? Colors.green.shade100
+                                            : Colors.amber.shade100,
+                                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      ),
+                                      child: Text(
+                                        formatSubscriptionStatus(tx.status),
+                                        style: TextStyle(
+                                          color: tx.status.toUpperCase().contains('PAY')
+                                              ? Colors.green.shade800
+                                              : Colors.amber.shade900,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                    if (tx.bonusDays > 0) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '+${tx.bonusDays}j bonus',
+                                        style: TextStyle(
+                                          color: Colors.green.shade700,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
         ],
-      );
+      ),
+    );
 
     final scaffold = Scaffold(
       appBar: AppBar(
         title: const Text('Abonnement & Facturation ARIKE'),
         automaticallyImplyLeading: !widget.mandatoryGate,
       ),
-      body: bodyContent,
+      body: SizedBox(
+        width: double.infinity,
+        child: bodyContent,
+      ),
     );
 
     return PopScope(
       canPop: !widget.mandatoryGate,
       child: scaffold,
+    );
+  }
+
+  void _showReceiptDialog(BuildContext context, PaymentTransactionRecord tx) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.receipt_long, color: Colors.green.shade700, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Reçu de Paiement', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('ARIKE SaaS Commercial', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Divider(),
+              _buildReceiptRow('Référence :', tx.reference ?? tx.id),
+              _buildReceiptRow('Date & Heure :', AppDateFormatter.formatDateLong(tx.date)),
+              _buildReceiptRow('Formule / Plan :', tx.planName),
+              if (tx.expiresAt != null)
+                _buildReceiptRow('Période couverte :', 'Jusqu\'au ${AppDateFormatter.formatDate(tx.expiresAt!)}'),
+              if (tx.bonusDays > 0)
+                _buildReceiptRow('Report prorata :', '+${tx.bonusDays} jours bonus offerts'),
+              _buildReceiptRow('Mode de règlement :', tx.provider),
+              _buildReceiptRow('Statut :', tx.status, valueColor: Colors.green.shade800),
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Montant Réglé :', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    '${tx.amount.toStringAsFixed(0)} ${tx.currency}',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: colorScheme.primary),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.verified, size: 18, color: Colors.green.shade700),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Paiement certifié et synchronisé avec le serveur ARIKE.',
+                        style: TextStyle(color: Colors.green.shade900, fontSize: 11, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReceiptRow(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: valueColor),
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -932,14 +1404,32 @@ class _PlanCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isPopular ? colorScheme.primary : null,
-                      ),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isPopular ? colorScheme.primary : null,
+                        ),
+                  ),
                 ),
-                if (isPopular)
+                if (isCurrent)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Text(
+                      'ACTUEL',
+                      style: TextStyle(
+                        color: Colors.green.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  )
+                else if (isPopular)
                   Chip(
                     label: const Text('Populaire'),
                     backgroundColor: colorScheme.primaryContainer,
@@ -985,7 +1475,7 @@ class _PlanCard extends StatelessWidget {
                     const Icon(Icons.check, size: 16, color: Colors.green),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(f, style: Theme.of(context).textTheme.bodySmall),
+                      child: Text(formatModuleName(f), style: Theme.of(context).textTheme.bodySmall),
                     ),
                   ],
                 ),
@@ -995,15 +1485,25 @@ class _PlanCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: isCurrent
-                  ? OutlinedButton.icon(
-                      onPressed: onSelect,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Renouveler ce forfait'),
-                    )
-                  : FilledButton(
-                      onPressed: onSelect,
-                      child: const Text('Choisir ce forfait'),
-                    ),
+                  ? (price == 0
+                      ? OutlinedButton(
+                          onPressed: null,
+                          child: const Text('Votre Forfait Actuel'),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: onSelect,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Renouveler ce forfait'),
+                        ))
+                  : (price == 0
+                      ? OutlinedButton(
+                          onPressed: onSelect,
+                          child: const Text('Basculer en Forfait Gratuit'),
+                        )
+                      : FilledButton(
+                          onPressed: onSelect,
+                          child: const Text('Choisir ce forfait'),
+                        )),
             ),
           ],
         ),

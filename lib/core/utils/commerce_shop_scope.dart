@@ -9,7 +9,11 @@ class CommerceShopScope {
 
   /// Boutique locale active (V3 : une seule boutique à la fois).
   static List<int> candidateLocalShopIds(AuthSession session) {
-    return [session.shop.id];
+    final ids = <int>{session.shop.id};
+    if (session.user.shopId > 0) {
+      ids.add(session.user.shopId);
+    }
+    return ids.toList();
   }
 
   /// Boutique cible pour la synchronisation cloud (V3 : une boutique à la fois).

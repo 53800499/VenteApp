@@ -16,6 +16,7 @@ import '../bloc/customer_list_bloc.dart';
 import 'customer_detail_page.dart';
 import 'customer_form_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
+import '../widgets/desktop_customer_list_view.dart';
 
 class CustomerListPage extends StatefulWidget {
   const CustomerListPage({
@@ -45,19 +46,65 @@ class _CustomerListPageState extends State<CustomerListPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Column(
-        children: [
-          BlocBuilder<CustomerListBloc, CustomerListState>(
-                  buildWhen: (prev, curr) =>
-                      prev.isRefreshing != curr.isRefreshing,
-                  builder: (context, state) {
-                    if (!state.isRefreshing) {
-                      return const SizedBox.shrink();
-                    }
-                    return const LinearProgressIndicator();
+    return ResponsiveBuilder(
+      builder: (context, screenType) {
+        final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+
+        if (isDesktop) {
+          return BlocBuilder<CustomerListBloc, CustomerListState>(
+            builder: (context, state) {
+              if (state.status == CustomerListStatus.initial && state.customers.isEmpty) {
+                return const Scaffold(body: SaleListSkeleton());
+              }
+              return Scaffold(
+                body: DesktopCustomerListView(
+                  session: widget.session,
+                  state: state,
+                  searchController: _searchController,
+                  onSearchChanged: (value) {
+                    setState(() {});
+                    context.read<CustomerListBloc>().add(CustomerListSearchChanged(value));
                   },
+                  onClearSearch: () {
+                    _searchController.clear();
+                    context.read<CustomerListBloc>().add(const CustomerListSearchChanged(''));
+                    setState(() {});
+                  },
+                  onRefresh: () async {
+                    context.read<CustomerListBloc>().add(const CustomerListRefreshRequested());
+                    await context.read<CustomerListBloc>().stream.firstWhere(
+                          (s) => s.status == CustomerListStatus.ready && !s.isRefreshing,
+                        );
+                  },
+                  onNewCustomer: () => _openCreate(context),
+                  onCustomerTap: (id) => _openDetail(context, id),
+                  onDebtFilterToggled: (v) {
+                    context.read<CustomerListBloc>().add(CustomerListDebtFilterToggled(v));
+                  },
+                  onSortSelected: (sort) {
+                    context.read<CustomerListBloc>().add(CustomerListSortChanged(sort));
+                  },
+                  canWrite: _canWrite,
                 ),
+              );
+            },
+          );
+        }
+
+        // --- RENDU MOBILE STRICTEMENT IDENTIQUE ET PRÉSERVÉ ---
+        return Scaffold(
+          body: Column(
+            children: [
+              BlocBuilder<CustomerListBloc, CustomerListState>(
+                buildWhen: (prev, curr) =>
+                    prev.isRefreshing != curr.isRefreshing,
+                builder: (context, state) {
+                  if (!state.isRefreshing) {
+                    return const SizedBox.shrink();
+                  }
+                  return const LinearProgressIndicator();
+                },
+              ),
                 ResponsiveBuilder(
                   builder: (context, screenType) {
                     final horizontal =
@@ -177,6 +224,8 @@ class _CustomerListPageState extends State<CustomerListPage> {
                   : const [],
             ),
           );
+        },
+      );
   }
 
   Future<void> _openCreate(BuildContext context) async {
@@ -230,14 +279,14 @@ class _CustomerListBody extends StatelessWidget {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.sm,
         AppSpacing.md,
-        110,
+        context.isCompactScreen ? 110.0 : AppSpacing.md,
       ),
       itemCount: state.customers.length + (showBanner ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
         if (showBanner && index == 0) {
           return _DebtorsBanner(overview: state.debtorsOverview!);
@@ -447,14 +496,19 @@ class _CustomerListTile extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              customer.phone != null && customer.phone!.isNotEmpty
-                                  ? customer.phone!
-                                  : 'Pas de numéro',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
+                            Expanded(
+                              child: Text(
+                                customer.phone != null && customer.phone!.isNotEmpty
+                                    ? customer.phone!
+                                    : 'Pas de numéro',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
+                            const SizedBox(width: AppSpacing.sm),
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

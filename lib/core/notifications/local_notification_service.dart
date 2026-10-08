@@ -20,6 +20,10 @@ class LocalNotificationService {
 
   Future<void> initialize({NotificationTapCallback? onTap}) async {
     if (_initialized) return;
+    if (!kIsWeb && Platform.isWindows) {
+      _initialized = true;
+      return;
+    }
     _onTap = onTap;
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -115,7 +119,7 @@ class LocalNotificationService {
   }
 
   Future<void> showItem(NotificationItem item, {int? notificationId}) async {
-    if (!_initialized) return;
+    if (!_initialized || (!kIsWeb && Platform.isWindows)) return;
 
     final id = notificationId ?? _stableId(item);
     final channelId = AndroidNotificationChannels.channelIdFor(item.channel);
@@ -132,18 +136,26 @@ class LocalNotificationService {
       iOS: const DarwinNotificationDetails(),
     );
 
-    await _plugin.show(
-      id,
-      item.title,
-      item.body,
-      details,
-      payload: item.deepLink,
-    );
+    try {
+      await _plugin.show(
+        id,
+        item.title,
+        item.body,
+        details,
+        payload: item.deepLink,
+      );
+    } catch (e) {
+      debugPrint('LocalNotificationService show error: $e');
+    }
   }
 
   Future<void> cancelDailySummary() async {
-    if (!_initialized) return;
-    await _plugin.cancel(NotificationIds.dailySummary);
+    if (!_initialized || (!kIsWeb && Platform.isWindows)) return;
+    try {
+      await _plugin.cancel(NotificationIds.dailySummary);
+    } catch (e) {
+      debugPrint('LocalNotificationService cancel error: $e');
+    }
   }
 
   int _stableId(NotificationItem item) {

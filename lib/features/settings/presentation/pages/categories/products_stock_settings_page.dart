@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../app/theme/app_tokens.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
 
@@ -39,10 +40,11 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
           }
           _alertThreshold = config.inventory.defaultAlertThreshold;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          return AppPageContainer(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header card
                 Container(
@@ -283,9 +285,10 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                 ),
               ],
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

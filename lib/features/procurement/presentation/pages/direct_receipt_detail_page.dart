@@ -12,6 +12,7 @@ import '../bloc/procurement_bloc.dart';
 import '../widgets/procurement_feedback.dart';
 import 'invoice_detail_page.dart';
 import 'record_supplier_payment_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class DirectReceiptDetailPage extends StatefulWidget {
   const DirectReceiptDetailPage({super.key, required this.receiptId});
@@ -111,9 +112,10 @@ class _DirectReceiptDetailPageState extends State<DirectReceiptDetailPage> {
               remaining > 0 &&
               invoice.status != SupplierInvoiceStatus.paid;
 
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            children: [
+          return AppPageContainer(
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              children: [
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -368,7 +370,8 @@ class _DirectReceiptDetailPageState extends State<DirectReceiptDetailPage> {
                 ],
               ],
             ],
-          );
+          ),
+        );
   }
 
   String _formatDate(int ms) {

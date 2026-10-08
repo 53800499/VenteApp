@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 
 import '../audit/local_audit_writer.dart';
 import '../database/app_database.dart';
+import '../security/production_message_policy.dart';
 import '../utils/time.dart';
 import '../../features/customers/data/datasources/local/customers_local_datasource.dart';
 import '../../features/customers/data/datasources/remote/customers_remote_datasource.dart';
@@ -98,7 +99,9 @@ class SyncConflictService {
           operation: row.operation,
           localSummary: _summarizePayload(row.payload),
           localDetails: details,
-          serverMessage: row.lastError,
+          serverMessage: row.lastError != null
+              ? ProductionMessagePolicy.sanitize(row.lastError!)
+              : null,
           serverDetails: deliverWarning
               ? '${_formatServerError(row.lastError) ?? ''}\n\n'
                   'Attention : garder le serveur abandonne cette sync. '
@@ -387,7 +390,11 @@ class SyncConflictService {
 
   String? _formatServerError(String? error) {
     if (error == null || error.isEmpty) return null;
-    return _prettyJson(error) ?? error;
+    final sanitized = ProductionMessagePolicy.sanitize(error);
+    if (!ProductionMessagePolicy.isTechnicalMessage(error)) {
+      return _prettyJson(sanitized) ?? sanitized;
+    }
+    return sanitized;
   }
 
   String? _prettyJson(String raw) {

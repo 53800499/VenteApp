@@ -13,6 +13,7 @@ import '../../../sales/presentation/pages/sale_detail_page.dart';
 import '../../domain/entities/sales_order.dart';
 import '../bloc/sales_order_bloc.dart';
 import 'sales_order_deliver_page.dart';
+import '../../../../shared/components/app_page_container.dart';
 
 class SalesOrderDetailPage extends StatefulWidget {
   const SalesOrderDetailPage({
@@ -138,8 +139,9 @@ class _SalesOrderDetailPageState extends State<SalesOrderDetailPage> {
 
           return Stack(
             children: [
-              ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
+              AppPageContainer(
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   _SoHeaderCard(order: order),
                   const SizedBox(height: AppSpacing.lg),
@@ -170,6 +172,7 @@ class _SalesOrderDetailPageState extends State<SalesOrderDetailPage> {
                   const SizedBox(height: AppSpacing.xl),
                 ],
               ),
+            ),
               if (state.saving)
                 const Positioned(
                   left: 0,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../domain/module_access_guard.dart';
 
-class LicenseStatusBanner extends StatelessWidget {
+class LicenseStatusBanner extends StatefulWidget {
   final LicenseInfo licenseInfo;
   final VoidCallback? onRenewPressed;
 
@@ -12,8 +12,23 @@ class LicenseStatusBanner extends StatelessWidget {
   });
 
   @override
+  State<LicenseStatusBanner> createState() => _LicenseStatusBannerState();
+}
+
+class _LicenseStatusBannerState extends State<LicenseStatusBanner> {
+  bool _dismissed = false;
+
+  @override
+  void didUpdateWidget(covariant LicenseStatusBanner oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.licenseInfo.state != widget.licenseInfo.state) {
+      _dismissed = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext me) {
-    if (licenseInfo.state == LicenseState.active) {
+    if (_dismissed || widget.licenseInfo.state == LicenseState.active) {
       return const SizedBox.shrink();
     }
 
@@ -22,13 +37,13 @@ class LicenseStatusBanner extends StatelessWidget {
     final IconData icon;
     final String message;
 
-    switch (licenseInfo.state) {
+    switch (widget.licenseInfo.state) {
       case LicenseState.inGracePeriod:
         backgroundColor = Colors.amber.shade100;
         textColor = Colors.amber.shade900;
         icon = Icons.warning_amber_rounded;
         message =
-            'Période de grâce : Votre abonnement expiré. Il vous reste ${licenseInfo.remainingGraceDays} jour(s) pour le renouveler.';
+            'Période de grâce : Votre abonnement expiré. Il vous reste ${widget.licenseInfo.remainingGraceDays} jour(s) pour le renouveler.';
         break;
       case LicenseState.restrictedReadOnly:
         backgroundColor = Colors.orange.shade100;
@@ -56,7 +71,7 @@ class LicenseStatusBanner extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
         color: backgroundColor,
         border: Border(
@@ -77,12 +92,12 @@ class LicenseStatusBanner extends StatelessWidget {
               ),
             ),
           ),
-          if (onRenewPressed != null &&
-              (licenseInfo.state == LicenseState.inGracePeriod ||
-                  licenseInfo.state == LicenseState.restrictedReadOnly)) ...[
+          if (widget.onRenewPressed != null &&
+              (widget.licenseInfo.state == LicenseState.inGracePeriod ||
+                  widget.licenseInfo.state == LicenseState.restrictedReadOnly)) ...[
             const SizedBox(width: 8),
             TextButton(
-              onPressed: onRenewPressed,
+              onPressed: widget.onRenewPressed,
               style: TextButton.styleFrom(
                 foregroundColor: textColor,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -97,6 +112,16 @@ class LicenseStatusBanner extends StatelessWidget {
               ),
             ),
           ],
+          IconButton(
+            icon: Icon(Icons.close, size: 18, color: textColor),
+            tooltip: 'Fermer',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            onPressed: () {
+              setState(() => _dismissed = true);
+            },
+          ),
         ],
       ),
     );

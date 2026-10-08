@@ -9,7 +9,8 @@ import 'api_error_humanizer.dart';
 import 'failures.dart';
 
 /// Convertit toute exception en message lisible pour l'utilisateur.
-String friendlyErrorMessage(Object error) {
+String friendlyErrorMessage(Object? error) {
+  if (error == null) return 'Une erreur est survenue. Réessayez.';
   if (error is Failure) {
     return ProductionMessagePolicy.sanitize(
       humanizeAuthErrorMessage(error.message),
@@ -17,9 +18,7 @@ String friendlyErrorMessage(Object error) {
   }
   if (error is TimeoutException) {
     return ProductionMessagePolicy.sanitize(
-      humanizeAuthErrorMessage(
-        'Le service met trop de temps à répondre. Réessayez.',
-      ),
+      'Le service met trop de temps à répondre. Vérifiez votre connexion internet.',
     );
   }
   if (error is DioException) {
@@ -55,6 +54,25 @@ Failure mapDioException(DioException error) {
   final statusCode = error.response?.statusCode;
   final body = error.response?.data;
 
+  // Interception stricte du 403 (Accès interdit / licence requise / permissions)
+  if (statusCode == 403) {
+    if (body is Map<String, dynamic>) {
+      final apiError = body['error'];
+      if (apiError is Map<String, dynamic>) {
+        final failure = _mapApiErrorPayload(apiError, statusCode);
+        if (failure != null) return failure;
+      }
+      final message = body['message'];
+      if (message is String &&
+          message.isNotEmpty &&
+          !ProductionMessagePolicy.isTechnicalMessage(message) &&
+          !message.toLowerCase().contains('forbidden')) {
+        return UnauthorizedFailure(humanizeAuthErrorMessage(message));
+      }
+    }
+    return UnauthorizedFailure(_httpStatusMessage(403));
+  }
+
   if (body is Map<String, dynamic>) {
     final apiError = body['error'];
     if (apiError is Map<String, dynamic>) {
@@ -85,7 +103,7 @@ Failure mapDioException(DioException error) {
       }
       final text = message['message'];
       if (text is String && text.isNotEmpty) {
-        return UnauthorizedFailure(text);
+        return UnauthorizedFailure(humanizeAuthErrorMessage(text));
       }
     }
     if (message is String && message.isNotEmpty) {
@@ -94,7 +112,6 @@ Failure mapDioException(DioException error) {
         return _conflictFailure(human, body);
       }
       if (statusCode == 404) return NotFoundFailure(human);
-      if (statusCode == 403) return UnauthorizedFailure(human);
       if (statusCode == 401) {
         return UnauthorizedFailure(
           human == message
@@ -112,6 +129,12 @@ Failure mapDioException(DioException error) {
   }
 
   if (body is String && body.isNotEmpty) {
+    if (ProductionMessagePolicy.isTechnicalMessage(body) ||
+        body.trim().startsWith('<') ||
+        body.toLowerCase().contains('forbidden') ||
+        body.toLowerCase().contains('unauthorized')) {
+      return UnauthorizedFailure(_httpStatusMessage(statusCode));
+    }
     return UnauthorizedFailure(humanizeApiErrorMessage(body));
   }
 
@@ -122,14 +145,14 @@ String _httpStatusMessage(int? statusCode) {
   return switch (statusCode) {
     400 => 'Données invalides. Vérifiez votre saisie.',
     401 => 'Session expirée. Saisissez votre PIN de connexion.',
-    403 => 'Action non autorisée.',
-    404 => 'Boutique ou utilisateur introuvable.',
+    403 => 'Action non autorisée ou option non incluse dans votre forfait.',
+    404 => 'Élément ou boutique introuvable sur le service en ligne.',
     409 => 'Conflit avec des données déjà enregistrées sur le cloud.',
     422 => 'Informations incorrectes. Vérifiez votre saisie.',
-    429 => 'Trop de tentatives. Patientez avant de réessayer.',
-    500 => 'Le service en ligne a rencontré une erreur. Réessayez.',
-    502 || 503 || 504 => 'Service temporairement indisponible.',
-    _ => 'Erreur réseau. Réessayez.',
+    429 => 'Trop de tentatives rapprochées. Patientez un instant avant de réessayer.',
+    500 => 'Le service en ligne a rencontré une anomalie temporaire. Vos données locales restent en sécurité.',
+    502 || 503 || 504 => 'Service en ligne temporairement inaccessible. Vos opérations hors-ligne continuent normalement.',
+    _ => 'Connexion temporairement instable. Vos données restent enregistrées sur cet appareil.',
   };
 }
 
@@ -156,6 +179,19 @@ Failure? _mapApiErrorPayload(Map<String, dynamic> apiError, int? statusCode) {
   }
 
   final message = apiError['message'];
+  final action = apiError['action'] as String?;
+  final retryable = apiError['retryable'] as bool?;
+
+  if (retryable == false || (action != null && action != 'RETRY')) {
+    final msg = message is String
+        ? humanizeAuthErrorMessage(message)
+        : 'Intervention nécessaire pour cette opération.';
+    return ActionRequiredFailure(
+      message: msg,
+      suggestedAction: action ?? 'EDIT_OPERATION',
+    );
+  }
+
   if (message is String && message.isNotEmpty) {
     final human = humanizeAuthErrorMessage(message);
     if (statusCode == 400) {

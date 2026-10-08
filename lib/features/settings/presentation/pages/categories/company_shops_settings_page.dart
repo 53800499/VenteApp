@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../app/theme/app_tokens.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../../shop/presentation/pages/shop_list_page.dart';
 import '../../../domain/entities/settings_entities.dart';
@@ -68,10 +69,11 @@ class _CompanyShopsSettingsPageState extends State<CompanyShopsSettingsPage> {
           }
           _hydrate(config);
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          return AppPageContainer(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header card
                 Container(
@@ -210,9 +212,10 @@ class _CompanyShopsSettingsPageState extends State<CompanyShopsSettingsPage> {
                 ),
               ],
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

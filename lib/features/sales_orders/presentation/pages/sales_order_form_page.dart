@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/components/app_dropdown.dart';
+import '../../../../shared/components/app_page_container.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -219,8 +220,9 @@ class _SalesOrderFormPageState extends State<SalesOrderFormPage> {
         appBar: AppBar(title: const Text('Nouvelle commande')),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.all(AppSpacing.md),
+            : AppPageContainer.form(
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.md),
                 children: [
                   DropdownButtonFormField<int>(
                     value: _customerId,
@@ -300,6 +302,7 @@ class _SalesOrderFormPageState extends State<SalesOrderFormPage> {
                   ),
                 ],
               ),
+            ),
       ),
     );
   }

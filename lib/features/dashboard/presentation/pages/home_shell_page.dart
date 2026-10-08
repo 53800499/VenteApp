@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -7,7 +9,6 @@ import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/auth/widgets/cloud_session_notice.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
-import '../../../../core/responsive/screen_type.dart';
 import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
 import '../../../../shared/guards/permission_guard.dart';
@@ -15,7 +16,10 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../shop/presentation/widgets/shop_switcher_sheet.dart';
 import '../../../../core/network/widgets/offline_mode_banner.dart';
+import '../../../../core/sync/sync_service.dart';
+import '../../../../core/sync/sync_snapshot.dart';
 import '../../../../core/sync/widgets/sync_status_indicator.dart';
+import '../../../../shared/widgets/header_lock_button.dart';
 import '../../../../core/notifications/notification_orchestrator.dart';
 import '../../../../core/notifications/notification_permission_prompter.dart';
 import '../../../sales/presentation/bloc/sale_list_bloc.dart';
@@ -32,8 +36,25 @@ import '../../../fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 import '../../../subscription/domain/services/subscription_controller.dart';
 import '../../../subscription/presentation/pages/subscription_page.dart';
+import '../../../subscription/presentation/widgets/data_security_upgrade_modal.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
+import '../../../audit/presentation/pages/audit_journal_page.dart';
+import '../../../calculators/presentation/pages/calculators_page.dart';
+import '../../../cash_sessions/presentation/pages/cash_sessions_page.dart';
+import '../../../expenses/presentation/pages/expenses_page.dart';
+import '../../../procurement/presentation/pages/procurement_page.dart';
+import '../../../rbac/presentation/pages/roles_catalog_page.dart';
+import '../../../reports/presentation/pages/reports_page.dart';
+import '../../../sales_analysis/presentation/pages/sales_analysis_page.dart';
+import '../../../sales_orders/presentation/pages/sales_orders_page.dart';
+import '../../../settings/presentation/pages/settings_page.dart';
+import '../../../shop/presentation/pages/shop_list_page.dart';
+import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
+import '../../../users/presentation/pages/user_list_page.dart';
 import '../bloc/dashboard_bloc.dart';
+import '../models/sidebar_destination.dart';
+import '../widgets/desktop_breadcrumb_header.dart';
+import '../widgets/desktop_sidebar.dart';
 import 'dashboard_page.dart';
 
 class HomeShellPage extends StatefulWidget {
@@ -47,6 +68,7 @@ class HomeShellPage extends StatefulWidget {
 
 class _HomeShellPageState extends State<HomeShellPage> {
   int _currentIndex = 0;
+  SidebarDestination _activeDestination = SidebarDestination.dashboard;
   FxWorkspaceModeController? _fxWorkspace;
 
   bool get _canViewFx => PermissionGuard.can(
@@ -59,9 +81,56 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
   SubscriptionController? _subController;
 
+  late final DashboardBloc _dashboardBloc;
+  late final SaleListBloc _saleListBloc;
+  late final CustomerListBloc _customerListBloc;
+  late final ProductListBloc _productListBloc;
+
+  final _dashboardNavKey = GlobalKey<NavigatorState>();
+  final _salesNavKey = GlobalKey<NavigatorState>();
+  final _inventoryNavKey = GlobalKey<NavigatorState>();
+  final _customersNavKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
+    sl<SyncService>().scheduleSync(
+      shopId: widget.session.shop.id,
+      trigger: SyncTrigger.appStarted,
+    );
+    _dashboardBloc = DashboardBloc(
+      getDashboard: sl(),
+      session: widget.session,
+      syncService: sl(),
+    )..add(const DashboardLoadRequested());
+
+    _saleListBloc = SaleListBloc(
+      listSales: sl(),
+      repository: sl(),
+      syncPolicy: sl(),
+      session: widget.session,
+      syncService: sl(),
+    )..add(const SaleListLoadRequested());
+
+    _customerListBloc = CustomerListBloc(
+      listCustomers: sl(),
+      listDebtors: sl(),
+      repository: sl(),
+      saleRepository: sl(),
+      syncPolicy: sl(),
+      session: widget.session,
+      syncService: sl(),
+    )..add(const CustomerListLoadRequested());
+
+    _productListBloc = ProductListBloc(
+      listProducts: sl(),
+      listCategories: sl(),
+      repository: sl(),
+      syncPolicy: sl(),
+      session: widget.session,
+      syncService: sl(),
+    )..add(const ProductListLoadRequested());
+
     try {
       ensureFxExchangeDependencies();
       final workspace = sl<FxWorkspaceModeController>();
@@ -102,6 +171,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
           builder: (_) => const SubscriptionPage(mandatoryGate: true),
         ),
       );
+    } else if (controller.details.isDataAtRisk && mounted) {
+      // Sensibilisation pédagogique obligatoire : invite l'utilisateur local à passer à un forfait sécurisé
+      await DataSecurityUpgradeModal.show(context);
     }
   }
 
@@ -109,12 +181,19 @@ class _HomeShellPageState extends State<HomeShellPage> {
   void dispose() {
     _fxWorkspace?.removeListener(_onFxWorkspaceChanged);
     _subController?.removeListener(_onSubscriptionChanged);
+    _dashboardBloc.close();
+    _saleListBloc.close();
+    _customerListBloc.close();
+    _productListBloc.close();
     super.dispose();
   }
 
   void _onFxWorkspaceChanged() {
     if (!mounted) return;
-    setState(() => _currentIndex = 0);
+    setState(() {
+      _currentIndex = 0;
+      _activeDestination = SidebarDestination.dashboard;
+    });
   }
 
   Future<void> _loadFxWorkspaceMode() async {
@@ -130,21 +209,49 @@ class _HomeShellPageState extends State<HomeShellPage> {
   }
 
   Future<void> _bootstrapNotifications() async {
-    ensureNotificationsDependencies();
-    if (mounted) {
-      await NotificationPermissionPrompter().maybePrompt(context);
-    }
-    final orchestrator = sl<NotificationOrchestrator>();
-    orchestrator.bindShop(widget.session.shop.id);
-    await orchestrator.processPending(shopId: widget.session.shop.id);
-    if (!mounted) return;
-    final link = orchestrator.deepLinks.consumePending();
-    if (link != null) {
-      orchestrator.deepLinks.handle(context, link, widget.session);
+    try {
+      ensureNotificationsDependencies();
+      if (mounted && !kIsWeb && !Platform.isWindows) {
+        await NotificationPermissionPrompter().maybePrompt(context);
+      }
+      final orchestrator = sl<NotificationOrchestrator>();
+      orchestrator.bindShop(widget.session.shop.id);
+      await orchestrator.processPending(shopId: widget.session.shop.id);
+      if (!mounted) return;
+      final link = orchestrator.deepLinks.consumePending();
+      if (link != null) {
+        orchestrator.deepLinks.handle(context, link, widget.session);
+      }
+    } catch (e) {
+      debugPrint('Notification bootstrap error: $e');
     }
   }
 
   void _openNewSale(BuildContext context) {
+    final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+    if (isDesktop) {
+      _onSidebarDestinationSelected(SidebarDestination.sales);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _salesNavKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (_) => NewSalePage(session: widget.session),
+          ),
+        ).then((created) async {
+          if (created != true) return;
+          _customerListBloc.add(const CustomerListLocalRefreshRequested());
+          _saleListBloc.add(const SaleListLocalRefreshRequested());
+          _productListBloc.add(const ProductListLocalRefreshRequested());
+          _dashboardBloc.add(const DashboardRefreshRequested());
+          try {
+            await sl<NotificationOrchestrator>().processPending(
+              shopId: widget.session.shop.id,
+            );
+          } catch (_) {}
+        });
+      });
+      return;
+    }
+
     Navigator.of(context)
         .push(
       MaterialPageRoute(
@@ -152,55 +259,45 @@ class _HomeShellPageState extends State<HomeShellPage> {
       ),
     )
         .then((created) async {
-      if (created != true || !context.mounted) return;
-      context.read<CustomerListBloc>().add(
+      if (created != true) return;
+      _customerListBloc.add(
             const CustomerListLocalRefreshRequested(),
           );
-      context.read<SaleListBloc>().add(const SaleListLocalRefreshRequested());
-      context.read<ProductListBloc>().add(
+      _saleListBloc.add(const SaleListLocalRefreshRequested());
+      _productListBloc.add(
             const ProductListLocalRefreshRequested(),
           );
-      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
-      await sl<NotificationOrchestrator>().processPending(
-        shopId: widget.session.shop.id,
-      );
+      _dashboardBloc.add(const DashboardRefreshRequested());
+      try {
+        await sl<NotificationOrchestrator>().processPending(
+          shopId: widget.session.shop.id,
+        );
+      } catch (_) {}
       if (!mounted) return;
-      setState(() => _currentIndex = _useFxPrimary ? 0 : 1);
+      _onSidebarDestinationSelected(
+        _useFxPrimary ? SidebarDestination.dashboard : SidebarDestination.sales,
+      );
     });
   }
 
   void _openSalesTab() {
-    setState(() => _currentIndex = _useFxPrimary ? 2 : 1);
+    _onSidebarDestinationSelected(SidebarDestination.sales);
   }
 
   void _openFxExchange(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => FxExchangePage(session: widget.session),
-      ),
-    );
+    _onSidebarDestinationSelected(SidebarDestination.fxExchange);
   }
 
   void _openLowStockProducts(BuildContext context) {
-    if (_useFxPrimary) {
-      setState(() => _currentIndex = 2);
-      return;
+    _onSidebarDestinationSelected(SidebarDestination.inventory);
+    if (!_useFxPrimary) {
+      _productListBloc.add(const ProductListLowStockToggled(true));
     }
-    setState(() => _currentIndex = 2);
-    context.read<ProductListBloc>().add(const ProductListLowStockToggled(true));
   }
 
   void _openDebtors(BuildContext context) {
-    if (_useFxPrimary) {
-      setState(() => _currentIndex = 1);
-      context.read<CustomerListBloc>().add(
-            const CustomerListShowDebtorsToggled(true),
-          );
-      return;
-    }
-    setState(() => _currentIndex = 3);
-    context.read<ProductListBloc>().add(const ProductListLowStockToggled(false));
-    context.read<CustomerListBloc>().add(
+    _onSidebarDestinationSelected(SidebarDestination.customers);
+    _customerListBloc.add(
           const CustomerListShowDebtorsToggled(true),
         );
   }
@@ -209,25 +306,190 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _currentIndex = index;
       if (!_useFxPrimary) {
+        _activeDestination = switch (index) {
+          0 => SidebarDestination.dashboard,
+          1 => SidebarDestination.sales,
+          2 => SidebarDestination.inventory,
+          3 => SidebarDestination.customers,
+          _ => SidebarDestination.dashboard,
+        };
         if (index != 2) {
-          context.read<ProductListBloc>().add(
+          _productListBloc.add(const ProductListLowStockToggled(false));
+        }
+        if (index != 3) {
+          _customerListBloc.add(const CustomerListShowDebtorsToggled(false));
+        }
+        if (index == 0) {
+          _dashboardBloc.add(const DashboardRefreshRequested());
+        }
+      } else {
+        _activeDestination = switch (index) {
+          0 => SidebarDestination.dashboard,
+          1 => SidebarDestination.customers,
+          _ => SidebarDestination.dashboard,
+        };
+        if (index != 1) {
+          _customerListBloc.add(const CustomerListShowDebtorsToggled(false));
+        }
+      }
+    });
+  }
+
+  void _onSidebarDestinationSelected(SidebarDestination destination) {
+    setState(() {
+      _activeDestination = destination;
+      if (destination == SidebarDestination.dashboard) {
+        _currentIndex = 0;
+      } else if (destination == SidebarDestination.sales) {
+        _currentIndex = _useFxPrimary ? 0 : 1;
+      } else if (destination == SidebarDestination.inventory) {
+        _currentIndex = 2;
+      } else if (destination == SidebarDestination.customers) {
+        _currentIndex = _useFxPrimary ? 1 : 3;
+      }
+
+      if (!_useFxPrimary) {
+        if (destination != SidebarDestination.inventory) {
+          _productListBloc.add(
                 const ProductListLowStockToggled(false),
               );
         }
-        if (index != 3) {
-          context.read<CustomerListBloc>().add(
+        if (destination != SidebarDestination.customers) {
+          _customerListBloc.add(
                 const CustomerListShowDebtorsToggled(false),
               );
         }
-      } else if (index != 1) {
-        context.read<CustomerListBloc>().add(
+      } else if (destination != SidebarDestination.customers) {
+        _customerListBloc.add(
               const CustomerListShowDebtorsToggled(false),
             );
       }
     });
-    if (!_useFxPrimary && index == 0) {
-      context.read<DashboardBloc>().add(const DashboardRefreshRequested());
+
+    if (!_useFxPrimary && destination == SidebarDestination.dashboard) {
+      _dashboardBloc.add(const DashboardRefreshRequested());
     }
+  }
+
+  Widget _buildDestinationWidget(SidebarDestination destination) {
+    return switch (destination) {
+      SidebarDestination.dashboard => _SubpageNavigator(
+          key: const ValueKey('desktop_dashboard'),
+          navigatorKey: _dashboardNavKey,
+          child: DashboardPage(
+            session: widget.session,
+            onLowStockTap: () => _openLowStockProducts(context),
+            onNewSaleTap: () => _openNewSale(context),
+            onSalesHistoryTap: _openSalesTab,
+            onDebtorsTap: () => _openDebtors(context),
+            onFxExchangeTap: _canViewFx ? () => _openFxExchange(context) : null,
+          ),
+        ),
+      SidebarDestination.sales => _SubpageNavigator(
+          key: const ValueKey('desktop_sales'),
+          navigatorKey: _salesNavKey,
+          child: SaleListPage(session: widget.session),
+        ),
+      SidebarDestination.inventory => _SubpageNavigator(
+          key: const ValueKey('desktop_inventory'),
+          navigatorKey: _inventoryNavKey,
+          child: ProductListPage(session: widget.session),
+        ),
+      SidebarDestination.customers => _SubpageNavigator(
+          key: const ValueKey('desktop_customers'),
+          navigatorKey: _customersNavKey,
+          child: CustomerListPage(session: widget.session),
+        ),
+      SidebarDestination.cashSessions => _SubpageNavigator(
+          key: const ValueKey('cashSessions'),
+          child: CashSessionsPage(session: widget.session),
+        ),
+      SidebarDestination.expenses => _SubpageNavigator(
+          key: const ValueKey('expenses'),
+          child: ExpensesPage(session: widget.session),
+        ),
+      SidebarDestination.procurement => _SubpageNavigator(
+          key: const ValueKey('procurement'),
+          child: ProcurementPage(session: widget.session),
+        ),
+      SidebarDestination.salesOrders => _SubpageNavigator(
+          key: const ValueKey('salesOrders'),
+          child: SalesOrdersPage(session: widget.session),
+        ),
+      SidebarDestination.stockTransfer => _SubpageNavigator(
+          key: const ValueKey('stockTransfer'),
+          child: StockTransferPage(session: widget.session),
+        ),
+      SidebarDestination.reports => _SubpageNavigator(
+          key: const ValueKey('reports'),
+          child: ReportsPage(session: widget.session),
+        ),
+      SidebarDestination.salesAnalysis => _SubpageNavigator(
+          key: const ValueKey('salesAnalysis'),
+          child: SalesAnalysisPage(session: widget.session),
+        ),
+      SidebarDestination.calculators => _SubpageNavigator(
+          key: const ValueKey('calculators'),
+          child: CalculatorsPage(session: widget.session),
+        ),
+      SidebarDestination.fxExchange => _SubpageNavigator(
+          key: const ValueKey('fxExchange'),
+          child: FxExchangePage(session: widget.session),
+        ),
+      SidebarDestination.users => _SubpageNavigator(
+          key: const ValueKey('users'),
+          child: UserListPage(session: widget.session),
+        ),
+      SidebarDestination.roles => _SubpageNavigator(
+          key: const ValueKey('roles'),
+          child: RolesCatalogPage(session: widget.session),
+        ),
+      SidebarDestination.shops => _SubpageNavigator(
+          key: const ValueKey('shops'),
+          child: ShopListPage(session: widget.session),
+        ),
+      SidebarDestination.subscription => const _SubpageNavigator(
+          key: ValueKey('subscription'),
+          child: SubscriptionPage(),
+        ),
+      SidebarDestination.settings => _SubpageNavigator(
+          key: const ValueKey('settings'),
+          child: SettingsPage(session: widget.session),
+        ),
+      SidebarDestination.audit => _SubpageNavigator(
+          key: const ValueKey('audit'),
+          child: AuditJournalPage(session: widget.session),
+        ),
+    };
+  }
+
+  Widget _buildDesktopContent() {
+    final isCore = _activeDestination == SidebarDestination.dashboard ||
+        _activeDestination == SidebarDestination.sales ||
+        _activeDestination == SidebarDestination.inventory ||
+        _activeDestination == SidebarDestination.customers;
+
+    if (!isCore) {
+      return _buildDestinationWidget(_activeDestination);
+    }
+
+    final coreIndex = switch (_activeDestination) {
+      SidebarDestination.dashboard => 0,
+      SidebarDestination.sales => 1,
+      SidebarDestination.inventory => 2,
+      SidebarDestination.customers => 3,
+      _ => 0,
+    };
+
+    return IndexedStack(
+      index: coreIndex,
+      children: [
+        _buildDestinationWidget(SidebarDestination.dashboard),
+        _buildDestinationWidget(SidebarDestination.sales),
+        _buildDestinationWidget(SidebarDestination.inventory),
+        _buildDestinationWidget(SidebarDestination.customers),
+      ],
+    );
   }
 
   /// Guide module pour l'onglet courant (null = déjà couvert ailleurs ou Plus).
@@ -311,93 +573,15 @@ class _HomeShellPageState extends State<HomeShellPage> {
               label: 'Plus',
             ),
           ];
-    final railDestinations = useFx
-        ? const [
-            NavigationRailDestination(
-              icon: Icon(Icons.currency_exchange),
-              selectedIcon: Icon(Icons.currency_exchange),
-              label: Text('Change'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people_rounded),
-              label: Text('Clients'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.more_horiz),
-              selectedIcon: Icon(Icons.more_horiz),
-              label: Text('Plus'),
-            ),
-          ]
-        : const [
-            NavigationRailDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: Text('Accueil'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.point_of_sale_outlined),
-              selectedIcon: Icon(Icons.point_of_sale_rounded),
-              label: Text('Ventes'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.inventory_2_outlined),
-              selectedIcon: Icon(Icons.inventory_2_rounded),
-              label: Text('Stock'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people_rounded),
-              label: Text('Clients'),
-            ),
-            NavigationRailDestination(
-              icon: Icon(Icons.more_horiz),
-              selectedIcon: Icon(Icons.more_horiz),
-              label: Text('Plus'),
-            ),
-          ];
 
     final safeIndex = _currentIndex.clamp(0, destinations.length - 1);
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => DashboardBloc(
-            getDashboard: sl(),
-            session: widget.session,
-            syncService: sl(),
-          )..add(const DashboardLoadRequested()),
-        ),
-        BlocProvider(
-          create: (_) => SaleListBloc(
-            listSales: sl(),
-            repository: sl(),
-            syncPolicy: sl(),
-            session: widget.session,
-            syncService: sl(),
-          )..add(const SaleListLoadRequested()),
-        ),
-        BlocProvider(
-          create: (_) => CustomerListBloc(
-            listCustomers: sl(),
-            listDebtors: sl(),
-            repository: sl(),
-            saleRepository: sl(),
-            syncPolicy: sl(),
-            session: widget.session,
-            syncService: sl(),
-          )..add(const CustomerListLoadRequested()),
-        ),
-        BlocProvider(
-          create: (_) => ProductListBloc(
-            listProducts: sl(),
-            listCategories: sl(),
-            repository: sl(),
-            syncPolicy: sl(),
-            session: widget.session,
-            syncService: sl(),
-          )..add(const ProductListLoadRequested()),
-        ),
+        BlocProvider.value(value: _dashboardBloc),
+        BlocProvider.value(value: _saleListBloc),
+        BlocProvider.value(value: _customerListBloc),
+        BlocProvider.value(value: _productListBloc),
       ],
       child: ResponsiveBuilder(
         builder: (context, screenType) {
@@ -420,62 +604,62 @@ class _HomeShellPageState extends State<HomeShellPage> {
                 );
 
           if (useRail) {
-            return Scaffold(
-              floatingActionButton: _showShellVoiceFab(safeIndex, useFx)
-                  ? VoiceAssistantFab(session: widget.session)
-                  : null,
-              floatingActionButtonLocation:
-                  FloatingActionButtonLocation.endFloat,
-              body: Row(
-                children: [
-                  NavigationRail(
-                    selectedIndex: safeIndex,
-                    extended: screenType == ScreenType.expanded,
-                    minWidth: Breakpoints.navigationRailWidth(screenType),
-                    minExtendedWidth: 200,
-                    labelType: screenType == ScreenType.expanded
-                        ? NavigationRailLabelType.all
-                        : NavigationRailLabelType.selected,
-                    indicatorColor: colorScheme.primaryContainer,
-                    onDestinationSelected: (index) =>
-                        _onTabSelected(context, index),
-                    leading: Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.sm),
-                      child: _ShellAvatar(
-                        label: widget.session.shop.name,
-                        size: screenType == ScreenType.expanded ? 48 : 40,
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, result) {
+                if (didPop) return;
+                final activeNav = switch (_activeDestination) {
+                  SidebarDestination.dashboard => _dashboardNavKey.currentState,
+                  SidebarDestination.sales => _salesNavKey.currentState,
+                  SidebarDestination.inventory => _inventoryNavKey.currentState,
+                  SidebarDestination.customers => _customersNavKey.currentState,
+                  _ => null,
+                };
+                if (activeNav != null && activeNav.canPop()) {
+                  activeNav.pop();
+                  return;
+                }
+                if (_activeDestination != SidebarDestination.dashboard) {
+                  _onSidebarDestinationSelected(SidebarDestination.dashboard);
+                }
+              },
+              child: Scaffold(
+                floatingActionButton: _showShellVoiceFab(safeIndex, useFx)
+                    ? VoiceAssistantFab(session: widget.session)
+                    : null,
+                floatingActionButtonLocation:
+                    FloatingActionButtonLocation.endFloat,
+                body: Row(
+                  children: [
+                    DesktopSidebar(
+                      session: widget.session,
+                      activeDestination: _activeDestination,
+                      onDestinationSelected: _onSidebarDestinationSelected,
+                      onNewSale: () => _openNewSale(context),
+                      useFxPrimary: useFx,
+                    ),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          DesktopBreadcrumbHeader(
+                            session: widget.session,
+                            activeDestination: _activeDestination,
+                            onNavigateHome: () => _onSidebarDestinationSelected(
+                              SidebarDestination.dashboard,
+                            ),
+                            onLock: () => context
+                                .read<AuthBloc>()
+                                .add(const AuthAppLockedRequested()),
+                            helpArticleId: _activeDestination.helpArticleId,
+                            useFxPrimary: useFx,
+                          ),
+                          const OfflineModeBanner(showWhenSynced: true),
+                          Expanded(child: _buildDesktopContent()),
+                        ],
                       ),
                     ),
-                    destinations: railDestinations,
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        _ShellHeader(
-                          shopName: widget.session.shop.name,
-                          userName: widget.session.user.name,
-                          roleLabel: widget.session.user.roleLabel,
-                          canSwitchShop: canSwitchShop,
-                          onSwitchShop: canSwitchShop
-                              ? () => ShopSwitcherSheet.show(
-                                    context,
-                                    widget.session,
-                                  )
-                              : null,
-                          onLock: () => context
-                              .read<AuthBloc>()
-                              .add(const AuthAppLockedRequested()),
-                          compact: false,
-                          session: widget.session,
-                          helpArticleId: _helpArticleForTab(safeIndex, useFx),
-                        ),
-                        const OfflineModeBanner(showWhenSynced: true),
-                        Expanded(child: content),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }
@@ -606,12 +790,9 @@ class _ShellContent extends StatelessWidget {
             MorePage(session: session),
           ];
 
-    return ResponsivePage(
-      padding: EdgeInsets.zero,
-      child: IndexedStack(
-        index: currentIndex.clamp(0, pages.length - 1),
-        children: pages,
-      ),
+    return IndexedStack(
+      index: currentIndex.clamp(0, pages.length - 1),
+      children: pages,
     );
   }
 }
@@ -746,14 +927,37 @@ class _ShellHeader extends StatelessWidget {
           ),
           if (helpArticleId != null)
             ModuleHelpButton(articleId: helpArticleId!),
-          IconButton.filledTonal(
-            onPressed: onLock,
-            icon: const Icon(Icons.lock_outline_rounded),
-            tooltip: 'Verrouiller',
+          HeaderLockButton(
+            onLock: onLock,
+            filledTonal: true,
           ),
           SyncStatusIndicator(session: session),
         ],
       ),
+    );
+  }
+}
+
+class _SubpageNavigator extends StatelessWidget {
+  const _SubpageNavigator({
+    super.key,
+    required this.child,
+    this.navigatorKey,
+  });
+
+  final Widget child;
+  final GlobalKey<NavigatorState>? navigatorKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: navigatorKey,
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => child,
+        );
+      },
     );
   }
 }

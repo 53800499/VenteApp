@@ -39,10 +39,7 @@ class AuthSetupCompleted extends AuthState {
 }
 
 class AuthSetupFailure extends AuthState {
-  const AuthSetupFailure(
-    this.message, {
-    this.fieldErrors = const {},
-  });
+  const AuthSetupFailure(this.message, {this.fieldErrors = const {}});
 
   final String message;
   final Map<String, String> fieldErrors;
@@ -66,18 +63,19 @@ class AuthLocked extends AuthState {
   final String? errorMessage;
   final bool requiresEmergencyRecovery;
   final bool canGoBack;
+
   /// Déverrouillage d'une session existante (≠ nouvelle connexion).
   final bool isUnlockOnly;
 
   @override
   List<Object?> get props => [
-        lockScreen,
-        isSubmitting,
-        errorMessage,
-        requiresEmergencyRecovery,
-        canGoBack,
-        isUnlockOnly,
-      ];
+    lockScreen,
+    isSubmitting,
+    errorMessage,
+    requiresEmergencyRecovery,
+    canGoBack,
+    isUnlockOnly,
+  ];
 }
 
 /// Connexion WhatsApp : saisie numéro puis code OTP.
@@ -104,15 +102,15 @@ class AuthWhatsappLogin extends AuthState {
 
   @override
   List<Object?> get props => [
-        phone,
-        step,
-        isSubmitting,
-        errorMessage,
-        infoMessage,
-        maskedPhone,
-        deliveryWarning,
-        devCode,
-      ];
+    phone,
+    step,
+    isSubmitting,
+    errorMessage,
+    infoMessage,
+    maskedPhone,
+    deliveryWarning,
+    devCode,
+  ];
 }
 
 enum WhatsappLoginStep { phone, code }
@@ -134,8 +132,13 @@ class AuthMembershipSelection extends AuthState {
   final String? errorMessage;
 
   @override
-  List<Object?> get props =>
-      [phone, verificationToken, memberships, isSubmitting, errorMessage];
+  List<Object?> get props => [
+    phone,
+    verificationToken,
+    memberships,
+    isSubmitting,
+    errorMessage,
+  ];
 }
 
 /// Sélection de boutique après connexion (patron multi-boutiques).
@@ -153,8 +156,12 @@ class AuthShopSelection extends AuthState {
   final String? errorMessage;
 
   @override
-  List<Object?> get props =>
-      [provisionalSession, shops, isSubmitting, errorMessage];
+  List<Object?> get props => [
+    provisionalSession,
+    shops,
+    isSubmitting,
+    errorMessage,
+  ];
 }
 
 class AuthAuthenticated extends AuthState {

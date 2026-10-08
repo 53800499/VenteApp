@@ -7,6 +7,7 @@ import '../../../../core/sync/sync_queue_datasource.dart';
 import '../datasources/procurement_local_datasource.dart';
 import '../../domain/entities/procurement.dart';
 import '../../domain/entities/procurement_sync_entities.dart';
+import '../../../../core/security/production_message_policy.dart';
 
 /// Synthèse UX de la synchronisation cloud pour le module approvisionnement.
 class ProcurementSyncStatusService {
@@ -297,7 +298,11 @@ class ProcurementSyncStatusService {
         (i) => i.state == ProcurementCloudSyncState.error,
         orElse: () => items.first,
       );
-      return '${first.label} : ${first.detail ?? 'Synchronisation à vérifier.'} '
+      final rawDetail = first.detail;
+      final cleanDetail = rawDetail != null && rawDetail.isNotEmpty
+          ? ProductionMessagePolicy.sanitize(rawDetail)
+          : 'Synchronisation à vérifier.';
+      return '${first.label} : $cleanDetail '
           'Consultez « Sync appro » pour le détail.';
     }
 

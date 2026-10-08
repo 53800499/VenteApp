@@ -8,15 +8,13 @@ import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
 import '../../../../core/utils/phone_util.dart';
 import '../../../../shared/components/ui_primitives.dart';
+import '../../../../shared/utils/module_labels.dart';
 import '../../../subscription/data/services/subscription_remote_service.dart';
 import '../../domain/entities/setup_field.dart';
 import '../bloc/auth_bloc.dart';
 
 class SetupPage extends StatefulWidget {
-  const SetupPage({
-    super.key,
-    this.onBack,
-  });
+  const SetupPage({super.key, this.onBack});
 
   final VoidCallback? onBack;
 
@@ -51,11 +49,13 @@ class _SetupPageState extends State<SetupPage> {
 
   Future<void> _loadOnboardingPolicy() async {
     try {
-      final policy = await sl<SubscriptionRemoteService>().fetchOnboardingPolicy();
+      final policy = await sl<SubscriptionRemoteService>()
+          .fetchOnboardingPolicy();
       if (mounted) {
         setState(() {
           _trialEnabled = policy['trialEnabled'] as bool? ?? true;
-          _trialDurationDays = (policy['trialDurationDays'] as num?)?.toInt() ?? 14;
+          _trialDurationDays =
+              (policy['trialDurationDays'] as num?)?.toInt() ?? 14;
           if (policy['defaultPlanCode'] != null) {
             _selectedPlanCode = policy['defaultPlanCode'].toString();
           }
@@ -103,26 +103,24 @@ class _SetupPageState extends State<SetupPage> {
 
   void _submit() {
     context.read<AuthBloc>().add(
-          AuthSetupRequested(
-            ownerName: _ownerNameController.text.trim(),
-            shopName: _shopNameController.text.trim(),
-            pin: _pinController.text.trim(),
-            ownerPhone: _ownerPhoneController.text.trim(),
-            shopAddress: _shopAddressController.text.trim().isEmpty
-                ? null
-                : _shopAddressController.text.trim(),
-            shopPhone: _shopPhoneController.text.trim().isEmpty
-                ? null
-                : _shopPhoneController.text.trim(),
-            planCode: _selectedPlanCode,
-          ),
-        );
+      AuthSetupRequested(
+        ownerName: _ownerNameController.text.trim(),
+        shopName: _shopNameController.text.trim(),
+        pin: _pinController.text.trim(),
+        ownerPhone: _ownerPhoneController.text.trim(),
+        shopAddress: _shopAddressController.text.trim().isEmpty
+            ? null
+            : _shopAddressController.text.trim(),
+        shopPhone: _shopPhoneController.text.trim().isEmpty
+            ? null
+            : _shopPhoneController.text.trim(),
+        planCode: _selectedPlanCode,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return BlocListener<AuthBloc, AuthState>(
       listenWhen: (previous, current) =>
           current is AuthSetupFailure || current is AuthSetupInProgress,
@@ -146,387 +144,160 @@ class _SetupPageState extends State<SetupPage> {
           final summary = state is AuthSetupFailure ? state.message : null;
 
           return Scaffold(
-            body: GradientBackground(
-              child: SafeArea(
-                child: ResponsivePage(
-                  maxWidth: Breakpoints.formMaxWidth,
-                  padding: EdgeInsets.zero,
-                  expandHeight: true,
+            body: LayoutBuilder(
+              builder: (context, constraints) {
+                final isDesktop = Breakpoints.isDesktopWidth(
+                  constraints.maxWidth,
+                );
+
+                if (isDesktop) {
+                  return _buildDesktopLayout(context, isLoading, summary);
+                }
+
+                return _buildMobileLayout(context, isLoading, summary);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout(
+    BuildContext context,
+    bool isLoading,
+    String? summary,
+  ) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // --- VOLET GAUCHE : STEPPER TIMELINE & CONTEXTE ---
+        // Occupe l'intégralité de la section gauche, pleine hauteur, bord à bord
+        Expanded(
+          flex: 4,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.lockGradientTop,
+                  AppColors.lockGradientBottom,
+                ],
+              ),
+              border: Border(
+                right: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.xl,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Header Navigation Bar
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xs,
+                      if (widget.onBack != null || _currentStep > 0)
+                        TextButton.icon(
+                          onPressed: isLoading ? null : _previousStep,
+                          icon: const Icon(Icons.arrow_back, size: 18),
+                          label: Text(
+                            _currentStep > 0
+                                ? 'Étape précédente'
+                                : 'Retour à l\'accueil',
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ),
+                      const SizedBox(height: AppSpacing.lg),
+                      const AppLogo(size: 64),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'Configuration Initiale',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Créez votre commerce et configurez votre poste de caisse en 3 étapes simples.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // Timeline des 3 étapes
+                      _SetupStepItem(
+                        stepIndex: 0,
+                        currentStep: _currentStep,
+                        title: 'Entreprise & Boutique',
+                        subtitle: 'Nom commercial, téléphone, adresse',
+                        icon: Icons.storefront_outlined,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _SetupStepItem(
+                        stepIndex: 1,
+                        currentStep: _currentStep,
+                        title: 'Sécurité du Patron',
+                        subtitle: 'Code PIN secret du poste caisse',
+                        icon: Icons.lock_outline,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _SetupStepItem(
+                        stepIndex: 2,
+                        currentStep: _currentStep,
+                        title: 'Forfait & Licence',
+                        subtitle: _trialEnabled
+                            ? 'Essai de $_trialDurationDays jours offert'
+                            : 'Choix de votre formule SaaS',
+                        icon: Icons.stars_outlined,
+                      ),
+
+                      const SizedBox(height: AppSpacing.xl),
+                      // Info card
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest.withValues(
+                            alpha: 0.4,
+                          ),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(
+                            color: scheme.outlineVariant.withValues(alpha: 0.4),
+                          ),
                         ),
                         child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            IconButton(
-                              onPressed: isLoading ? null : _previousStep,
-                              icon: const Icon(Icons.arrow_back),
+                            Icon(
+                              Icons.verified_user_outlined,
+                              size: 18,
+                              color: scheme.primary,
                             ),
-                            const Spacer(),
-                            // Stepper Indicator
-                            Row(
-                              children: List.generate(3, (index) {
-                                final active = index <= _currentStep;
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                                  width: index == _currentStep ? 24 : 10,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: active
-                                        ? scheme.primary
-                                        : scheme.outlineVariant,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                );
-                              }),
-                            ),
-                            const Spacer(),
-                            Text(
-                              'Étape ${_currentStep + 1}/3',
-                              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: scheme.primary,
-                                  ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Vos données sont protégées et enregistrées localement sur ce poste de vente.',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                  fontSize: 11,
+                                ),
+                              ),
                             ),
                           ],
-                        ),
-                      ),
-
-                      // Header Title & Subtitle
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.lg,
-                          AppSpacing.xs,
-                          AppSpacing.lg,
-                          0,
-                        ),
-                        child: PageHeader(
-                          icon: _currentStep == 0
-                              ? Icons.storefront_outlined
-                              : (_currentStep == 1
-                                  ? Icons.lock_outline
-                                  : Icons.stars_outlined),
-                          title: _currentStep == 0
-                              ? 'Création de votre Commerce'
-                              : (_currentStep == 1
-                                  ? 'Sécurité du Patron'
-                                  : 'Choix de votre Forfait ARIKE'),
-                          subtitle: _currentStep == 0
-                              ? 'Identifiez votre entreprise et votre boutique principale.'
-                              : (_currentStep == 1
-                                  ? 'Définissez votre code PIN sécurisé pour déverrouiller la caisse.'
-                                  : 'Sélectionnez votre offre. Vos 14 premiers jours sont 100% gratuits !'),
-                        ),
-                      ),
-
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(AppSpacing.lg),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // ÉTAPE 0 : Profil & Boutique
-                              if (_currentStep == 0) ...[
-                                Form(
-                                  key: _formKeyStep1,
-                                  child: Column(
-                                    children: [
-                                      _FormSection(
-                                        title: 'Profil du Patron',
-                                        children: [
-                                          TextFormField(
-                                            controller: _ownerNameController,
-                                            decoration: InputDecoration(
-                                              labelText: 'Nom & Prénom du patron',
-                                              prefixIcon: const Icon(Icons.person_outline),
-                                              errorText: _fieldError(SetupField.ownerName.code),
-                                            ),
-                                            textInputAction: TextInputAction.next,
-                                            onChanged: (_) => _clearFieldError(SetupField.ownerName.code),
-                                            validator: (value) {
-                                              if (value == null || value.trim().length < 2) {
-                                                return 'Le nom doit comporter au moins 2 caractères.';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                          const SizedBox(height: AppSpacing.md),
-                                          TextFormField(
-                                            controller: _ownerPhoneController,
-                                            decoration: InputDecoration(
-                                              labelText: 'WhatsApp du patron',
-                                              hintText: '+229 01 97 00 00 00',
-                                              prefixIcon: const Icon(Icons.chat_outlined),
-                                              errorText: _fieldError(SetupField.ownerPhone.code),
-                                            ),
-                                            keyboardType: TextInputType.phone,
-                                            textInputAction: TextInputAction.next,
-                                            onChanged: (_) => _clearFieldError(SetupField.ownerPhone.code),
-                                            validator: (value) {
-                                              if (value == null || value.trim().isEmpty) {
-                                                return 'Le numéro WhatsApp est requis.';
-                                              }
-                                              if (!isValidPhone(value)) {
-                                                return 'Numéro invalide (indicatif pays requis, ex. +229…).';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      _FormSection(
-                                        title: 'Boutique Principale',
-                                        children: [
-                                          TextFormField(
-                                            controller: _shopNameController,
-                                            decoration: InputDecoration(
-                                              labelText: 'Nom de la boutique',
-                                              prefixIcon: const Icon(Icons.store_outlined),
-                                              errorText: _fieldError(SetupField.shopName.code),
-                                            ),
-                                            textInputAction: TextInputAction.next,
-                                            onChanged: (_) => _clearFieldError(SetupField.shopName.code),
-                                            validator: (value) {
-                                              if (value == null || value.trim().isEmpty) {
-                                                return 'Le nom de la boutique est requis.';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                          const SizedBox(height: AppSpacing.md),
-                                          TextFormField(
-                                            controller: _shopAddressController,
-                                            decoration: const InputDecoration(
-                                              labelText: 'Adresse / Ville (optionnel)',
-                                              prefixIcon: Icon(Icons.location_on_outlined),
-                                            ),
-                                            textInputAction: TextInputAction.next,
-                                          ),
-                                          const SizedBox(height: AppSpacing.md),
-                                          TextFormField(
-                                            controller: _shopPhoneController,
-                                            decoration: InputDecoration(
-                                              labelText: 'Téléphone boutique (optionnel)',
-                                              prefixIcon: const Icon(Icons.phone_outlined),
-                                              errorText: _fieldError(SetupField.shopPhone.code),
-                                            ),
-                                            keyboardType: TextInputType.phone,
-                                            textInputAction: TextInputAction.next,
-                                            onChanged: (_) => _clearFieldError(SetupField.shopPhone.code),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      FilledButton.icon(
-                                        onPressed: _nextStep,
-                                        icon: const Icon(Icons.arrow_forward),
-                                        label: const Text('Continuer vers la sécurité'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-
-                              // ÉTAPE 1 : Sécurité PIN
-                              if (_currentStep == 1) ...[
-                                Form(
-                                  key: _formKeyStep2,
-                                  child: Column(
-                                    children: [
-                                      _FormSection(
-                                        title: 'Sécurité & Code PIN',
-                                        children: [
-                                          TextFormField(
-                                            controller: _pinController,
-                                            decoration: const InputDecoration(
-                                              labelText: 'Code PIN Patron (4 à 6 chiffres)',
-                                              prefixIcon: Icon(Icons.lock_outline),
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            obscureText: true,
-                                            textInputAction: TextInputAction.next,
-                                            validator: (value) {
-                                              final pin = value?.trim() ?? '';
-                                              if (!RegExp(r'^\d{4,6}$').hasMatch(pin)) {
-                                                return 'Le PIN doit comporter entre 4 et 6 chiffres.';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                          const SizedBox(height: AppSpacing.md),
-                                          TextFormField(
-                                            controller: _confirmPinController,
-                                            decoration: const InputDecoration(
-                                              labelText: 'Confirmer le PIN',
-                                              prefixIcon: Icon(Icons.verified_user_outlined),
-                                            ),
-                                            keyboardType: TextInputType.number,
-                                            obscureText: true,
-                                            validator: (value) {
-                                              if (value?.trim() != _pinController.text.trim()) {
-                                                return 'Les codes PIN ne correspondent pas.';
-                                              }
-                                              return null;
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: AppSpacing.lg),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: OutlinedButton(
-                                              onPressed: _previousStep,
-                                              child: const Text('Retour'),
-                                            ),
-                                          ),
-                                          const SizedBox(width: AppSpacing.md),
-                                          Expanded(
-                                            flex: 2,
-                                            child: FilledButton.icon(
-                                              onPressed: _nextStep,
-                                              icon: const Icon(Icons.arrow_forward, size: 18),
-                                              label: const Text(
-                                                'Choisir forfait',
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-
-                              // ÉTAPE 2 : Choix Obligatoire du Forfait SaaS
-                              if (_currentStep == 2) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(AppSpacing.md),
-                                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                                  decoration: BoxDecoration(
-                                    color: _trialEnabled ? Colors.green.shade50 : Colors.amber.shade50,
-                                    border: Border.all(
-                                      color: _trialEnabled ? Colors.green.shade300 : Colors.amber.shade300,
-                                    ),
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        _trialEnabled ? Icons.card_giftcard : Icons.lock_clock_outlined,
-                                        color: _trialEnabled ? Colors.green.shade800 : Colors.amber.shade900,
-                                        size: 28,
-                                      ),
-                                      const SizedBox(width: AppSpacing.sm),
-                                      Expanded(
-                                        child: Text(
-                                          _trialEnabled
-                                              ? '🎁 Essai gratuit de $_trialDurationDays jours activé immédiatement sur le forfait sélectionné. Aucun paiement maintenant !'
-                                              : '⚡ Paiement obligatoire à l\'inscription. La validation de votre forfait débloquera immédiatement votre licence d\'utilisation.',
-                                          style: TextStyle(
-                                            color: _trialEnabled ? Colors.green.shade900 : Colors.amber.shade900,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // Card 1: ARIKE Essentiel
-                                _PlanSelectionCard(
-                                  code: 'ESSENTIEL',
-                                  name: 'ARIKE Essentiel',
-                                  priceText: '3 000 FCFA / mois',
-                                  subtitle: 'Petit commerce · 1 boutique · 3 utilisateurs',
-                                  features: const [
-                                    'Ventes & Caisse enregistreuse',
-                                    'Gestion du stock & Alertes rupture',
-                                    'Fichier clients & Suivi des dettes',
-                                    'Dépenses & Charges de caisse',
-                                    'Fonctionne 100% Hors-Ligne',
-                                  ],
-                                  isSelected: _selectedPlanCode == 'ESSENTIEL',
-                                  isDefault: true,
-                                  onSelect: () => setState(() => _selectedPlanCode = 'ESSENTIEL'),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-
-                                // Card 2: ARIKE Pro
-                                _PlanSelectionCard(
-                                  code: 'PRO',
-                                  name: '⭐ ARIKE Pro',
-                                  priceText: '6 000 FCFA / mois',
-                                  subtitle: 'Boutique en croissance · 2 boutiques · 10 utilisateurs',
-                                  features: const [
-                                    'Tout le forfait Essentiel',
-                                    'Bureau de Change FX (Devises)',
-                                    'Assistant Vocal ARIKE',
-                                    'Transferts de stock inter-boutiques',
-                                    'Commandes & Approvisionnements',
-                                  ],
-                                  isSelected: _selectedPlanCode == 'PRO',
-                                  onSelect: () => setState(() => _selectedPlanCode = 'PRO'),
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-
-                                // Card 3: ARIKE Business
-                                _PlanSelectionCard(
-                                  code: 'BUSINESS',
-                                  name: 'ARIKE Business',
-                                  priceText: '10 000 FCFA / mois',
-                                  subtitle: 'Réseau & Grossiste · 5 boutiques · 30 utilisateurs',
-                                  features: const [
-                                    'Tout le forfait Pro',
-                                    'Multi-entreprises & Distributeurs',
-                                    'Accès API dédiée & Export complet',
-                                    'Support prioritaire 24/7 & Configuration',
-                                  ],
-                                  isSelected: _selectedPlanCode == 'BUSINESS',
-                                  onSelect: () => setState(() => _selectedPlanCode = 'BUSINESS'),
-                                ),
-
-                                if (summary != null) ...[
-                                  const SizedBox(height: AppSpacing.md),
-                                  ErrorBanner(message: summary),
-                                ],
-                                const SizedBox(height: AppSpacing.lg),
-
-                                FilledButton.icon(
-                                  onPressed: isLoading ? null : _submit,
-                                  icon: isLoading
-                                      ? const SizedBox(
-                                          height: 18,
-                                          width: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : Icon(
-                                          _trialEnabled ? Icons.rocket_launch : Icons.payment,
-                                          size: 18,
-                                        ),
-                                  label: Text(
-                                    isLoading
-                                        ? 'Activation...'
-                                        : (_trialEnabled
-                                            ? 'Essai gratuit ${_trialDurationDays}j — $_selectedPlanCode'
-                                            : 'Valider et payer — $_selectedPlanCode'),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
                         ),
                       ),
                     ],
@@ -534,8 +305,576 @@ class _SetupPageState extends State<SetupPage> {
                 ),
               ),
             ),
-          );
-        },
+          ),
+        ),
+
+        // --- VOLET DROIT : FORMULAIRE DE L'ÉTAPE COURANTE ---
+        // Occupe l'intégralité de la section droite, avec le formulaire centré
+        Expanded(
+          flex: 7,
+          child: Container(
+            color: scheme.surface,
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.xl,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PageHeader(
+                        icon: _currentStep == 0
+                            ? Icons.storefront_outlined
+                            : (_currentStep == 1
+                                  ? Icons.lock_outline
+                                  : Icons.stars_outlined),
+                        title: _currentStep == 0
+                            ? 'Création de votre Commerce'
+                            : (_currentStep == 1
+                                  ? 'Sécurité du Patron'
+                                  : 'Choix de votre Forfait ARIKE'),
+                        subtitle: _currentStep == 0
+                            ? 'Identifiez votre entreprise et votre boutique principale.'
+                            : (_currentStep == 1
+                                  ? 'Définissez votre code PIN sécurisé pour déverrouiller la caisse.'
+                                  : 'Sélectionnez votre offre. Vos 14 premiers jours sont 100% gratuits !'),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      _buildStepFormContent(context, isLoading, summary),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout(
+    BuildContext context,
+    bool isLoading,
+    String? summary,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return GradientBackground(
+      child: SafeArea(
+        child: ResponsivePage(
+          maxWidth: Breakpoints.formMaxWidth,
+          padding: EdgeInsets.zero,
+          expandHeight: true,
+          child: Column(
+            children: [
+              // Header Navigation Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: isLoading ? null : _previousStep,
+                      icon: const Icon(Icons.arrow_back),
+                    ),
+                    const Spacer(),
+                    // Stepper Indicator
+                    Row(
+                      children: List.generate(3, (index) {
+                        final active = index <= _currentStep;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: index == _currentStep ? 24 : 10,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? scheme.primary
+                                : scheme.outlineVariant,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        );
+                      }),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Étape ${_currentStep + 1}/3',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Header Title & Subtitle
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xs,
+                  AppSpacing.lg,
+                  0,
+                ),
+                child: PageHeader(
+                  icon: _currentStep == 0
+                      ? Icons.storefront_outlined
+                      : (_currentStep == 1
+                            ? Icons.lock_outline
+                            : Icons.stars_outlined),
+                  title: _currentStep == 0
+                      ? 'Création de votre Commerce'
+                      : (_currentStep == 1
+                            ? 'Sécurité du Patron'
+                            : 'Choix de votre Forfait ARIKE'),
+                  subtitle: _currentStep == 0
+                      ? 'Identifiez votre entreprise et votre boutique principale.'
+                      : (_currentStep == 1
+                            ? 'Définissez votre code PIN sécurisé pour déverrouiller la caisse.'
+                            : 'Sélectionnez votre offre. Vos 14 premiers jours sont 100% gratuits !'),
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: _buildStepFormContent(context, isLoading, summary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepFormContent(
+    BuildContext context,
+    bool isLoading,
+    String? summary,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ÉTAPE 0 : Profil & Boutique
+        if (_currentStep == 0) ...[
+          Form(
+            key: _formKeyStep1,
+            child: Column(
+              children: [
+                _FormSection(
+                  title: 'Profil du Patron',
+                  children: [
+                    TextFormField(
+                      controller: _ownerNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nom & Prénom du patron',
+                        prefixIcon: const Icon(Icons.person_outline),
+                        errorText: _fieldError(SetupField.ownerName.code),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) =>
+                          _clearFieldError(SetupField.ownerName.code),
+                      validator: (value) {
+                        if (value == null || value.trim().length < 2) {
+                          return 'Le nom doit comporter au moins 2 caractères.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _ownerPhoneController,
+                      decoration: InputDecoration(
+                        labelText: 'WhatsApp du patron',
+                        hintText: '+229 01 97 00 00 00',
+                        prefixIcon: const Icon(Icons.chat_outlined),
+                        errorText: _fieldError(SetupField.ownerPhone.code),
+                      ),
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) =>
+                          _clearFieldError(SetupField.ownerPhone.code),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Le numéro WhatsApp est requis.';
+                        }
+                        if (!isValidPhone(value)) {
+                          return 'Numéro invalide (indicatif pays requis, ex. +229…).';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                _FormSection(
+                  title: 'Boutique Principale',
+                  children: [
+                    TextFormField(
+                      controller: _shopNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Nom de la boutique',
+                        prefixIcon: const Icon(Icons.store_outlined),
+                        errorText: _fieldError(SetupField.shopName.code),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) =>
+                          _clearFieldError(SetupField.shopName.code),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Le nom de la boutique est requis.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _shopAddressController,
+                      decoration: const InputDecoration(
+                        labelText: 'Adresse / Ville (optionnel)',
+                        prefixIcon: Icon(Icons.location_on_outlined),
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _shopPhoneController,
+                      decoration: InputDecoration(
+                        labelText: 'Téléphone boutique (optionnel)',
+                        prefixIcon: const Icon(Icons.phone_outlined),
+                        errorText: _fieldError(SetupField.shopPhone.code),
+                      ),
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) =>
+                          _clearFieldError(SetupField.shopPhone.code),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton.icon(
+                  onPressed: _nextStep,
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('Continuer vers la sécurité'),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // ÉTAPE 1 : Sécurité PIN
+        if (_currentStep == 1) ...[
+          Form(
+            key: _formKeyStep2,
+            child: Column(
+              children: [
+                _FormSection(
+                  title: 'Sécurité & Code PIN',
+                  children: [
+                    TextFormField(
+                      controller: _pinController,
+                      decoration: const InputDecoration(
+                        labelText: 'Code PIN Patron (4 à 6 chiffres)',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        final pin = value?.trim() ?? '';
+                        if (!RegExp(r'^\d{4,6}$').hasMatch(pin)) {
+                          return 'Le PIN doit comporter entre 4 et 6 chiffres.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    TextFormField(
+                      controller: _confirmPinController,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirmer le PIN',
+                        prefixIcon: Icon(Icons.verified_user_outlined),
+                      ),
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      validator: (value) {
+                        if (value?.trim() != _pinController.text.trim()) {
+                          return 'Les codes PIN ne correspondent pas.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _previousStep,
+                        child: const Text('Retour'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: _nextStep,
+                        icon: const Icon(Icons.arrow_forward, size: 18),
+                        label: const Text(
+                          'Choisir forfait',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // ÉTAPE 2 : Choix Obligatoire du Forfait SaaS
+        if (_currentStep == 2) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: _trialEnabled
+                  ? Colors.green.shade50
+                  : Colors.amber.shade50,
+              border: Border.all(
+                color: _trialEnabled
+                    ? Colors.green.shade300
+                    : Colors.amber.shade300,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  _trialEnabled
+                      ? Icons.card_giftcard
+                      : Icons.lock_clock_outlined,
+                  color: _trialEnabled
+                      ? Colors.green.shade800
+                      : Colors.amber.shade900,
+                  size: 28,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    _trialEnabled
+                        ? '🎁 Essai gratuit de $_trialDurationDays jours activé immédiatement sur le forfait sélectionné. Aucun paiement maintenant !'
+                        : '⚡ Paiement obligatoire à l\'inscription. La validation de votre forfait débloquera immédiatement votre licence d\'utilisation.',
+                    style: TextStyle(
+                      color: _trialEnabled
+                          ? Colors.green.shade900
+                          : Colors.amber.shade900,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Card 1: ARIKE Essentiel
+          _PlanSelectionCard(
+            code: 'ESSENTIEL',
+            name: 'ARIKE Essentiel',
+            priceText: '3 000 FCFA / mois',
+            subtitle: 'Petit commerce · 1 boutique · 3 utilisateurs',
+            features: const [
+              'Ventes & Caisse enregistreuse',
+              'Gestion du stock & Alertes rupture',
+              'Fichier clients & Suivi des dettes',
+              'Dépenses & Charges de caisse',
+              'Fonctionne 100% Hors-Ligne',
+            ],
+            isSelected: _selectedPlanCode == 'ESSENTIEL',
+            isDefault: true,
+            onSelect: () => setState(() => _selectedPlanCode = 'ESSENTIEL'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Card 2: ARIKE Pro
+          _PlanSelectionCard(
+            code: 'PRO',
+            name: '⭐ ARIKE Pro',
+            priceText: '6 000 FCFA / mois',
+            subtitle: 'Boutique en croissance · 2 boutiques · 10 utilisateurs',
+            features: const [
+              'Tout le forfait Essentiel',
+              'Bureau de Change FX (Devises)',
+              'Assistant Vocal ARIKE',
+              'Transferts de stock inter-boutiques',
+              'Commandes & Approvisionnements',
+            ],
+            isSelected: _selectedPlanCode == 'PRO',
+            onSelect: () => setState(() => _selectedPlanCode = 'PRO'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+
+          // Card 3: ARIKE Business
+          _PlanSelectionCard(
+            code: 'BUSINESS',
+            name: 'ARIKE Business',
+            priceText: '10 000 FCFA / mois',
+            subtitle: 'Réseau & Grossiste · 5 boutiques · 30 utilisateurs',
+            features: const [
+              'Tout le forfait Pro',
+              'Multi-entreprises & Distributeurs',
+              'Accès API dédiée & Export complet',
+              'Support prioritaire 24/7 & Configuration',
+            ],
+            isSelected: _selectedPlanCode == 'BUSINESS',
+            onSelect: () => setState(() => _selectedPlanCode = 'BUSINESS'),
+          ),
+
+          if (summary != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            ErrorBanner(message: summary),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: isLoading ? null : _previousStep,
+                  child: const Text('Retour'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                flex: 2,
+                child: FilledButton.icon(
+                  onPressed: isLoading ? null : _submit,
+                  icon: isLoading
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          _trialEnabled ? Icons.rocket_launch : Icons.payment,
+                          size: 18,
+                        ),
+                  label: Text(
+                    isLoading
+                        ? 'Activation en cours...'
+                        : (_trialEnabled
+                              ? 'Démarrer l\'essai ($_trialDurationDays jours)'
+                              : 'Valider et souscrire'),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SetupStepItem extends StatelessWidget {
+  const _SetupStepItem({
+    required this.stepIndex,
+    required this.currentStep,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final int stepIndex;
+  final int currentStep;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isDone = currentStep > stepIndex;
+    final isActive = currentStep == stepIndex;
+
+    final color = isDone
+        ? AppColors.success
+        : (isActive ? scheme.primary : scheme.outline);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isActive
+            ? scheme.primary.withValues(alpha: 0.1)
+            : (isDone
+                  ? AppColors.success.withValues(alpha: 0.08)
+                  : Colors.transparent),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: isActive
+              ? scheme.primary.withValues(alpha: 0.4)
+              : (isDone
+                    ? AppColors.success.withValues(alpha: 0.3)
+                    : scheme.outlineVariant.withValues(alpha: 0.3)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isDone ? Icons.check_rounded : icon,
+              size: 16,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: isActive || isDone
+                        ? FontWeight.bold
+                        : FontWeight.w500,
+                    color: isActive || isDone
+                        ? scheme.onSurface
+                        : scheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -572,7 +911,9 @@ class _PlanSelectionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: isSelected ? scheme.primaryContainer.withValues(alpha: 0.4) : Colors.white,
+          color: isSelected
+              ? scheme.primaryContainer.withValues(alpha: 0.35)
+              : Colors.white,
           border: Border.all(
             color: isSelected ? scheme.primary : scheme.outlineVariant,
             width: isSelected ? 2 : 1,
@@ -583,71 +924,122 @@ class _PlanSelectionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Radio<String>(
                   value: code,
                   groupValue: isSelected ? code : '',
                   onChanged: (_) => onSelect(),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
-                          Text(
-                            name,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isSelected ? scheme.primary : null,
-                                ),
-                          ),
-                          if (isDefault) ...[
-                            const SizedBox(width: AppSpacing.xs),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: scheme.primary,
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              Text(
+                                name,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? scheme.primary : null,
+                                    ),
                               ),
-                              child: const Text(
-                                'Recommandé',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              if (isDefault)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: scheme.primary,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.sm,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'Recommandé',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? scheme.primary.withValues(alpha: 0.12)
+                                  : scheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Text(
+                              priceText,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: scheme.primary,
+                                fontSize: 12,
                               ),
                             ),
-                          ],
+                          ),
                         ],
                       ),
+                      const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  priceText,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.primary,
-                    fontSize: 14,
-                  ),
-                ),
               ],
             ),
-            const Divider(height: AppSpacing.sm),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
+            const Divider(height: AppSpacing.md),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: features
-                  .map((f) => Row(
-                        mainAxisSize: MainAxisSize.min,
+                  .map(
+                    (f) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.check_circle_outline, size: 14, color: scheme.primary),
-                          const SizedBox(width: 4),
-                          Text(f, style: const TextStyle(fontSize: 11)),
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 15,
+                            color: scheme.primary,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              formatModuleName(f),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
                         ],
-                      ))
+                      ),
+                    ),
+                  )
                   .toList(),
             ),
           ],
@@ -658,10 +1050,7 @@ class _PlanSelectionCard extends StatelessWidget {
 }
 
 class _FormSection extends StatelessWidget {
-  const _FormSection({
-    required this.title,
-    required this.children,
-  });
+  const _FormSection({required this.title, required this.children});
 
   final String title;
   final List<Widget> children;
@@ -676,9 +1065,9 @@ class _FormSection extends StatelessWidget {
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.seed,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: AppColors.seed),
             ),
             const SizedBox(height: AppSpacing.md),
             ...children,

@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../../app/di/injection_container.dart';
 import '../../../../../app/theme/app_tokens.dart';
-import '../../../../../core/auth/app_lock_controller.dart';
+import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/data/datasources/local/biometric_local_datasource.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../domain/entities/settings_entities.dart';
@@ -55,10 +55,11 @@ class _SecurityDeviceSettingsPageState extends State<SecurityDeviceSettingsPage>
             config.security.autoLockMinutes,
           );
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          return AppPageContainer(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
@@ -206,9 +207,10 @@ class _SecurityDeviceSettingsPageState extends State<SecurityDeviceSettingsPage>
                 ),
               ],
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

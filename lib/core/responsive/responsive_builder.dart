@@ -53,10 +53,33 @@ class ResponsivePage extends StatelessWidget {
     return ResponsiveBuilder(
       builder: (context, type) {
         final resolvedMax = maxWidth ?? Breakpoints.contentMaxWidth(type);
-        final resolvedPadding = padding ??
-            EdgeInsets.symmetric(
-              horizontal: Breakpoints.horizontalPadding(type),
+        final resolvedPadding = padding ?? EdgeInsets.zero;
+
+        if (resolvedMax.isInfinite) {
+          final padded = Padding(
+            padding: resolvedPadding,
+            child: child,
+          );
+          if (!expandHeight) {
+            return SizedBox(
+              width: double.infinity,
+              child: padded,
             );
+          }
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final height = constraints.maxHeight.isFinite
+                  ? constraints.maxHeight
+                  : MediaQuery.sizeOf(context).height;
+
+              return SizedBox(
+                width: double.infinity,
+                height: height,
+                child: padded,
+              );
+            },
+          );
+        }
 
         final content = ConstrainedBox(
           constraints: BoxConstraints(

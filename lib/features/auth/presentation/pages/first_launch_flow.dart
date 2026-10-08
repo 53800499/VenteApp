@@ -23,9 +23,7 @@ class _FirstLaunchFlowState extends State<FirstLaunchFlow> {
     setState(() => _step = _FirstLaunchStep.entry);
   }
 
-  SetupPage _setupPage() => SetupPage(
-        onBack: _goToEntry,
-      );
+  SetupPage _setupPage() => SetupPage(onBack: _goToEntry);
 
   @override
   Widget build(BuildContext context) {
@@ -37,17 +35,16 @@ class _FirstLaunchFlowState extends State<FirstLaunchFlow> {
 
         return switch (_step) {
           _FirstLaunchStep.entry => AuthEntryPage(
-              localSetupAvailable: state is AuthNeedsSetup &&
-                  state.localSetupAvailable,
-              onCreateShop: () =>
-                  setState(() => _step = _FirstLaunchStep.setup),
-              onLogin: () => context
-                  .read<AuthBloc>()
-                  .add(const AuthProceedToLoginRequested()),
-              onPinLogin: () => context
-                  .read<AuthBloc>()
-                  .add(const AuthProceedToPinLoginRequested()),
+            localSetupAvailable:
+                state is AuthNeedsSetup && state.localSetupAvailable,
+            onCreateShop: () => setState(() => _step = _FirstLaunchStep.setup),
+            onLogin: () => context.read<AuthBloc>().add(
+              const AuthProceedToLoginRequested(),
             ),
+            onPinLogin: () => context.read<AuthBloc>().add(
+              const AuthProceedToPinLoginRequested(),
+            ),
+          ),
           _FirstLaunchStep.setup => _setupPage(),
         };
       },

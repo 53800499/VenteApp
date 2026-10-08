@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
@@ -14,6 +15,7 @@ import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/debt_entities.dart';
 import '../../domain/usecases/debt_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../core/responsive/responsive_builder.dart';
 import 'debt_detail_page.dart';
 
 class ForgivenDebtsPage extends StatelessWidget {
@@ -113,7 +115,7 @@ class _ForgivenDebtsListState extends State<ForgivenDebtsList> {
     } on Failure catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
+        _error = friendlyErrorMessage(e);
         _loading = false;
       });
     } catch (_) {
@@ -152,17 +154,20 @@ class _ForgivenDebtsListState extends State<ForgivenDebtsList> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: _entries.length,
-        itemBuilder: (context, index) {
-          final entry = _entries[index];
-          return _ForgivenDebtCard(
-            entry: entry,
-            showCustomerName: widget.customerId == null,
-            onTap: () => _openDetail(entry),
-          );
-        },
+      child: ResponsivePage(
+        padding: EdgeInsets.zero,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          itemCount: _entries.length,
+          itemBuilder: (context, index) {
+            final entry = _entries[index];
+            return _ForgivenDebtCard(
+              entry: entry,
+              showCustomerName: widget.customerId == null,
+              onTap: () => _openDetail(entry),
+            );
+          },
+        ),
       ),
     );
   }

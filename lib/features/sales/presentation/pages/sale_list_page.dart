@@ -18,6 +18,7 @@ import 'sale_detail_page.dart';
 import 'quick_sale_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
+import '../widgets/desktop_sale_list_view.dart';
 
 class SaleListPage extends StatefulWidget {
   const SaleListPage({super.key, required this.session});
@@ -49,16 +50,58 @@ class _SaleListPageState extends State<SaleListPage> {
       session: widget.session,
       moduleName: 'Ventes & Caisse',
       moduleIcon: Icons.point_of_sale_outlined,
-      child: Scaffold(
-        body: Column(
-          children: [
-            BlocBuilder<SaleListBloc, SaleListState>(
-                    buildWhen: (prev, curr) =>
-                        prev.isRefreshing != curr.isRefreshing,
-                    builder: (context, state) {
-                      if (!state.isRefreshing) {
-                        return const SizedBox.shrink();
-                      }
+      child: ResponsiveBuilder(
+        builder: (context, screenType) {
+          final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+
+          if (isDesktop) {
+            return BlocBuilder<SaleListBloc, SaleListState>(
+              builder: (context, state) {
+                if (state.status == SaleListStatus.initial ||
+                    (state.status == SaleListStatus.loading && state.sales.isEmpty)) {
+                  return const Scaffold(body: SaleListSkeleton());
+                }
+                return Scaffold(
+                  body: DesktopSaleListView(
+                    session: widget.session,
+                    state: state,
+                    searchController: _searchController,
+                    onSearchChanged: (value) {
+                      setState(() {});
+                      context.read<SaleListBloc>().add(SaleListSearchChanged(value));
+                    },
+                    onClearSearch: () {
+                      _searchController.clear();
+                      context.read<SaleListBloc>().add(const SaleListSearchChanged(''));
+                      setState(() {});
+                    },
+                    onRefresh: () async {
+                      context.read<SaleListBloc>().add(const SaleListRefreshRequested());
+                      await context.read<SaleListBloc>().stream.firstWhere(
+                            (s) => s.status == SaleListStatus.loaded && !s.isRefreshing,
+                          );
+                    },
+                    onNewSale: () => _openNewSale(context),
+                    onQuickSale: () => _openQuickSale(context),
+                    onSaleTap: (id) => _openDetail(context, id),
+                    canCreate: _canCreate,
+                  ),
+                );
+              },
+            );
+          }
+
+          // --- RENDU MOBILE STRICTEMENT IDENTIQUE ET PRÉSERVÉ ---
+          return Scaffold(
+            body: Column(
+              children: [
+                BlocBuilder<SaleListBloc, SaleListState>(
+                  buildWhen: (prev, curr) =>
+                      prev.isRefreshing != curr.isRefreshing,
+                  builder: (context, state) {
+                    if (!state.isRefreshing) {
+                      return const SizedBox.shrink();
+                    }
                     return const LinearProgressIndicator();
                   },
                 ),
@@ -155,11 +198,11 @@ class _SaleListPageState extends State<SaleListPage> {
                                     title: 'Aucune vente enregistrée',
                                   )
                                 : ListView.separated(
-                                    padding: const EdgeInsets.fromLTRB(
+                                    padding: EdgeInsets.fromLTRB(
                                       AppSpacing.md,
                                       AppSpacing.sm,
                                       AppSpacing.md,
-                                      110,
+                                      context.isCompactScreen ? 110.0 : AppSpacing.md,
                                     ),
                                     itemCount: state.sales.length,
                                     separatorBuilder: (_, __) =>
@@ -214,6 +257,8 @@ class _SaleListPageState extends State<SaleListPage> {
                     ]
                   : const [],
             ),
+          );
+        },
       ),
     );
   }

@@ -5,6 +5,7 @@ enum ArikeModule {
   sales,
   inventory,
   purchases,
+  salesOrders,
   expenses,
   fxExchange,
   assistant,
