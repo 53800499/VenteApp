@@ -8,6 +8,7 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/inventory_entities.dart';
 import '../bloc/product_list_bloc.dart';
+import '../pages/stock_analysis_page.dart';
 
 /// Vue Desktop ERP moderne et adaptative pour le listing des stocks et produits.
 class DesktopProductListView extends StatelessWidget {
@@ -197,6 +198,22 @@ class DesktopProductListView extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh_rounded, size: 20),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => StockAnalysisPage(session: session),
+              ),
+            ),
+            icon: const Icon(Icons.analytics_outlined, size: 18),
+            label: const Text('Analyse du Stock'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 2,
+              ),
+            ),
           ),
           if (canWrite) ...[
             const SizedBox(width: AppSpacing.sm),

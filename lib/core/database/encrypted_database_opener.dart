@@ -122,17 +122,20 @@ QueryExecutor openEncryptedConnection(DatabaseKeyStorage keyStorage) {
 
     sqlite.sqlite3.tempDirectory = (await getTemporaryDirectory()).path;
 
-    return NativeDatabase.createInBackground(
-      file,
-      isolateSetup: () {
-        ensureDatabaseAccessible(
-          dbFile: file,
-          passphrase: passphrase,
-        );
-      },
-      setup: (rawDb) => applyDatabaseKey(rawDb, passphrase),
+    ensureDatabaseAccessible(
+      dbFile: file,
+      passphrase: passphrase,
     );
+
+    return _openBackgroundNativeDb(file, passphrase);
   });
+}
+
+QueryExecutor _openBackgroundNativeDb(File file, String passphrase) {
+  return NativeDatabase.createInBackground(
+    file,
+    setup: (rawDb) => applyDatabaseKey(rawDb, passphrase),
+  );
 }
 
 /// Base en mémoire non chiffrée (SQLite3MC ne supporte pas `PRAGMA key` en RAM).

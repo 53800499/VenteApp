@@ -55,6 +55,7 @@ import '../../core/storage/device_id_storage.dart';
 import '../../core/storage/form_draft_storage.dart';
 import '../../core/storage/last_shop_storage.dart';
 import '../../core/storage/onboarding_storage.dart';
+import '../../core/storage/safe_secure_storage.dart';
 import '../../core/storage/session_storage.dart';
 import '../../features/auth/data/datasources/local/biometric_local_datasource.dart';
 import '../../features/auth/data/datasources/remote/auth_remote_datasource.dart';
@@ -90,7 +91,11 @@ import '../../features/inventory/data/repositories/inventory_repository_impl.dar
 import '../../features/inventory/domain/repositories/inventory_repository.dart';
 import '../../features/inventory/domain/services/category_validation_service.dart';
 import '../../features/inventory/domain/services/product_validation_service.dart';
+import '../../features/inventory/domain/services/stock_valuation_service.dart';
 import '../../features/inventory/domain/usecases/inventory_usecases.dart';
+import '../../features/inventory/domain/usecases/stock_valuation_usecases.dart';
+import '../../features/inventory/data/datasources/local/inventory_lot_local_datasource.dart';
+import '../../features/inventory/data/datasources/local/stock_valuation_local_datasource.dart';
 import '../../features/shop/data/datasources/remote/shop_remote_datasource.dart';
 import '../../features/shop/data/repositories/shop_repository_impl.dart';
 import '../../features/shop/domain/repositories/shop_repository.dart';
@@ -784,7 +789,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => LastShopStorage(sl()));
   sl.registerLazySingleton(() => ApiSettingsStorage(sl()));
 
-  sl.registerLazySingleton(() => const FlutterSecureStorage());
+  sl.registerLazySingleton<FlutterSecureStorage>(() => SafeSecureStorage());
   sl.registerLazySingleton(() => DatabaseKeyStorage(sl()));
   sl.registerLazySingleton(() => AppDatabase(keyStorage: sl()));
   sl.registerLazySingleton(PinHasher.new);
@@ -836,7 +841,10 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton(RecentPinProof.new);
   sl.registerLazySingleton(
-    () => DeviceIdentityService(deviceIdStorage: sl()),
+    () => DeviceIdentityService(
+      deviceIdStorage: sl(),
+      storage: sl<FlutterSecureStorage>(),
+    ),
   );
   sl.registerLazySingleton(
     () => CloudSessionRepairService(
@@ -1083,6 +1091,16 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => UpdateProduct(sl()));
   sl.registerLazySingleton(() => ArchiveProduct(sl()));
   sl.registerLazySingleton(() => AdjustProductStock(sl()));
+  sl.registerLazySingleton(() => const StockValuationService());
+  sl.registerLazySingleton(
+    () => StockValuationLocalDatasource(
+      db: sl(),
+      lotDatasource: InventoryLotLocalDatasource(sl()),
+      service: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => GetStockValuationSummary(sl()));
+  sl.registerLazySingleton(() => GetProductSalesVelocity(sl()));
 
   sl.registerLazySingleton(() => const SaleValidationService());
   sl.registerLazySingleton(() => const ReceiptFormatterService());

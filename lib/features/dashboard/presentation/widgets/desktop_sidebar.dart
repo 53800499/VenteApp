@@ -317,6 +317,13 @@ class DesktopSidebar extends StatelessWidget {
                         onTap: () => onDestinationSelected(SidebarDestination.inventory),
                       ),
                       _SidebarItem(
+                        icon: Icons.analytics_outlined,
+                        activeIcon: Icons.analytics_rounded,
+                        label: 'Analyse du Stock',
+                        selected: activeDestination == SidebarDestination.stockValuation,
+                        onTap: () => onDestinationSelected(SidebarDestination.stockValuation),
+                      ),
+                      _SidebarItem(
                         icon: Icons.people_outline,
                         activeIcon: Icons.people_rounded,
                         label: 'Clients & Dettes',

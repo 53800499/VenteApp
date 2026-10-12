@@ -28,6 +28,7 @@ import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../procurement/presentation/pages/procurement_page.dart';
 import '../../../sales_orders/presentation/pages/sales_orders_page.dart';
 import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
+import '../../../inventory/presentation/pages/stock_analysis_page.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
@@ -285,6 +286,16 @@ class MorePage extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ModuleActionTile(
+                      icon: Icons.account_balance_wallet_outlined,
+                      title: 'Valorisation du Stock',
+                      subtitle: 'Capital immobilisé, CA potentiel, marge et stock dormant',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => StockAnalysisPage(session: activeSession),
+                        ),
+                      ),
+                    ),
                     if (_canViewExpenses)
                       ModuleActionTile(
                         icon: Icons.payments_outlined,

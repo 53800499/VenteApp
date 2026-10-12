@@ -1071,238 +1071,273 @@ class _DesktopProductCatalog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final products = state.filteredProducts;
+    try {
+      final theme = Theme.of(context);
+      final cs = theme.colorScheme;
+      final products = state.filteredProducts;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // En-tête : Raccourcis clavier & Compteur
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            0,
-          ),
-          child: Row(
-            children: [
-              const _KeyboardShortcutPill(label: 'F1', description: 'Recherche'),
-              const SizedBox(width: AppSpacing.sm),
-              const _KeyboardShortcutPill(label: 'Entrée', description: 'Scanner / Ajout'),
-              const SizedBox(width: AppSpacing.sm),
-              const _KeyboardShortcutPill(label: 'F2', description: 'Encaisser'),
-              const Spacer(),
-              Text(
-                '${products.length} produit(s) affiché(s)',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: cs.outline,
-                  fontWeight: FontWeight.w600,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // En-tête : Raccourcis clavier & Compteur
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
+            child: Row(
+              children: [
+                const _KeyboardShortcutPill(label: 'F1', description: 'Recherche'),
+                const SizedBox(width: AppSpacing.sm),
+                const _KeyboardShortcutPill(label: 'Entrée', description: 'Scanner / Ajout'),
+                const SizedBox(width: AppSpacing.sm),
+                const _KeyboardShortcutPill(label: 'F2', description: 'Encaisser'),
+                const Spacer(),
+                Text(
+                  '${products.length} produit(s) affiché(s)',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.outline,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.sm),
 
-        // Barre d'outils : Recherche / Code-barres & Switcher Grille/Liste
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: searchController,
-                  focusNode: searchFocusNode,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () {
-                              searchController.clear();
-                              context
-                                  .read<NewSaleBloc>()
-                                  .add(const NewSaleSearchChanged(''));
-                            },
-                          )
-                        : null,
-                    hintText: 'Rechercher un produit, code-barres (F1)…',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
+          // Barre d'outils : Recherche / Code-barres & Switcher Grille/Liste
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: searchController,
+                    focusNode: searchFocusNode,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      suffixIcon: searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                searchController.clear();
+                                context
+                                    .read<NewSaleBloc>()
+                                    .add(const NewSaleSearchChanged(''));
+                              },
+                            )
+                          : null,
+                      hintText: 'Rechercher un produit, code-barres (F1)…',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: 10,
+                      ),
                     ),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: 10,
-                    ),
+                    onChanged: (q) =>
+                        context.read<NewSaleBloc>().add(NewSaleSearchChanged(q)),
+                    onSubmitted: onSearchSubmitted,
                   ),
-                  onChanged: (q) =>
-                      context.read<NewSaleBloc>().add(NewSaleSearchChanged(q)),
-                  onSubmitted: onSearchSubmitted,
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(
-                    value: true,
-                    icon: Icon(Icons.grid_view_rounded, size: 18),
-                    tooltip: 'Affichage Grille POS',
+                const SizedBox(width: AppSpacing.sm),
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: true,
+                      icon: Icon(Icons.grid_view_rounded, size: 18),
+                      tooltip: 'Affichage Grille POS',
+                    ),
+                    ButtonSegment(
+                      value: false,
+                      icon: Icon(Icons.view_headline_rounded, size: 18),
+                      tooltip: 'Affichage Liste compacte',
+                    ),
+                  ],
+                  selected: {isGridView},
+                  onSelectionChanged: (set) => onToggleView(set.first),
+                  showSelectedIcon: false,
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  ButtonSegment(
-                    value: false,
-                    icon: Icon(Icons.view_headline_rounded, size: 18),
-                    tooltip: 'Affichage Liste compacte',
-                  ),
-                ],
-                selected: {isGridView},
-                onSelectionChanged: (set) => onToggleView(set.first),
+                ),
+              ],
+            ),
+          ),
+
+          // Sélecteur de grille tarifaire (si activé pour l'enseigne)
+          if (state.pricingTiersEnabled) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SegmentedButton<SalePricingTier>(
+                segments: SalePricingTier.values
+                    .map(
+                      (tier) => ButtonSegment(
+                        value: tier,
+                        label: Text(tier.label),
+                      ),
+                    )
+                    .toList(),
+                selected: {state.selectedPricingTier},
+                onSelectionChanged: (selection) {
+                  context.read<NewSaleBloc>().add(
+                        NewSalePricingTierChanged(selection.first),
+                      );
+                },
                 showSelectedIcon: false,
                 style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
+            ),
+          ],
+
+          const SizedBox(height: AppSpacing.xs),
+
+          // Zone de produits (Grille ou Liste)
+          Expanded(
+            child: products.isEmpty
+                ? state.products.isEmpty
+                    ? EmptyListPlaceholder.refreshable(
+                        icon: Icons.inventory_2_outlined,
+                        title: 'Aucun produit disponible',
+                        subtitle:
+                            'Ajoutez des produits dans l’Inventaire, puis actualisez.',
+                        onRefresh: () async {
+                          context
+                              .read<NewSaleBloc>()
+                              .add(const NewSaleLoadRequested());
+                          await context.read<NewSaleBloc>().stream.firstWhere(
+                                (s) =>
+                                    s.status == NewSaleStatus.ready ||
+                                    s.status == NewSaleStatus.failure,
+                              );
+                        },
+                      )
+                    : const EmptyListPlaceholder(
+                        embedded: true,
+                        icon: Icons.search_off_outlined,
+                        title: 'Aucun produit ne correspond à votre recherche',
+                      )
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      context
+                          .read<NewSaleBloc>()
+                          .add(const NewSaleLoadRequested());
+                      await context.read<NewSaleBloc>().stream.firstWhere(
+                            (s) =>
+                                s.status == NewSaleStatus.ready ||
+                                s.status == NewSaleStatus.failure,
+                          );
+                    },
+                    child: isGridView
+                        ? GridView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.all(AppSpacing.md),
+                            gridDelegate:
+                                const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 210,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              childAspectRatio: 0.78,
+                            ),
+                            itemCount: products.length,
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              final inCartIndex = state.cart
+                                  .indexWhere((l) => l.productId == product.id);
+                              final inCart = inCartIndex >= 0
+                                  ? state.cart[inCartIndex]
+                                  : null;
+                              final outOfStock = product.quantityInStock <= 0;
+                              final unitPrice = product.catalogPrice(
+                                state.selectedPricingTier,
+                              );
+
+                              return _DesktopProductGridCard(
+                                product: product,
+                                unitPrice: unitPrice,
+                                inCartQuantity: inCart?.quantity ?? 0,
+                                outOfStock: outOfStock,
+                                onTap: () => onProductSelected(product),
+                              );
+                            },
+                          )
+                        : ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xs,
+                            ),
+                            itemCount: products.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 6),
+                            itemBuilder: (context, index) {
+                              final product = products[index];
+                              final inCartIndex = state.cart
+                                  .indexWhere((l) => l.productId == product.id);
+                              final inCart = inCartIndex >= 0
+                                  ? state.cart[inCartIndex]
+                                  : null;
+                              final outOfStock = product.quantityInStock <= 0;
+                              final unitPrice = product.catalogPrice(
+                                state.selectedPricingTier,
+                              );
+
+                              return _DesktopProductListRow(
+                                product: product,
+                                unitPrice: unitPrice,
+                                inCartQuantity: inCart?.quantity ?? 0,
+                                outOfStock: outOfStock,
+                                onTap: () => onProductSelected(product),
+                              );
+                            },
+                          ),
+                  ),
+          ),
+        ],
+      );
+    } catch (_) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.refresh_rounded,
+                size: 40,
+                color: Colors.amber,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Affichage temporairement indisponible',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              const Text(
+                'Une actualisation du catalogue résout ce problème.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              FilledButton.tonal(
+                onPressed: () => context
+                    .read<NewSaleBloc>()
+                    .add(const NewSaleLoadRequested()),
+                child: const Text('Recharger le catalogue'),
+              ),
             ],
           ),
         ),
-
-        // Sélecteur de grille tarifaire (si activé pour l'enseigne)
-        if (state.pricingTiersEnabled) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: SegmentedButton<SalePricingTier>(
-              segments: SalePricingTier.values
-                  .map(
-                    (tier) => ButtonSegment(
-                      value: tier,
-                      label: Text(tier.label),
-                    ),
-                  )
-                  .toList(),
-              selected: {state.selectedPricingTier},
-              onSelectionChanged: (selection) {
-                context.read<NewSaleBloc>().add(
-                      NewSalePricingTierChanged(selection.first),
-                    );
-              },
-              showSelectedIcon: false,
-              style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-            ),
-          ),
-        ],
-
-        const SizedBox(height: AppSpacing.xs),
-
-        // Zone de produits (Grille ou Liste)
-        Expanded(
-          child: products.isEmpty
-              ? state.products.isEmpty
-                  ? EmptyListPlaceholder.refreshable(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'Aucun produit disponible',
-                      subtitle:
-                          'Ajoutez des produits dans l’Inventaire, puis actualisez.',
-                      onRefresh: () async {
-                        context
-                            .read<NewSaleBloc>()
-                            .add(const NewSaleLoadRequested());
-                        await context.read<NewSaleBloc>().stream.firstWhere(
-                              (s) =>
-                                  s.status == NewSaleStatus.ready ||
-                                  s.status == NewSaleStatus.failure,
-                            );
-                      },
-                    )
-                  : const EmptyListPlaceholder(
-                      embedded: true,
-                      icon: Icons.search_off_outlined,
-                      title: 'Aucun produit ne correspond à votre recherche',
-                    )
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    context
-                        .read<NewSaleBloc>()
-                        .add(const NewSaleLoadRequested());
-                    await context.read<NewSaleBloc>().stream.firstWhere(
-                          (s) =>
-                              s.status == NewSaleStatus.ready ||
-                              s.status == NewSaleStatus.failure,
-                        );
-                  },
-                  child: isGridView
-                      ? GridView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          gridDelegate:
-                              const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 210,
-                            mainAxisSpacing: 10,
-                            crossAxisSpacing: 10,
-                            childAspectRatio: 0.84,
-                          ),
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-                            final inCartIndex = state.cart
-                                .indexWhere((l) => l.productId == product.id);
-                            final inCart = inCartIndex >= 0
-                                ? state.cart[inCartIndex]
-                                : null;
-                            final outOfStock = product.quantityInStock <= 0;
-                            final unitPrice = product.catalogPrice(
-                              state.selectedPricingTier,
-                            );
-
-                            return _DesktopProductGridCard(
-                              product: product,
-                              unitPrice: unitPrice,
-                              inCartQuantity: inCart?.quantity ?? 0,
-                              outOfStock: outOfStock,
-                              onTap: () => onProductSelected(product),
-                            );
-                          },
-                        )
-                      : ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.xs,
-                          ),
-                          itemCount: products.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 6),
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-                            final inCartIndex = state.cart
-                                .indexWhere((l) => l.productId == product.id);
-                            final inCart = inCartIndex >= 0
-                                ? state.cart[inCartIndex]
-                                : null;
-                            final outOfStock = product.quantityInStock <= 0;
-                            final unitPrice = product.catalogPrice(
-                              state.selectedPricingTier,
-                            );
-
-                            return _DesktopProductListRow(
-                              product: product,
-                              unitPrice: unitPrice,
-                              inCartQuantity: inCart?.quantity ?? 0,
-                              outOfStock: outOfStock,
-                              onTap: () => onProductSelected(product),
-                            );
-                          },
-                        ),
-                ),
-        ),
-      ],
-    );
+      );
+    }
   }
 }
 
@@ -1441,8 +1476,9 @@ class _DesktopProductGridCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Nom du produit
-              Expanded(
+              // Nom du produit avec hauteur dédiée
+              SizedBox(
+                height: 38,
                 child: Text(
                   product.name,
                   maxLines: 2,
@@ -1453,6 +1489,7 @@ class _DesktopProductGridCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const Spacer(),
 
               // Prix et Action rapide
               Row(

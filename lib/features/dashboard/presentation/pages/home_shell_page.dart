@@ -51,6 +51,7 @@ import '../../../settings/presentation/pages/settings_page.dart';
 import '../../../shop/presentation/pages/shop_list_page.dart';
 import '../../../stock_transfer/presentation/pages/stock_transfer_page.dart';
 import '../../../users/presentation/pages/user_list_page.dart';
+import '../../../inventory/presentation/pages/stock_analysis_page.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../models/sidebar_destination.dart';
 import '../widgets/desktop_breadcrumb_header.dart';
@@ -89,6 +90,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
   final _dashboardNavKey = GlobalKey<NavigatorState>();
   final _salesNavKey = GlobalKey<NavigatorState>();
   final _inventoryNavKey = GlobalKey<NavigatorState>();
+  final _stockValuationNavKey = GlobalKey<NavigatorState>();
   final _customersNavKey = GlobalKey<NavigatorState>();
 
   @override
@@ -342,14 +344,16 @@ class _HomeShellPageState extends State<HomeShellPage> {
         _currentIndex = 0;
       } else if (destination == SidebarDestination.sales) {
         _currentIndex = _useFxPrimary ? 0 : 1;
-      } else if (destination == SidebarDestination.inventory) {
+      } else if (destination == SidebarDestination.inventory ||
+          destination == SidebarDestination.stockValuation) {
         _currentIndex = 2;
       } else if (destination == SidebarDestination.customers) {
         _currentIndex = _useFxPrimary ? 1 : 3;
       }
 
       if (!_useFxPrimary) {
-        if (destination != SidebarDestination.inventory) {
+        if (destination != SidebarDestination.inventory &&
+            destination != SidebarDestination.stockValuation) {
           _productListBloc.add(
                 const ProductListLowStockToggled(false),
               );
@@ -394,6 +398,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
           key: const ValueKey('desktop_inventory'),
           navigatorKey: _inventoryNavKey,
           child: ProductListPage(session: widget.session),
+        ),
+      SidebarDestination.stockValuation => _SubpageNavigator(
+          key: const ValueKey('desktop_stock_valuation'),
+          navigatorKey: _stockValuationNavKey,
+          child: StockAnalysisPage(session: widget.session),
         ),
       SidebarDestination.customers => _SubpageNavigator(
           key: const ValueKey('desktop_customers'),
@@ -467,6 +476,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
     final isCore = _activeDestination == SidebarDestination.dashboard ||
         _activeDestination == SidebarDestination.sales ||
         _activeDestination == SidebarDestination.inventory ||
+        _activeDestination == SidebarDestination.stockValuation ||
         _activeDestination == SidebarDestination.customers;
 
     if (!isCore) {
@@ -477,7 +487,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
       SidebarDestination.dashboard => 0,
       SidebarDestination.sales => 1,
       SidebarDestination.inventory => 2,
-      SidebarDestination.customers => 3,
+      SidebarDestination.stockValuation => 3,
+      SidebarDestination.customers => 4,
       _ => 0,
     };
 
@@ -487,6 +498,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
         _buildDestinationWidget(SidebarDestination.dashboard),
         _buildDestinationWidget(SidebarDestination.sales),
         _buildDestinationWidget(SidebarDestination.inventory),
+        _buildDestinationWidget(SidebarDestination.stockValuation),
         _buildDestinationWidget(SidebarDestination.customers),
       ],
     );
@@ -612,6 +624,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
                   SidebarDestination.dashboard => _dashboardNavKey.currentState,
                   SidebarDestination.sales => _salesNavKey.currentState,
                   SidebarDestination.inventory => _inventoryNavKey.currentState,
+                  SidebarDestination.stockValuation => _stockValuationNavKey.currentState,
                   SidebarDestination.customers => _customersNavKey.currentState,
                   _ => null,
                 };

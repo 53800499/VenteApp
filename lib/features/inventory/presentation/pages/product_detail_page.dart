@@ -15,6 +15,10 @@ import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../procurement/presentation/models/po_form_prefill.dart';
 import '../../../procurement/presentation/utils/procurement_navigation.dart';
+import '../../domain/entities/inventory_entities.dart';
+import '../../domain/entities/stock_valuation_entities.dart';
+import '../../domain/services/stock_valuation_service.dart';
+import '../../domain/usecases/stock_valuation_usecases.dart';
 import '../bloc/product_detail_bloc.dart';
 import '../widgets/inventory_feedback.dart';
 import '../widgets/stock_gauge.dart';
@@ -173,6 +177,10 @@ class ProductDetailPage extends StatelessWidget {
 
     final detail = state.detail!;
     final product = detail.product;
+    final valuation = const StockValuationService().calculateProductValuation(
+      product: product,
+      activeLots: detail.stockLots,
+    );
 
     return ResponsiveBuilder(
       builder: (context, screenType) {
@@ -294,6 +302,10 @@ class ProductDetailPage extends StatelessWidget {
                 ],
               ),
             ],
+            const SizedBox(height: AppSpacing.md),
+            _buildValuationCard(context, valuation, product),
+            const SizedBox(height: AppSpacing.md),
+            _buildSalesVelocitySection(context, product.id),
             if (_canProcure && product.isLowStock) ...[
               const SizedBox(height: AppSpacing.md),
               FilledButton.icon(
@@ -436,6 +448,417 @@ class ProductDetailPage extends StatelessWidget {
       context.read<ProductDetailBloc>().add(const ProductDetailArchiveRequested());
     }
   }
+
+  Widget _buildValuationCard(
+    BuildContext context,
+    ProductStockValuation valuation,
+    Product product,
+  ) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 20,
+                  color: cs.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Valorisation du stock',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (valuation.isFifoValued)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      '${valuation.lotCount} lot(s) FIFO',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.onPrimaryContainer,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      'Prix catalogue',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: _MetricCard(
+                    label: 'Valeur d\'achat (Capital)',
+                    value: formatFcfa(valuation.purchaseValue),
+                    subtitle: valuation.quantityInStock > 0
+                        ? 'PMP : ${formatFcfa(valuation.averagePurchasePrice)} / u'
+                        : 'Stock nul',
+                    backgroundColor:
+                        cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _MetricCard(
+                    label: 'CA potentiel (Vente)',
+                    value: formatFcfa(valuation.potentialRevenue),
+                    subtitle: 'Prix : ${formatFcfa(product.priceSell)} / u',
+                    backgroundColor:
+                        cs.primaryContainer.withValues(alpha: 0.25),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: valuation.potentialMargin >= 0
+                    ? Colors.green.shade50
+                    : Colors.red.shade50,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: valuation.potentialMargin >= 0
+                      ? Colors.green.shade300
+                      : Colors.red.shade300,
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Marge brute potentielle',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: valuation.potentialMargin >= 0
+                                ? Colors.green.shade900
+                                : Colors.red.shade900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            formatFcfa(valuation.potentialMargin),
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: valuation.potentialMargin >= 0
+                                  ? Colors.green.shade900
+                                  : Colors.red.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: valuation.potentialMargin >= 0
+                          ? Colors.green.shade600
+                          : Colors.red.shade600,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      'Taux : ${valuation.marginRate.toStringAsFixed(1)} %',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSalesVelocitySection(BuildContext context, int productId) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return FutureBuilder<ProductSalesVelocity>(
+      future: sl<GetProductSalesVelocity>()(
+        shopId: session.shop.id,
+        productId: productId,
+      ),
+      builder: (context, snapshot) {
+        final velocity = snapshot.data ?? ProductSalesVelocity.empty;
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.trending_up_rounded,
+                        size: 20, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Dynamique des ventes',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isLoading) ...[
+                      const SizedBox(width: 8),
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _VelocityCell(
+                        period: 'Aujourd\'hui',
+                        qty: velocity.salesToday,
+                        revenue: velocity.revenueToday,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _VelocityCell(
+                        period: 'Cette semaine',
+                        qty: velocity.salesThisWeek,
+                        revenue: velocity.revenueThisWeek,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _VelocityCell(
+                        period: 'Ce mois',
+                        qty: velocity.salesThisMonth,
+                        revenue: velocity.revenueThisMonth,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _VelocityCell(
+                        period: 'Total réalisé',
+                        qty: velocity.salesTotal,
+                        revenue: velocity.revenueTotal,
+                        isTotal: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.subtitle,
+    required this.backgroundColor,
+  });
+
+  final String label;
+  final String value;
+  final String subtitle;
+  final Color backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VelocityCell extends StatelessWidget {
+  const _VelocityCell({
+    required this.period,
+    required this.qty,
+    required this.revenue,
+    this.isTotal = false,
+  });
+
+  final String period;
+  final int qty;
+  final int revenue;
+  final bool isTotal;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: isTotal
+            ? cs.secondaryContainer.withValues(alpha: 0.3)
+            : cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+        border: Border.all(
+          color: isTotal
+              ? cs.primary.withValues(alpha: 0.3)
+              : cs.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            period,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isTotal ? cs.primary : cs.onSurfaceVariant,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '$qty unité${qty > 1 ? 's' : ''}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatFcfa(revenue),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: cs.outline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _InfoTile extends StatelessWidget {
@@ -454,11 +877,15 @@ class _InfoTile extends StatelessWidget {
           children: [
             Text(label, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
             ),
           ],
         ),

@@ -6,6 +6,7 @@ enum SidebarDestination {
   dashboard,
   sales,
   inventory,
+  stockValuation,
   customers,
   // Modules & Commerce
   cashSessions,
@@ -33,6 +34,7 @@ extension SidebarDestinationX on SidebarDestination {
           useFxPrimary ? 'Bureau de Change' : 'Tableau de bord',
         SidebarDestination.sales => 'Ventes & Caisse',
         SidebarDestination.inventory => 'Stock & Produits',
+        SidebarDestination.stockValuation => 'Analyse du Stock',
         SidebarDestination.customers =>
           useFxPrimary ? 'Clients & Devises' : 'Clients & Dettes',
         SidebarDestination.cashSessions => 'Sessions de Caisse',
@@ -57,6 +59,7 @@ extension SidebarDestinationX on SidebarDestination {
         SidebarDestination.dashboard ||
         SidebarDestination.sales ||
         SidebarDestination.inventory ||
+        SidebarDestination.stockValuation ||
         SidebarDestination.customers =>
           'Activité principale',
         SidebarDestination.cashSessions ||
@@ -85,6 +88,7 @@ extension SidebarDestinationX on SidebarDestination {
             : Icons.dashboard_outlined,
         SidebarDestination.sales => Icons.point_of_sale_outlined,
         SidebarDestination.inventory => Icons.inventory_2_outlined,
+        SidebarDestination.stockValuation => Icons.analytics_outlined,
         SidebarDestination.customers => Icons.people_outline,
         SidebarDestination.cashSessions => Icons.account_balance_wallet_outlined,
         SidebarDestination.expenses => Icons.payments_outlined,
@@ -110,6 +114,7 @@ extension SidebarDestinationX on SidebarDestination {
             : Icons.dashboard_rounded,
         SidebarDestination.sales => Icons.point_of_sale_rounded,
         SidebarDestination.inventory => Icons.inventory_2_rounded,
+        SidebarDestination.stockValuation => Icons.analytics_rounded,
         SidebarDestination.customers => Icons.people_rounded,
         SidebarDestination.cashSessions => Icons.account_balance_wallet_rounded,
         SidebarDestination.expenses => Icons.payments_rounded,
@@ -136,6 +141,7 @@ extension SidebarDestinationX on SidebarDestination {
         SidebarDestination.dashboard => 'dashboard',
         SidebarDestination.sales => 'sales',
         SidebarDestination.inventory => 'inventory',
+        SidebarDestination.stockValuation => 'inventory',
         SidebarDestination.customers => 'customers',
         SidebarDestination.cashSessions => 'cash_sessions',
         SidebarDestination.expenses => 'expenses',

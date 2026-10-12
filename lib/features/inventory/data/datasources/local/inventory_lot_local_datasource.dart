@@ -370,7 +370,7 @@ class InventoryLotLocalDatasource {
             (l) => OrderingTerm.asc(l.id),
           ]))
         .get();
-    return rows.map(_toEntity).toList();
+    return rows.map(toEntity).toList();
   }
 
   Future<bool> hasLotForReceiptItem(int purchaseReceiptItemId) async {
@@ -517,7 +517,7 @@ class InventoryLotLocalDatasource {
     await refreshProductStockFromLots(shopId: shopId, productId: productId);
   }
 
-  lot_entity.InventoryLot _toEntity(InventoryLot row) {
+  lot_entity.InventoryLot toEntity(InventoryLot row) {
     return lot_entity.InventoryLot(
       id: row.id,
       shopId: row.shopId,

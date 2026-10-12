@@ -19,6 +19,7 @@ import '../widgets/product_card.dart';
 import 'product_detail_page.dart';
 import 'product_form_page.dart';
 import 'category_list_page.dart';
+import 'stock_analysis_page.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
 import '../widgets/desktop_product_list_view.dart';
@@ -218,6 +219,17 @@ class _ProductListPageState extends State<ProductListPage> {
                       Row(
                         children: [
                           Expanded(child: _FiltersBar(canWrite: _canWrite)),
+                          IconButton(
+                            icon: const Icon(Icons.analytics_outlined, size: 20),
+                            tooltip: 'Analyse & Valorisation du Stock',
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => StockAnalysisPage(
+                                  session: widget.session,
+                                ),
+                              ),
+                            ),
+                          ),
                           if (_canWrite)
                             TextButton.icon(
                               onPressed: () async {
