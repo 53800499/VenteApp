@@ -1,5 +1,7 @@
 import '../../../../core/errors/failures.dart';
+import '../../../../shared/enums/permission.dart';
 import '../../../../shared/enums/user_role.dart';
+import '../../../../shared/guards/permission_guard.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../auth/domain/usecases/auth_usecases.dart';
 import '../entities/cash_session_entities.dart';
@@ -83,6 +85,71 @@ class OpenCashSession {
       );
 }
 
+class SubmitCashSessionClosing {
+  const SubmitCashSessionClosing(this._repository);
+
+  final CashSessionRepository _repository;
+
+  Future<CashSession> call({
+    required AuthSession session,
+    required int sessionId,
+    required SubmitCashSessionClosingInput input,
+  }) =>
+      _repository.submitClosing(
+        shopId: session.shop.id,
+        userId: session.user.id,
+        sessionId: sessionId,
+        input: input,
+      );
+}
+
+class ApproveCashSession {
+  const ApproveCashSession(this._repository);
+
+  final CashSessionRepository _repository;
+
+  Future<CashSession> call({
+    required AuthSession session,
+    required int sessionId,
+    required ApproveCashSessionInput input,
+  }) {
+    final canApprove = session.user.role == UserRole.owner ||
+        PermissionGuard.can(
+          session.user.permissions,
+          Permission.cashSessionsApprove,
+        );
+    if (!canApprove) {
+      throw const UnauthorizedFailure(
+        'Seul le propriétaire ou un utilisateur autorisé peut approuver une clôture de caisse.',
+      );
+    }
+    return _repository.approveSession(
+      shopId: session.shop.id,
+      userId: session.user.id,
+      sessionId: sessionId,
+      input: input,
+    );
+  }
+}
+
+class RecordOwnerDrop {
+  const RecordOwnerDrop(this._repository);
+
+  final CashSessionRepository _repository;
+
+  Future<CashMovement> call({
+    required AuthSession session,
+    required int sessionId,
+    required RecordOwnerDropInput input,
+  }) =>
+      _repository.recordOwnerDrop(
+        shopId: session.shop.id,
+        userId: session.user.id,
+        sessionId: sessionId,
+        input: input,
+      );
+}
+
 class CloseCashSession {
   const CloseCashSession(this._repository, this._verifyOwnerPin);
 
@@ -98,7 +165,7 @@ class CloseCashSession {
       final pin = input.ownerPin?.trim() ?? '';
       if (pin.length < 4) {
         throw const ValidationFailure(
-          'Le PIN du patron est requis pour clôturer la caisse.',
+          'Le PIN du patron est requis pour clôturer la caisse directement.',
         );
       }
       await _verifyOwnerPin(shopId: session.shop.id, pin: pin);

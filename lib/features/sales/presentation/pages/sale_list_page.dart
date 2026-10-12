@@ -52,7 +52,7 @@ class _SaleListPageState extends State<SaleListPage> {
       moduleIcon: Icons.point_of_sale_outlined,
       child: ResponsiveBuilder(
         builder: (context, screenType) {
-          final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+          final isDesktop = Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
 
           if (isDesktop) {
             return BlocBuilder<SaleListBloc, SaleListState>(
@@ -205,7 +205,7 @@ class _SaleListPageState extends State<SaleListPage> {
                                       context.isCompactScreen ? 110.0 : AppSpacing.md,
                                     ),
                                     itemCount: state.sales.length,
-                                    separatorBuilder: (_, __) =>
+                                    separatorBuilder: (_, _) =>
                                         const SizedBox(height: AppSpacing.sm),
                                     itemBuilder: (context, index) {
                                       final sale = state.sales[index];

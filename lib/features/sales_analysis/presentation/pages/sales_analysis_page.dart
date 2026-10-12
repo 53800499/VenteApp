@@ -19,6 +19,8 @@ import '../utils/sales_analysis_formatters.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 import 'product_sales_detail_page.dart';
 import '../../../../shared/components/app_page_container.dart';
+import '../../../../core/responsive/breakpoints.dart';
+import '../widgets/desktop_sales_analysis_view.dart';
 
 Future<void> _refreshSalesAnalysis(BuildContext context) async {
   final bloc = context.read<SalesAnalysisBloc>();
@@ -28,6 +30,43 @@ Future<void> _refreshSalesAnalysis(BuildContext context) async {
         s.status == SalesAnalysisStatus.loaded ||
         s.status == SalesAnalysisStatus.failure,
   );
+}
+
+Future<void> _pickCustomRange(BuildContext context) async {
+  final now = DateTime.now();
+  final picked = await showDateRangePicker(
+    context: context,
+    firstDate: DateTime(now.year - 2),
+    lastDate: now,
+    helpText: 'Choisir une période',
+  );
+  if (picked == null || !context.mounted) return;
+
+  const beninOffsetMs = 60 * 60 * 1000;
+  final fromMs = DateTime.utc(
+    picked.start.year,
+    picked.start.month,
+    picked.start.day,
+  ).millisecondsSinceEpoch -
+      beninOffsetMs;
+  final toMs = DateTime.utc(
+    picked.end.year,
+    picked.end.month,
+    picked.end.day,
+    23,
+    59,
+    59,
+    999,
+  ).millisecondsSinceEpoch -
+      beninOffsetMs;
+
+  context.read<SalesAnalysisBloc>().add(
+        SalesAnalysisPeriodChanged(
+          period: ReportPeriodPreset.custom,
+          customFrom: fromMs,
+          customTo: toMs,
+        ),
+      );
 }
 
 /// État vide d'un onglet (sans RefreshIndicator — compatible TabBarView).
@@ -135,6 +174,8 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
     return BlocListener<SalesAnalysisBloc, SalesAnalysisState>(
       listenWhen: (prev, curr) => prev.tabIndex != curr.tabIndex,
       listener: (context, state) {
@@ -142,109 +183,153 @@ class _SalesAnalysisViewState extends State<_SalesAnalysisView>
           _tabController.animateTo(state.tabIndex);
         }
       },
-      child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Analyse des ventes'),
-        actions: [
-          const ModuleHelpButton(articleId: 'sales_analysis'),
-          IconButton(
-            tooltip: 'Actualiser',
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _refreshSalesAnalysis(context),
-          ),
-          const AppHeaderActions(),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: _tabs.map((t) => Tab(text: t)).toList(),
-        ),
-      ),
-      body: AppPageContainer(
-        maxWidth: 1100.0,
-        child: Column(
-          children: [
-          const OfflineModeBanner(
-            onlinePreferredMessage: OfflineModeBanner.hybridReadMessage,
-          ),
-          BlocBuilder<SalesAnalysisBloc, SalesAnalysisState>(
-            buildWhen: (prev, curr) =>
-                prev.query != curr.query || prev.periodLabel != curr.periodLabel,
-            builder: (context, state) {
-              return _PeriodBar(
-                query: state.query,
-                periodLabel: state.periodLabel,
-              );
-            },
-          ),
-          Expanded(
-            child: BlocBuilder<SalesAnalysisBloc, SalesAnalysisState>(
-              builder: (context, state) {
-                final bootstrapping =
-                    (state.status == SalesAnalysisStatus.initial ||
-                            state.status == SalesAnalysisStatus.loading) &&
-                        state.products.isEmpty;
-                if (bootstrapping) {
-                  return const DashboardSkeleton();
-                }
-                if (state.status == SalesAnalysisStatus.failure &&
-                    state.products.isEmpty) {
-                  return _ErrorBody(message: state.errorMessage ?? 'Erreur');
-                }
+      child: isDesktop
+          ? Scaffold(
+              body: BlocBuilder<SalesAnalysisBloc, SalesAnalysisState>(
+                builder: (context, state) {
+                  final bootstrapping =
+                      (state.status == SalesAnalysisStatus.initial ||
+                              state.status == SalesAnalysisStatus.loading) &&
+                          state.products.isEmpty;
+                  if (bootstrapping) {
+                    return const DashboardSkeleton();
+                  }
+                  if (state.status == SalesAnalysisStatus.failure &&
+                      state.products.isEmpty) {
+                    return _ErrorBody(message: state.errorMessage ?? 'Erreur');
+                  }
 
-                return Column(
-                  children: [
-                    if (state.status == SalesAnalysisStatus.loading)
-                      const LinearProgressIndicator(minHeight: 2),
-                    Expanded(
-                      child: TabBarView(
+                  return DesktopSalesAnalysisView(
+                    session: context.read<SalesAnalysisBloc>().session,
+                    state: state,
+                    tabController: _tabController,
+                    onRefresh: () => _refreshSalesAnalysis(context),
+                    onPickCustomRange: (ctx) => _pickCustomRange(ctx),
+                    onTabSelected: (index) {
+                      _tabController.animateTo(index);
+                      context
+                          .read<SalesAnalysisBloc>()
+                          .add(SalesAnalysisTabChanged(index));
+                    },
+                  );
+                },
+              ),
+            )
+          : Scaffold(
+              appBar: AppBar(
+                title: const Text('Analyse des ventes'),
+                actions: [
+                  const ModuleHelpButton(articleId: 'sales_analysis'),
+                  IconButton(
+                    tooltip: 'Actualiser',
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => _refreshSalesAnalysis(context),
+                  ),
+                  const AppHeaderActions(),
+                ],
+                bottom: TabBar(
                   controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  tabs: _tabs.map((t) => Tab(text: t)).toList(),
+                ),
+              ),
+              body: AppPageContainer(
+                maxWidth: 1100.0,
+                child: Column(
                   children: [
-                    _ProductsTab(
-                      products: state.products,
-                      query: state.query,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
+                    const OfflineModeBanner(
+                      onlinePreferredMessage: OfflineModeBanner.hybridReadMessage,
                     ),
-                    _EmployeesTab(
-                      employees: state.employees,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
+                    BlocBuilder<SalesAnalysisBloc, SalesAnalysisState>(
+                      buildWhen: (prev, curr) =>
+                          prev.query != curr.query ||
+                          prev.periodLabel != curr.periodLabel,
+                      builder: (context, state) {
+                        return _PeriodBar(
+                          query: state.query,
+                          periodLabel: state.periodLabel,
+                        );
+                      },
                     ),
-                    _ClientsTab(
-                      customers: state.customers,
-                      session: context.read<SalesAnalysisBloc>().session,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
-                    ),
-                    _CategoriesTab(
-                      categories: state.categories,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
-                    ),
-                    _MarginsTab(
-                      margins: state.margins,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
-                    ),
-                    _PricesTab(
-                      deviations: state.priceDeviations,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
-                    ),
-                    _TrendsTab(
-                      trends: state.trends,
-                      isLoading: state.status == SalesAnalysisStatus.loading,
-                    ),
-                  ],
+                    Expanded(
+                      child: BlocBuilder<SalesAnalysisBloc, SalesAnalysisState>(
+                        builder: (context, state) {
+                          final bootstrapping =
+                              (state.status == SalesAnalysisStatus.initial ||
+                                      state.status ==
+                                          SalesAnalysisStatus.loading) &&
+                                  state.products.isEmpty;
+                          if (bootstrapping) {
+                            return const DashboardSkeleton();
+                          }
+                          if (state.status == SalesAnalysisStatus.failure &&
+                              state.products.isEmpty) {
+                            return _ErrorBody(
+                                message: state.errorMessage ?? 'Erreur');
+                          }
+
+                          return Column(
+                            children: [
+                              if (state.status == SalesAnalysisStatus.loading)
+                                const LinearProgressIndicator(minHeight: 2),
+                              Expanded(
+                                child: TabBarView(
+                                  controller: _tabController,
+                                  children: [
+                                    _ProductsTab(
+                                      products: state.products,
+                                      query: state.query,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                    _EmployeesTab(
+                                      employees: state.employees,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                    _ClientsTab(
+                                      customers: state.customers,
+                                      session: context
+                                          .read<SalesAnalysisBloc>()
+                                          .session,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                    _CategoriesTab(
+                                      categories: state.categories,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                    _MarginsTab(
+                                      margins: state.margins,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                    _PricesTab(
+                                      deviations: state.priceDeviations,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                    _TrendsTab(
+                                      trends: state.trends,
+                                      isLoading: state.status ==
+                                          SalesAnalysisStatus.loading,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ],
-      ),
-      ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _PeriodBar extends StatelessWidget {
@@ -252,43 +337,6 @@ class _PeriodBar extends StatelessWidget {
 
   final SalesAnalysisQuery query;
   final String? periodLabel;
-
-  Future<void> _pickCustomRange(BuildContext context) async {
-    final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 2),
-      lastDate: now,
-      helpText: 'Choisir une période',
-    );
-    if (picked == null || !context.mounted) return;
-
-    const beninOffsetMs = 60 * 60 * 1000;
-    final fromMs = DateTime.utc(
-      picked.start.year,
-      picked.start.month,
-      picked.start.day,
-    ).millisecondsSinceEpoch -
-        beninOffsetMs;
-    final toMs = DateTime.utc(
-      picked.end.year,
-      picked.end.month,
-      picked.end.day,
-      23,
-      59,
-      59,
-      999,
-    ).millisecondsSinceEpoch -
-        beninOffsetMs;
-
-    context.read<SalesAnalysisBloc>().add(
-          SalesAnalysisPeriodChanged(
-            period: ReportPeriodPreset.custom,
-            customFrom: fromMs,
-            customTo: toMs,
-          ),
-        );
-  }
 
   @override
   Widget build(BuildContext context) {

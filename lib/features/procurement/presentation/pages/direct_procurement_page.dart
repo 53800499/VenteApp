@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../shared/components/app_searchable_item_picker.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
 import '../../../../core/utils/currency_formatter.dart';
@@ -402,68 +403,66 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
       builder: (diagContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           title: const Text('Ajouter un article'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<dynamic>(
-                  isExpanded: true,
-                  value: selectedProduct,
-                  hint: const Text('Sélectionner un produit'),
-                  decoration: const InputDecoration(
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSearchableItemPicker<dynamic>(
+                    items: _allProducts,
+                    selectedItem: selectedProduct,
                     labelText: 'Produit *',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _allProducts.map((p) {
-                    return DropdownMenuItem(
-                      value: p,
-                      child: Text(p.name as String),
-                    );
-                  }).toList(),
-                  onChanged: (val) async {
-                    setStateDialog(() => selectedProduct = val);
-                    if (val != null) {
-                      final shopId = context.read<ProcurementBloc>().shopId;
-                      final lotDs = InventoryLotLocalDatasource(
-                        sl<InventoryLocalDatasource>().database,
-                      );
-                      final ref = await lotDs.getReferenceUnitCost(
-                        shopId: shopId,
-                        productId: val.id as int,
-                      );
-                      if (context.mounted) {
-                        setStateDialog(() => costController.text = '$ref');
+                    hintText: 'Rechercher un produit...',
+                    labelBuilder: (p) => p.name as String,
+                    subtitleBuilder: (p) => 'Stock actuel : ${p.quantityInStock}',
+                    filterPredicate: (p, q) =>
+                        (p.name as String).toLowerCase().contains(q.toLowerCase()),
+                    onChanged: (val) async {
+                      setStateDialog(() => selectedProduct = val);
+                      if (val != null) {
+                        final shopId = context.read<ProcurementBloc>().shopId;
+                        final lotDs = InventoryLotLocalDatasource(
+                          sl<InventoryLocalDatasource>().database,
+                        );
+                        final ref = await lotDs.getReferenceUnitCost(
+                          shopId: shopId,
+                          productId: val.id as int,
+                        );
+                        if (context.mounted) {
+                          setStateDialog(() => costController.text = '$ref');
+                        }
                       }
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: acceptedController,
-                        decoration: const InputDecoration(
-                          labelText: 'Accepté *',
-                          border: OutlineInputBorder(),
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: acceptedController,
+                          decoration: const InputDecoration(
+                            labelText: 'Accepté *',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
                         ),
-                        keyboardType: TextInputType.number,
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: TextFormField(
-                        controller: refusedController,
-                        decoration: const InputDecoration(
-                          labelText: 'Refusé',
-                          border: OutlineInputBorder(),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: TextFormField(
+                          controller: refusedController,
+                          decoration: const InputDecoration(
+                            labelText: 'Refusé',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) => setStateDialog(() {}),
                         ),
-                        keyboardType: TextInputType.number,
-                        onChanged: (_) => setStateDialog(() {}),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
                 if ((int.tryParse(refusedController.text.trim()) ?? 0) > 0) ...[
                   const SizedBox(height: AppSpacing.sm),
                   DropdownButtonFormField<SupplierRefusalReason>(
@@ -528,7 +527,8 @@ class _DirectProcurementPageState extends State<DirectProcurementPage> {
               ],
             ),
           ),
-          actions: [
+        ),
+        actions: [
             TextButton(
               onPressed: () => Navigator.pop(diagContext),
               child: const Text('Annuler'),

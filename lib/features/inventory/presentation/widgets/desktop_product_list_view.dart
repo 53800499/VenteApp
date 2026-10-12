@@ -51,33 +51,39 @@ class DesktopProductListView extends StatelessWidget {
 
     final lowStockCount = products.where((p) => p.isLowStock || p.quantityInStock <= p.alertThreshold).length;
 
-    return Container(
-      color: scheme.surfaceContainerLowest.withValues(alpha: 0.5),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.lg,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. En-tête de commande ERP
-            _buildCommandHeader(context, theme, scheme, products.length, lowStockCount),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompactOrMedium = constraints.maxWidth < 900;
 
-            const SizedBox(height: AppSpacing.md),
-
-            // 2. Barre d'outils (Recherche + Filtres Catégories / Alertes / Tri)
-            _buildToolbar(context, theme, scheme, lowStockCount),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // 3. Tableau de données moderne ERP
-            Expanded(
-              child: _buildDataTable(context, theme, scheme, products),
+        return Container(
+          color: scheme.surfaceContainerLowest.withValues(alpha: 0.5),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompactOrMedium ? AppSpacing.md : AppSpacing.xl,
+              vertical: isCompactOrMedium ? AppSpacing.sm : AppSpacing.lg,
             ),
-          ],
-        ),
-      ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. En-tête de commande ERP
+                _buildCommandHeader(context, theme, scheme, products.length, lowStockCount),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // 2. Barre d'outils (Recherche + Filtres Catégories / Alertes / Tri)
+                _buildToolbar(context, theme, scheme, lowStockCount),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // 3. Tableau de données moderne ERP
+                Expanded(
+                  child: _buildDataTable(context, theme, scheme, products),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -88,139 +94,120 @@ class DesktopProductListView extends StatelessWidget {
     int totalCount,
     int lowStockCount,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md + 4),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm + 2),
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 820;
+
+        final titleAndBadge = Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm + 2),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Icon(
+                Icons.inventory_2_rounded,
+                color: scheme.primary,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              Icons.inventory_2_rounded,
-              color: scheme.primary,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    Text(
-                      'Gestion des Stocks & Produits',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Text(
-                        '$totalCount référence${totalCount > 1 ? 's' : ''}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurfaceVariant,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      Text(
+                        'Gestion des Stocks & Produits',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                    ),
-                    if (lowStockCount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.warning.withValues(alpha: 0.15),
+                          color: scheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(AppRadius.pill),
-                          border: Border.all(
-                            color: AppColors.warning.withValues(alpha: 0.4),
-                          ),
                         ),
                         child: Text(
-                          '$lowStockCount en alerte',
+                          '$totalCount référence${totalCount > 1 ? 's' : ''}',
                           style: theme.textTheme.labelSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: AppColors.warning,
+                            color: scheme.onSurfaceVariant,
                           ),
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Catalogue de vente, suivi des approvisionnements et alertes de rupture en temps réel',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceMuted,
-                    fontWeight: FontWeight.w500,
+                      if (lowStockCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(AppRadius.pill),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: Text(
+                            '$lowStockCount en alerte',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Actions
-          IconButton(
-            onPressed: state.isRefreshing ? null : onRefresh,
-            tooltip: 'Actualiser le catalogue',
-            icon: state.isRefreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded, size: 20),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => StockAnalysisPage(session: session),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Catalogue, approvisionnements et alertes de rupture en temps réel',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
-            icon: const Icon(Icons.analytics_outlined, size: 18),
-            label: const Text('Analyse du Stock'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 2,
-              ),
+            IconButton(
+              onPressed: state.isRefreshing ? null : onRefresh,
+              tooltip: 'Actualiser le catalogue',
+              icon: state.isRefreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 20),
             ),
-          ),
-          if (canWrite) ...[
-            const SizedBox(width: AppSpacing.sm),
+          ],
+        );
+
+        final actionButtons = Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
+          alignment: WrapAlignment.end,
+          children: [
             OutlinedButton.icon(
-              onPressed: onManageCategories,
-              icon: const Icon(Icons.category_outlined, size: 18),
-              label: const Text('Gérer les catégories'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => StockAnalysisPage(session: session),
+                ),
+              ),
+              icon: const Icon(Icons.analytics_outlined, size: 18),
+              label: const Text('Analyse du Stock'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
@@ -228,21 +215,66 @@ class DesktopProductListView extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            FilledButton.icon(
-              onPressed: onNewProduct,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Nouveau Produit'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm + 2,
+            if (canWrite) ...[
+              OutlinedButton.icon(
+                onPressed: onManageCategories,
+                icon: const Icon(Icons.category_outlined, size: 18),
+                label: const Text('Gérer les catégories'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm + 2,
+                  ),
                 ),
               ),
-            ),
+              FilledButton.icon(
+                onPressed: onNewProduct,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Nouveau Produit'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm + 2,
+                  ),
+                ),
+              ),
+            ],
           ],
-        ],
-      ),
+        );
+
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titleAndBadge,
+                    const SizedBox(height: AppSpacing.sm),
+                    actionButtons,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: titleAndBadge),
+                    actionButtons,
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -252,156 +284,188 @@ class DesktopProductListView extends StatelessWidget {
     ColorScheme scheme,
     int lowStockCount,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Recherche
-          Expanded(
-            flex: 3,
-            child: SizedBox(
-              height: 40,
-              child: TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher un produit, SKU, code-barres…',
-                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceMuted,
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: onClearSearch,
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  filled: true,
-                  fillColor: scheme.surfaceContainerLowest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: scheme.primary, width: 1.5),
-                  ),
-                ),
-                onChanged: onSearchChanged,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 820;
 
-          // Filtre Stock faible
-          FilterChip(
-            avatar: Icon(
-              Icons.warning_amber_rounded,
-              size: 14,
-              color: state.filters.lowStockOnly ? AppColors.warning : AppColors.onSurfaceMuted,
-            ),
-            label: Text(
-              lowStockCount > 0 ? 'Stock faible ($lowStockCount)' : 'Stock faible',
-            ),
-            selected: state.filters.lowStockOnly,
-            onSelected: onLowStockToggled,
-            visualDensity: VisualDensity.compact,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-
-          // Menu déroulant des catégories
-          Container(
-            height: 38,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: scheme.outlineVariant.withValues(alpha: 0.4),
+        final searchField = SizedBox(
+          height: 40,
+          child: TextField(
+            controller: searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher un produit, SKU, code-barres…',
+              hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.onSurfaceMuted,
               ),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<int?>(
-                value: state.filters.categoryId,
-                hint: const Text('Toutes les catégories', style: TextStyle(fontSize: 13)),
-                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
-                  fontSize: 13,
-                ),
-                items: [
-                  const DropdownMenuItem<int?>(
-                    value: null,
-                    child: Text('Toutes les catégories'),
-                  ),
-                  ...state.categories.map(
-                    (cat) => DropdownMenuItem<int?>(
-                      value: cat.id,
-                      child: Text(cat.name),
-                    ),
-                  ),
-                ],
-                onChanged: onCategorySelected,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-
-          // Menu de tri
-          PopupMenuButton<ProductSort>(
-            tooltip: 'Trier la liste',
-            onSelected: onSortSelected,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: ProductSort.nameAsc, child: Text('Nom A → Z')),
-              PopupMenuItem(value: ProductSort.nameDesc, child: Text('Nom Z → A')),
-              PopupMenuItem(value: ProductSort.stockAsc, child: Text('Stock croissant')),
-              PopupMenuItem(value: ProductSort.stockDesc, child: Text('Stock décroissant')),
-              PopupMenuItem(value: ProductSort.priceAsc, child: Text('Prix croissant')),
-              PopupMenuItem(value: ProductSort.priceDesc, child: Text('Prix décroissant')),
-            ],
-            child: Container(
-              height: 38,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerLowest,
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              suffixIcon: searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: onClearSearch,
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              filled: true,
+              fillColor: scheme.surfaceContainerLowest,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(
-                  color: scheme.outlineVariant.withValues(alpha: 0.4),
+                borderSide: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.sort_rounded, size: 18, color: scheme.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Trier',
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide(color: scheme.primary, width: 1.5),
+              ),
+            ),
+            onChanged: onSearchChanged,
+          ),
+        );
+
+        final filterGroup = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              // Filtre Stock faible
+              FilterChip(
+                avatar: Icon(
+                  Icons.warning_amber_rounded,
+                  size: 14,
+                  color: state.filters.lowStockOnly
+                      ? AppColors.warning
+                      : AppColors.onSurfaceMuted,
+                ),
+                label: Text(
+                  lowStockCount > 0 ? 'Stock faible ($lowStockCount)' : 'Stock faible',
+                ),
+                selected: state.filters.lowStockOnly,
+                onSelected: onLowStockToggled,
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+
+              // Menu déroulant des catégories
+              Container(
+                height: 38,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: scheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    value: state.filters.categoryId,
+                    hint: const Text(
+                      'Toutes les catégories',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
                       fontSize: 13,
                     ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('Toutes les catégories'),
+                      ),
+                      ...state.categories.map(
+                        (cat) => DropdownMenuItem<int?>(
+                          value: cat.id,
+                          child: Text(cat.name),
+                        ),
+                      ),
+                    ],
+                    onChanged: onCategorySelected,
                   ),
-                ],
+                ),
               ),
+              const SizedBox(width: AppSpacing.xs),
+
+              // Menu de tri
+              PopupMenuButton<ProductSort>(
+                tooltip: 'Trier la liste',
+                onSelected: onSortSelected,
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: ProductSort.nameAsc, child: Text('Nom A → Z')),
+                  PopupMenuItem(value: ProductSort.nameDesc, child: Text('Nom Z → A')),
+                  PopupMenuItem(value: ProductSort.stockAsc, child: Text('Stock croissant')),
+                  PopupMenuItem(value: ProductSort.stockDesc, child: Text('Stock décroissant')),
+                  PopupMenuItem(value: ProductSort.priceAsc, child: Text('Prix croissant')),
+                  PopupMenuItem(value: ProductSort.priceDesc, child: Text('Prix décroissant')),
+                ],
+                child: Container(
+                  height: 38,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm + 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: scheme.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.sort_rounded, size: 18, color: scheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Trier',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.3),
             ),
           ),
-        ],
-      ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchField,
+                    const SizedBox(height: AppSpacing.xs),
+                    filterGroup,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(flex: 3, child: searchField),
+                    const SizedBox(width: AppSpacing.md),
+                    filterGroup,
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -428,47 +492,48 @@ class DesktopProductListView extends StatelessWidget {
       const AppTableColumn(
         label: 'Réf. / SKU',
         icon: Icons.qr_code_rounded,
-        width: 130,
+        width: 120,
       ),
       const AppTableColumn(
         label: 'Désignation Produit',
         icon: Icons.inventory_2_outlined,
         flex: 3,
+        minWidth: 200,
       ),
       const AppTableColumn(
         label: 'Catégorie',
         icon: Icons.category_outlined,
-        width: 160,
+        width: 150,
       ),
       const AppTableColumn(
         label: 'Prix Unitaire',
         icon: Icons.monetization_on_outlined,
-        width: 150,
+        width: 140,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
       const AppTableColumn(
         label: 'Stock Dispo',
         icon: Icons.warehouse_rounded,
-        width: 140,
+        width: 130,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
       const AppTableColumn(
         label: 'Seuil Min',
         icon: Icons.notifications_none_rounded,
-        width: 110,
+        width: 100,
         alignment: Alignment.center,
       ),
       const AppTableColumn(
         label: 'État',
         icon: Icons.health_and_safety_outlined,
-        width: 140,
+        width: 130,
         alignment: Alignment.center,
       ),
       const AppTableColumn(
         label: 'Action',
-        width: 100,
+        width: 80,
         alignment: Alignment.center,
       ),
     ];
@@ -655,7 +720,7 @@ class DesktopProductListView extends StatelessWidget {
       columns: columns,
       rows: rows,
       itemsPerPage: 15,
-      minWidth: 900,
+      minWidth: 1050,
     );
   }
 }

@@ -30,8 +30,10 @@ import 'po_form_page.dart';
 import 'direct_procurement_page.dart';
 import 'direct_receipt_detail_page.dart';
 import '../models/po_form_prefill.dart';
+import '../../../../core/responsive/breakpoints.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../widgets/desktop_procurement_view.dart';
 
 class ProcurementPage extends StatelessWidget {
   const ProcurementPage({
@@ -248,6 +250,103 @@ class _ProcurementViewState extends State<_ProcurementView>
         }
       },
       builder: (context, state) {
+        final isDesktop =
+            Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
+        if (isDesktop) {
+          return ProcurementSyncScope(
+            overview: _syncOverview,
+            onRefresh: _refreshSyncOverview,
+            child: Scaffold(
+              body: DesktopProcurementView(
+                state: state,
+                canCreate: canCreate,
+                canReceive: canReceive,
+                syncOverview: _syncOverview,
+                shopId: _shopId,
+                onRefresh: () => _refresh(context, includeReport: true),
+                onOpenNewPo: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: const PoFormPage(),
+                      ),
+                    ),
+                  );
+                },
+                onOpenDirectProcurement: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: const DirectProcurementPage(),
+                      ),
+                    ),
+                  );
+                },
+                onOpenNewSupplier: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: const SupplierFormPage(),
+                      ),
+                    ),
+                  );
+                },
+                onOpenPoDetail: (poId) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: PoDetailPage(poId: poId),
+                      ),
+                    ),
+                  );
+                },
+                onOpenDirectReceiptDetail: (receiptId) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: DirectReceiptDetailPage(receiptId: receiptId),
+                      ),
+                    ),
+                  );
+                },
+                onOpenInvoiceDetail: (invoiceId) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: InvoiceDetailPage(invoiceId: invoiceId),
+                      ),
+                    ),
+                  );
+                },
+                onOpenSupplierDetail: (supplier) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<ProcurementBloc>(),
+                        child: SupplierFormPage(supplier: supplier),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+        }
+
         return ProcurementSyncScope(
           overview: _syncOverview,
           onRefresh: _refreshSyncOverview,
@@ -675,13 +774,15 @@ class _OrdersList extends StatelessWidget {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.5,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const EmptyListPlaceholder(
-                      title: 'Aucune commande d\'approvisionnement.',
-                      icon: Icons.shopping_bag_outlined,
-                    ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const EmptyListPlaceholder(
+                        title: 'Aucune commande d\'approvisionnement.',
+                        icon: Icons.shopping_bag_outlined,
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     if (canCreate)
                       FilledButton.icon(
@@ -706,7 +807,8 @@ class _OrdersList extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+          ),
+        ],
         ),
       );
     }
@@ -948,13 +1050,15 @@ class _DirectReceiptsList extends StatelessWidget {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.5,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const EmptyListPlaceholder(
-                      title: 'Aucun approvisionnement direct.',
-                      icon: Icons.inventory_2_outlined,
-                    ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const EmptyListPlaceholder(
+                        title: 'Aucun approvisionnement direct.',
+                        icon: Icons.inventory_2_outlined,
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     if (canReceive)
                       FilledButton.icon(
@@ -979,7 +1083,8 @@ class _DirectReceiptsList extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+          ),
+        ],
         ),
       );
     }
@@ -1171,13 +1276,15 @@ class _SuppliersTab extends StatelessWidget {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.5,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const EmptyListPlaceholder(
-                      title: 'Aucun fournisseur.',
-                      icon: Icons.people_alt_outlined,
-                    ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const EmptyListPlaceholder(
+                        title: 'Aucun fournisseur.',
+                        icon: Icons.people_alt_outlined,
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     if (canCreate)
                       FilledButton.icon(
@@ -1192,7 +1299,8 @@ class _SuppliersTab extends StatelessWidget {
                 ),
               ),
             ),
-          ],
+          ),
+        ],
         ),
       );
     }

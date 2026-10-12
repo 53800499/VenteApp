@@ -94,7 +94,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 47;
+  int get schemaVersion => 48;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -539,6 +539,43 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 47) {
             await _backfillSyncQueueColumns();
+          }
+          if (from < 48) {
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.submittedAt,
+            );
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.submittedBy,
+            );
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.approvedAt,
+            );
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.approvedBy,
+            );
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.justificationCategory,
+            );
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.justificationNote,
+            );
+            await _addColumnIfMissing(
+              m,
+              cashSessions,
+              cashSessions.reviewNote,
+            );
           }
         },
       );

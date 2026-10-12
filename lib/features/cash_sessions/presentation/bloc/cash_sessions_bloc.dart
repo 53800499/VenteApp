@@ -22,6 +22,9 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     required ListCashMovements listMovements,
     required OpenCashSession openSession,
     required CloseCashSession closeSession,
+    SubmitCashSessionClosing? submitClosing,
+    ApproveCashSession? approveSession,
+    RecordOwnerDrop? recordOwnerDrop,
     required RecordCashMovement recordMovement,
     required SyncCashSessionsFromRemote syncFromRemote,
     required AuthSession session,
@@ -32,6 +35,9 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
         _listMovements = listMovements,
         _openSession = openSession,
         _closeSession = closeSession,
+        _submitClosing = submitClosing,
+        _approveSession = approveSession,
+        _recordOwnerDrop = recordOwnerDrop,
         _recordMovement = recordMovement,
         _syncFromRemote = syncFromRemote,
         _session = session,
@@ -40,6 +46,9 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     on<CashSessionsRefreshRequested>(_onRefresh);
     on<CashSessionOpenRequested>(_onOpen);
     on<CashSessionCloseRequested>(_onClose);
+    on<CashSessionSubmitClosingRequested>(_onSubmitClosing);
+    on<CashSessionApproveRequested>(_onApprove);
+    on<CashSessionOwnerDropRequested>(_onOwnerDrop);
     on<CashMovementRecordRequested>(_onMovement);
 
     _syncSub = syncService?.snapshots.listen(_onSyncSnapshot);
@@ -51,6 +60,9 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
   final ListCashMovements _listMovements;
   final OpenCashSession _openSession;
   final CloseCashSession _closeSession;
+  final SubmitCashSessionClosing? _submitClosing;
+  final ApproveCashSession? _approveSession;
+  final RecordOwnerDrop? _recordOwnerDrop;
   final RecordCashMovement _recordMovement;
   final SyncCashSessionsFromRemote _syncFromRemote;
   final AuthSession _session;
@@ -152,6 +164,109 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     }
   }
 
+  Future<void> _onSubmitClosing(
+    CashSessionSubmitClosingRequested event,
+    Emitter<CashSessionsState> emit,
+  ) async {
+    final open = state.openSession;
+    if (open == null) return;
+    final submit = _submitClosing;
+    if (submit == null) return;
+
+    emit(state.copyWith(isSubmitting: true, clearError: true));
+    try {
+      await submit(
+        session: _session,
+        sessionId: open.id,
+        input: event.input,
+      );
+      emit(state.copyWith(isSubmitting: false, clearOpenSession: true));
+      await _fetch(emit);
+    } on Failure catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onApprove(
+    CashSessionApproveRequested event,
+    Emitter<CashSessionsState> emit,
+  ) async {
+    final approve = _approveSession;
+    if (approve == null) return;
+
+    emit(state.copyWith(isSubmitting: true, clearError: true));
+    try {
+      await approve(
+        session: _session,
+        sessionId: event.sessionId,
+        input: event.input,
+      );
+      emit(state.copyWith(isSubmitting: false));
+      await _fetch(emit);
+    } on Failure catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onOwnerDrop(
+    CashSessionOwnerDropRequested event,
+    Emitter<CashSessionsState> emit,
+  ) async {
+    final open = state.openSession;
+    if (open == null) return;
+    final recordDrop = _recordOwnerDrop;
+    if (recordDrop == null) return;
+
+    emit(state.copyWith(isSubmitting: true, clearError: true));
+    try {
+      await recordDrop(
+        session: _session,
+        sessionId: open.id,
+        input: event.input,
+      );
+      emit(state.copyWith(isSubmitting: false));
+      await _fetch(emit);
+    } on Failure catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          errorMessage: friendlyErrorMessage(e),
+        ),
+      );
+    }
+  }
+
   Future<void> _onMovement(
     CashMovementRecordRequested event,
     Emitter<CashSessionsState> emit,
@@ -188,34 +303,28 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     try {
       unawaited(_syncFromRemote(session: _session));
       final open = await _findOpenSession(session: _session);
-      final history = await _listSessions(session: _session);
       CashSessionLiveTotals? totals;
       List<CashMovement> movements = const [];
       if (open != null) {
         totals = await _getLiveTotals(session: _session, cashSession: open);
-        movements = await _listMovements(
-          session: _session,
-          sessionId: open.id,
-        );
+        movements = await _listMovements(session: _session, sessionId: open.id);
       }
+      final history = await _listSessions(session: _session);
       emit(
         state.copyWith(
           status: CashSessionsStatus.loaded,
-          openSession: open,
-          clearOpenSession: open == null,
-          liveTotals: totals,
-          history: history,
-          movements: movements,
           isRefreshing: false,
-          clearError: true,
+          openSession: open,
+          liveTotals: totals,
+          movements: movements,
+          history: history,
+          clearOpenSession: open == null,
         ),
       );
     } on Failure catch (e) {
       emit(
         state.copyWith(
-          status: state.openSession != null
-              ? CashSessionsStatus.loaded
-              : CashSessionsStatus.failure,
+          status: CashSessionsStatus.failure,
           isRefreshing: false,
           errorMessage: friendlyErrorMessage(e),
         ),
@@ -223,9 +332,7 @@ class CashSessionsBloc extends Bloc<CashSessionsEvent, CashSessionsState> {
     } catch (e) {
       emit(
         state.copyWith(
-          status: state.openSession != null
-              ? CashSessionsStatus.loaded
-              : CashSessionsStatus.failure,
+          status: CashSessionsStatus.failure,
           isRefreshing: false,
           errorMessage: friendlyErrorMessage(e),
         ),

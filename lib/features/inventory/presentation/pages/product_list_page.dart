@@ -88,7 +88,7 @@ class _ProductListPageState extends State<ProductListPage> {
   Widget _buildScaffold(BuildContext context) {
     return ResponsiveBuilder(
       builder: (context, screenType) {
-        final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+        final isDesktop = Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
 
         if (isDesktop) {
           return BlocBuilder<ProductListBloc, ProductListState>(

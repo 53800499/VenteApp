@@ -230,7 +230,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
   }
 
   void _openNewSale(BuildContext context) {
-    final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+    final isDesktop = Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
     if (isDesktop) {
       _onSidebarDestinationSelected(SidebarDestination.sales);
       WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -89,6 +89,94 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
   }
 
   @override
+  Future<CashSession> submitClosing({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required SubmitCashSessionClosingInput input,
+  }) async {
+    final session = await _local.getSession(shopId, sessionId);
+    if (!session.isOpen) {
+      throw const ConflictFailure('Cette session est déjà soumise ou clôturée.');
+    }
+
+    final totals = await _local.computeLiveTotals(
+      shopId: shopId,
+      sessionId: sessionId,
+      openedAt: session.openedAt,
+    );
+
+    final expectedCash = _aggregation.expectedCash(
+      openingCash: session.openingCash,
+      salesCash: totals.salesCash,
+      depositsCash: totals.depositsCash,
+      expensesCash: totals.expensesCash,
+      withdrawalsCash: totals.withdrawalsCash,
+    );
+    final expectedMomo = _aggregation.expectedMomo(
+      openingMomo: session.openingMomo,
+      salesMomo: totals.salesMomo,
+      depositsMomo: totals.depositsMomo,
+      expensesMomo: totals.expensesMomo,
+      withdrawalsMomo: totals.withdrawalsMomo,
+    );
+
+    final differenceCash =
+        _aggregation.difference(input.countedCash, expectedCash);
+    final differenceMomo =
+        _aggregation.difference(input.countedMomo, expectedMomo);
+
+    final submitted = await _local.submitClosing(
+      shopId: shopId,
+      userId: userId,
+      sessionId: sessionId,
+      input: input,
+      totals: totals,
+      expectedCash: expectedCash,
+      expectedMomo: expectedMomo,
+      differenceCash: differenceCash,
+      differenceMomo: differenceMomo,
+    );
+
+    await _recorder?.recordCashSessionClose(
+      shopId: shopId,
+      sessionId: sessionId,
+      payload: SubmitCashSessionApiRequest(
+        countedCash: input.countedCash,
+        countedMomo: input.countedMomo,
+        closingNote: input.closingNote,
+        justificationCategory: input.justificationCategory,
+        justificationNote: input.justificationNote,
+        salesCash: totals.salesCash,
+        salesMomo: totals.salesMomo,
+        expensesCash: totals.expensesCash,
+        expensesMomo: totals.expensesMomo,
+        depositsCash: totals.depositsCash,
+        depositsMomo: totals.depositsMomo,
+        withdrawalsCash: totals.withdrawalsCash,
+        withdrawalsMomo: totals.withdrawalsMomo,
+        saleCount: totals.saleCount,
+      ).toJson(),
+    );
+    return submitted;
+  }
+
+  @override
+  Future<CashSession> approveSession({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required ApproveCashSessionInput input,
+  }) async {
+    return _local.approveSession(
+      shopId: shopId,
+      userId: userId,
+      sessionId: sessionId,
+      input: input,
+    );
+  }
+
+  @override
   Future<CashSession> closeSession({
     required int shopId,
     required int userId,
@@ -146,6 +234,8 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
         countedMomo: input.countedMomo,
         closingNote: input.closingNote,
         ownerPin: input.ownerPin,
+        justificationCategory: input.justificationCategory,
+        justificationNote: input.justificationNote,
         salesCash: totals.salesCash,
         salesMomo: totals.salesMomo,
         expensesCash: totals.expensesCash,
@@ -158,6 +248,31 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
       ).toJson(),
     );
     return closed;
+  }
+
+  @override
+  Future<CashMovement> recordOwnerDrop({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required RecordOwnerDropInput input,
+  }) async {
+    if (input.amount <= 0) {
+      throw const ValidationFailure(
+        'Le montant de la remise doit être positif.',
+      );
+    }
+    return recordMovement(
+      shopId: shopId,
+      userId: userId,
+      sessionId: sessionId,
+      input: RecordCashMovementInput(
+        movementType: CashMovementType.ownerDrop,
+        registerType: input.registerType,
+        amount: input.amount,
+        note: input.note ?? 'Remise de fonds au propriétaire',
+      ),
+    );
   }
 
   @override

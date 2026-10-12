@@ -22,6 +22,33 @@ class CashSessionsRemoteDatasource {
     return CashSessionApiDto.fromJson(data);
   }
 
+  Future<CashSessionApiDto> submitClosing(
+    int sessionId,
+    SubmitCashSessionApiRequest body,
+  ) async {
+    final data =
+        await _post('/cash-sessions/$sessionId/submit-closing', body.toJson());
+    return CashSessionApiDto.fromJson(data);
+  }
+
+  Future<CashSessionApiDto> approveSession(
+    int sessionId,
+    ApproveCashSessionApiRequest body,
+  ) async {
+    final data =
+        await _post('/cash-sessions/$sessionId/approve', body.toJson());
+    return CashSessionApiDto.fromJson(data);
+  }
+
+  Future<CashMovementApiDto> ownerDrop(
+    int sessionId,
+    OwnerDropApiRequest body,
+  ) async {
+    final data =
+        await _post('/cash-sessions/$sessionId/owner-drop', body.toJson());
+    return CashMovementApiDto.fromJson(data);
+  }
+
   Future<CashSessionApiDto> closeSession(
     int sessionId,
     CloseCashSessionApiRequest body,

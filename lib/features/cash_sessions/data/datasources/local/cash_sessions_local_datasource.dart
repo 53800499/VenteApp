@@ -14,7 +14,7 @@ class CashSessionsLocalDatasource {
   Future<CashSession?> findOpenSession(int shopId) async {
     final row = await (_db.select(_db.cashSessions)
           ..where(
-            (s) => s.shopId.equals(shopId) & s.status.equals('open'),
+            (s) => s.shopId.equals(shopId) & s.status.isIn(['open', 'reopened']),
           )
           ..orderBy([(s) => OrderingTerm.desc(s.openedAt)])
           ..limit(1))
@@ -213,6 +213,84 @@ class CashSessionsLocalDatasource {
     return getSession(shopId, id);
   }
 
+  Future<CashSession> submitClosing({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required SubmitCashSessionClosingInput input,
+    required CashSessionLiveTotals totals,
+    required int expectedCash,
+    required int expectedMomo,
+    required int differenceCash,
+    required int differenceMomo,
+  }) async {
+    final timestamp = nowMs();
+    final hasDiscrepancy = differenceCash != 0 || differenceMomo != 0;
+    final status = hasDiscrepancy
+        ? (input.justificationCategory != null ||
+                (input.justificationNote != null &&
+                    input.justificationNote!.trim().isNotEmpty)
+            ? CashSessionStatus.justified
+            : CashSessionStatus.reviewRequired)
+        : CashSessionStatus.submitted;
+
+    await (_db.update(_db.cashSessions)
+          ..where((s) => s.shopId.equals(shopId) & s.id.equals(sessionId)))
+        .write(
+      db.CashSessionsCompanion(
+        closedBy: Value(userId),
+        closedAt: Value(timestamp),
+        submittedBy: Value(userId),
+        submittedAt: Value(timestamp),
+        salesCash: Value(totals.salesCash),
+        salesMomo: Value(totals.salesMomo),
+        expensesCash: Value(totals.expensesCash),
+        expensesMomo: Value(totals.expensesMomo),
+        depositsCash: Value(totals.depositsCash),
+        depositsMomo: Value(totals.depositsMomo),
+        withdrawalsCash: Value(totals.withdrawalsCash),
+        withdrawalsMomo: Value(totals.withdrawalsMomo),
+        expectedCash: Value(expectedCash),
+        expectedMomo: Value(expectedMomo),
+        countedCash: Value(input.countedCash),
+        countedMomo: Value(input.countedMomo),
+        differenceCash: Value(differenceCash),
+        differenceMomo: Value(differenceMomo),
+        saleCount: Value(totals.saleCount),
+        status: Value(status.code),
+        closingNote: Value(input.closingNote),
+        justificationCategory: Value(input.justificationCategory),
+        justificationNote: Value(input.justificationNote),
+        updatedAt: Value(timestamp),
+        syncStatus: const Value('pending'),
+        version: const Value(2),
+      ),
+    );
+    return getSession(shopId, sessionId);
+  }
+
+  Future<CashSession> approveSession({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required ApproveCashSessionInput input,
+  }) async {
+    final timestamp = nowMs();
+    await (_db.update(_db.cashSessions)
+          ..where((s) => s.shopId.equals(shopId) & s.id.equals(sessionId)))
+        .write(
+      db.CashSessionsCompanion(
+        approvedBy: Value(userId),
+        approvedAt: Value(timestamp),
+        status: Value(CashSessionStatus.approved.code),
+        reviewNote: Value(input.reviewNote),
+        updatedAt: Value(timestamp),
+        syncStatus: const Value('pending'),
+      ),
+    );
+    return getSession(shopId, sessionId);
+  }
+
   Future<CashSession> closeSession({
     required int shopId,
     required int userId,
@@ -248,6 +326,8 @@ class CashSessionsLocalDatasource {
         saleCount: Value(totals.saleCount),
         status: const Value('closed'),
         closingNote: Value(input.closingNote),
+        justificationCategory: Value(input.justificationCategory),
+        justificationNote: Value(input.justificationNote),
         updatedAt: Value(timestamp),
         syncStatus: const Value('pending'),
         version: const Value(2),
@@ -514,6 +594,10 @@ class CashSessionsLocalDatasource {
           row.closedBy != null ? await _userName(row.closedBy!) : null,
       openedAt: row.openedAt,
       closedAt: row.closedAt,
+      submittedAt: row.submittedAt,
+      submittedBy: row.submittedBy,
+      approvedAt: row.approvedAt,
+      approvedBy: row.approvedBy,
       openingCash: row.openingCash,
       openingMomo: row.openingMomo,
       salesCash: row.salesCash,
@@ -533,6 +617,9 @@ class CashSessionsLocalDatasource {
       saleCount: row.saleCount,
       status: CashSessionStatus.fromCode(row.status),
       closingNote: row.closingNote,
+      justificationCategory: row.justificationCategory,
+      justificationNote: row.justificationNote,
+      reviewNote: row.reviewNote,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );

@@ -13,10 +13,17 @@ abstract final class Breakpoints {
   static const authMaxWidth = 480.0;
 
   /// Largeur à partir de laquelle on bascule en ergonomie desktop
-  /// (DataTable au lieu de cartes, dialogues centrés au lieu de bottom sheets).
+  /// (dialogues centrés au lieu de bottom sheets, etc.).
   static const desktopMin = 840.0;
 
+  /// Seuil à partir de la limite du mobile pour afficher les tableaux de données
+  /// (DataTable) avec défilement horizontal fluide et colonnes ergonomiques (>= 600px).
+  static const dataTableMin = 600.0;
+
   static bool isDesktopWidth(double width) => width >= desktopMin;
+
+  /// Indique si la largeur d'écran permet d'afficher une DataTable moderne (hors mobile compact).
+  static bool useDataTable(double width) => width >= dataTableMin;
 
   static ScreenType screenTypeOf(double width) {
     if (width <= compactMax) return ScreenType.compact;

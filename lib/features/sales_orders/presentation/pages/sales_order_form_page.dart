@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/components/app_dropdown.dart';
 import '../../../../shared/components/app_page_container.dart';
+import '../../../../shared/components/app_searchable_item_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -39,19 +39,25 @@ class _SalesOrderFormPageState extends State<SalesOrderFormPage> {
   }
 
   Future<void> _loadCatalog() async {
-    final customers = await sl<ListCustomers>()(
-      session: widget.session,
-    );
-    final products = await sl<ListProducts>()(
-      shopId: widget.session.shop.id,
-      filters: const ProductListFilters(),
-    );
-    if (!mounted) return;
-    setState(() {
-      _customers = customers;
-      _products = products.where((p) => !p.isArchived).toList();
-      _loading = false;
-    });
+    try {
+      final customers = await sl<ListCustomers>()(
+        session: widget.session,
+      );
+      final products = await sl<ListProducts>()(
+        shopId: widget.session.shop.id,
+        filters: const ProductListFilters(),
+      );
+      if (!mounted) return;
+      setState(() {
+        _customers = customers;
+        _products = products.where((p) => !p.isArchived).toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
   }
 
   @override
@@ -70,45 +76,54 @@ class _SalesOrderFormPageState extends State<SalesOrderFormPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
           title: const Text('Ajouter un produit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppDropdown<Product>(
-                labelText: 'Produit',
-                hintText: 'Sélectionner ou rechercher un produit',
-                enableSearch: true,
-                searchHintText: 'Rechercher un produit...',
-                items: _products,
-                initialItem: selected,
-                headerBuilder: (context, item, enabled) => Text(
-                  '${item.name} (stock ${item.quantityInStock})',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text('${item.name} — ${item.priceSell} FCFA (stock ${item.quantityInStock})'),
-                ),
-                onChanged: (p) {
-                  selected = p;
-                  if (p != null) {
-                    priceController.text = '${p.priceSell}';
-                  }
-                  setLocal(() {});
-                },
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSearchableItemPicker<Product>(
+                    items: _products,
+                    selectedItem: selected,
+                    labelText: 'Produit *',
+                    hintText: 'Rechercher un produit...',
+                    labelBuilder: (p) => p.name,
+                    subtitleBuilder: (p) =>
+                        '${formatFcfa(p.priceSell)} · Stock disponible : ${p.quantityInStock}',
+                    filterPredicate: (p, q) =>
+                        p.name.toLowerCase().contains(q.toLowerCase()),
+                    onChanged: (p) {
+                      selected = p;
+                      if (p != null) {
+                        priceController.text = '${p.priceSell}';
+                      }
+                      setLocal(() {});
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: qtyController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantité *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.format_list_numbered),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextField(
+                    controller: priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Prix unitaire (FCFA) *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.payments_outlined),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: qtyController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantité'),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Prix unitaire'),
-              ),
-            ],
+            ),
           ),
           actions: [
             TextButton(

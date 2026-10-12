@@ -10,6 +10,7 @@ import '../../domain/entities/stock_transfer.dart';
 import '../../domain/repositories/stock_transfer_repository.dart';
 import '../bloc/stock_transfer_bloc.dart';
 import '../../../../shared/components/app_page_container.dart';
+import '../../../../shared/components/app_searchable_item_picker.dart';
 
 class StockTransferFormPage extends StatefulWidget {
   const StockTransferFormPage({super.key});
@@ -292,35 +293,38 @@ class _StockTransferFormPageState extends State<StockTransferFormPage> {
       builder: (diagContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Ajouter un produit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<dynamic>(
-                isExpanded: true,
-                initialValue: selectedProduct,
-                hint: const Text('Produit'),
-                decoration: const InputDecoration(
-                  labelText: 'Produit *',
-                  border: OutlineInputBorder(),
-                ),
-                items: _allProducts.map((p) {
-                  return DropdownMenuItem(
-                    value: p,
-                    child: Text('${p.name} (${p.quantityInStock} en stock)'),
-                  );
-                }).toList(),
-                onChanged: (v) => setDialogState(() => selectedProduct = v),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSearchableItemPicker<dynamic>(
+                    items: _allProducts,
+                    selectedItem: selectedProduct,
+                    labelText: 'Produit *',
+                    hintText: 'Rechercher un produit...',
+                    labelBuilder: (p) => '${p.name}',
+                    subtitleBuilder: (p) =>
+                        'Stock disponible : ${p.quantityInStock}',
+                    filterPredicate: (p, q) =>
+                        '${p.name}'.toLowerCase().contains(q.toLowerCase()),
+                    onChanged: (v) => setDialogState(() => selectedProduct = v),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: qtyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantité *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.format_list_numbered),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                controller: qtyController,
-                decoration: const InputDecoration(
-                  labelText: 'Quantité *',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+            ),
           ),
           actions: [
             TextButton(

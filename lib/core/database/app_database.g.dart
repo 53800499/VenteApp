@@ -11619,6 +11619,17 @@ class $SyncQueueTable extends SyncQueue
     requiredDuringInsert: false,
     defaultValue: const Constant('pending'),
   );
+  static const VerificationMeta _suggestedActionMeta = const VerificationMeta(
+    'suggestedAction',
+  );
+  @override
+  late final GeneratedColumn<String> suggestedAction = GeneratedColumn<String>(
+    'suggested_action',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -11641,6 +11652,39 @@ class $SyncQueueTable extends SyncQueue
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _discardedAtMeta = const VerificationMeta(
+    'discardedAt',
+  );
+  @override
+  late final GeneratedColumn<int> discardedAt = GeneratedColumn<int>(
+    'discarded_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _discardedByMeta = const VerificationMeta(
+    'discardedBy',
+  );
+  @override
+  late final GeneratedColumn<int> discardedBy = GeneratedColumn<int>(
+    'discarded_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _discardReasonMeta = const VerificationMeta(
+    'discardReason',
+  );
+  @override
+  late final GeneratedColumn<String> discardReason = GeneratedColumn<String>(
+    'discard_reason',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -11660,8 +11704,12 @@ class $SyncQueueTable extends SyncQueue
     lastError,
     errorCode,
     status,
+    suggestedAction,
     createdAt,
     processedAt,
+    discardedAt,
+    discardedBy,
+    discardReason,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11807,6 +11855,15 @@ class $SyncQueueTable extends SyncQueue
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('suggested_action')) {
+      context.handle(
+        _suggestedActionMeta,
+        suggestedAction.isAcceptableOrUnknown(
+          data['suggested_action']!,
+          _suggestedActionMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -11821,6 +11878,33 @@ class $SyncQueueTable extends SyncQueue
         processedAt.isAcceptableOrUnknown(
           data['processed_at']!,
           _processedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('discarded_at')) {
+      context.handle(
+        _discardedAtMeta,
+        discardedAt.isAcceptableOrUnknown(
+          data['discarded_at']!,
+          _discardedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('discarded_by')) {
+      context.handle(
+        _discardedByMeta,
+        discardedBy.isAcceptableOrUnknown(
+          data['discarded_by']!,
+          _discardedByMeta,
+        ),
+      );
+    }
+    if (data.containsKey('discard_reason')) {
+      context.handle(
+        _discardReasonMeta,
+        discardReason.isAcceptableOrUnknown(
+          data['discard_reason']!,
+          _discardReasonMeta,
         ),
       );
     }
@@ -11901,6 +11985,10 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      suggestedAction: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}suggested_action'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -11908,6 +11996,18 @@ class $SyncQueueTable extends SyncQueue
       processedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}processed_at'],
+      ),
+      discardedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}discarded_at'],
+      ),
+      discardedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}discarded_by'],
+      ),
+      discardReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}discard_reason'],
       ),
     );
   }
@@ -11936,8 +12036,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
   final String? lastError;
   final String? errorCode;
   final String status;
+  final String? suggestedAction;
   final int createdAt;
   final int? processedAt;
+  final int? discardedAt;
+  final int? discardedBy;
+  final String? discardReason;
   const SyncQueueData({
     required this.id,
     required this.shopId,
@@ -11956,8 +12060,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     this.lastError,
     this.errorCode,
     required this.status,
+    this.suggestedAction,
     required this.createdAt,
     this.processedAt,
+    this.discardedAt,
+    this.discardedBy,
+    this.discardReason,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -11987,9 +12095,21 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       map['error_code'] = Variable<String>(errorCode);
     }
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || suggestedAction != null) {
+      map['suggested_action'] = Variable<String>(suggestedAction);
+    }
     map['created_at'] = Variable<int>(createdAt);
     if (!nullToAbsent || processedAt != null) {
       map['processed_at'] = Variable<int>(processedAt);
+    }
+    if (!nullToAbsent || discardedAt != null) {
+      map['discarded_at'] = Variable<int>(discardedAt);
+    }
+    if (!nullToAbsent || discardedBy != null) {
+      map['discarded_by'] = Variable<int>(discardedBy);
+    }
+    if (!nullToAbsent || discardReason != null) {
+      map['discard_reason'] = Variable<String>(discardReason);
     }
     return map;
   }
@@ -12021,10 +12141,22 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           ? const Value.absent()
           : Value(errorCode),
       status: Value(status),
+      suggestedAction: suggestedAction == null && nullToAbsent
+          ? const Value.absent()
+          : Value(suggestedAction),
       createdAt: Value(createdAt),
       processedAt: processedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(processedAt),
+      discardedAt: discardedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discardedAt),
+      discardedBy: discardedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discardedBy),
+      discardReason: discardReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(discardReason),
     );
   }
 
@@ -12053,8 +12185,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       lastError: serializer.fromJson<String?>(json['lastError']),
       errorCode: serializer.fromJson<String?>(json['errorCode']),
       status: serializer.fromJson<String>(json['status']),
+      suggestedAction: serializer.fromJson<String?>(json['suggestedAction']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       processedAt: serializer.fromJson<int?>(json['processedAt']),
+      discardedAt: serializer.fromJson<int?>(json['discardedAt']),
+      discardedBy: serializer.fromJson<int?>(json['discardedBy']),
+      discardReason: serializer.fromJson<String?>(json['discardReason']),
     );
   }
   @override
@@ -12078,8 +12214,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       'lastError': serializer.toJson<String?>(lastError),
       'errorCode': serializer.toJson<String?>(errorCode),
       'status': serializer.toJson<String>(status),
+      'suggestedAction': serializer.toJson<String?>(suggestedAction),
       'createdAt': serializer.toJson<int>(createdAt),
       'processedAt': serializer.toJson<int?>(processedAt),
+      'discardedAt': serializer.toJson<int?>(discardedAt),
+      'discardedBy': serializer.toJson<int?>(discardedBy),
+      'discardReason': serializer.toJson<String?>(discardReason),
     };
   }
 
@@ -12101,8 +12241,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     Value<String?> lastError = const Value.absent(),
     Value<String?> errorCode = const Value.absent(),
     String? status,
+    Value<String?> suggestedAction = const Value.absent(),
     int? createdAt,
     Value<int?> processedAt = const Value.absent(),
+    Value<int?> discardedAt = const Value.absent(),
+    Value<int?> discardedBy = const Value.absent(),
+    Value<String?> discardReason = const Value.absent(),
   }) => SyncQueueData(
     id: id ?? this.id,
     shopId: shopId ?? this.shopId,
@@ -12123,8 +12267,16 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     lastError: lastError.present ? lastError.value : this.lastError,
     errorCode: errorCode.present ? errorCode.value : this.errorCode,
     status: status ?? this.status,
+    suggestedAction: suggestedAction.present
+        ? suggestedAction.value
+        : this.suggestedAction,
     createdAt: createdAt ?? this.createdAt,
     processedAt: processedAt.present ? processedAt.value : this.processedAt,
+    discardedAt: discardedAt.present ? discardedAt.value : this.discardedAt,
+    discardedBy: discardedBy.present ? discardedBy.value : this.discardedBy,
+    discardReason: discardReason.present
+        ? discardReason.value
+        : this.discardReason,
   );
   SyncQueueData copyWithCompanion(SyncQueueCompanion data) {
     return SyncQueueData(
@@ -12161,10 +12313,22 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
       lastError: data.lastError.present ? data.lastError.value : this.lastError,
       errorCode: data.errorCode.present ? data.errorCode.value : this.errorCode,
       status: data.status.present ? data.status.value : this.status,
+      suggestedAction: data.suggestedAction.present
+          ? data.suggestedAction.value
+          : this.suggestedAction,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       processedAt: data.processedAt.present
           ? data.processedAt.value
           : this.processedAt,
+      discardedAt: data.discardedAt.present
+          ? data.discardedAt.value
+          : this.discardedAt,
+      discardedBy: data.discardedBy.present
+          ? data.discardedBy.value
+          : this.discardedBy,
+      discardReason: data.discardReason.present
+          ? data.discardReason.value
+          : this.discardReason,
     );
   }
 
@@ -12188,14 +12352,18 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           ..write('lastError: $lastError, ')
           ..write('errorCode: $errorCode, ')
           ..write('status: $status, ')
+          ..write('suggestedAction: $suggestedAction, ')
           ..write('createdAt: $createdAt, ')
-          ..write('processedAt: $processedAt')
+          ..write('processedAt: $processedAt, ')
+          ..write('discardedAt: $discardedAt, ')
+          ..write('discardedBy: $discardedBy, ')
+          ..write('discardReason: $discardReason')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     shopId,
     domain,
@@ -12213,9 +12381,13 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     lastError,
     errorCode,
     status,
+    suggestedAction,
     createdAt,
     processedAt,
-  );
+    discardedAt,
+    discardedBy,
+    discardReason,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -12237,8 +12409,12 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
           other.lastError == this.lastError &&
           other.errorCode == this.errorCode &&
           other.status == this.status &&
+          other.suggestedAction == this.suggestedAction &&
           other.createdAt == this.createdAt &&
-          other.processedAt == this.processedAt);
+          other.processedAt == this.processedAt &&
+          other.discardedAt == this.discardedAt &&
+          other.discardedBy == this.discardedBy &&
+          other.discardReason == this.discardReason);
 }
 
 class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
@@ -12259,8 +12435,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
   final Value<String?> lastError;
   final Value<String?> errorCode;
   final Value<String> status;
+  final Value<String?> suggestedAction;
   final Value<int> createdAt;
   final Value<int?> processedAt;
+  final Value<int?> discardedAt;
+  final Value<int?> discardedBy;
+  final Value<String?> discardReason;
   const SyncQueueCompanion({
     this.id = const Value.absent(),
     this.shopId = const Value.absent(),
@@ -12279,8 +12459,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     this.lastError = const Value.absent(),
     this.errorCode = const Value.absent(),
     this.status = const Value.absent(),
+    this.suggestedAction = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.processedAt = const Value.absent(),
+    this.discardedAt = const Value.absent(),
+    this.discardedBy = const Value.absent(),
+    this.discardReason = const Value.absent(),
   });
   SyncQueueCompanion.insert({
     this.id = const Value.absent(),
@@ -12300,8 +12484,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     this.lastError = const Value.absent(),
     this.errorCode = const Value.absent(),
     this.status = const Value.absent(),
+    this.suggestedAction = const Value.absent(),
     required int createdAt,
     this.processedAt = const Value.absent(),
+    this.discardedAt = const Value.absent(),
+    this.discardedBy = const Value.absent(),
+    this.discardReason = const Value.absent(),
   }) : shopId = Value(shopId),
        entityTable = Value(entityTable),
        recordId = Value(recordId),
@@ -12327,8 +12515,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     Expression<String>? lastError,
     Expression<String>? errorCode,
     Expression<String>? status,
+    Expression<String>? suggestedAction,
     Expression<int>? createdAt,
     Expression<int>? processedAt,
+    Expression<int>? discardedAt,
+    Expression<int>? discardedBy,
+    Expression<String>? discardReason,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -12349,8 +12541,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       if (lastError != null) 'last_error': lastError,
       if (errorCode != null) 'error_code': errorCode,
       if (status != null) 'status': status,
+      if (suggestedAction != null) 'suggested_action': suggestedAction,
       if (createdAt != null) 'created_at': createdAt,
       if (processedAt != null) 'processed_at': processedAt,
+      if (discardedAt != null) 'discarded_at': discardedAt,
+      if (discardedBy != null) 'discarded_by': discardedBy,
+      if (discardReason != null) 'discard_reason': discardReason,
     });
   }
 
@@ -12372,8 +12568,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     Value<String?>? lastError,
     Value<String?>? errorCode,
     Value<String>? status,
+    Value<String?>? suggestedAction,
     Value<int>? createdAt,
     Value<int?>? processedAt,
+    Value<int?>? discardedAt,
+    Value<int?>? discardedBy,
+    Value<String?>? discardReason,
   }) {
     return SyncQueueCompanion(
       id: id ?? this.id,
@@ -12393,8 +12593,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       lastError: lastError ?? this.lastError,
       errorCode: errorCode ?? this.errorCode,
       status: status ?? this.status,
+      suggestedAction: suggestedAction ?? this.suggestedAction,
       createdAt: createdAt ?? this.createdAt,
       processedAt: processedAt ?? this.processedAt,
+      discardedAt: discardedAt ?? this.discardedAt,
+      discardedBy: discardedBy ?? this.discardedBy,
+      discardReason: discardReason ?? this.discardReason,
     );
   }
 
@@ -12452,11 +12656,23 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (suggestedAction.present) {
+      map['suggested_action'] = Variable<String>(suggestedAction.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
     if (processedAt.present) {
       map['processed_at'] = Variable<int>(processedAt.value);
+    }
+    if (discardedAt.present) {
+      map['discarded_at'] = Variable<int>(discardedAt.value);
+    }
+    if (discardedBy.present) {
+      map['discarded_by'] = Variable<int>(discardedBy.value);
+    }
+    if (discardReason.present) {
+      map['discard_reason'] = Variable<String>(discardReason.value);
     }
     return map;
   }
@@ -12481,8 +12697,12 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
           ..write('lastError: $lastError, ')
           ..write('errorCode: $errorCode, ')
           ..write('status: $status, ')
+          ..write('suggestedAction: $suggestedAction, ')
           ..write('createdAt: $createdAt, ')
-          ..write('processedAt: $processedAt')
+          ..write('processedAt: $processedAt, ')
+          ..write('discardedAt: $discardedAt, ')
+          ..write('discardedBy: $discardedBy, ')
+          ..write('discardReason: $discardReason')
           ..write(')'))
         .toString();
   }
@@ -16646,6 +16866,56 @@ class $CashSessionsTable extends CashSessions
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _submittedAtMeta = const VerificationMeta(
+    'submittedAt',
+  );
+  @override
+  late final GeneratedColumn<int> submittedAt = GeneratedColumn<int>(
+    'submitted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _submittedByMeta = const VerificationMeta(
+    'submittedBy',
+  );
+  @override
+  late final GeneratedColumn<int> submittedBy = GeneratedColumn<int>(
+    'submitted_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
+  static const VerificationMeta _approvedAtMeta = const VerificationMeta(
+    'approvedAt',
+  );
+  @override
+  late final GeneratedColumn<int> approvedAt = GeneratedColumn<int>(
+    'approved_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _approvedByMeta = const VerificationMeta(
+    'approvedBy',
+  );
+  @override
+  late final GeneratedColumn<int> approvedBy = GeneratedColumn<int>(
+    'approved_by',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES users (id)',
+    ),
+  );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -16662,6 +16932,40 @@ class $CashSessionsTable extends CashSessions
   @override
   late final GeneratedColumn<String> closingNote = GeneratedColumn<String>(
     'closing_note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _justificationCategoryMeta =
+      const VerificationMeta('justificationCategory');
+  @override
+  late final GeneratedColumn<String> justificationCategory =
+      GeneratedColumn<String>(
+        'justification_category',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _justificationNoteMeta = const VerificationMeta(
+    'justificationNote',
+  );
+  @override
+  late final GeneratedColumn<String> justificationNote =
+      GeneratedColumn<String>(
+        'justification_note',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _reviewNoteMeta = const VerificationMeta(
+    'reviewNote',
+  );
+  @override
+  late final GeneratedColumn<String> reviewNote = GeneratedColumn<String>(
+    'review_note',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -16759,8 +17063,15 @@ class $CashSessionsTable extends CashSessions
     differenceCash,
     differenceMomo,
     saleCount,
+    submittedAt,
+    submittedBy,
+    approvedAt,
+    approvedBy,
     status,
     closingNote,
+    justificationCategory,
+    justificationNote,
+    reviewNote,
     createdAt,
     updatedAt,
     version,
@@ -16963,6 +17274,36 @@ class $CashSessionsTable extends CashSessions
         saleCount.isAcceptableOrUnknown(data['sale_count']!, _saleCountMeta),
       );
     }
+    if (data.containsKey('submitted_at')) {
+      context.handle(
+        _submittedAtMeta,
+        submittedAt.isAcceptableOrUnknown(
+          data['submitted_at']!,
+          _submittedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('submitted_by')) {
+      context.handle(
+        _submittedByMeta,
+        submittedBy.isAcceptableOrUnknown(
+          data['submitted_by']!,
+          _submittedByMeta,
+        ),
+      );
+    }
+    if (data.containsKey('approved_at')) {
+      context.handle(
+        _approvedAtMeta,
+        approvedAt.isAcceptableOrUnknown(data['approved_at']!, _approvedAtMeta),
+      );
+    }
+    if (data.containsKey('approved_by')) {
+      context.handle(
+        _approvedByMeta,
+        approvedBy.isAcceptableOrUnknown(data['approved_by']!, _approvedByMeta),
+      );
+    }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
@@ -16976,6 +17317,30 @@ class $CashSessionsTable extends CashSessions
           data['closing_note']!,
           _closingNoteMeta,
         ),
+      );
+    }
+    if (data.containsKey('justification_category')) {
+      context.handle(
+        _justificationCategoryMeta,
+        justificationCategory.isAcceptableOrUnknown(
+          data['justification_category']!,
+          _justificationCategoryMeta,
+        ),
+      );
+    }
+    if (data.containsKey('justification_note')) {
+      context.handle(
+        _justificationNoteMeta,
+        justificationNote.isAcceptableOrUnknown(
+          data['justification_note']!,
+          _justificationNoteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('review_note')) {
+      context.handle(
+        _reviewNoteMeta,
+        reviewNote.isAcceptableOrUnknown(data['review_note']!, _reviewNoteMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -17119,6 +17484,22 @@ class $CashSessionsTable extends CashSessions
         DriftSqlType.int,
         data['${effectivePrefix}sale_count'],
       )!,
+      submittedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}submitted_at'],
+      ),
+      submittedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}submitted_by'],
+      ),
+      approvedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}approved_at'],
+      ),
+      approvedBy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}approved_by'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -17126,6 +17507,18 @@ class $CashSessionsTable extends CashSessions
       closingNote: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}closing_note'],
+      ),
+      justificationCategory: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}justification_category'],
+      ),
+      justificationNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}justification_note'],
+      ),
+      reviewNote: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}review_note'],
       ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
@@ -17184,8 +17577,15 @@ class CashSession extends DataClass implements Insertable<CashSession> {
   final int? differenceCash;
   final int? differenceMomo;
   final int saleCount;
+  final int? submittedAt;
+  final int? submittedBy;
+  final int? approvedAt;
+  final int? approvedBy;
   final String status;
   final String? closingNote;
+  final String? justificationCategory;
+  final String? justificationNote;
+  final String? reviewNote;
   final int createdAt;
   final int updatedAt;
   final int version;
@@ -17216,8 +17616,15 @@ class CashSession extends DataClass implements Insertable<CashSession> {
     this.differenceCash,
     this.differenceMomo,
     required this.saleCount,
+    this.submittedAt,
+    this.submittedBy,
+    this.approvedAt,
+    this.approvedBy,
     required this.status,
     this.closingNote,
+    this.justificationCategory,
+    this.justificationNote,
+    this.reviewNote,
     required this.createdAt,
     required this.updatedAt,
     required this.version,
@@ -17267,9 +17674,30 @@ class CashSession extends DataClass implements Insertable<CashSession> {
       map['difference_momo'] = Variable<int>(differenceMomo);
     }
     map['sale_count'] = Variable<int>(saleCount);
+    if (!nullToAbsent || submittedAt != null) {
+      map['submitted_at'] = Variable<int>(submittedAt);
+    }
+    if (!nullToAbsent || submittedBy != null) {
+      map['submitted_by'] = Variable<int>(submittedBy);
+    }
+    if (!nullToAbsent || approvedAt != null) {
+      map['approved_at'] = Variable<int>(approvedAt);
+    }
+    if (!nullToAbsent || approvedBy != null) {
+      map['approved_by'] = Variable<int>(approvedBy);
+    }
     map['status'] = Variable<String>(status);
     if (!nullToAbsent || closingNote != null) {
       map['closing_note'] = Variable<String>(closingNote);
+    }
+    if (!nullToAbsent || justificationCategory != null) {
+      map['justification_category'] = Variable<String>(justificationCategory);
+    }
+    if (!nullToAbsent || justificationNote != null) {
+      map['justification_note'] = Variable<String>(justificationNote);
+    }
+    if (!nullToAbsent || reviewNote != null) {
+      map['review_note'] = Variable<String>(reviewNote);
     }
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
@@ -17327,10 +17755,31 @@ class CashSession extends DataClass implements Insertable<CashSession> {
           ? const Value.absent()
           : Value(differenceMomo),
       saleCount: Value(saleCount),
+      submittedAt: submittedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(submittedAt),
+      submittedBy: submittedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(submittedBy),
+      approvedAt: approvedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(approvedAt),
+      approvedBy: approvedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(approvedBy),
       status: Value(status),
       closingNote: closingNote == null && nullToAbsent
           ? const Value.absent()
           : Value(closingNote),
+      justificationCategory: justificationCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(justificationCategory),
+      justificationNote: justificationNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(justificationNote),
+      reviewNote: reviewNote == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reviewNote),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       version: Value(version),
@@ -17375,8 +17824,19 @@ class CashSession extends DataClass implements Insertable<CashSession> {
       differenceCash: serializer.fromJson<int?>(json['differenceCash']),
       differenceMomo: serializer.fromJson<int?>(json['differenceMomo']),
       saleCount: serializer.fromJson<int>(json['saleCount']),
+      submittedAt: serializer.fromJson<int?>(json['submittedAt']),
+      submittedBy: serializer.fromJson<int?>(json['submittedBy']),
+      approvedAt: serializer.fromJson<int?>(json['approvedAt']),
+      approvedBy: serializer.fromJson<int?>(json['approvedBy']),
       status: serializer.fromJson<String>(json['status']),
       closingNote: serializer.fromJson<String?>(json['closingNote']),
+      justificationCategory: serializer.fromJson<String?>(
+        json['justificationCategory'],
+      ),
+      justificationNote: serializer.fromJson<String?>(
+        json['justificationNote'],
+      ),
+      reviewNote: serializer.fromJson<String?>(json['reviewNote']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       version: serializer.fromJson<int>(json['version']),
@@ -17412,8 +17872,17 @@ class CashSession extends DataClass implements Insertable<CashSession> {
       'differenceCash': serializer.toJson<int?>(differenceCash),
       'differenceMomo': serializer.toJson<int?>(differenceMomo),
       'saleCount': serializer.toJson<int>(saleCount),
+      'submittedAt': serializer.toJson<int?>(submittedAt),
+      'submittedBy': serializer.toJson<int?>(submittedBy),
+      'approvedAt': serializer.toJson<int?>(approvedAt),
+      'approvedBy': serializer.toJson<int?>(approvedBy),
       'status': serializer.toJson<String>(status),
       'closingNote': serializer.toJson<String?>(closingNote),
+      'justificationCategory': serializer.toJson<String?>(
+        justificationCategory,
+      ),
+      'justificationNote': serializer.toJson<String?>(justificationNote),
+      'reviewNote': serializer.toJson<String?>(reviewNote),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'version': serializer.toJson<int>(version),
@@ -17447,8 +17916,15 @@ class CashSession extends DataClass implements Insertable<CashSession> {
     Value<int?> differenceCash = const Value.absent(),
     Value<int?> differenceMomo = const Value.absent(),
     int? saleCount,
+    Value<int?> submittedAt = const Value.absent(),
+    Value<int?> submittedBy = const Value.absent(),
+    Value<int?> approvedAt = const Value.absent(),
+    Value<int?> approvedBy = const Value.absent(),
     String? status,
     Value<String?> closingNote = const Value.absent(),
+    Value<String?> justificationCategory = const Value.absent(),
+    Value<String?> justificationNote = const Value.absent(),
+    Value<String?> reviewNote = const Value.absent(),
     int? createdAt,
     int? updatedAt,
     int? version,
@@ -17483,8 +17959,19 @@ class CashSession extends DataClass implements Insertable<CashSession> {
         ? differenceMomo.value
         : this.differenceMomo,
     saleCount: saleCount ?? this.saleCount,
+    submittedAt: submittedAt.present ? submittedAt.value : this.submittedAt,
+    submittedBy: submittedBy.present ? submittedBy.value : this.submittedBy,
+    approvedAt: approvedAt.present ? approvedAt.value : this.approvedAt,
+    approvedBy: approvedBy.present ? approvedBy.value : this.approvedBy,
     status: status ?? this.status,
     closingNote: closingNote.present ? closingNote.value : this.closingNote,
+    justificationCategory: justificationCategory.present
+        ? justificationCategory.value
+        : this.justificationCategory,
+    justificationNote: justificationNote.present
+        ? justificationNote.value
+        : this.justificationNote,
+    reviewNote: reviewNote.present ? reviewNote.value : this.reviewNote,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     version: version ?? this.version,
@@ -17545,10 +18032,31 @@ class CashSession extends DataClass implements Insertable<CashSession> {
           ? data.differenceMomo.value
           : this.differenceMomo,
       saleCount: data.saleCount.present ? data.saleCount.value : this.saleCount,
+      submittedAt: data.submittedAt.present
+          ? data.submittedAt.value
+          : this.submittedAt,
+      submittedBy: data.submittedBy.present
+          ? data.submittedBy.value
+          : this.submittedBy,
+      approvedAt: data.approvedAt.present
+          ? data.approvedAt.value
+          : this.approvedAt,
+      approvedBy: data.approvedBy.present
+          ? data.approvedBy.value
+          : this.approvedBy,
       status: data.status.present ? data.status.value : this.status,
       closingNote: data.closingNote.present
           ? data.closingNote.value
           : this.closingNote,
+      justificationCategory: data.justificationCategory.present
+          ? data.justificationCategory.value
+          : this.justificationCategory,
+      justificationNote: data.justificationNote.present
+          ? data.justificationNote.value
+          : this.justificationNote,
+      reviewNote: data.reviewNote.present
+          ? data.reviewNote.value
+          : this.reviewNote,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       version: data.version.present ? data.version.value : this.version,
@@ -17586,8 +18094,15 @@ class CashSession extends DataClass implements Insertable<CashSession> {
           ..write('differenceCash: $differenceCash, ')
           ..write('differenceMomo: $differenceMomo, ')
           ..write('saleCount: $saleCount, ')
+          ..write('submittedAt: $submittedAt, ')
+          ..write('submittedBy: $submittedBy, ')
+          ..write('approvedAt: $approvedAt, ')
+          ..write('approvedBy: $approvedBy, ')
           ..write('status: $status, ')
           ..write('closingNote: $closingNote, ')
+          ..write('justificationCategory: $justificationCategory, ')
+          ..write('justificationNote: $justificationNote, ')
+          ..write('reviewNote: $reviewNote, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
@@ -17623,8 +18138,15 @@ class CashSession extends DataClass implements Insertable<CashSession> {
     differenceCash,
     differenceMomo,
     saleCount,
+    submittedAt,
+    submittedBy,
+    approvedAt,
+    approvedBy,
     status,
     closingNote,
+    justificationCategory,
+    justificationNote,
+    reviewNote,
     createdAt,
     updatedAt,
     version,
@@ -17659,8 +18181,15 @@ class CashSession extends DataClass implements Insertable<CashSession> {
           other.differenceCash == this.differenceCash &&
           other.differenceMomo == this.differenceMomo &&
           other.saleCount == this.saleCount &&
+          other.submittedAt == this.submittedAt &&
+          other.submittedBy == this.submittedBy &&
+          other.approvedAt == this.approvedAt &&
+          other.approvedBy == this.approvedBy &&
           other.status == this.status &&
           other.closingNote == this.closingNote &&
+          other.justificationCategory == this.justificationCategory &&
+          other.justificationNote == this.justificationNote &&
+          other.reviewNote == this.reviewNote &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.version == this.version &&
@@ -17693,8 +18222,15 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
   final Value<int?> differenceCash;
   final Value<int?> differenceMomo;
   final Value<int> saleCount;
+  final Value<int?> submittedAt;
+  final Value<int?> submittedBy;
+  final Value<int?> approvedAt;
+  final Value<int?> approvedBy;
   final Value<String> status;
   final Value<String?> closingNote;
+  final Value<String?> justificationCategory;
+  final Value<String?> justificationNote;
+  final Value<String?> reviewNote;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int> version;
@@ -17725,8 +18261,15 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
     this.differenceCash = const Value.absent(),
     this.differenceMomo = const Value.absent(),
     this.saleCount = const Value.absent(),
+    this.submittedAt = const Value.absent(),
+    this.submittedBy = const Value.absent(),
+    this.approvedAt = const Value.absent(),
+    this.approvedBy = const Value.absent(),
     this.status = const Value.absent(),
     this.closingNote = const Value.absent(),
+    this.justificationCategory = const Value.absent(),
+    this.justificationNote = const Value.absent(),
+    this.reviewNote = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.version = const Value.absent(),
@@ -17758,8 +18301,15 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
     this.differenceCash = const Value.absent(),
     this.differenceMomo = const Value.absent(),
     this.saleCount = const Value.absent(),
+    this.submittedAt = const Value.absent(),
+    this.submittedBy = const Value.absent(),
+    this.approvedAt = const Value.absent(),
+    this.approvedBy = const Value.absent(),
     this.status = const Value.absent(),
     this.closingNote = const Value.absent(),
+    this.justificationCategory = const Value.absent(),
+    this.justificationNote = const Value.absent(),
+    this.reviewNote = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.version = const Value.absent(),
@@ -17795,8 +18345,15 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
     Expression<int>? differenceCash,
     Expression<int>? differenceMomo,
     Expression<int>? saleCount,
+    Expression<int>? submittedAt,
+    Expression<int>? submittedBy,
+    Expression<int>? approvedAt,
+    Expression<int>? approvedBy,
     Expression<String>? status,
     Expression<String>? closingNote,
+    Expression<String>? justificationCategory,
+    Expression<String>? justificationNote,
+    Expression<String>? reviewNote,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? version,
@@ -17828,8 +18385,16 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
       if (differenceCash != null) 'difference_cash': differenceCash,
       if (differenceMomo != null) 'difference_momo': differenceMomo,
       if (saleCount != null) 'sale_count': saleCount,
+      if (submittedAt != null) 'submitted_at': submittedAt,
+      if (submittedBy != null) 'submitted_by': submittedBy,
+      if (approvedAt != null) 'approved_at': approvedAt,
+      if (approvedBy != null) 'approved_by': approvedBy,
       if (status != null) 'status': status,
       if (closingNote != null) 'closing_note': closingNote,
+      if (justificationCategory != null)
+        'justification_category': justificationCategory,
+      if (justificationNote != null) 'justification_note': justificationNote,
+      if (reviewNote != null) 'review_note': reviewNote,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (version != null) 'version': version,
@@ -17863,8 +18428,15 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
     Value<int?>? differenceCash,
     Value<int?>? differenceMomo,
     Value<int>? saleCount,
+    Value<int?>? submittedAt,
+    Value<int?>? submittedBy,
+    Value<int?>? approvedAt,
+    Value<int?>? approvedBy,
     Value<String>? status,
     Value<String?>? closingNote,
+    Value<String?>? justificationCategory,
+    Value<String?>? justificationNote,
+    Value<String?>? reviewNote,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int>? version,
@@ -17896,8 +18468,16 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
       differenceCash: differenceCash ?? this.differenceCash,
       differenceMomo: differenceMomo ?? this.differenceMomo,
       saleCount: saleCount ?? this.saleCount,
+      submittedAt: submittedAt ?? this.submittedAt,
+      submittedBy: submittedBy ?? this.submittedBy,
+      approvedAt: approvedAt ?? this.approvedAt,
+      approvedBy: approvedBy ?? this.approvedBy,
       status: status ?? this.status,
       closingNote: closingNote ?? this.closingNote,
+      justificationCategory:
+          justificationCategory ?? this.justificationCategory,
+      justificationNote: justificationNote ?? this.justificationNote,
+      reviewNote: reviewNote ?? this.reviewNote,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       version: version ?? this.version,
@@ -17979,11 +18559,34 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
     if (saleCount.present) {
       map['sale_count'] = Variable<int>(saleCount.value);
     }
+    if (submittedAt.present) {
+      map['submitted_at'] = Variable<int>(submittedAt.value);
+    }
+    if (submittedBy.present) {
+      map['submitted_by'] = Variable<int>(submittedBy.value);
+    }
+    if (approvedAt.present) {
+      map['approved_at'] = Variable<int>(approvedAt.value);
+    }
+    if (approvedBy.present) {
+      map['approved_by'] = Variable<int>(approvedBy.value);
+    }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
     if (closingNote.present) {
       map['closing_note'] = Variable<String>(closingNote.value);
+    }
+    if (justificationCategory.present) {
+      map['justification_category'] = Variable<String>(
+        justificationCategory.value,
+      );
+    }
+    if (justificationNote.present) {
+      map['justification_note'] = Variable<String>(justificationNote.value);
+    }
+    if (reviewNote.present) {
+      map['review_note'] = Variable<String>(reviewNote.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
@@ -18032,8 +18635,15 @@ class CashSessionsCompanion extends UpdateCompanion<CashSession> {
           ..write('differenceCash: $differenceCash, ')
           ..write('differenceMomo: $differenceMomo, ')
           ..write('saleCount: $saleCount, ')
+          ..write('submittedAt: $submittedAt, ')
+          ..write('submittedBy: $submittedBy, ')
+          ..write('approvedAt: $approvedAt, ')
+          ..write('approvedBy: $approvedBy, ')
           ..write('status: $status, ')
           ..write('closingNote: $closingNote, ')
+          ..write('justificationCategory: $justificationCategory, ')
+          ..write('justificationNote: $justificationNote, ')
+          ..write('reviewNote: $reviewNote, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('version: $version, ')
@@ -63839,8 +64449,12 @@ typedef $$SyncQueueTableCreateCompanionBuilder =
       Value<String?> lastError,
       Value<String?> errorCode,
       Value<String> status,
+      Value<String?> suggestedAction,
       required int createdAt,
       Value<int?> processedAt,
+      Value<int?> discardedAt,
+      Value<int?> discardedBy,
+      Value<String?> discardReason,
     });
 typedef $$SyncQueueTableUpdateCompanionBuilder =
     SyncQueueCompanion Function({
@@ -63861,8 +64475,12 @@ typedef $$SyncQueueTableUpdateCompanionBuilder =
       Value<String?> lastError,
       Value<String?> errorCode,
       Value<String> status,
+      Value<String?> suggestedAction,
       Value<int> createdAt,
       Value<int?> processedAt,
+      Value<int?> discardedAt,
+      Value<int?> discardedBy,
+      Value<String?> discardReason,
     });
 
 final class $$SyncQueueTableReferences
@@ -63976,6 +64594,11 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get suggestedAction => $composableBuilder(
+    column: $table.suggestedAction,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -63983,6 +64606,21 @@ class $$SyncQueueTableFilterComposer
 
   ColumnFilters<int> get processedAt => $composableBuilder(
     column: $table.processedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get discardedAt => $composableBuilder(
+    column: $table.discardedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get discardedBy => $composableBuilder(
+    column: $table.discardedBy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get discardReason => $composableBuilder(
+    column: $table.discardReason,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -64099,6 +64737,11 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get suggestedAction => $composableBuilder(
+    column: $table.suggestedAction,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -64106,6 +64749,21 @@ class $$SyncQueueTableOrderingComposer
 
   ColumnOrderings<int> get processedAt => $composableBuilder(
     column: $table.processedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get discardedAt => $composableBuilder(
+    column: $table.discardedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get discardedBy => $composableBuilder(
+    column: $table.discardedBy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get discardReason => $composableBuilder(
+    column: $table.discardReason,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -64206,11 +64864,31 @@ class $$SyncQueueTableAnnotationComposer
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<String> get suggestedAction => $composableBuilder(
+    column: $table.suggestedAction,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
   GeneratedColumn<int> get processedAt => $composableBuilder(
     column: $table.processedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get discardedAt => $composableBuilder(
+    column: $table.discardedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get discardedBy => $composableBuilder(
+    column: $table.discardedBy,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get discardReason => $composableBuilder(
+    column: $table.discardReason,
     builder: (column) => column,
   );
 
@@ -64283,8 +64961,12 @@ class $$SyncQueueTableTableManager
                 Value<String?> lastError = const Value.absent(),
                 Value<String?> errorCode = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> suggestedAction = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int?> processedAt = const Value.absent(),
+                Value<int?> discardedAt = const Value.absent(),
+                Value<int?> discardedBy = const Value.absent(),
+                Value<String?> discardReason = const Value.absent(),
               }) => SyncQueueCompanion(
                 id: id,
                 shopId: shopId,
@@ -64303,8 +64985,12 @@ class $$SyncQueueTableTableManager
                 lastError: lastError,
                 errorCode: errorCode,
                 status: status,
+                suggestedAction: suggestedAction,
                 createdAt: createdAt,
                 processedAt: processedAt,
+                discardedAt: discardedAt,
+                discardedBy: discardedBy,
+                discardReason: discardReason,
               ),
           createCompanionCallback:
               ({
@@ -64325,8 +65011,12 @@ class $$SyncQueueTableTableManager
                 Value<String?> lastError = const Value.absent(),
                 Value<String?> errorCode = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> suggestedAction = const Value.absent(),
                 required int createdAt,
                 Value<int?> processedAt = const Value.absent(),
+                Value<int?> discardedAt = const Value.absent(),
+                Value<int?> discardedBy = const Value.absent(),
+                Value<String?> discardReason = const Value.absent(),
               }) => SyncQueueCompanion.insert(
                 id: id,
                 shopId: shopId,
@@ -64345,8 +65035,12 @@ class $$SyncQueueTableTableManager
                 lastError: lastError,
                 errorCode: errorCode,
                 status: status,
+                suggestedAction: suggestedAction,
                 createdAt: createdAt,
                 processedAt: processedAt,
+                discardedAt: discardedAt,
+                discardedBy: discardedBy,
+                discardReason: discardReason,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -68379,8 +69073,15 @@ typedef $$CashSessionsTableCreateCompanionBuilder =
       Value<int?> differenceCash,
       Value<int?> differenceMomo,
       Value<int> saleCount,
+      Value<int?> submittedAt,
+      Value<int?> submittedBy,
+      Value<int?> approvedAt,
+      Value<int?> approvedBy,
       Value<String> status,
       Value<String?> closingNote,
+      Value<String?> justificationCategory,
+      Value<String?> justificationNote,
+      Value<String?> reviewNote,
       required int createdAt,
       required int updatedAt,
       Value<int> version,
@@ -68413,8 +69114,15 @@ typedef $$CashSessionsTableUpdateCompanionBuilder =
       Value<int?> differenceCash,
       Value<int?> differenceMomo,
       Value<int> saleCount,
+      Value<int?> submittedAt,
+      Value<int?> submittedBy,
+      Value<int?> approvedAt,
+      Value<int?> approvedBy,
       Value<String> status,
       Value<String?> closingNote,
+      Value<String?> justificationCategory,
+      Value<String?> justificationNote,
+      Value<String?> reviewNote,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int> version,
@@ -68472,6 +69180,40 @@ final class $$CashSessionsTableReferences
       $_db.users,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_closedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _submittedByTable(_$AppDatabase db) =>
+      db.users.createAlias('cash_sessions__submitted_by__users__id');
+
+  $$UsersTableProcessedTableManager? get submittedBy {
+    final $_column = $_itemColumn<int>('submitted_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_submittedByTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $UsersTable _approvedByTable(_$AppDatabase db) =>
+      db.users.createAlias('cash_sessions__approved_by__users__id');
+
+  $$UsersTableProcessedTableManager? get approvedBy {
+    final $_column = $_itemColumn<int>('approved_by');
+    if ($_column == null) return null;
+    final manager = $$UsersTableTableManager(
+      $_db,
+      $_db.users,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_approvedByTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -68606,6 +69348,16 @@ class $$CashSessionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get submittedAt => $composableBuilder(
+    column: $table.submittedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get approvedAt => $composableBuilder(
+    column: $table.approvedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnFilters(column),
@@ -68613,6 +69365,21 @@ class $$CashSessionsTableFilterComposer
 
   ColumnFilters<String> get closingNote => $composableBuilder(
     column: $table.closingNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get justificationCategory => $composableBuilder(
+    column: $table.justificationCategory,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get justificationNote => $composableBuilder(
+    column: $table.justificationNote,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reviewNote => $composableBuilder(
+    column: $table.reviewNote,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -68696,6 +69463,52 @@ class $$CashSessionsTableFilterComposer
     final $$UsersTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get submittedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.submittedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableFilterComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableFilterComposer get approvedBy {
+    final $$UsersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.approvedBy,
       referencedTable: $db.users,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -68850,6 +69663,16 @@ class $$CashSessionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get submittedAt => $composableBuilder(
+    column: $table.submittedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get approvedAt => $composableBuilder(
+    column: $table.approvedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -68857,6 +69680,21 @@ class $$CashSessionsTableOrderingComposer
 
   ColumnOrderings<String> get closingNote => $composableBuilder(
     column: $table.closingNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get justificationCategory => $composableBuilder(
+    column: $table.justificationCategory,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get justificationNote => $composableBuilder(
+    column: $table.justificationNote,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reviewNote => $composableBuilder(
+    column: $table.reviewNote,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -68940,6 +69778,52 @@ class $$CashSessionsTableOrderingComposer
     final $$UsersTableOrderingComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.closedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get submittedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.submittedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableOrderingComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableOrderingComposer get approvedBy {
+    final $$UsersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.approvedBy,
       referencedTable: $db.users,
       getReferencedColumn: (t) => t.id,
       builder:
@@ -69057,11 +69941,36 @@ class $$CashSessionsTableAnnotationComposer
   GeneratedColumn<int> get saleCount =>
       $composableBuilder(column: $table.saleCount, builder: (column) => column);
 
+  GeneratedColumn<int> get submittedAt => $composableBuilder(
+    column: $table.submittedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get approvedAt => $composableBuilder(
+    column: $table.approvedAt,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
   GeneratedColumn<String> get closingNote => $composableBuilder(
     column: $table.closingNote,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get justificationCategory => $composableBuilder(
+    column: $table.justificationCategory,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get justificationNote => $composableBuilder(
+    column: $table.justificationNote,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reviewNote => $composableBuilder(
+    column: $table.reviewNote,
     builder: (column) => column,
   );
 
@@ -69154,6 +70063,52 @@ class $$CashSessionsTableAnnotationComposer
     return composer;
   }
 
+  $$UsersTableAnnotationComposer get submittedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.submittedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$UsersTableAnnotationComposer get approvedBy {
+    final $$UsersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.approvedBy,
+      referencedTable: $db.users,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$UsersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.users,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> cashMovementsRefs<T extends Object>(
     Expression<T> Function($$CashMovementsTableAnnotationComposer a) f,
   ) {
@@ -69197,6 +70152,8 @@ class $$CashSessionsTableTableManager
             bool shopId,
             bool openedBy,
             bool closedBy,
+            bool submittedBy,
+            bool approvedBy,
             bool cashMovementsRefs,
           })
         > {
@@ -69236,8 +70193,15 @@ class $$CashSessionsTableTableManager
                 Value<int?> differenceCash = const Value.absent(),
                 Value<int?> differenceMomo = const Value.absent(),
                 Value<int> saleCount = const Value.absent(),
+                Value<int?> submittedAt = const Value.absent(),
+                Value<int?> submittedBy = const Value.absent(),
+                Value<int?> approvedAt = const Value.absent(),
+                Value<int?> approvedBy = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> closingNote = const Value.absent(),
+                Value<String?> justificationCategory = const Value.absent(),
+                Value<String?> justificationNote = const Value.absent(),
+                Value<String?> reviewNote = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int> version = const Value.absent(),
@@ -69268,8 +70232,15 @@ class $$CashSessionsTableTableManager
                 differenceCash: differenceCash,
                 differenceMomo: differenceMomo,
                 saleCount: saleCount,
+                submittedAt: submittedAt,
+                submittedBy: submittedBy,
+                approvedAt: approvedAt,
+                approvedBy: approvedBy,
                 status: status,
                 closingNote: closingNote,
+                justificationCategory: justificationCategory,
+                justificationNote: justificationNote,
+                reviewNote: reviewNote,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
@@ -69302,8 +70273,15 @@ class $$CashSessionsTableTableManager
                 Value<int?> differenceCash = const Value.absent(),
                 Value<int?> differenceMomo = const Value.absent(),
                 Value<int> saleCount = const Value.absent(),
+                Value<int?> submittedAt = const Value.absent(),
+                Value<int?> submittedBy = const Value.absent(),
+                Value<int?> approvedAt = const Value.absent(),
+                Value<int?> approvedBy = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<String?> closingNote = const Value.absent(),
+                Value<String?> justificationCategory = const Value.absent(),
+                Value<String?> justificationNote = const Value.absent(),
+                Value<String?> reviewNote = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int> version = const Value.absent(),
@@ -69334,8 +70312,15 @@ class $$CashSessionsTableTableManager
                 differenceCash: differenceCash,
                 differenceMomo: differenceMomo,
                 saleCount: saleCount,
+                submittedAt: submittedAt,
+                submittedBy: submittedBy,
+                approvedAt: approvedAt,
+                approvedBy: approvedBy,
                 status: status,
                 closingNote: closingNote,
+                justificationCategory: justificationCategory,
+                justificationNote: justificationNote,
+                reviewNote: reviewNote,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 version: version,
@@ -69356,6 +70341,8 @@ class $$CashSessionsTableTableManager
                 shopId = false,
                 openedBy = false,
                 closedBy = false,
+                submittedBy = false,
+                approvedBy = false,
                 cashMovementsRefs = false,
               }) {
                 return PrefetchHooks(
@@ -69424,6 +70411,36 @@ class $$CashSessionsTableTableManager
                                   )
                                   as T;
                         }
+                        if (submittedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.submittedBy,
+                                    referencedTable:
+                                        $$CashSessionsTableReferences
+                                            ._submittedByTable(db),
+                                    referencedColumn:
+                                        $$CashSessionsTableReferences
+                                            ._submittedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (approvedBy) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.approvedBy,
+                                    referencedTable:
+                                        $$CashSessionsTableReferences
+                                            ._approvedByTable(db),
+                                    referencedColumn:
+                                        $$CashSessionsTableReferences
+                                            ._approvedByTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
 
                         return state;
                       },
@@ -69474,6 +70491,8 @@ typedef $$CashSessionsTableProcessedTableManager =
         bool shopId,
         bool openedBy,
         bool closedBy,
+        bool submittedBy,
+        bool approvedBy,
         bool cashMovementsRefs,
       })
     >;

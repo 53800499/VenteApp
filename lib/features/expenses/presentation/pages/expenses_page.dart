@@ -20,7 +20,9 @@ import 'expense_detail_page.dart';
 import 'expense_form_page.dart';
 import '../services/expense_pdf_exporter.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../widgets/desktop_expenses_view.dart';
 
 class ExpensesPage extends StatelessWidget {
   const ExpensesPage({super.key, required this.session});
@@ -56,6 +58,66 @@ class _ExpensesView extends StatelessWidget {
       context.read<ExpensesBloc>().session.user.permissions,
       Permission.expensesCreate,
     );
+    final isDesktop =
+        Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
+    if (isDesktop) {
+      return Scaffold(
+        body: BlocBuilder<ExpensesBloc, ExpensesState>(
+          builder: (context, state) {
+            if (state.status == ExpensesStatus.loading &&
+                state.summary == null) {
+              return const SaleListSkeleton();
+            }
+            if (state.status == ExpensesStatus.failure &&
+                state.summary == null) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(state.errorMessage ?? 'Erreur'),
+                    const SizedBox(height: AppSpacing.md),
+                    FilledButton(
+                      onPressed: () => context
+                          .read<ExpensesBloc>()
+                          .add(const ExpensesLoadRequested()),
+                      child: const Text('Réessayer'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return DesktopExpensesView(
+              session: context.read<ExpensesBloc>().session,
+              state: state,
+              canCreate: canCreate,
+              onRefresh: () async {
+                context.read<ExpensesBloc>().add(const ExpensesLoadRequested());
+              },
+              onOpenForm: () => _openForm(context),
+              onOpenCategories: () => _openCategories(context),
+              onExportPdf: () => _exportPdf(context),
+              onOpenDetail: (expense) async {
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => ExpenseDetailPage(
+                      session: context.read<ExpensesBloc>().session,
+                      expenseId: expense.id,
+                    ),
+                  ),
+                );
+                if (changed == true && context.mounted) {
+                  context
+                      .read<ExpensesBloc>()
+                      .add(const ExpensesLoadRequested());
+                }
+              },
+            );
+          },
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

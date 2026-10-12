@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/components/app_dropdown.dart';
 import '../../../../shared/components/app_page_container.dart';
+import '../../../../shared/components/app_searchable_item_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/di/injection_container.dart';
@@ -513,59 +514,62 @@ class _PoFormPageState extends State<PoFormPage> {
       builder: (diagContext) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           title: const Text('Ajouter un article'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppDropdown<dynamic>(
-                labelText: 'Produit *',
-                hintText: 'Sélectionner ou rechercher un produit',
-                enableSearch: true,
-                searchHintText: 'Rechercher un produit...',
-                items: _allProducts,
-                initialItem: selectedProduct,
-                headerBuilder: (context, item, enabled) => Text(item.name as String, style: const TextStyle(fontWeight: FontWeight.w600)),
-                listItemBuilder: (context, item, isSelected, onItemSelect) => Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(item.name as String),
-                ),
-                onChanged: (val) async {
-                  setStateDialog(() => selectedProduct = val);
-                  if (val != null) {
-                    final shopId = context.read<ProcurementBloc>().shopId;
-                    final lotDs = InventoryLotLocalDatasource(
-                      sl<InventoryLocalDatasource>().database,
-                    );
-                    final ref = await lotDs.getReferenceUnitCost(
-                      shopId: shopId,
-                      productId: val.id as int,
-                    );
-                    if (context.mounted) {
-                      setStateDialog(() => costController.text = '$ref');
-                    }
-                  }
-                },
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppSearchableItemPicker<dynamic>(
+                    items: _allProducts,
+                    selectedItem: selectedProduct,
+                    labelText: 'Produit *',
+                    hintText: 'Rechercher un produit...',
+                    labelBuilder: (p) => p.name as String,
+                    subtitleBuilder: (p) => 'Stock actuel : ${p.quantityInStock}',
+                    filterPredicate: (p, q) =>
+                        (p.name as String).toLowerCase().contains(q.toLowerCase()),
+                    onChanged: (val) async {
+                      setStateDialog(() => selectedProduct = val);
+                      if (val != null) {
+                        final shopId = context.read<ProcurementBloc>().shopId;
+                        final lotDs = InventoryLotLocalDatasource(
+                          sl<InventoryLocalDatasource>().database,
+                        );
+                        final ref = await lotDs.getReferenceUnitCost(
+                          shopId: shopId,
+                          productId: val.id as int,
+                        );
+                        if (context.mounted) {
+                          setStateDialog(() => costController.text = '$ref');
+                        }
+                      }
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: qtyController,
+                    decoration: const InputDecoration(
+                      labelText: 'Quantité *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.format_list_numbered),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextFormField(
+                    controller: costController,
+                    decoration: const InputDecoration(
+                      labelText: 'Prix d\'achat unitaire (FCFA) *',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.payments_outlined),
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                controller: qtyController,
-                decoration: const InputDecoration(
-                  labelText: 'Quantité',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.format_list_numbered),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextFormField(
-                controller: costController,
-                decoration: const InputDecoration(
-                  labelText: 'Prix d\'achat unitaire (FCFA)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.payments_outlined),
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
+            ),
           ),
           actions: [
             TextButton(

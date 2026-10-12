@@ -62,33 +62,39 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
     final completedSales = allSales.where((s) => s.status != SaleStatus.cancelled);
     final totalRevenue = completedSales.fold<int>(0, (sum, s) => sum + s.totalAmount);
 
-    return Container(
-      color: scheme.surfaceContainerLowest.withValues(alpha: 0.5),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.lg,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. Barre de commande supérieure Desktop
-            _buildCommandHeader(context, theme, scheme, totalRevenue, allSales.length),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompactOrMedium = constraints.maxWidth < 900;
 
-            const SizedBox(height: AppSpacing.md),
-
-            // 2. Barre d'outils (Recherche + Filtres de type & statut)
-            _buildToolbar(theme, scheme),
-
-            const SizedBox(height: AppSpacing.md),
-
-            // 3. Tableau de données moderne ERP
-            Expanded(
-              child: _buildDataTable(context, theme, scheme, filteredSales),
+        return Container(
+          color: scheme.surfaceContainerLowest.withValues(alpha: 0.5),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isCompactOrMedium ? AppSpacing.md : AppSpacing.xl,
+              vertical: isCompactOrMedium ? AppSpacing.sm : AppSpacing.lg,
             ),
-          ],
-        ),
-      ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 1. Barre de commande supérieure Desktop
+                _buildCommandHeader(context, theme, scheme, totalRevenue, allSales.length),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // 2. Barre d'outils (Recherche + Filtres de type & statut)
+                _buildToolbar(theme, scheme),
+
+                const SizedBox(height: AppSpacing.md),
+
+                // 3. Tableau de données moderne ERP
+                Expanded(
+                  child: _buildDataTable(context, theme, scheme, filteredSales),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -99,234 +105,298 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
     int totalRevenue,
     int totalCount,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md + 4),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.4),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.sm + 2),
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 800;
+
+        final titleAndBadge = Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.sm + 2),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Icon(
+                Icons.point_of_sale_rounded,
+                color: scheme.primary,
+                size: 24,
+              ),
             ),
-            child: Icon(
-              Icons.point_of_sale_rounded,
-              color: scheme.primary,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    Text(
-                      'Historique des Ventes',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: scheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                      ),
-                      child: Text(
-                        '$totalCount vente${totalCount > 1 ? 's' : ''}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurfaceVariant,
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      Text(
+                        'Historique des Ventes',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Volume total réalisé : ${formatFcfa(totalRevenue)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceMuted,
-                    fontWeight: FontWeight.w500,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Text(
+                          '$totalCount vente${totalCount > 1 ? 's' : ''}',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          ),
-          // Actions
-          IconButton(
-            onPressed: widget.state.isRefreshing ? null : widget.onRefresh,
-            tooltip: 'Actualiser la liste',
-            icon: widget.state.isRefreshing
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.refresh_rounded, size: 20),
-          ),
-          if (widget.canCreate) ...[
-            const SizedBox(width: AppSpacing.sm),
-            OutlinedButton.icon(
-              onPressed: widget.onQuickSale,
-              icon: const Icon(Icons.flash_on_rounded, size: 18),
-              label: const Text('Vente rapide'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFD97706),
-                side: BorderSide(color: const Color(0xFFF59E0B).withValues(alpha: 0.6)),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm + 2,
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Volume total : ${formatFcfa(totalRevenue)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.onSurfaceMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            FilledButton.icon(
-              onPressed: widget.onNewSale,
-              icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
-              label: const Text('Nouvelle Vente (F2)'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.sm + 2,
-                ),
-              ),
+            IconButton(
+              onPressed: widget.state.isRefreshing ? null : widget.onRefresh,
+              tooltip: 'Actualiser la liste',
+              icon: widget.state.isRefreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 20),
             ),
           ],
-        ],
-      ),
+        );
+
+        final actionButtons = widget.canCreate
+            ? Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                alignment: WrapAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: widget.onQuickSale,
+                    icon: const Icon(Icons.flash_on_rounded, size: 18),
+                    label: const Text('Vente rapide'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFFD97706),
+                      side: BorderSide(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.6),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                        vertical: AppSpacing.sm + 2,
+                      ),
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: widget.onNewSale,
+                    icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                    label: const Text('Nouvelle Vente (F2)'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.sm + 2,
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : const SizedBox.shrink();
+
+        return Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    titleAndBadge,
+                    if (widget.canCreate) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      actionButtons,
+                    ],
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(child: titleAndBadge),
+                    if (widget.canCreate) actionButtons,
+                  ],
+                ),
+        );
+      },
     );
   }
 
   Widget _buildToolbar(ThemeData theme, ColorScheme scheme) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: scheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Champ de recherche
-          Expanded(
-            flex: 3,
-            child: SizedBox(
-              height: 40,
-              child: TextField(
-                controller: widget.searchController,
-                decoration: InputDecoration(
-                  hintText: 'Rechercher par n° de reçu, client…',
-                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceMuted,
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: widget.searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: widget.onClearSearch,
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  filled: true,
-                  fillColor: scheme.surfaceContainerLowest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(color: scheme.primary, width: 1.5),
-                  ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 780;
+
+        final searchField = SizedBox(
+          height: 40,
+          child: TextField(
+            controller: widget.searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher par n° de reçu, client…',
+              hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.onSurfaceMuted,
+              ),
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              suffixIcon: widget.searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 18),
+                      onPressed: widget.onClearSearch,
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              filled: true,
+              fillColor: scheme.surfaceContainerLowest,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
                 ),
-                onChanged: widget.onSearchChanged,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderSide: BorderSide(color: scheme.primary, width: 1.5),
               ),
             ),
+            onChanged: widget.onSearchChanged,
           ),
-          const SizedBox(width: AppSpacing.md),
-          // Filtres par type de vente
-          FilterChip(
-            label: const Text('Toutes'),
-            selected: _filterType == null && _filterStatus == null,
-            onSelected: (_) {
-              setState(() {
-                _filterType = null;
-                _filterStatus = null;
-              });
-            },
-            visualDensity: VisualDensity.compact,
+        );
+
+        final filterChips = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              FilterChip(
+                label: const Text('Toutes'),
+                selected: _filterType == null && _filterStatus == null,
+                onSelected: (_) {
+                  setState(() {
+                    _filterType = null;
+                    _filterStatus = null;
+                  });
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              FilterChip(
+                avatar: const Icon(Icons.receipt_long_outlined, size: 14),
+                label: const Text('Standard'),
+                selected: _filterType == SaleType.standard,
+                onSelected: (selected) {
+                  setState(() {
+                    _filterType = selected ? SaleType.standard : null;
+                  });
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              FilterChip(
+                avatar: const Icon(
+                  Icons.flash_on_rounded,
+                  size: 14,
+                  color: Color(0xFFD97706),
+                ),
+                label: const Text('Rapide'),
+                selected: _filterType == SaleType.quick,
+                onSelected: (selected) {
+                  setState(() {
+                    _filterType = selected ? SaleType.quick : null;
+                  });
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              FilterChip(
+                avatar: const Icon(
+                  Icons.cancel_outlined,
+                  size: 14,
+                  color: AppColors.danger,
+                ),
+                label: const Text('Annulées'),
+                selected: _filterStatus == SaleStatus.cancelled,
+                onSelected: (selected) {
+                  setState(() {
+                    _filterStatus = selected ? SaleStatus.cancelled : null;
+                  });
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.xs),
-          FilterChip(
-            avatar: const Icon(Icons.receipt_long_outlined, size: 14),
-            label: const Text('Standard'),
-            selected: _filterType == SaleType.standard,
-            onSelected: (selected) {
-              setState(() {
-                _filterType = selected ? SaleType.standard : null;
-              });
-            },
-            visualDensity: VisualDensity.compact,
+        );
+
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
           ),
-          const SizedBox(width: AppSpacing.xs),
-          FilterChip(
-            avatar: const Icon(Icons.flash_on_rounded, size: 14, color: Color(0xFFD97706)),
-            label: const Text('Rapide'),
-            selected: _filterType == SaleType.quick,
-            onSelected: (selected) {
-              setState(() {
-                _filterType = selected ? SaleType.quick : null;
-              });
-            },
-            visualDensity: VisualDensity.compact,
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.3),
+            ),
           ),
-          const SizedBox(width: AppSpacing.xs),
-          FilterChip(
-            avatar: const Icon(Icons.cancel_outlined, size: 14, color: AppColors.danger),
-            label: const Text('Annulées'),
-            selected: _filterStatus == SaleStatus.cancelled,
-            onSelected: (selected) {
-              setState(() {
-                _filterStatus = selected ? SaleStatus.cancelled : null;
-              });
-            },
-            visualDensity: VisualDensity.compact,
-          ),
-        ],
-      ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchField,
+                    const SizedBox(height: AppSpacing.xs),
+                    filterChips,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(flex: 3, child: searchField),
+                    const SizedBox(width: AppSpacing.md),
+                    filterChips,
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -351,27 +421,28 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
       const AppTableColumn(
         label: 'Reçu / ID',
         icon: Icons.tag_rounded,
-        width: 140,
+        width: 130,
       ),
       const AppTableColumn(
         label: 'Date & Heure',
         icon: Icons.access_time_rounded,
-        width: 160,
+        width: 150,
       ),
       const AppTableColumn(
         label: 'Client',
         icon: Icons.person_outline_rounded,
         flex: 2,
+        minWidth: 180,
       ),
       const AppTableColumn(
         label: 'Type',
         icon: Icons.category_outlined,
-        width: 130,
+        width: 120,
       ),
       const AppTableColumn(
         label: 'Montant Total',
         icon: Icons.monetization_on_outlined,
-        width: 160,
+        width: 150,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
@@ -383,7 +454,7 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
       ),
       const AppTableColumn(
         label: 'Action',
-        width: 100,
+        width: 80,
         alignment: Alignment.center,
       ),
     ];
@@ -553,7 +624,7 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
       columns: columns,
       rows: rows,
       itemsPerPage: 15,
-      minWidth: 850,
+      minWidth: 940,
     );
   }
 }

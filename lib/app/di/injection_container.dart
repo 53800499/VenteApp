@@ -513,6 +513,15 @@ void ensureCashSessionDependencies() {
   if (!sl.isRegistered<CloseCashSession>()) {
     sl.registerLazySingleton(() => CloseCashSession(sl(), sl()));
   }
+  if (!sl.isRegistered<SubmitCashSessionClosing>()) {
+    sl.registerLazySingleton(() => SubmitCashSessionClosing(sl()));
+  }
+  if (!sl.isRegistered<ApproveCashSession>()) {
+    sl.registerLazySingleton(() => ApproveCashSession(sl()));
+  }
+  if (!sl.isRegistered<RecordOwnerDrop>()) {
+    sl.registerLazySingleton(() => RecordOwnerDrop(sl()));
+  }
   if (!sl.isRegistered<RecordCashMovement>()) {
     sl.registerLazySingleton(() => RecordCashMovement(sl()));
   }

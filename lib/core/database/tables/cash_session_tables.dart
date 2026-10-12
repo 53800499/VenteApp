@@ -26,8 +26,15 @@ class CashSessions extends Table {
   IntColumn get differenceCash => integer().nullable()();
   IntColumn get differenceMomo => integer().nullable()();
   IntColumn get saleCount => integer().withDefault(const Constant(0))();
+  IntColumn get submittedAt => integer().nullable()();
+  IntColumn get submittedBy => integer().nullable().references(Users, #id)();
+  IntColumn get approvedAt => integer().nullable()();
+  IntColumn get approvedBy => integer().nullable().references(Users, #id)();
   TextColumn get status => text().withDefault(const Constant('open'))();
   TextColumn get closingNote => text().nullable()();
+  TextColumn get justificationCategory => text().nullable()();
+  TextColumn get justificationNote => text().nullable()();
+  TextColumn get reviewNote => text().nullable()();
   IntColumn get createdAt => integer()();
   IntColumn get updatedAt => integer()();
   IntColumn get version => integer().withDefault(const Constant(1))();

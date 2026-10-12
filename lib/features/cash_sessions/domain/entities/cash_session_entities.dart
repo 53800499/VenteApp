@@ -2,17 +2,40 @@ import 'package:equatable/equatable.dart';
 
 enum CashSessionStatus {
   open,
+  submitted,
+  reviewRequired,
+  justified,
+  approved,
+  reopened,
   closed;
 
-  String get code => name;
+  String get code => switch (this) {
+        CashSessionStatus.open => 'open',
+        CashSessionStatus.submitted => 'submitted',
+        CashSessionStatus.reviewRequired => 'review_required',
+        CashSessionStatus.justified => 'justified',
+        CashSessionStatus.approved => 'approved',
+        CashSessionStatus.reopened => 'reopened',
+        CashSessionStatus.closed => 'closed',
+      };
 
   static CashSessionStatus fromCode(String code) => switch (code) {
+        'submitted' => CashSessionStatus.submitted,
+        'review_required' => CashSessionStatus.reviewRequired,
+        'justified' => CashSessionStatus.justified,
+        'approved' => CashSessionStatus.approved,
+        'reopened' => CashSessionStatus.reopened,
         'closed' => CashSessionStatus.closed,
         _ => CashSessionStatus.open,
       };
 
   String get label => switch (this) {
-        CashSessionStatus.open => 'Ouverte',
+        CashSessionStatus.open => 'En cours',
+        CashSessionStatus.submitted => 'Soumise',
+        CashSessionStatus.reviewRequired => 'À vérifier',
+        CashSessionStatus.justified => 'Justifiée',
+        CashSessionStatus.approved => 'Validée',
+        CashSessionStatus.reopened => 'Rouverte',
         CashSessionStatus.closed => 'Clôturée',
       };
 }
@@ -20,17 +43,23 @@ enum CashSessionStatus {
 enum CashRegisterType {
   cash,
   mtnMomo,
-  moovMoney;
+  moovMoney,
+  celtis,
+  bank;
 
   String get code => switch (this) {
         CashRegisterType.cash => 'cash',
         CashRegisterType.mtnMomo => 'mtn_momo',
         CashRegisterType.moovMoney => 'moov_money',
+        CashRegisterType.celtis => 'celtis',
+        CashRegisterType.bank => 'bank',
       };
 
   static CashRegisterType fromCode(String code) => switch (code) {
         'mtn_momo' => CashRegisterType.mtnMomo,
         'moov_money' => CashRegisterType.moovMoney,
+        'celtis' => CashRegisterType.celtis,
+        'bank' => CashRegisterType.bank,
         _ => CashRegisterType.cash,
       };
 
@@ -38,23 +67,36 @@ enum CashRegisterType {
         CashRegisterType.cash => 'Espèces',
         CashRegisterType.mtnMomo => 'MTN MoMo',
         CashRegisterType.moovMoney => 'Moov Money',
+        CashRegisterType.celtis => 'Celtis Cash',
+        CashRegisterType.bank => 'Banque / Virement',
       };
 }
 
 enum CashMovementType {
   withdrawal,
-  deposit;
+  deposit,
+  ownerDrop,
+  bankDeposit;
 
-  String get code => name;
+  String get code => switch (this) {
+        CashMovementType.withdrawal => 'withdrawal',
+        CashMovementType.deposit => 'deposit',
+        CashMovementType.ownerDrop => 'owner_drop',
+        CashMovementType.bankDeposit => 'bank_deposit',
+      };
 
   static CashMovementType fromCode(String code) => switch (code) {
         'deposit' => CashMovementType.deposit,
+        'owner_drop' => CashMovementType.ownerDrop,
+        'bank_deposit' => CashMovementType.bankDeposit,
         _ => CashMovementType.withdrawal,
       };
 
   String get label => switch (this) {
         CashMovementType.withdrawal => 'Retrait',
         CashMovementType.deposit => 'Entrée',
+        CashMovementType.ownerDrop => 'Remise au patron',
+        CashMovementType.bankDeposit => 'Dépôt banque',
       };
 }
 
@@ -68,6 +110,10 @@ class CashSession extends Equatable {
     this.closedByName,
     required this.openedAt,
     this.closedAt,
+    this.submittedAt,
+    this.submittedBy,
+    this.approvedAt,
+    this.approvedBy,
     required this.openingCash,
     required this.openingMomo,
     required this.salesCash,
@@ -87,6 +133,9 @@ class CashSession extends Equatable {
     required this.saleCount,
     required this.status,
     this.closingNote,
+    this.justificationCategory,
+    this.justificationNote,
+    this.reviewNote,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -99,6 +148,10 @@ class CashSession extends Equatable {
   final String? closedByName;
   final int openedAt;
   final int? closedAt;
+  final int? submittedAt;
+  final int? submittedBy;
+  final int? approvedAt;
+  final int? approvedBy;
   final int openingCash;
   final int openingMomo;
   final int salesCash;
@@ -118,6 +171,9 @@ class CashSession extends Equatable {
   final int saleCount;
   final CashSessionStatus status;
   final String? closingNote;
+  final String? justificationCategory;
+  final String? justificationNote;
+  final String? reviewNote;
   final int createdAt;
   final int updatedAt;
 
@@ -138,10 +194,16 @@ class CashSession extends Equatable {
   int get totalDifference =>
       (differenceCash ?? 0) + (differenceMomo ?? 0);
 
-  bool get isOpen => status == CashSessionStatus.open;
+  bool get isOpen => status == CashSessionStatus.open || status == CashSessionStatus.reopened;
+  bool get isPendingReview =>
+      status == CashSessionStatus.submitted ||
+      status == CashSessionStatus.reviewRequired ||
+      status == CashSessionStatus.justified;
+  bool get isApproved => status == CashSessionStatus.approved || status == CashSessionStatus.closed;
+  bool get hasDifference => (differenceCash ?? 0) != 0 || (differenceMomo ?? 0) != 0;
 
   @override
-  List<Object?> get props => [id, shopId, status, openedAt, closedAt];
+  List<Object?> get props => [id, shopId, status, openedAt, closedAt, submittedAt, approvedAt];
 }
 
 class CashMovement extends Equatable {
@@ -246,21 +308,83 @@ class OpenCashSessionInput extends Equatable {
   List<Object?> get props => [openingCash, openingMomo];
 }
 
+class SubmitCashSessionClosingInput extends Equatable {
+  const SubmitCashSessionClosingInput({
+    required this.countedCash,
+    required this.countedMomo,
+    this.closingNote,
+    this.justificationCategory,
+    this.justificationNote,
+  });
+
+  final int countedCash;
+  final int countedMomo;
+  final String? closingNote;
+  final String? justificationCategory;
+  final String? justificationNote;
+
+  @override
+  List<Object?> get props => [
+        countedCash,
+        countedMomo,
+        closingNote,
+        justificationCategory,
+        justificationNote,
+      ];
+}
+
+class ApproveCashSessionInput extends Equatable {
+  const ApproveCashSessionInput({
+    this.reviewNote,
+  });
+
+  final String? reviewNote;
+
+  @override
+  List<Object?> get props => [reviewNote];
+}
+
+class RecordOwnerDropInput extends Equatable {
+  const RecordOwnerDropInput({
+    required this.amount,
+    this.registerType = CashRegisterType.cash,
+    this.note,
+  });
+
+  final int amount;
+  final CashRegisterType registerType;
+  final String? note;
+
+  @override
+  List<Object?> get props => [amount, registerType, note];
+}
+
 class CloseCashSessionInput extends Equatable {
   const CloseCashSessionInput({
     required this.countedCash,
     required this.countedMomo,
     this.closingNote,
     this.ownerPin,
+    this.justificationCategory,
+    this.justificationNote,
   });
 
   final int countedCash;
   final int countedMomo;
   final String? closingNote;
   final String? ownerPin;
+  final String? justificationCategory;
+  final String? justificationNote;
 
   @override
-  List<Object?> get props => [countedCash, countedMomo, closingNote, ownerPin];
+  List<Object?> get props => [
+        countedCash,
+        countedMomo,
+        closingNote,
+        ownerPin,
+        justificationCategory,
+        justificationNote,
+      ];
 }
 
 class RecordCashMovementInput extends Equatable {
@@ -278,4 +402,17 @@ class RecordCashMovementInput extends Equatable {
 
   @override
   List<Object?> get props => [movementType, registerType, amount];
+}
+
+extension CashDiscrepancyCategoryX on String {
+  String get discrepancyCategoryLabel => switch (this) {
+        'unconfirmed_payment' => 'Paiement Mobile Money non confirmé',
+        'pending_transaction' => 'Transaction en attente',
+        'entry_error' => 'Erreur de saisie vente',
+        'unrecorded_expense' => 'Dépense urgente non saisie',
+        'network_fee' => 'Frais de retrait Mobile Money',
+        'cash_breakage' => 'Erreur rendu de monnaie',
+        'other' => 'Autre motif',
+        _ => this,
+      };
 }

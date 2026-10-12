@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../shared/components/app_desktop_data_table.dart';
 import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../domain/entities/sales_analysis_entities.dart';
@@ -44,6 +46,11 @@ class _ProductSalesDetailPageState extends State<ProductSalesDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDesktop =
+        Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.productName)),
       body: FutureBuilder<ProductSalesDetail>(
@@ -59,6 +66,208 @@ class _ProductSalesDetailPageState extends State<ProductSalesDetailPage> {
           final isHeadless = SalesAnalysisHeadlessLabels.isHeadlessProductName(
             widget.productName,
           );
+
+          if (isDesktop) {
+            return Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Colonne de gauche : Indicateurs & Vendeurs
+                  SizedBox(
+                    width: 380,
+                    child: ListView(
+                      children: [
+                        if (isHeadless) ...[
+                          Card(
+                            color: cs.surfaceContainerHighest,
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.md),
+                              child: Text(
+                                'Ces ventes n\'ont pas de lignes produit enregistrées '
+                                '(vente rapide ou synchronisation incomplète). '
+                                'Le montant affiché correspond au total de chaque vente.',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
+                        _StatsCard(stats: detail.stats),
+                        if (detail.employeeStats.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.lg),
+                          Text(
+                            'Qui vend à quel prix ?',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          ...detail.employeeStats.map(
+                            (e) => Card(
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  radius: 14,
+                                  child: Text(
+                                    (e.userName ?? 'V')
+                                        .characters
+                                        .first
+                                        .toUpperCase(),
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ),
+                                title: Text(
+                                  e.userName ?? 'Vendeur #${e.userId}',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${e.saleLineCount} ventes · ${e.discountLineCount} écart(s)',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                trailing: Text(
+                                  formatFcfa(e.averageUnitPrice),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: AppSpacing.lg),
+
+                  // Colonne de droite : Historique des ventes en DataTable
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Historique des ventes (${detail.lines.length} lignes)',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Expanded(
+                          child: detail.lines.isEmpty
+                              ? const EmptyListPlaceholder(
+                                  icon: Icons.receipt_long_outlined,
+                                  title: 'Aucune vente sur cette période',
+                                )
+                              : AppDesktopDataTable(
+                                  minWidth: 700,
+                                  columns: const [
+                                    AppTableColumn(
+                                      label: 'Date de Vente',
+                                      width: 150,
+                                    ),
+                                    AppTableColumn(
+                                      label: 'Client',
+                                      flex: 2,
+                                      minWidth: 160,
+                                    ),
+                                    AppTableColumn(
+                                      label: 'Vendeur',
+                                      width: 140,
+                                    ),
+                                    AppTableColumn(
+                                      label: 'Qté',
+                                      width: 100,
+                                      alignment: Alignment.centerRight,
+                                      textAlign: TextAlign.right,
+                                    ),
+                                    AppTableColumn(
+                                      label: 'Prix Unitaire',
+                                      width: 140,
+                                      alignment: Alignment.centerRight,
+                                      textAlign: TextAlign.right,
+                                    ),
+                                    AppTableColumn(
+                                      label: 'Total Ligne',
+                                      width: 150,
+                                      alignment: Alignment.centerRight,
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ],
+                                  rows: detail.lines.map((line) {
+                                    final customer = line.customerName ??
+                                        'Client comptoir';
+                                    final seller = line.sellerName ?? '—';
+                                    final qty =
+                                        formatQuantitySold(line.quantity);
+                                    final isHeadlessLine =
+                                        line.catalogPrice == null &&
+                                            line.discountAmount == 0;
+                                    final priceColor =
+                                        line.catalogPrice != null &&
+                                                line.unitPrice <
+                                                    line.catalogPrice!
+                                            ? cs.error
+                                            : null;
+                                    final totalLine =
+                                        (line.unitPrice * line.quantity)
+                                            .round();
+
+                                    return AppTableRow(
+                                      cells: [
+                                        Text(
+                                          formatRelativeSaleDate(line.soldAt),
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                        Text(
+                                          customer,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(seller),
+                                        Text(
+                                          isHeadlessLine
+                                              ? 'Vente #${line.saleId}'
+                                              : '$qty u',
+                                        ),
+                                        Text(
+                                          formatFcfa(line.unitPrice),
+                                          style: TextStyle(
+                                            color: priceColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        Text(
+                                          formatFcfa(totalLine),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
             children: [
@@ -104,8 +313,8 @@ class _ProductSalesDetailPageState extends State<ProductSalesDetailPage> {
               ),
               const SizedBox(height: AppSpacing.sm),
               if (detail.lines.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: EmptyListPlaceholder(
                     icon: Icons.receipt_long_outlined,
                     title: 'Aucune vente sur cette période',

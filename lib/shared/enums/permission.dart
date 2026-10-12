@@ -52,6 +52,7 @@ enum Permission {
   cashSessionsOpen('cash_sessions:open'),
   cashSessionsClose('cash_sessions:close'),
   cashSessionsAdjust('cash_sessions:adjust'),
+  cashSessionsApprove('cash_sessions:approve'),
   calculatorsUse('calculators:use'),
   calculatorsExport('calculators:export'),
   calculatorsHistory('calculators:history'),

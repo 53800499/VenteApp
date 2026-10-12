@@ -16,8 +16,10 @@ import '../../domain/entities/sales_order.dart';
 import '../bloc/sales_order_bloc.dart';
 import 'sales_order_detail_page.dart';
 import 'sales_order_form_page.dart';
+import '../../../../core/responsive/breakpoints.dart';
 import '../../../../shared/components/app_page_container.dart';
 import '../../../../shared/guards/module_activity_guard.dart';
+import '../widgets/desktop_sales_orders_view.dart';
 
 class SalesOrdersPage extends StatelessWidget {
   const SalesOrdersPage({super.key, required this.session});
@@ -143,6 +145,67 @@ class _SalesOrdersViewState extends State<_SalesOrdersView>
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop =
+        Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
+    if (isDesktop) {
+      return Scaffold(
+        body: BlocConsumer<SalesOrderBloc, SalesOrderState>(
+          listenWhen: (p, c) =>
+              p.errorMessage != c.errorMessage ||
+              p.successMessage != c.successMessage,
+          listener: (context, state) {
+            if (state.errorMessage != null) {
+              ActionFeedback.showErrorMessage(
+                context,
+                state.errorMessage!,
+              );
+              context
+                  .read<SalesOrderBloc>()
+                  .add(const SalesOrderFeedbackCleared());
+            } else if (state.successMessage != null) {
+              ActionFeedback.showInfo(context, state.successMessage!);
+              context
+                  .read<SalesOrderBloc>()
+                  .add(const SalesOrderFeedbackCleared());
+            }
+          },
+          builder: (context, state) {
+            return DesktopSalesOrdersView(
+              session: widget.session,
+              state: state,
+              canWrite: widget.canWrite,
+              onRefresh: () {
+                _reload();
+                _loadReport();
+              },
+              onOpenCreate: _openCreate,
+              onOpenDetail: _openDetail,
+              onStatusFilterChanged: (status) {
+                _statusFilter = status;
+                _reload();
+              },
+              onSearchChanged: (query) {
+                _searchController.text = query;
+                _reload();
+              },
+              onPeriodChanged: (days) {
+                setState(() {
+                  _reportPeriod = days == 7
+                      ? _ReportPeriod.days7
+                      : (days == 30 ? _ReportPeriod.days30 : _ReportPeriod.month);
+                });
+                _loadReport();
+              },
+              activePeriodDays: _reportPeriod == _ReportPeriod.days7
+                  ? 7
+                  : (_reportPeriod == _ReportPeriod.days30 ? 30 : 90),
+            );
+          },
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Commandes clients'),

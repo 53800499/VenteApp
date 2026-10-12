@@ -50,19 +50,19 @@ class EmptyListPlaceholder extends StatelessWidget {
   Widget buildContent(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           FeatureIllustrationIcon(icon: icon),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             title,
             style: theme.textTheme.titleMedium,
             textAlign: TextAlign.center,
           ),
           if (subtitle != null) ...[
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               subtitle!,
               textAlign: TextAlign.center,
@@ -110,11 +110,27 @@ class EmptyListPlaceholder extends StatelessWidget {
       );
     }
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: buildContent(context),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final content = Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: buildContent(context),
+        );
+
+        if (constraints.maxHeight.isFinite) {
+          return Center(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: content,
+            ),
+          );
+        }
+
+        return Center(child: content);
+      },
     );
   }
 }

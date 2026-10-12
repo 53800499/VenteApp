@@ -7,6 +7,10 @@ class CashSessionApiDto {
     this.closedBy,
     required this.openedAt,
     this.closedAt,
+    this.submittedAt,
+    this.submittedBy,
+    this.approvedAt,
+    this.approvedBy,
     required this.openingCash,
     required this.openingMomo,
     required this.salesCash,
@@ -26,6 +30,9 @@ class CashSessionApiDto {
     required this.saleCount,
     required this.status,
     this.closingNote,
+    this.justificationCategory,
+    this.justificationNote,
+    this.reviewNote,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -37,6 +44,10 @@ class CashSessionApiDto {
   final int? closedBy;
   final int openedAt;
   final int? closedAt;
+  final int? submittedAt;
+  final int? submittedBy;
+  final int? approvedAt;
+  final int? approvedBy;
   final int openingCash;
   final int openingMomo;
   final int salesCash;
@@ -56,6 +67,9 @@ class CashSessionApiDto {
   final int saleCount;
   final String status;
   final String? closingNote;
+  final String? justificationCategory;
+  final String? justificationNote;
+  final String? reviewNote;
   final int createdAt;
   final int updatedAt;
 
@@ -73,6 +87,14 @@ class CashSessionApiDto {
           (json['opened_at'] as num).toInt(),
       closedAt: (json['closedAt'] as num?)?.toInt() ??
           (json['closed_at'] as num?)?.toInt(),
+      submittedAt: (json['submittedAt'] as num?)?.toInt() ??
+          (json['submitted_at'] as num?)?.toInt(),
+      submittedBy: (json['submittedBy'] as num?)?.toInt() ??
+          (json['submitted_by'] as num?)?.toInt(),
+      approvedAt: (json['approvedAt'] as num?)?.toInt() ??
+          (json['approved_at'] as num?)?.toInt(),
+      approvedBy: (json['approvedBy'] as num?)?.toInt() ??
+          (json['approved_by'] as num?)?.toInt(),
       openingCash: (json['openingCash'] as num?)?.toInt() ??
           (json['opening_cash'] as num?)?.toInt() ??
           0,
@@ -121,6 +143,12 @@ class CashSessionApiDto {
       status: json['status'] as String? ?? 'closed',
       closingNote: json['closingNote'] as String? ??
           json['closing_note'] as String?,
+      justificationCategory: json['justificationCategory'] as String? ??
+          json['justification_category'] as String?,
+      justificationNote: json['justificationNote'] as String? ??
+          json['justification_note'] as String?,
+      reviewNote: json['reviewNote'] as String? ??
+          json['review_note'] as String?,
       createdAt: (json['createdAt'] as num?)?.toInt() ??
           (json['created_at'] as num).toInt(),
       updatedAt: (json['updatedAt'] as num?)?.toInt() ??
@@ -131,6 +159,10 @@ class CashSessionApiDto {
   Map<String, dynamic> toJson() => {
         'openedAt': openedAt,
         'closedAt': closedAt,
+        'submittedAt': submittedAt,
+        'submittedBy': submittedBy,
+        'approvedAt': approvedAt,
+        'approvedBy': approvedBy,
         'openingCash': openingCash,
         'openingMomo': openingMomo,
         'salesCash': salesCash,
@@ -150,6 +182,9 @@ class CashSessionApiDto {
         'saleCount': saleCount,
         'status': status,
         'closingNote': closingNote,
+        'justificationCategory': justificationCategory,
+        'justificationNote': justificationNote,
+        'reviewNote': reviewNote,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
       };
@@ -170,12 +205,96 @@ class OpenCashSessionApiRequest {
       };
 }
 
+class SubmitCashSessionApiRequest {
+  const SubmitCashSessionApiRequest({
+    required this.countedCash,
+    required this.countedMomo,
+    this.closingNote,
+    this.justificationCategory,
+    this.justificationNote,
+    required this.salesCash,
+    required this.salesMomo,
+    required this.expensesCash,
+    required this.expensesMomo,
+    required this.depositsCash,
+    required this.depositsMomo,
+    required this.withdrawalsCash,
+    required this.withdrawalsMomo,
+    required this.saleCount,
+  });
+
+  final int countedCash;
+  final int countedMomo;
+  final String? closingNote;
+  final String? justificationCategory;
+  final String? justificationNote;
+  final int salesCash;
+  final int salesMomo;
+  final int expensesCash;
+  final int expensesMomo;
+  final int depositsCash;
+  final int depositsMomo;
+  final int withdrawalsCash;
+  final int withdrawalsMomo;
+  final int saleCount;
+
+  Map<String, dynamic> toJson() => {
+        'countedCash': countedCash,
+        'countedMomo': countedMomo,
+        if (closingNote != null) 'closingNote': closingNote,
+        if (justificationCategory != null)
+          'justificationCategory': justificationCategory,
+        if (justificationNote != null) 'justificationNote': justificationNote,
+        'salesCash': salesCash,
+        'salesMomo': salesMomo,
+        'expensesCash': expensesCash,
+        'expensesMomo': expensesMomo,
+        'depositsCash': depositsCash,
+        'depositsMomo': depositsMomo,
+        'withdrawalsCash': withdrawalsCash,
+        'withdrawalsMomo': withdrawalsMomo,
+        'saleCount': saleCount,
+      };
+}
+
+class ApproveCashSessionApiRequest {
+  const ApproveCashSessionApiRequest({
+    this.reviewNote,
+  });
+
+  final String? reviewNote;
+
+  Map<String, dynamic> toJson() => {
+        if (reviewNote != null) 'reviewNote': reviewNote,
+      };
+}
+
+class OwnerDropApiRequest {
+  const OwnerDropApiRequest({
+    required this.amount,
+    this.registerType = 'cash',
+    this.note,
+  });
+
+  final int amount;
+  final String registerType;
+  final String? note;
+
+  Map<String, dynamic> toJson() => {
+        'amount': amount,
+        'registerType': registerType,
+        if (note != null) 'note': note,
+      };
+}
+
 class CloseCashSessionApiRequest {
   const CloseCashSessionApiRequest({
     required this.countedCash,
     required this.countedMomo,
     this.closingNote,
     this.ownerPin,
+    this.justificationCategory,
+    this.justificationNote,
     required this.salesCash,
     required this.salesMomo,
     required this.expensesCash,
@@ -191,6 +310,8 @@ class CloseCashSessionApiRequest {
   final int countedMomo;
   final String? closingNote;
   final String? ownerPin;
+  final String? justificationCategory;
+  final String? justificationNote;
   final int salesCash;
   final int salesMomo;
   final int expensesCash;
@@ -204,8 +325,11 @@ class CloseCashSessionApiRequest {
   Map<String, dynamic> toJson() => {
         'countedCash': countedCash,
         'countedMomo': countedMomo,
-        'closingNote': closingNote,
+        if (closingNote != null) 'closingNote': closingNote,
         if (ownerPin != null) 'ownerPin': ownerPin,
+        if (justificationCategory != null)
+          'justificationCategory': justificationCategory,
+        if (justificationNote != null) 'justificationNote': justificationNote,
         'salesCash': salesCash,
         'salesMomo': salesMomo,
         'expensesCash': expensesCash,

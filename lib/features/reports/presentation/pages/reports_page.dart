@@ -22,6 +22,38 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../services/report_pdf_exporter.dart';
 import '../bloc/report_bloc.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../../core/responsive/breakpoints.dart';
+import '../widgets/desktop_reports_view.dart';
+
+Future<void> _pickReportCustomRange(BuildContext context) async {
+  final now = DateTime.now();
+  final picked = await showDateRangePicker(
+    context: context,
+    firstDate: DateTime(now.year - 2),
+    lastDate: now,
+    helpText: 'Choisir une période',
+  );
+  if (picked == null || !context.mounted) return;
+
+  final fromMs = DateTime(
+    picked.start.year,
+    picked.start.month,
+    picked.start.day,
+  ).millisecondsSinceEpoch;
+  final toMs = DateTime(
+    picked.end.year,
+    picked.end.month,
+    picked.end.day,
+    23,
+    59,
+    59,
+    999,
+  ).millisecondsSinceEpoch;
+
+  context.read<ReportBloc>().add(
+        ReportCustomRangeSelected(fromMs: fromMs, toMs: toMs),
+      );
+}
 
 bool _canUseConsolidatedView(AuthSession session) =>
     session.user.role == UserRole.owner &&
@@ -87,6 +119,8 @@ class _ReportsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
     return BlocListener<ReportBloc, ReportState>(
       listenWhen: (prev, curr) =>
           curr.errorMessage != null && curr.errorMessage != prev.errorMessage,
@@ -97,88 +131,153 @@ class _ReportsView extends StatelessWidget {
           SnackBar(content: Text(message)),
         );
       },
-      child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Statistiques'),
-        actions: [
-          const ModuleHelpButton(articleId: 'reports'),
-          BlocBuilder<ReportBloc, ReportState>(
-            buildWhen: (prev, curr) => prev.status != curr.status,
-            builder: (context, state) {
-              if (state.status != ReportStatus.success || state.report == null) {
-                return const SizedBox.shrink();
-              }
-              return IconButton(
-                tooltip: 'Exporter PDF',
-                icon: const Icon(Icons.picture_as_pdf_outlined),
-                onPressed: () => _exportPdf(context),
-              );
-            },
-          ),
-          const AppHeaderActions(),
-        ],
-      ),
-      body: Column(
-        children: [
-          const OfflineModeBanner(
-            onlinePreferredMessage: OfflineModeBanner.hybridReadMessage,
-          ),
-          Expanded(
-            child: BlocBuilder<ReportBloc, ReportState>(
-        builder: (context, state) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<ReportBloc>().add(const ReportLoadRequested());
-              await context.read<ReportBloc>().stream.firstWhere(
-                    (s) => s.status != ReportStatus.loading,
+      child: isDesktop
+          ? Scaffold(
+              body: BlocBuilder<ReportBloc, ReportState>(
+                builder: (context, state) {
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      context.read<ReportBloc>().add(const ReportLoadRequested());
+                      await context.read<ReportBloc>().stream.firstWhere(
+                            (s) => s.status != ReportStatus.loading,
+                          );
+                    },
+                    child: switch (state.status) {
+                      ReportStatus.initial || ReportStatus.loading =>
+                        const DashboardSkeleton(),
+                      ReportStatus.failure => ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              state.errorMessage ??
+                                  'Impossible de charger le rapport.',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Center(
+                              child: FilledButton.icon(
+                                onPressed: () => context
+                                    .read<ReportBloc>()
+                                    .add(const ReportLoadRequested()),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Réessayer'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ReportStatus.success => DesktopReportsView(
+                          session: context.read<ReportBloc>().session,
+                          state: state,
+                          onRefresh: () async {
+                            context
+                                .read<ReportBloc>()
+                                .add(const ReportLoadRequested());
+                            await context.read<ReportBloc>().stream.firstWhere(
+                                  (s) => s.status != ReportStatus.loading,
+                                );
+                          },
+                          onExportPdf: () => _exportPdf(context),
+                          onPickCustomRange: (ctx) =>
+                              _pickReportCustomRange(ctx),
+                        ),
+                    },
                   );
-            },
-            child: switch (state.status) {
-              ReportStatus.initial || ReportStatus.loading =>
-                const DashboardSkeleton(),
-              ReportStatus.failure => ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Theme.of(context).colorScheme.error,
+                },
+              ),
+            )
+          : Scaffold(
+              appBar: AppBar(
+                title: const Text('Statistiques'),
+                actions: [
+                  const ModuleHelpButton(articleId: 'reports'),
+                  BlocBuilder<ReportBloc, ReportState>(
+                    buildWhen: (prev, curr) => prev.status != curr.status,
+                    builder: (context, state) {
+                      if (state.status != ReportStatus.success ||
+                          state.report == null) {
+                        return const SizedBox.shrink();
+                      }
+                      return IconButton(
+                        tooltip: 'Exporter PDF',
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        onPressed: () => _exportPdf(context),
+                      );
+                    },
+                  ),
+                  const AppHeaderActions(),
+                ],
+              ),
+              body: Column(
+                children: [
+                  const OfflineModeBanner(
+                    onlinePreferredMessage: OfflineModeBanner.hybridReadMessage,
+                  ),
+                  Expanded(
+                    child: BlocBuilder<ReportBloc, ReportState>(
+                      builder: (context, state) {
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            context
+                                .read<ReportBloc>()
+                                .add(const ReportLoadRequested());
+                            await context.read<ReportBloc>().stream.firstWhere(
+                                  (s) => s.status != ReportStatus.loading,
+                                );
+                          },
+                          child: switch (state.status) {
+                            ReportStatus.initial || ReportStatus.loading =>
+                              const DashboardSkeleton(),
+                            ReportStatus.failure => ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 48,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  Text(
+                                    state.errorMessage ??
+                                        'Impossible de charger le rapport.',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  Center(
+                                    child: FilledButton.icon(
+                                      onPressed: () => context
+                                          .read<ReportBloc>()
+                                          .add(const ReportLoadRequested()),
+                                      icon: const Icon(Icons.refresh),
+                                      label: const Text('Réessayer'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ReportStatus.success => Column(
+                                children: [
+                                  if (state.isRefreshing)
+                                    const LinearProgressIndicator(minHeight: 2),
+                                  Expanded(
+                                    child: _ReportBody(state: state),
+                                  ),
+                                ],
+                              ),
+                          },
+                        );
+                      },
                     ),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      state.errorMessage ?? 'Impossible de charger le rapport.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Center(
-                      child: FilledButton.icon(
-                        onPressed: () => context
-                            .read<ReportBloc>()
-                            .add(const ReportLoadRequested()),
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Réessayer'),
-                      ),
-                    ),
-                  ],
-                ),
-              ReportStatus.success => Column(
-                  children: [
-                    if (state.isRefreshing)
-                      const LinearProgressIndicator(minHeight: 2),
-                    Expanded(
-                      child: _ReportBody(state: state),
-                    ),
-                  ],
-                ),
-            },
-          );
-        },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      ),
     );
   }
 }
@@ -290,40 +389,10 @@ class _PeriodChips extends StatelessWidget {
         ActionChip(
           avatar: const Icon(Icons.date_range, size: 18),
           label: const Text('Personnalisé'),
-          onPressed: () => _pickCustomRange(context),
+          onPressed: () => _pickReportCustomRange(context),
         ),
       ],
     );
-  }
-
-  Future<void> _pickCustomRange(BuildContext context) async {
-    final now = DateTime.now();
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 2),
-      lastDate: now,
-      helpText: 'Choisir une période',
-    );
-    if (picked == null || !context.mounted) return;
-
-    final fromMs = DateTime(
-      picked.start.year,
-      picked.start.month,
-      picked.start.day,
-    ).millisecondsSinceEpoch;
-    final toMs = DateTime(
-      picked.end.year,
-      picked.end.month,
-      picked.end.day,
-      23,
-      59,
-      59,
-      999,
-    ).millisecondsSinceEpoch;
-
-    context.read<ReportBloc>().add(
-          ReportCustomRangeSelected(fromMs: fromMs, toMs: toMs),
-        );
   }
 }
 
@@ -534,7 +603,7 @@ class _TopProductsSection extends StatelessWidget {
                     ),
                     trailing: topBy == ReportTopSort.revenue
                         ? Text(formatFcfa(product.revenue))
-                        : Text('${product.quantitySold.toStringAsFixed(0)}'),
+                        : Text(product.quantitySold.toStringAsFixed(0)),
                   ),
               ],
             ),

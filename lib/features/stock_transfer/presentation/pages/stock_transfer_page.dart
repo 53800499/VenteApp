@@ -19,7 +19,9 @@ import '../bloc/stock_transfer_bloc.dart';
 import 'stock_transfer_detail_page.dart';
 import 'stock_transfer_form_page.dart';
 import 'stock_transfer_qr_scan_page.dart';
+import '../../../../core/responsive/breakpoints.dart';
 import '../../../../shared/components/app_page_container.dart';
+import '../widgets/desktop_stock_transfer_view.dart';
 
 class StockTransferPage extends StatelessWidget {
   const StockTransferPage({super.key, this.session});
@@ -94,6 +96,59 @@ class _StockTransferViewState extends State<_StockTransferView>
       session.user.permissions,
       Permission.inventoryTransferReceive,
     );
+    final isDesktop =
+        Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
+
+    if (isDesktop) {
+      return BlocListener<StockTransferBloc, StockTransferState>(
+        listenWhen: (prev, curr) =>
+            prev.errorMessage != curr.errorMessage && curr.errorMessage != null,
+        listener: (context, state) {
+          if (state.errorMessage == null) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.errorMessage!)),
+          );
+        },
+        child: Scaffold(
+          body: BlocBuilder<StockTransferBloc, StockTransferState>(
+            builder: (context, state) {
+              if (state.status == StockTransferBlocStatus.loading &&
+                  state.outgoing.isEmpty &&
+                  state.incoming.isEmpty &&
+                  state.inTransit.isEmpty) {
+                return const SaleListSkeleton();
+              }
+
+              return DesktopStockTransferView(
+                state: state,
+                canCreate: canCreate,
+                canReceive: canReceive,
+                onRefresh: () => _refreshFromServer(context),
+                onOpenCreate: () async {
+                  final created = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<StockTransferBloc>(),
+                        child: const StockTransferFormPage(),
+                      ),
+                    ),
+                  );
+                  if (created == true && context.mounted) {
+                    context.read<StockTransferBloc>().add(
+                          const StockTransferListRefreshRequested(
+                            forceRemote: false,
+                          ),
+                        );
+                  }
+                },
+                onOpenQrScan: () => _openQrScan(context),
+                onOpenDetail: (id) => _openDetail(context, id),
+              );
+            },
+          ),
+        ),
+      );
+    }
 
     return BlocListener<StockTransferBloc, StockTransferState>(
       listenWhen: (prev, curr) =>

@@ -31,6 +31,20 @@ abstract class CashSessionRepository {
     required OpenCashSessionInput input,
   });
 
+  Future<CashSession> submitClosing({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required SubmitCashSessionClosingInput input,
+  });
+
+  Future<CashSession> approveSession({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required ApproveCashSessionInput input,
+  });
+
   Future<CashSession> closeSession({
     required int shopId,
     required int userId,
@@ -43,6 +57,13 @@ abstract class CashSessionRepository {
     required int userId,
     required int sessionId,
     required RecordCashMovementInput input,
+  });
+
+  Future<CashMovement> recordOwnerDrop({
+    required int shopId,
+    required int userId,
+    required int sessionId,
+    required RecordOwnerDropInput input,
   });
 
   Future<void> syncFromRemote({required int shopId});

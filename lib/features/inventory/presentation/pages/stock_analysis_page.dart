@@ -113,7 +113,7 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final isDesktop = Breakpoints.isDesktopWidth(MediaQuery.sizeOf(context).width);
+    final isDesktop = Breakpoints.useDataTable(MediaQuery.sizeOf(context).width);
 
     return Scaffold(
       appBar: isDesktop
@@ -175,7 +175,7 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
 
           return ResponsiveBuilder(
             builder: (context, screenType) {
-              final isDesktop = Breakpoints.isDesktopWidth(
+              final isDesktop = Breakpoints.useDataTable(
                 MediaQuery.sizeOf(context).width,
               );
 
@@ -208,29 +208,35 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Container(
-      color: cs.surfaceContainerLowest.withValues(alpha: 0.5),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Les 3 KPIs consolidés en haut de page
-          _buildDesktopSummaryCards(context, summary),
-          const SizedBox(height: AppSpacing.md),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompactOrMedium = constraints.maxWidth < 900;
 
-          // 2. Barre d'outils ERP (Recherche + Filtres)
-          _buildDesktopToolbar(context, summary),
-          const SizedBox(height: AppSpacing.md),
-
-          // 3. DataTable ERP
-          Expanded(
-            child: _buildDesktopDataTable(context, filteredItems),
+        return Container(
+          color: cs.surfaceContainerLowest.withValues(alpha: 0.5),
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompactOrMedium ? AppSpacing.md : AppSpacing.xl,
+            vertical: isCompactOrMedium ? AppSpacing.sm : AppSpacing.lg,
           ),
-        ],
-      ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Les 3 KPIs consolidés en haut de page
+              _buildDesktopSummaryCards(context, summary),
+              const SizedBox(height: AppSpacing.md),
+
+              // 2. Barre d'outils ERP (Recherche + Filtres)
+              _buildDesktopToolbar(context, summary),
+              const SizedBox(height: AppSpacing.md),
+
+              // 3. DataTable ERP
+              Expanded(
+                child: _buildDesktopDataTable(context, filteredItems),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -241,44 +247,63 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _SummaryCard(
-            icon: Icons.account_balance_wallet_outlined,
-            label: 'Valeur du stock (Achat)',
-            value: formatFcfa(summary.totalPurchaseValue),
-            subtitle:
-                '${summary.totalUnitsInStock} unités · Capital immobilisé (FIFO/lots)',
-            accentColor: Colors.blue.shade700,
-            backgroundColor: Colors.blue.shade50,
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: _SummaryCard(
-            icon: Icons.point_of_sale_outlined,
-            label: 'CA potentiel (Vente)',
-            value: formatFcfa(summary.totalPotentialRevenue),
-            subtitle: 'Valorisation marchande aux prix boutique',
-            accentColor: cs.primary,
-            backgroundColor: cs.primaryContainer.withValues(alpha: 0.35),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: _SummaryCard(
-            icon: Icons.trending_up_rounded,
-            label: 'Marge potentielle brute',
-            value: formatFcfa(summary.totalPotentialMargin),
-            subtitle:
-                'Gain brut estimé · Taux global : ${summary.overallMarginRate.toStringAsFixed(1)} %',
-            accentColor: AppColors.success,
-            backgroundColor: AppColors.success.withValues(alpha: 0.1),
-            badgeText: '+${summary.overallMarginRate.toStringAsFixed(1)} %',
-          ),
-        ),
-      ],
+    final card1 = _SummaryCard(
+      icon: Icons.account_balance_wallet_outlined,
+      label: 'Valeur du stock (Achat)',
+      value: formatFcfa(summary.totalPurchaseValue),
+      subtitle:
+          '${summary.totalUnitsInStock} unités · Capital immobilisé (FIFO/lots)',
+      accentColor: Colors.blue.shade700,
+      backgroundColor: Colors.blue.shade50,
+    );
+
+    final card2 = _SummaryCard(
+      icon: Icons.point_of_sale_outlined,
+      label: 'CA potentiel (Vente)',
+      value: formatFcfa(summary.totalPotentialRevenue),
+      subtitle: 'Valorisation marchande aux prix boutique',
+      accentColor: cs.primary,
+      backgroundColor: cs.primaryContainer.withValues(alpha: 0.35),
+    );
+
+    final card3 = _SummaryCard(
+      icon: Icons.trending_up_rounded,
+      label: 'Marge potentielle brute',
+      value: formatFcfa(summary.totalPotentialMargin),
+      subtitle:
+          'Gain brut estimé · Taux global : ${summary.overallMarginRate.toStringAsFixed(1)} %',
+      accentColor: AppColors.success,
+      backgroundColor: AppColors.success.withValues(alpha: 0.1),
+      badgeText: '+${summary.overallMarginRate.toStringAsFixed(1)} %',
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 840) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                SizedBox(width: 260, child: card1),
+                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: 260, child: card2),
+                const SizedBox(width: AppSpacing.md),
+                SizedBox(width: 260, child: card3),
+              ],
+            ),
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: card1),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: card2),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: card3),
+          ],
+        );
+      },
     );
   }
 
@@ -289,112 +314,128 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: 0.4),
-        ),
-      ),
-      child: Row(
-        children: [
-          if (Navigator.of(context).canPop()) ...[
-            IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, size: 20),
-              tooltip: 'Retour',
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
-          // Recherche
-          Expanded(
-            flex: 2,
-            child: SizedBox(
-              height: 40,
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Filtrer par nom de produit, SKU ou catégorie…',
-                  hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurfaceMuted,
-                  ),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: () => _searchController.clear(),
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                  filled: true,
-                  fillColor: cs.surfaceContainerLowest,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(
-                      color: cs.outlineVariant.withValues(alpha: 0.5),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 800;
+
+        final searchRow = Row(
+          children: [
+            if (Navigator.of(context).canPop()) ...[
+              IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                tooltip: 'Retour',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+            ],
+            Expanded(
+              child: SizedBox(
+                height: 40,
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Filtrer par nom de produit, SKU ou catégorie…',
+                    hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.onSurfaceMuted,
                     ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: BorderSide(
-                      color: cs.outlineVariant.withValues(alpha: 0.5),
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () => _searchController.clear(),
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    filled: true,
+                    fillColor: cs.surfaceContainerLowest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(
+                        color: cs.outlineVariant.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      borderSide: BorderSide(
+                        color: cs.outlineVariant.withValues(alpha: 0.5),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.md),
+          ],
+        );
 
-          // Puces de filtres stratégiques
-          Expanded(
-            flex: 3,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildChip(
-                    label: 'Tous (${summary.items.length})',
-                    filter: _StockAnalysisFilter.all,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildChip(
-                    label: 'Top Valeur',
-                    filter: _StockAnalysisFilter.topValue,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildChip(
-                    label: 'Top CA',
-                    filter: _StockAnalysisFilter.topRevenue,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildChip(
-                    label: 'Top Marge',
-                    filter: _StockAnalysisFilter.topMargin,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildChip(
-                    label: 'Stock faible (${summary.lowStockCount})',
-                    filter: _StockAnalysisFilter.lowStock,
-                    badgeColor: AppColors.warning,
-                  ),
-                  const SizedBox(width: 6),
-                  _buildChip(
-                    label: 'Dormant (${summary.deadStockCount})',
-                    filter: _StockAnalysisFilter.deadStock,
-                    badgeColor: Colors.orange.shade800,
-                  ),
-                ],
+        final filterChips = SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildChip(
+                label: 'Tous (${summary.items.length})',
+                filter: _StockAnalysisFilter.all,
               ),
+              const SizedBox(width: 6),
+              _buildChip(
+                label: 'Top Valeur',
+                filter: _StockAnalysisFilter.topValue,
+              ),
+              const SizedBox(width: 6),
+              _buildChip(
+                label: 'Top CA',
+                filter: _StockAnalysisFilter.topRevenue,
+              ),
+              const SizedBox(width: 6),
+              _buildChip(
+                label: 'Top Marge',
+                filter: _StockAnalysisFilter.topMargin,
+              ),
+              const SizedBox(width: 6),
+              _buildChip(
+                label: 'Stock faible (${summary.lowStockCount})',
+                filter: _StockAnalysisFilter.lowStock,
+                badgeColor: AppColors.warning,
+              ),
+              const SizedBox(width: 6),
+              _buildChip(
+                label: 'Dormant (${summary.deadStockCount})',
+                filter: _StockAnalysisFilter.deadStock,
+                badgeColor: Colors.orange.shade800,
+              ),
+            ],
+          ),
+        );
+
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.4),
             ),
           ),
-        ],
-      ),
+          child: isCompact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    searchRow,
+                    const SizedBox(height: AppSpacing.xs),
+                    filterChips,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(flex: 2, child: searchRow),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(flex: 3, child: filterChips),
+                  ],
+                ),
+        );
+      },
     );
   }
 
@@ -426,11 +467,12 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
         label: 'Désignation Produit',
         icon: Icons.inventory_2_outlined,
         flex: 3,
+        minWidth: 200,
       ),
       const AppTableColumn(
         label: 'Stock Dispo',
         icon: Icons.warehouse_rounded,
-        width: 130,
+        width: 120,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
@@ -444,7 +486,7 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
       const AppTableColumn(
         label: 'Capital Immobilisé',
         icon: Icons.account_balance_wallet_outlined,
-        width: 160,
+        width: 150,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
@@ -458,20 +500,20 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
       const AppTableColumn(
         label: 'CA Potentiel',
         icon: Icons.point_of_sale_outlined,
-        width: 160,
+        width: 150,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
       const AppTableColumn(
         label: 'Marge Potentielle',
         icon: Icons.trending_up_rounded,
-        width: 160,
+        width: 150,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
       ),
       const AppTableColumn(
         label: 'Statut',
-        width: 140,
+        width: 130,
         alignment: Alignment.center,
         textAlign: TextAlign.center,
       ),
@@ -698,7 +740,7 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
       columns: columns,
       rows: rows,
       itemsPerPage: 15,
-      minWidth: 1240,
+      minWidth: 1260,
     );
   }
 

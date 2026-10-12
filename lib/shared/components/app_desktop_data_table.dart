@@ -1,13 +1,15 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
 
-/// Définition d'une colonne pour le tableau desktop
+/// Définition d'une colonne pour le tableau ergonomique
 class AppTableColumn {
   const AppTableColumn({
     required this.label,
     this.icon,
     this.width,
+    this.minWidth,
     this.flex = 1,
     this.alignment = Alignment.centerLeft,
     this.textAlign = TextAlign.left,
@@ -19,6 +21,7 @@ class AppTableColumn {
   final String label;
   final IconData? icon;
   final double? width;
+  final double? minWidth;
   final int flex;
   final Alignment alignment;
   final TextAlign textAlign;
@@ -27,7 +30,7 @@ class AppTableColumn {
   final bool isSorted;
 }
 
-/// Ligne de données pour le tableau desktop
+/// Ligne de données pour le tableau
 class AppTableRow {
   const AppTableRow({
     required this.cells,
@@ -42,7 +45,8 @@ class AppTableRow {
   final Color? color;
 }
 
-/// Tableau de données moderne et ergonomique pour les pages de listing sur Windows Desktop
+/// Tableau de données moderne et adaptatif pour les pages de listing
+/// Conçu pour fonctionner dès la limite du mobile (>= 600px) jusqu'au grand écran desktop.
 class AppDesktopDataTable extends StatefulWidget {
   const AppDesktopDataTable({
     super.key,
@@ -104,13 +108,59 @@ class _AppDesktopDataTableState extends State<AppDesktopDataTable> {
     final scheme = theme.colorScheme;
 
     if (widget.rows.isEmpty) {
-      return widget.emptyPlaceholder ??
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(AppSpacing.xl),
-              child: Text('Aucune donnée à afficher'),
+      final emptyChild = widget.emptyPlaceholder ??
+          Center(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 38,
+                    color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Aucune donnée à afficher',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
+
+      return Container(
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Center(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: emptyChild,
+            ),
+          ),
+        ),
+      );
     }
 
     final totalRows = widget.rows.length;
@@ -144,108 +194,172 @@ class _AppDesktopDataTableState extends State<AppDesktopDataTable> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Table avec barre de défilement horizontal et vertical
+            // Table avec barre de défilement horizontal et vertical adaptatifs
             Expanded(
               child: LayoutBuilder(
                 builder: (context, boxConstraints) {
-                  final tableWidth = mathMax(widget.minWidth, boxConstraints.maxWidth);
-                  return Scrollbar(
-                    controller: _horizontalScroll,
-                    thumbVisibility: true,
-                    child: SingleChildScrollView(
-                      controller: _horizontalScroll,
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: tableWidth,
-                        child: Column(
-                          children: [
-                            // En-tête des colonnes
-                            _buildHeader(theme, scheme),
+                  // Calcul de la largeur naturelle minimale en fonction des colonnes
+                  final naturalMinWidth = widget.columns.fold<double>(
+                    0.0,
+                    (sum, col) => sum + (col.width ?? (col.minWidth ?? 150.0)),
+                  );
+                  final effectiveMinWidth = mathMax(widget.minWidth, naturalMinWidth);
+                  final tableWidth = mathMax(effectiveMinWidth, boxConstraints.maxWidth);
+                  final canScrollHorizontally = tableWidth > boxConstraints.maxWidth;
 
-                        const Divider(height: 1, thickness: 1),
+                  return Stack(
+                    children: [
+                      ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(
+                          dragDevices: {
+                            PointerDeviceKind.touch,
+                            PointerDeviceKind.mouse,
+                            PointerDeviceKind.trackpad,
+                            PointerDeviceKind.stylus,
+                          },
+                        ),
+                        child: Scrollbar(
+                          controller: _horizontalScroll,
+                          thumbVisibility: canScrollHorizontally,
+                          interactive: true,
+                          thickness: 6,
+                          radius: const Radius.circular(3),
+                          child: SingleChildScrollView(
+                            controller: _horizontalScroll,
+                            scrollDirection: Axis.horizontal,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              width: tableWidth,
+                              child: Column(
+                                children: [
+                                  // En-tête des colonnes
+                                  _buildHeader(theme, scheme),
 
-                        // Corps des lignes scrollables
-                        Expanded(
-                          child: Scrollbar(
-                            controller: _verticalScroll,
-                            thumbVisibility: true,
-                            child: ListView.separated(
-                              controller: _verticalScroll,
-                              itemCount: pageRows.length,
-                              separatorBuilder: (_, __) => Divider(
-                                height: 1,
-                                thickness: 1,
-                                color: scheme.outlineVariant.withValues(alpha: 0.15),
-                              ),
-                              itemBuilder: (context, index) {
-                                final row = pageRows[index];
-                                final isHovered = _hoveredIndex == index;
+                                  const Divider(height: 1, thickness: 1),
 
-                                return MouseRegion(
-                                  cursor: row.onTap != null
-                                      ? SystemMouseCursors.click
-                                      : SystemMouseCursors.basic,
-                                  onEnter: (_) => setState(() => _hoveredIndex = index),
-                                  onExit: (_) => setState(() => _hoveredIndex = null),
-                                  child: InkWell(
-                                    onTap: row.onTap,
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 150),
-                                      color: row.selected
-                                          ? scheme.primary.withValues(alpha: 0.12)
-                                          : (isHovered
-                                              ? scheme.surfaceContainerHighest.withValues(alpha: 0.45)
-                                              : (row.color ?? Colors.transparent)),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: AppSpacing.md,
-                                        vertical: AppSpacing.sm + 2,
-                                      ),
-                                      child: Row(
-                                        children: List.generate(
-                                          widget.columns.length,
-                                          (colIndex) {
-                                            final col = widget.columns[colIndex];
-                                            final cell = colIndex < row.cells.length
-                                                ? row.cells[colIndex]
-                                                : const SizedBox.shrink();
-
-                                            if (col.width != null) {
-                                              return SizedBox(
-                                                width: col.width,
-                                                child: Align(
-                                                  alignment: col.alignment,
-                                                  child: cell,
-                                                ),
-                                              );
-                                            }
-
-                                            return Expanded(
-                                              flex: col.flex,
-                                              child: Align(
-                                                alignment: col.alignment,
-                                                child: cell,
-                                              ),
-                                            );
-                                          },
+                                  // Corps des lignes scrollables
+                                  Expanded(
+                                    child: Scrollbar(
+                                      controller: _verticalScroll,
+                                      thumbVisibility: true,
+                                      child: ListView.separated(
+                                        controller: _verticalScroll,
+                                        itemCount: pageRows.length,
+                                        separatorBuilder: (_, _) => Divider(
+                                          height: 1,
+                                          thickness: 1,
+                                          color: scheme.outlineVariant
+                                              .withValues(alpha: 0.15),
                                         ),
+                                        itemBuilder: (context, index) {
+                                          final row = pageRows[index];
+                                          final isHovered = _hoveredIndex == index;
+
+                                          return MouseRegion(
+                                            cursor: row.onTap != null
+                                                ? SystemMouseCursors.click
+                                                : SystemMouseCursors.basic,
+                                            onEnter: (_) =>
+                                                setState(() => _hoveredIndex = index),
+                                            onExit: (_) =>
+                                                setState(() => _hoveredIndex = null),
+                                            child: InkWell(
+                                              onTap: row.onTap,
+                                              child: AnimatedContainer(
+                                                duration:
+                                                    const Duration(milliseconds: 150),
+                                                color: row.selected
+                                                    ? scheme.primary
+                                                        .withValues(alpha: 0.12)
+                                                    : (isHovered
+                                                        ? scheme
+                                                            .surfaceContainerHighest
+                                                            .withValues(alpha: 0.45)
+                                                        : (row.color ??
+                                                            Colors.transparent)),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: AppSpacing.md,
+                                                  vertical: AppSpacing.sm + 2,
+                                                ),
+                                                child: Row(
+                                                  children: List.generate(
+                                                    widget.columns.length,
+                                                    (colIndex) {
+                                                      final col =
+                                                          widget.columns[colIndex];
+                                                      final cell = colIndex <
+                                                              row.cells.length
+                                                          ? row.cells[colIndex]
+                                                          : const SizedBox.shrink();
+
+                                                      if (col.width != null) {
+                                                        return SizedBox(
+                                                          width: col.width,
+                                                          child: Align(
+                                                            alignment: col.alignment,
+                                                            child: cell,
+                                                          ),
+                                                        );
+                                                      }
+
+                                                      return Expanded(
+                                                        flex: col.flex,
+                                                        child: ConstrainedBox(
+                                                          constraints: BoxConstraints(
+                                                            minWidth: col.minWidth ?? 80,
+                                                          ),
+                                                          child: Align(
+                                                            alignment: col.alignment,
+                                                            child: cell,
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
                                       ),
                                     ),
                                   ),
-                                );
-                              },
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+                      ),
 
-            // Pied de table avec pagination
+                      // Ombre indicateur de défilement horizontal à droite
+                      if (canScrollHorizontally)
+                        Positioned(
+                          top: 0,
+                          bottom: 0,
+                          right: 0,
+                          width: 20,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                  colors: [
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.06),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            // Pied de table avec pagination adaptative
             if (widget.showPagination)
               _buildPaginationFooter(
                 theme,
@@ -311,7 +425,9 @@ class _AppDesktopDataTableState extends State<AppDesktopDataTable> {
                               : Icons.arrow_downward_rounded)
                           : Icons.unfold_more_rounded,
                       size: 14,
-                      color: col.isSorted ? scheme.primary : scheme.onSurfaceVariant.withValues(alpha: 0.5),
+                      color: col.isSorted
+                          ? scheme.primary
+                          : scheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
                   ],
                 ],
@@ -328,7 +444,10 @@ class _AppDesktopDataTableState extends State<AppDesktopDataTable> {
 
           return Expanded(
             flex: col.flex,
-            child: Align(alignment: col.alignment, child: content),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: col.minWidth ?? 80),
+              child: Align(alignment: col.alignment, child: content),
+            ),
           );
         }),
       ),
@@ -343,88 +462,176 @@ class _AppDesktopDataTableState extends State<AppDesktopDataTable> {
     required int totalRows,
     required int totalPages,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.15),
-        border: Border(
-          top: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.25),
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Statut d'affichage
-          Text(
-            'Affichage de $startIndex à $endIndex sur $totalRows résultat${totalRows > 1 ? 's' : ''}',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const Spacer(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 640;
 
-          // Sélecteur d'éléments par page
-          Text(
-            'Lignes :',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
+        if (isCompact) {
+          return Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs + 2,
             ),
-          ),
-          const SizedBox(width: 6),
-          DropdownButton<int>(
-            value: _pageSize,
-            isDense: true,
-            underline: const SizedBox.shrink(),
-            items: const [
-              DropdownMenuItem(value: 10, child: Text('10')),
-              DropdownMenuItem(value: 15, child: Text('15')),
-              DropdownMenuItem(value: 25, child: Text('25')),
-              DropdownMenuItem(value: 50, child: Text('50')),
-            ],
-            onChanged: (val) {
-              if (val != null) {
-                setState(() {
-                  _pageSize = val;
-                  _currentPage = 0;
-                });
-              }
-            },
-          ),
-          const SizedBox(width: AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.15),
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outlineVariant.withValues(alpha: 0.25),
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Résumé compact
+                Expanded(
+                  child: Text(
+                    '$startIndex-$endIndex / $totalRows',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
 
-          // Boutons navigation de page
-          IconButton(
-            onPressed: _currentPage > 0
-                ? () => setState(() => _currentPage--)
-                : null,
-            icon: const Icon(Icons.chevron_left_rounded),
-            tooltip: 'Page précédente',
-            visualDensity: VisualDensity.compact,
+                // Lignes
+                Text(
+                  'Lignes: ',
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+                ),
+                DropdownButton<int>(
+                  value: _pageSize,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  items: const [
+                    DropdownMenuItem(value: 10, child: Text('10')),
+                    DropdownMenuItem(value: 15, child: Text('15')),
+                    DropdownMenuItem(value: 25, child: Text('25')),
+                    DropdownMenuItem(value: 50, child: Text('50')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                        _pageSize = val;
+                        _currentPage = 0;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(width: AppSpacing.xs),
+
+                // Pagination
+                IconButton(
+                  onPressed: _currentPage > 0
+                      ? () => setState(() => _currentPage--)
+                      : null,
+                  icon: const Icon(Icons.chevron_left_rounded, size: 20),
+                  tooltip: 'Précédent',
+                  visualDensity: VisualDensity.compact,
+                ),
+                Text(
+                  '${_currentPage + 1}/${totalPages > 0 ? totalPages : 1}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                IconButton(
+                  onPressed: _currentPage < totalPages - 1
+                      ? () => setState(() => _currentPage++)
+                      : null,
+                  icon: const Icon(Icons.chevron_right_rounded, size: 20),
+                  tooltip: 'Suivant',
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              '${_currentPage + 1} / ${totalPages > 0 ? totalPages : 1}',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.15),
+            border: Border(
+              top: BorderSide(
+                color: scheme.outlineVariant.withValues(alpha: 0.25),
               ),
             ),
           ),
-          IconButton(
-            onPressed: _currentPage < totalPages - 1
-                ? () => setState(() => _currentPage++)
-                : null,
-            icon: const Icon(Icons.chevron_right_rounded),
-            tooltip: 'Page suivante',
-            visualDensity: VisualDensity.compact,
+          child: Row(
+            children: [
+              // Statut d'affichage
+              Text(
+                'Affichage de $startIndex à $endIndex sur $totalRows résultat${totalRows > 1 ? 's' : ''}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+
+              // Sélecteur d'éléments par page
+              Text(
+                'Lignes :',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 6),
+              DropdownButton<int>(
+                value: _pageSize,
+                isDense: true,
+                underline: const SizedBox.shrink(),
+                items: const [
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 15, child: Text('15')),
+                  DropdownMenuItem(value: 25, child: Text('25')),
+                  DropdownMenuItem(value: 50, child: Text('50')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _pageSize = val;
+                      _currentPage = 0;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(width: AppSpacing.lg),
+
+              // Boutons navigation de page
+              IconButton(
+                onPressed: _currentPage > 0
+                    ? () => setState(() => _currentPage--)
+                    : null,
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: 'Page précédente',
+                visualDensity: VisualDensity.compact,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '${_currentPage + 1} / ${totalPages > 0 ? totalPages : 1}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: _currentPage < totalPages - 1
+                    ? () => setState(() => _currentPage++)
+                    : null,
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: 'Page suivante',
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
