@@ -104,12 +104,15 @@ class SaleRepositoryImpl implements SaleRepository {
         quantity: line.quantity,
         unitPrice: unitPrice,
         lineDiscountAmount: line.lineDiscountAmount,
+        allowDeficit: line.allowDeficit,
+        deficitReason: line.deficitReason,
       );
 
       _validation.assertStockAvailable(
         product.name,
         product.quantityInStock,
         resolvedLine.quantity,
+        allowDeficit: resolvedLine.allowDeficit,
       );
 
       snapshots.add((
@@ -343,12 +346,15 @@ class SaleRepositoryImpl implements SaleRepository {
         quantity: line.quantity,
         unitPrice: unitPrice,
         lineDiscountAmount: line.lineDiscountAmount,
+        allowDeficit: line.allowDeficit,
+        deficitReason: line.deficitReason,
       );
 
       _validation.assertStockAvailable(
         product.name,
         product.quantityInStock,
         resolvedLine.quantity,
+        allowDeficit: resolvedLine.allowDeficit,
       );
 
       snapshots.add((

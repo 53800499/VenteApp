@@ -73,7 +73,9 @@ class SubscriptionPlanSettingsPage extends StatelessWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const SubscriptionPage(),
+                        builder: (_) => SubscriptionPage(
+                          shopName: session.shop.name,
+                        ),
                       ),
                     ),
                   ),

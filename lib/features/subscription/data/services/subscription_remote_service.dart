@@ -177,6 +177,12 @@ class SubscriptionRemoteService {
       maxShops: json['maxShops'] ?? 1,
       currentUsersCount: json['currentUsersCount'] ?? 1,
       currentShopsCount: json['currentShopsCount'] ?? 1,
+      scheduledPlanCode: json['scheduledPlanCode'] as String?,
+      scheduledEffectiveAt: json['scheduledEffectiveAt'] != null
+          ? DateTime.tryParse(json['scheduledEffectiveAt'].toString())
+          : null,
+      daysRemaining: (json['daysRemaining'] as num?)?.toInt() ?? 0,
+      graceDaysRemaining: (json['graceDaysRemaining'] as num?)?.toInt() ?? 0,
       paymentHistory: (json['paymentHistory'] as List?)
               ?.map((p) => PaymentTransactionRecord(
                     id: p['id'] ?? '',

@@ -2,6 +2,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/theme/ui_scale_controller.dart';
+
 import '../../features/subscription/domain/services/subscription_controller.dart';
 import '../../features/subscription/data/services/fedapay_remote_service.dart';
 import '../../features/subscription/data/services/subscription_remote_service.dart';
@@ -9,6 +11,7 @@ import '../../features/subscription/data/services/subscription_remote_service.da
 import '../../core/audit/local_audit_writer.dart';
 import '../../core/backup/google_drive_backup_service.dart';
 import '../../core/backup/shop_backup_service.dart';
+import '../../core/updates/app_update_service.dart';
 import '../../core/maintenance/product_dedupe_service.dart';
 import '../../core/database/app_database.dart' hide Supplier, PurchaseOrder, PurchaseOrderItem, PurchaseReceipt, PurchaseReceiptItem, SupplierInvoice, SupplierPayment;
 import '../../features/procurement/data/datasources/procurement_local_datasource.dart';
@@ -295,6 +298,15 @@ void ensureSalesAnalysisDependencies() {
   if (!sl.isRegistered<ClearSalesAnalysisRemoteCache>()) {
     sl.registerLazySingleton(
       () => ClearSalesAnalysisRemoteCache(sl<SalesAnalysisRepository>()),
+    );
+  }
+}
+
+/// Enregistre le contrôleur de mise à l'échelle des polices (Text Scaling).
+void ensureUiScaleDependencies() {
+  if (!sl.isRegistered<UiScaleController>()) {
+    sl.registerLazySingleton(
+      () => UiScaleController(sl<SharedPreferences>()),
     );
   }
 }
@@ -721,6 +733,9 @@ void ensureSettingsDependencies() {
   if (!sl.isRegistered<GoogleDriveBackupService>()) {
     sl.registerLazySingleton(() => GoogleDriveBackupService());
   }
+  if (!sl.isRegistered<AppUpdateService>()) {
+    sl.registerLazySingleton(() => AppUpdateService(apiClient: sl()));
+  }
   if (!sl.isRegistered<ShopBackupService>()) {
     sl.registerLazySingleton(() => ShopBackupService(sl()));
   }
@@ -808,6 +823,7 @@ Future<void> initDependencies() async {
   sl.registerLazySingleton(() => AuthCredentialsStorage(sl()));
   sl.registerLazySingleton(() => FormDraftStorage(sl()));
   sl.registerLazySingleton(() => DeviceIdStorage(sl()));
+  ensureUiScaleDependencies();
   ensureVoiceInputDependencies();
   ensureSubscriptionDependencies();
   await sl<DeviceIdStorage>().getOrCreate();
@@ -1298,6 +1314,9 @@ Future<void> initDependencies() async {
         await sl<CloudSessionController>().recordContact();
         sl<CloudSessionRepairService>().clearAwaitingState();
         sl<CloudSessionCoordinator>().markCloudSessionValid();
+        if (sl.isRegistered<SubscriptionController>()) {
+          sl<SubscriptionController>().refreshFromRemote();
+        }
       },
       subscriptionController: sl.isRegistered<SubscriptionController>() ? sl<SubscriptionController>() : null,
     ),
@@ -1353,6 +1372,10 @@ Future<void> initDependencies() async {
       lastShopStorage: sl(),
       syncService: sl(),
       appLockController: sl(),
+      cloudSessionRepairService:
+          sl.isRegistered<CloudSessionRepairService>() ? sl() : null,
+      cloudSessionController:
+          sl.isRegistered<CloudSessionController>() ? sl() : null,
     ),
   );
 }
@@ -1370,7 +1393,10 @@ void ensureSubscriptionDependencies() {
   }
   if (!sl.isRegistered<SubscriptionController>()) {
     sl.registerLazySingleton<SubscriptionController>(
-      () => SubscriptionController(remoteService: sl<SubscriptionRemoteService>()),
+      () => SubscriptionController(
+        remoteService: sl<SubscriptionRemoteService>(),
+        prefs: sl.isRegistered<SharedPreferences>() ? sl<SharedPreferences>() : null,
+      ),
     );
   }
 }

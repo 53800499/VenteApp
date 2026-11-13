@@ -6,6 +6,7 @@ import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../domain/entities/settings_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class ReceiptsPrinterSettingsPage extends StatefulWidget {
   const ReceiptsPrinterSettingsPage({
@@ -38,6 +39,9 @@ class _ReceiptsPrinterSettingsPageState extends State<ReceiptsPrinterSettingsPag
   void _hydrate(ShopConfiguration config) {
     if (_initialized) return;
     _footerController.text = config.receipts.footer ?? '';
+    _paperFormat = config.commerce.paperFormat;
+    _showSellerName = config.commerce.showSellerName;
+    _showQrCode = config.commerce.showQrCode;
     _initialized = true;
   }
 
@@ -121,7 +125,24 @@ class _ReceiptsPrinterSettingsPageState extends State<ReceiptsPrinterSettingsPag
                           ],
                           selected: {_paperFormat},
                           onSelectionChanged: widget.canWrite
-                              ? (set) => setState(() => _paperFormat = set.first)
+                              ? (set) async {
+                                  final newFormat = set.first;
+                                  final ok = await SettingsConfirmation.confirm(
+                                    context,
+                                    title: 'Format d\'impression',
+                                    message: 'Changer le format d\'impression du ticket vers $newFormat ?',
+                                    confirmLabel: 'Modifier',
+                                  );
+                                  if (ok && mounted) {
+                                    setState(() => _paperFormat = newFormat);
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(paperFormat: newFormat),
+                                            successMessage: 'Format du ticket mis à jour : $newFormat.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
                       ],
@@ -141,21 +162,47 @@ class _ReceiptsPrinterSettingsPageState extends State<ReceiptsPrinterSettingsPag
                         children: [
                           Text('Informations affichées', style: theme.textTheme.titleMedium),
                           const SizedBox(height: AppSpacing.sm),
-                          SwitchListTile(
+                          SettingsSwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             title: const Text('Afficher le nom du vendeur'),
                             value: _showSellerName,
+                            confirmationTitle: 'Nom du vendeur',
+                            confirmationMessage: _showSellerName
+                                ? 'Masquer le nom du vendeur sur le ticket de caisse ?'
+                                : 'Afficher le nom du vendeur sur le ticket de caisse ?',
                             onChanged: widget.canWrite
-                                ? (v) => setState(() => _showSellerName = v)
+                                ? (v) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(showSellerName: v),
+                                            successMessage: v
+                                                ? 'Nom du vendeur affiché sur le reçu.'
+                                                : 'Nom du vendeur masqué.',
+                                          ),
+                                        );
+                                  }
                                 : null,
                           ),
-                          SwitchListTile(
+                          SettingsSwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             title: const Text('Afficher le QR Code de vérification'),
                             subtitle: const Text('Permet de scanner le ticket pour authenticité'),
                             value: _showQrCode,
+                            confirmationTitle: 'QR Code sur le reçu',
+                            confirmationMessage: _showQrCode
+                                ? 'Désactiver le QR Code d\'authenticité sur le ticket ?'
+                                : 'Activer l\'impression du QR Code d\'authenticité sur le ticket ?',
                             onChanged: widget.canWrite
-                                ? (v) => setState(() => _showQrCode = v)
+                                ? (v) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(showQrCode: v),
+                                            successMessage: v
+                                                ? 'QR Code activé sur le ticket.'
+                                                : 'QR Code désactivé sur le ticket.',
+                                          ),
+                                        );
+                                  }
                                 : null,
                           ),
                           const SizedBox(height: AppSpacing.md),
@@ -176,7 +223,14 @@ class _ReceiptsPrinterSettingsPageState extends State<ReceiptsPrinterSettingsPag
                               child: FilledButton.icon(
                                 onPressed: state.isSaving
                                     ? null
-                                    : () {
+                                    : () async {
+                                        final ok = await SettingsConfirmation.confirm(
+                                          context,
+                                          title: 'Enregistrer le modèle de reçu',
+                                          message: 'Confirmer la mise à jour du message de bas de reçu ?',
+                                          confirmLabel: 'Enregistrer',
+                                        );
+                                        if (!ok || !context.mounted) return;
                                         context.read<SettingsBloc>().add(
                                               SettingsReceiptSaveRequested(
                                                 _footerController.text.trim(),

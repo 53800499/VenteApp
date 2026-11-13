@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../shared/components/app_dropdown.dart';
 import '../../../../shared/utils/module_labels.dart';
@@ -13,8 +15,15 @@ enum BillingCycle { monthly, quarterly, yearly }
 
 class SubscriptionPage extends StatefulWidget {
   final bool mandatoryGate;
+  final String? shopName;
+  final String? customerEmail;
 
-  const SubscriptionPage({super.key, this.mandatoryGate = false});
+  const SubscriptionPage({
+    super.key,
+    this.mandatoryGate = false,
+    this.shopName,
+    this.customerEmail,
+  });
 
   @override
   State<SubscriptionPage> createState() => _SubscriptionPageState();
@@ -31,7 +40,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     super.dispose();
   }
 
-  void _processFedaPayOrLocalPayment({
+  Future<void> _processFedaPayOrLocalPayment({
     required String targetPlanName,
     required double price,
     String? targetPlanCode,
@@ -44,130 +53,194 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
       _ => 'mtn',
     };
 
-    bool isCancelledByUser = false;
-
-    showDialog<void>(
+    final fedapayService = sl<FedaPayRemoteService>();
+    final outcome = await showDialog<_FedaPayDialogOutcome>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogCtx) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.mobile_friendly, color: Colors.blue),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text('Paiement FedaPay Mobile Money'),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Demande de paiement transmise au ${_phoneController.text} ($_selectedProvider).\n\n'
-                '📲 Veuillez entrer votre code secret sur le pop-up USSD apparu sur votre téléphone pour confirmer.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                isCancelledByUser = true;
-                Navigator.pop(dialogCtx);
-              },
-              child: const Text('Fermer / Vérifier plus tard'),
-            ),
-          ],
-        ),
+      builder: (dialogCtx) => _FedaPayProgressDialog(
+        fedapayService: fedapayService,
+        amount: price,
+        description: isAddon
+            ? 'Option $targetPlanName'
+            : 'Abonnement $targetPlanName ($_billingCycleLabel)',
+        phoneNumber: mode == 'card' ? null : _phoneController.text.trim(),
+        mode: mode,
+        providerLabel: _selectedProvider,
+        targetPlanName: targetPlanName,
+        planCode: targetPlanCode,
+        durationDays: _durationDays,
+        addonCode: isAddon ? targetPlanName : null,
+        customerName: widget.shopName,
+        customerEmail: widget.customerEmail,
       ),
     );
 
-    final fedapayService = sl<FedaPayRemoteService>();
-    final result = await fedapayService.initializePayment(
-      amount: price,
-      description: isAddon
-          ? 'Option $targetPlanName'
-          : 'Abonnement $targetPlanName ($_billingCycleLabel)',
-      phoneNumber: _phoneController.text,
-      mode: mode,
-      planCode: targetPlanCode,
-      durationDays: _durationDays,
-      addonCode: isAddon ? targetPlanName : null,
-    );
+    if (!mounted || outcome == null) return;
 
-    if (!result.success) {
-      if (mounted && Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red.shade700,
-            content: Text('Échec FedaPay : ${result.message}'),
-          ),
-        );
-      }
+    if (outcome.approved) {
+      setState(() => _pendingTx = null);
+      await _loadSubscriptionFromDatabase(forceRefresh: true);
+      if (!mounted) return;
+      await _showActivationSuccessDialog(
+        targetPlanName: targetPlanName,
+        price: price,
+        isAddon: isAddon,
+        transactionId: outcome.transactionId,
+      );
       return;
     }
 
-    final txId = result.transactionId;
-    if (txId != null) {
-      // Boucle de vérification (Polling 45s max)
-      for (int i = 0; i < 15; i++) {
-        if (isCancelledByUser || !mounted) break;
-        await Future<void>.delayed(const Duration(seconds: 3));
-        if (isCancelledByUser || !mounted) break;
-
-        final status = await fedapayService.checkTransactionStatus(txId);
-        if (status == 'approved' || status == 'transferred') {
-          if (mounted && Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          if (isAddon) {
-            _executeAddonPayment(addonTitle: targetPlanName, price: price);
-          } else if (targetPlanCode != null) {
-            _executePlanPayment(
-              targetPlanCode: targetPlanCode,
-              targetPlanName: targetPlanName,
-              price: price,
-            );
-          }
-          return;
-        } else if (status == 'declined' || status == 'canceled') {
-          if (mounted && Navigator.canPop(context)) {
-            Navigator.pop(context);
-          }
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: Colors.red.shade700,
-                content: Text('Paiement FedaPay annulé ou refusé ($status).'),
-              ),
-            );
-          }
-          return;
-        }
-      }
-    }
-
-    if (mounted && Navigator.canPop(context) && !isCancelledByUser) {
-      Navigator.pop(context);
-    }
-
-    if (mounted && !isCancelledByUser) {
+    if (outcome.errorMessage != null) {
+      setState(() => _pendingTx = null);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          duration: const Duration(seconds: 6),
+          backgroundColor: Colors.red.shade700,
+          content: Text(outcome.errorMessage!),
+        ),
+      );
+    } else if (outcome.pendingTimedOut) {
+      if (outcome.transactionId != null) {
+        setState(() {
+          _pendingTx = _PendingFedaPayTx(
+            transactionId: outcome.transactionId!,
+            checkoutUrl: outcome.checkoutUrl,
+            targetPlanName: targetPlanName,
+            price: price,
+            isAddon: isAddon,
+          );
+        });
+      }
+      await _loadSubscriptionFromDatabase(forceRefresh: true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 7),
           content: Text(
-            'Demande FedaPay soumise pour $targetPlanName. Votre abonnement sera activé dès la confirmation du paiement.',
+            'Transaction en attente${outcome.transactionId != null ? ' (Réf. #${outcome.transactionId})' : ''}. '
+            'Vous pouvez reprendre le paiement ou vérifier son statut ci-dessus.',
+          ),
+          action: SnackBarAction(
+            label: 'Vérifier',
+            onPressed: _checkPendingTransaction,
           ),
         ),
       );
     }
+  }
+
+  Future<void> _showActivationSuccessDialog({
+    required String targetPlanName,
+    required double price,
+    required bool isAddon,
+    int? transactionId,
+  }) async {
+    final details = _details;
+    final unlockedLabels = details.grantedModules
+        .map(formatModuleName)
+        .toList();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.check_circle, color: Colors.green.shade700, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isAddon ? 'Option activée !' : 'Abonnement activé !',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isAddon
+                    ? 'L\'option "$targetPlanName" est maintenant active sur votre boutique.'
+                    : 'Votre forfait ${details.planName} est actif et tous vos accès ont été mis à jour.',
+                style: const TextStyle(height: 1.4),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SuccessDetailRow(label: 'Formule', value: isAddon ? targetPlanName : details.planName),
+                    _SuccessDetailRow(
+                      label: 'Statut',
+                      value: details.status.toUpperCase() == 'ACTIVE' ? 'Actif' : details.status,
+                    ),
+                    _SuccessDetailRow(label: 'Montant payé', value: '${price.toStringAsFixed(0)} FCFA'),
+                    _SuccessDetailRow(label: 'Moyen', value: _selectedProvider),
+                    if (transactionId != null)
+                      _SuccessDetailRow(label: 'Référence FedaPay', value: '#$transactionId'),
+                    if (details.expiresAt != null)
+                      _SuccessDetailRow(
+                        label: 'Valide jusqu\'au',
+                        value: AppDateFormatter.formatDateLong(details.expiresAt!),
+                      ),
+                  ],
+                ),
+              ),
+              if (unlockedLabels.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                const Text(
+                  'Modules actifs :',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: unlockedLabels
+                      .take(8)
+                      .map(
+                        (m) => Chip(
+                          visualDensity: VisualDensity.compact,
+                          avatar: const Icon(Icons.check, size: 14, color: Colors.green),
+                          label: Text(m, style: const TextStyle(fontSize: 11)),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              if (mounted && Navigator.canPop(context)) {
+                Navigator.pop(context, true);
+              }
+            },
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Continuer vers l\'application'),
+          ),
+        ],
+      ),
+    );
   }
 
   String get _billingCycleLabel => switch (_billingCycle) {
@@ -209,6 +282,45 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   List<Map<String, dynamic>> _paidOptions = [];
   List<Map<String, dynamic>> _packages = [];
   bool _isLoading = false;
+  _PendingFedaPayTx? _pendingTx;
+  bool _checkingPendingTx = false;
+
+  Future<void> _checkPendingTransaction() async {
+    final pending = _pendingTx;
+    if (pending == null || _checkingPendingTx) return;
+    setState(() => _checkingPendingTx = true);
+    try {
+      final status = await sl<FedaPayRemoteService>().checkTransactionStatus(pending.transactionId);
+      if (!mounted) return;
+      if (status == 'approved' || status == 'transferred') {
+        setState(() => _pendingTx = null);
+        await _loadSubscriptionFromDatabase(forceRefresh: true);
+        if (!mounted) return;
+        await _showActivationSuccessDialog(
+          targetPlanName: pending.targetPlanName,
+          price: pending.price,
+          isAddon: pending.isAddon,
+          transactionId: pending.transactionId,
+        );
+      } else if (status == 'declined' || status == 'canceled') {
+        setState(() => _pendingTx = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            content: Text('Transaction #${pending.transactionId} annulée ou refusée ($status).'),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Transaction #${pending.transactionId} toujours en attente ($status).'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _checkingPendingTx = false);
+    }
+  }
 
   IconData _getOptionIcon(String code) {
     switch (code) {
@@ -430,16 +542,28 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               : null,
           builder: (dialogCtx, snapshot) {
             final preview = snapshot.data;
-            final bonusDays = (preview?['bonusDays'] as num?)?.toInt() ?? 0;
+            final remainingDays = (preview?['remainingDays'] as num?)?.toInt() ?? 0;
+            final totalGrantedDays = (preview?['totalGrantedDays'] as num?)?.toInt() ?? _durationDays;
             final transitionType = preview?['transitionType']?.toString() ?? (isCurrent ? 'RENEWAL' : 'UPGRADE');
+            final newExpiresAtRaw = preview?['newExpiresAt']?.toString();
+            final newExpiresAt = newExpiresAtRaw != null ? DateTime.tryParse(newExpiresAtRaw) : null;
+            final graceUntilRaw = preview?['graceUntil']?.toString();
+            final graceUntil = graceUntilRaw != null ? DateTime.tryParse(graceUntilRaw) : null;
             final message = preview?['message']?.toString() ??
                 (isCurrent
                     ? 'Votre formule actuelle sera prolongée de $_billingCycleLabel sans interruption.'
                     : 'Votre nouveau forfait s\'activera immédiatement.');
 
+            final badgeLabel = switch (transitionType) {
+              'UPGRADE' => 'Upgrade immédiat (cumul des jours)',
+              'RENEWAL' => 'Renouvellement cumulatif',
+              'DOWNGRADE' => 'Downgrade programmé à échéance',
+              _ => 'Nouvelle souscription',
+            };
+
             return AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-              title: Text(isCurrent ? 'Renouveler $targetPlanName' : 'Changer pour $targetPlanName'),
+              title: Text(isCurrent ? 'Renouveler $targetPlanName' : 'Passer à $targetPlanName'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -453,7 +577,6 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                         ),
                       ),
                     ] else ...[
-                      // Badge de transition
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
@@ -468,11 +591,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                           ),
                         ),
                         child: Text(
-                          transitionType == 'UPGRADE'
-                              ? '🚀 Montée en gamme (Upgrade immédiat)'
-                              : (transitionType == 'RENEWAL'
-                                  ? '🔄 Prolongation de forfait'
-                                  : 'ℹ️ Changement de formule'),
+                          badgeLabel,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
@@ -484,29 +603,46 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(message, style: const TextStyle(height: 1.4)),
-                      if (bonusDays > 0) ...[
-                        const SizedBox(height: AppSpacing.sm),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.shade300),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.card_giftcard, size: 20, color: Colors.green.shade700),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  '+$bonusDays jours bonus offerts grâce au report de votre ancien forfait !',
-                                  style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.bold, fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(dialogCtx).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                        child: Column(
+                          children: [
+                            _SuccessDetailRow(
+                              label: 'Formule actuelle',
+                              value: '${_details.planName}${remainingDays > 0 ? ' ($remainingDays j restants)' : ''}',
+                            ),
+                            _SuccessDetailRow(
+                              label: 'Prise d\'effet',
+                              value: transitionType == 'DOWNGRADE' ? 'À l\'échéance' : 'Immédiate',
+                            ),
+                            _SuccessDetailRow(
+                              label: 'Durée totale valide',
+                              value: '$totalGrantedDays jours',
+                            ),
+                            if (newExpiresAt != null)
+                              _SuccessDetailRow(
+                                label: 'Nouvelle expiration',
+                                value: AppDateFormatter.formatDateLong(newExpiresAt),
+                              ),
+                            if (graceUntil != null)
+                              _SuccessDetailRow(
+                                label: 'Fin grâce (+7j)',
+                                value: AppDateFormatter.formatDateLong(graceUntil),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Note : après expiration, une période de grâce distincte de 7 jours s\'ouvre avec restriction des modules payants avancés.',
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600, height: 1.3),
+                      ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         'Tarif : ${price.toStringAsFixed(0)} FCFA$_billingSuffix',
@@ -536,7 +672,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                       isAddon: false,
                     );
                   },
-                  child: const Text('Payer via Mobile Money'),
+                  child: const Text('Continuer vers le paiement'),
                 ),
               ],
             );
@@ -553,6 +689,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     String? targetPlanCode,
     bool isAddon = false,
   }) {
+    String? phoneError;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -560,83 +697,128 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.md)),
       ),
       builder: (ctx) => StatefulBuilder(
-        builder: (modalContext, setModalState) => SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              MediaQuery.of(modalContext).viewInsets.bottom + AppSpacing.md,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isAddon ? 'Paiement Option — $targetPlanName' : 'Paiement Mobile Money — $targetPlanName',
-                    style: Theme.of(modalContext).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    isAddon
-                        ? 'Montant à régler : ${price.toStringAsFixed(0)} FCFA / mois'
-                        : 'Montant à régler : ${price.toStringAsFixed(0)} FCFA ($_billingCycleLabel)',
-                    style: TextStyle(
-                      color: Theme.of(modalContext).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
+        builder: (modalContext, setModalState) {
+          final isCard = _selectedProvider == 'Carte Visa / Mastercard (FedaPay)';
+          return SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                MediaQuery.of(modalContext).viewInsets.bottom + AppSpacing.md,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isAddon ? 'Paiement Option — $targetPlanName' : 'Paiement — $targetPlanName',
+                      style: Theme.of(modalContext).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  AppDropdown<String>(
-                    labelText: 'Moyen de paiement (FedaPay / Mobile Money)',
-                    hintText: 'Sélectionner un moyen de paiement',
-                    items: const [
-                      'MTN Mobile Money (FedaPay)',
-                      'Moov Money (FedaPay)',
-                      'Celtiis (FedaPay)',
-                      'Carte Visa / Mastercard (FedaPay)',
-                    ],
-                    initialItem: _selectedProvider,
-                    onChanged: (val) {
-                      if (val != null) setModalState(() => _selectedProvider = val);
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Numéro Mobile Money (Bénin / UOA)',
-                      hintText: 'Ex: 61000000 ou 97000000',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.phone_android),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      isAddon
+                          ? 'Montant à régler : ${price.toStringAsFixed(0)} FCFA / mois'
+                          : 'Montant à régler : ${price.toStringAsFixed(0)} FCFA ($_billingCycleLabel)',
+                      style: TextStyle(
+                        color: Theme.of(modalContext).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        _processFedaPayOrLocalPayment(
-                          targetPlanName: targetPlanName,
-                          price: price,
-                          targetPlanCode: targetPlanCode,
-                          isAddon: isAddon,
-                        );
+                    const SizedBox(height: AppSpacing.md),
+                    AppDropdown<String>(
+                      labelText: 'Moyen de paiement (FedaPay)',
+                      hintText: 'Sélectionner un moyen de paiement',
+                      items: const [
+                        'MTN Mobile Money (FedaPay)',
+                        'Moov Money (FedaPay)',
+                        'Celtiis (FedaPay)',
+                        'Carte Visa / Mastercard (FedaPay)',
+                      ],
+                      initialItem: _selectedProvider,
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() {
+                            _selectedProvider = val;
+                            phoneError = null;
+                          });
+                        }
                       },
-                      icon: const Icon(Icons.payment),
-                      label: const Text('Payer via FedaPay'),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.md),
+                    if (isCard)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.credit_card, color: Colors.blue.shade700),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'Vous serez redirigé vers la page sécurisée FedaPay pour saisir votre carte bancaire.',
+                                style: TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        onChanged: (_) {
+                          if (phoneError != null) {
+                            setModalState(() => phoneError = null);
+                          }
+                        },
+                        decoration: InputDecoration(
+                          labelText: 'Numéro Mobile Money (Bénin / UEMOA)',
+                          hintText: 'Ex: 0197000000 ou 97000000',
+                          errorText: phoneError,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.phone_android),
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.lg),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () {
+                          if (!isCard) {
+                            final digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+                            if (digits.length < 8) {
+                              setModalState(() {
+                                phoneError = 'Veuillez saisir un numéro Mobile Money valide (min. 8 chiffres).';
+                              });
+                              return;
+                            }
+                          }
+                          Navigator.pop(ctx);
+                          _processFedaPayOrLocalPayment(
+                            targetPlanName: targetPlanName,
+                            price: price,
+                            targetPlanCode: targetPlanCode,
+                            isAddon: isAddon,
+                          );
+                        },
+                        icon: const Icon(Icons.payment),
+                        label: Text(isCard ? 'Payer par carte via FedaPay' : 'Payer via FedaPay'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -717,6 +899,42 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               ],
             ),
           ),
+        ] else if (_details.isInGrace) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.deepOrange.shade50,
+              border: Border.all(color: Colors.deepOrange.shade700),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.hourglass_bottom_rounded, color: Colors.deepOrange.shade900, size: 28),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Période de grâce active (${_details.graceDaysRemaining} jour${_details.graceDaysRemaining > 1 ? 's' : ''} restant${_details.graceDaysRemaining > 1 ? 's' : ''})',
+                        style: TextStyle(
+                          color: Colors.deepOrange.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Votre période payée a expiré. Les modules payants avancés et la synchronisation Cloud sont temporairement restreints jusqu\'au ${AppDateFormatter.formatDateLong(_details.graceUntil)}. Renouvelez maintenant pour tout rétablir.',
+                        style: TextStyle(color: Colors.deepOrange.shade900, fontSize: 12, height: 1.35),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ] else if (widget.mandatoryGate) ...[
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -744,6 +962,94 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           ),
         ],
         // 📡 Bannière Offline-First Value Proposition
+        if (_pendingTx != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              border: Border.all(color: Colors.amber.shade700),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.pending_actions_rounded, color: Colors.amber.shade900),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        'Paiement FedaPay en attente (Réf. #${_pendingTx!.transactionId})',
+                        style: TextStyle(
+                          color: Colors.amber.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${_pendingTx!.targetPlanName} — ${_pendingTx!.price.toStringAsFixed(0)} FCFA. '
+                  'Finalisez le paiement sur FedaPay ou vérifiez le statut sans recréer de transaction.',
+                  style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (_pendingTx!.checkoutUrl != null && _pendingTx!.checkoutUrl!.isNotEmpty)
+                      FilledButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.tryParse(_pendingTx!.checkoutUrl!);
+                          if (uri != null) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('Reprendre le paiement'),
+                      ),
+                    OutlinedButton.icon(
+                      onPressed: _checkingPendingTx ? null : _checkPendingTransaction,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: Text(_checkingPendingTx ? 'Vérification...' : 'Vérifier le statut'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+        if (_details.scheduledPlanCode != null) ...[
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              border: Border.all(color: Colors.blue.shade300),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.schedule_rounded, color: Colors.blue.shade800),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Changement programmé : votre forfait passera vers ${_details.scheduledPlanCode} '
+                    '${_details.scheduledEffectiveAt != null ? 'le ${AppDateFormatter.formatDateLong(_details.scheduledEffectiveAt!)}' : 'à l\'échéance de votre période en cours'}.',
+                    style: TextStyle(
+                      color: Colors.blue.shade900,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
@@ -1687,6 +1993,304 @@ class _BillingCycleTab extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SuccessDetailRow extends StatelessWidget {
+  const _SuccessDetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingFedaPayTx {
+  const _PendingFedaPayTx({
+    required this.transactionId,
+    this.checkoutUrl,
+    required this.targetPlanName,
+    required this.price,
+    required this.isAddon,
+  });
+
+  final int transactionId;
+  final String? checkoutUrl;
+  final String targetPlanName;
+  final double price;
+  final bool isAddon;
+}
+
+class _FedaPayDialogOutcome {
+  const _FedaPayDialogOutcome({
+    this.approved = false,
+    this.pendingTimedOut = false,
+    this.errorMessage,
+    this.transactionId,
+    this.checkoutUrl,
+  });
+
+  final bool approved;
+  final bool pendingTimedOut;
+  final String? errorMessage;
+  final int? transactionId;
+  final String? checkoutUrl;
+}
+
+class _FedaPayProgressDialog extends StatefulWidget {
+  const _FedaPayProgressDialog({
+    required this.fedapayService,
+    required this.amount,
+    required this.description,
+    required this.mode,
+    required this.providerLabel,
+    required this.targetPlanName,
+    this.phoneNumber,
+    this.planCode,
+    this.durationDays,
+    this.addonCode,
+    this.customerName,
+    this.customerEmail,
+  });
+
+  final FedaPayRemoteService fedapayService;
+  final double amount;
+  final String description;
+  final String? phoneNumber;
+  final String mode;
+  final String providerLabel;
+  final String targetPlanName;
+  final String? planCode;
+  final int? durationDays;
+  final String? addonCode;
+  final String? customerName;
+  final String? customerEmail;
+
+  @override
+  State<_FedaPayProgressDialog> createState() => _FedaPayProgressDialogState();
+}
+
+class _FedaPayProgressDialogState extends State<_FedaPayProgressDialog> with WidgetsBindingObserver {
+  bool _initializing = true;
+  bool _checkingNow = false;
+  bool _closed = false;
+  int? _transactionId;
+  String? _checkoutUrl;
+  int _elapsedSeconds = 0;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _startPayment();
+  }
+
+  @override
+  void dispose() {
+    _closed = true;
+    _pollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Dès le retour depuis le navigateur FedaPay vers ARIKE, vérifier côté serveur
+    if (state == AppLifecycleState.resumed && !_closed && _transactionId != null) {
+      _checkOnce(_transactionId!, manual: true);
+    }
+  }
+
+  void _finish(_FedaPayDialogOutcome outcome) {
+    if (_closed || !mounted) return;
+    _closed = true;
+    _pollTimer?.cancel();
+    Navigator.of(context).pop(outcome);
+  }
+
+  Future<void> _openCheckoutUrl() async {
+    final raw = _checkoutUrl;
+    if (raw == null || raw.isEmpty) return;
+    final uri = Uri.tryParse(raw);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _startPayment() async {
+    final result = await widget.fedapayService.initializePayment(
+      amount: widget.amount,
+      description: widget.description,
+      phoneNumber: widget.phoneNumber,
+      mode: widget.mode,
+      planCode: widget.planCode,
+      durationDays: widget.durationDays,
+      addonCode: widget.addonCode,
+      customerName: widget.customerName,
+      customerEmail: widget.customerEmail,
+    );
+
+    if (_closed || !mounted) return;
+
+    if (!result.success) {
+      _finish(_FedaPayDialogOutcome(errorMessage: 'Échec FedaPay : ${result.message}'));
+      return;
+    }
+
+    setState(() {
+      _initializing = false;
+      _transactionId = result.transactionId;
+      _checkoutUrl = result.checkoutUrl;
+    });
+
+    // Option 1 : ouvrir automatiquement checkoutUrl pour TOUS les moyens de paiement
+    if (result.checkoutUrl?.isNotEmpty ?? false) {
+      _openCheckoutUrl();
+    }
+
+    final txId = result.transactionId;
+    if (txId == null) {
+      _finish(_FedaPayDialogOutcome(pendingTimedOut: true, checkoutUrl: result.checkoutUrl));
+      return;
+    }
+
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (_closed || !mounted) {
+        timer.cancel();
+        return;
+      }
+      _elapsedSeconds += 3;
+      if (mounted) setState(() {});
+
+      await _checkOnce(txId);
+
+      if (!_closed && _elapsedSeconds >= 90) {
+        _finish(
+          _FedaPayDialogOutcome(
+            pendingTimedOut: true,
+            transactionId: txId,
+            checkoutUrl: _checkoutUrl,
+          ),
+        );
+      }
+    });
+  }
+
+  Future<void> _checkOnce(int txId, {bool manual = false}) async {
+    if (_closed || _checkingNow) return;
+    if (manual && mounted) setState(() => _checkingNow = true);
+    try {
+      final status = await widget.fedapayService.checkTransactionStatus(txId);
+      if (_closed || !mounted) return;
+
+      if (status == 'approved' || status == 'transferred') {
+        _finish(_FedaPayDialogOutcome(approved: true, transactionId: txId));
+      } else if (status == 'declined' || status == 'canceled') {
+        _finish(
+          _FedaPayDialogOutcome(
+            transactionId: txId,
+            errorMessage: 'Paiement FedaPay annulé ou refusé ($status).',
+          ),
+        );
+      }
+    } finally {
+      if (manual && mounted && !_closed) {
+        setState(() => _checkingNow = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isCard = widget.mode == 'card';
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+        title: Row(
+          children: [
+            Icon(isCard ? Icons.credit_card : Icons.mobile_friendly, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _initializing ? 'Connexion à FedaPay...' : 'Paiement FedaPay en cours',
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            if (_initializing)
+              Text(
+                'Création de la transaction de ${widget.amount.toStringAsFixed(0)} FCFA pour ${widget.targetPlanName}...',
+                textAlign: TextAlign.center,
+              )
+            else ...[
+              Text(
+                'La page sécurisée FedaPay a été ouverte pour régler ${widget.amount.toStringAsFixed(0)} FCFA (${widget.providerLabel}).\n\n'
+                'Finalisez le paiement sur FedaPay puis revenez ici : ARIKE vérifiera automatiquement la confirmation.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Vérification automatique... (${_elapsedSeconds}s / 90s)'
+                '${_transactionId != null ? ' • Réf #$_transactionId' : ''}',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                textAlign: TextAlign.center,
+              ),
+              if (_checkoutUrl != null && _checkoutUrl!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: _openCheckoutUrl,
+                  icon: const Icon(Icons.open_in_new, size: 16),
+                  label: const Text('Rouvrir la page de paiement FedaPay'),
+                ),
+              ],
+            ],
+          ],
+        ),
+        actions: [
+          if (!_initializing && _transactionId != null)
+            TextButton(
+              onPressed: _checkingNow ? null : () => _checkOnce(_transactionId!, manual: true),
+              child: Text(_checkingNow ? 'Vérification...' : 'Vérifier maintenant'),
+            ),
+          TextButton(
+            onPressed: () => _finish(
+              _FedaPayDialogOutcome(
+                pendingTimedOut: !_initializing,
+                transactionId: _transactionId,
+                checkoutUrl: _checkoutUrl,
+              ),
+            ),
+            child: const Text('Fermer'),
+          ),
+        ],
       ),
     );
   }

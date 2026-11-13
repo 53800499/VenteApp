@@ -15,6 +15,7 @@ import '../../../../shared/components/empty_list_placeholder.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../../shared/components/app_header_actions.dart';
 import '../bloc/new_sale_bloc.dart';
+import '../widgets/deficit_arbitration_dialog.dart';
 import '../widgets/sale_feedback.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
 import '../../../voice_input/domain/entities/voice_draft.dart';
@@ -416,10 +417,45 @@ class _NewSalePageState extends State<NewSalePage>
   }
 
   void _quickAddProduct(BuildContext context, SaleProductOption product) {
+    final mode = context.read<NewSaleBloc>().state.negativeStockMode;
     if (product.quantityInStock <= 0) {
-      SaleFeedback.showErrorMessage(
-        context,
-        'Stock épuisé pour « ${product.name} ».',
+      if (mode == 'forbidden') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Stock insuffisant pour « ${product.name} ». Vente en déficit interdite.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      if (mode == 'allowed') {
+        context.read<NewSaleBloc>().add(
+              NewSaleProductAdded(
+                product,
+                quantity: 1,
+                allowDeficit: true,
+              ),
+            );
+        return;
+      }
+      DeficitArbitrationDialog.show(
+        context: context,
+        productName: product.name,
+        availableStock: product.quantityInStock,
+        requestedQuantity: 1,
+        onAuthorizeDeficit: (qty, reason) {
+          context.read<NewSaleBloc>().add(
+                NewSaleProductAdded(
+                  product,
+                  quantity: qty,
+                  allowDeficit: true,
+                  deficitReason: reason,
+                ),
+              );
+        },
+        onAdjustQuantity: (_) {},
       );
       return;
     }
@@ -1887,12 +1923,43 @@ class _DesktopTicketPanel extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      line.productName,
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          line.productName,
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (line.hasDeficit) ...[
+                                          const SizedBox(height: 3),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFFBEB),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: const Color(0xFFFDE68A)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.warning_amber_rounded, size: 12, color: Color(0xFFD97706)),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'Déficit: -${line.deficitQuantity}',
+                                                  style: const TextStyle(
+                                                    fontSize: 10,
+                                                    color: Color(0xFFD97706),
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                   IconButton(
@@ -1963,17 +2030,52 @@ class _DesktopTicketPanel extends StatelessWidget {
                                   ),
                                   const Spacer(),
                                   // Stepper quantité
-                                  _QuantityInput(
-                                    value: line.quantity,
-                                    maxQuantity: line.stockAvailable,
-                                    onChanged: (quantity) => context
-                                        .read<NewSaleBloc>()
-                                        .add(
-                                          NewSaleLineQuantityChanged(
-                                            productId: line.productId,
-                                            quantity: quantity,
-                                          ),
-                                        ),
+                                  Builder(
+                                    builder: (context) {
+                                      final mode = context.read<NewSaleBloc>().state.negativeStockMode;
+                                      final allowDeficit = mode != 'forbidden';
+                                      return _QuantityInput(
+                                        value: line.quantity,
+                                        maxQuantity: allowDeficit ? 999999 : line.stockAvailable,
+                                        allowDeficit: allowDeficit,
+                                        onChanged: (quantity) {
+                                          if (quantity > line.stockAvailable && mode == 'warning') {
+                                            DeficitArbitrationDialog.show(
+                                              context: context,
+                                              productName: line.productName,
+                                              availableStock: line.stockAvailable,
+                                              requestedQuantity: quantity,
+                                              onAuthorizeDeficit: (qty, reason) {
+                                                context.read<NewSaleBloc>().add(
+                                                      NewSaleLineQuantityChanged(
+                                                        productId: line.productId,
+                                                        quantity: qty,
+                                                        allowDeficit: true,
+                                                        deficitReason: reason,
+                                                      ),
+                                                    );
+                                              },
+                                              onAdjustQuantity: (adj) {
+                                                context.read<NewSaleBloc>().add(
+                                                      NewSaleLineQuantityChanged(
+                                                        productId: line.productId,
+                                                        quantity: adj,
+                                                      ),
+                                                    );
+                                              },
+                                            );
+                                          } else {
+                                            context.read<NewSaleBloc>().add(
+                                                  NewSaleLineQuantityChanged(
+                                                    productId: line.productId,
+                                                    quantity: quantity,
+                                                    allowDeficit: allowDeficit,
+                                                  ),
+                                                );
+                                          }
+                                        },
+                                      );
+                                    },
                                   ),
                                   const SizedBox(width: AppSpacing.sm),
                                   // Total ligne
@@ -2372,6 +2474,7 @@ class _ProductList extends StatelessWidget {
                               ),
                               const SizedBox(width: AppSpacing.sm),
                               _ProductCartControls(
+                                key: ValueKey('cart_ctrl_${product.id}'),
                                 product: product,
                                 cartLine: inCart,
                                 outOfStock: outOfStock,
@@ -2454,6 +2557,32 @@ class _CartPanel extends StatelessWidget {
                               line.productName,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
+                            if (line.hasDeficit) ...[
+                              const SizedBox(height: 3),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFFBEB),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, size: 12, color: Color(0xFFD97706)),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Déficit: -${line.deficitQuantity}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Color(0xFFD97706),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 2),
                             InkWell(
                               onTap: state.canOverridePrice
@@ -2484,16 +2613,52 @@ class _CartPanel extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      _QuantityInput(
-                        value: line.quantity,
-                        maxQuantity: line.stockAvailable,
-                        onChanged: (quantity) =>
-                            context.read<NewSaleBloc>().add(
-                                  NewSaleLineQuantityChanged(
-                                    productId: line.productId,
-                                    quantity: quantity,
-                                  ),
-                                ),
+                      Builder(
+                        builder: (context) {
+                          final mode = context.read<NewSaleBloc>().state.negativeStockMode;
+                          final allowDeficit = mode != 'forbidden';
+                          return _QuantityInput(
+                            value: line.quantity,
+                            maxQuantity: allowDeficit ? 999999 : line.stockAvailable,
+                            allowDeficit: allowDeficit,
+                            onChanged: (quantity) {
+                              if (quantity > line.stockAvailable && mode == 'warning') {
+                                DeficitArbitrationDialog.show(
+                                  context: context,
+                                  productName: line.productName,
+                                  availableStock: line.stockAvailable,
+                                  requestedQuantity: quantity,
+                                  onAuthorizeDeficit: (qty, reason) {
+                                    context.read<NewSaleBloc>().add(
+                                          NewSaleLineQuantityChanged(
+                                            productId: line.productId,
+                                            quantity: qty,
+                                            allowDeficit: true,
+                                            deficitReason: reason,
+                                          ),
+                                        );
+                                  },
+                                  onAdjustQuantity: (adj) {
+                                    context.read<NewSaleBloc>().add(
+                                          NewSaleLineQuantityChanged(
+                                            productId: line.productId,
+                                            quantity: adj,
+                                          ),
+                                        );
+                                  },
+                                );
+                              } else {
+                                context.read<NewSaleBloc>().add(
+                                      NewSaleLineQuantityChanged(
+                                        productId: line.productId,
+                                        quantity: quantity,
+                                        allowDeficit: allowDeficit,
+                                      ),
+                                    );
+                              }
+                            },
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -2789,6 +2954,7 @@ class _QuantityInput extends StatefulWidget {
     this.onChanged,
     this.showPlusButton = true,
     this.allowRemove = true,
+    this.allowDeficit = false,
     super.key,
   });
 
@@ -2798,6 +2964,7 @@ class _QuantityInput extends StatefulWidget {
   final ValueChanged<int>? onChanged;
   final bool showPlusButton;
   final bool allowRemove;
+  final bool allowDeficit;
 
   @override
   State<_QuantityInput> createState() => _QuantityInputState();
@@ -2863,12 +3030,14 @@ class _QuantityInputState extends State<_QuantityInput> {
       return;
     }
 
-    final clamped = quantity.clamp(1, widget.maxQuantity);
+    final targetQty = widget.allowDeficit
+        ? (quantity < 1 ? 1 : quantity)
+        : (widget.maxQuantity > 0 ? quantity.clamp(1, widget.maxQuantity) : 1);
     if (_isControlled) {
-      widget.onChanged?.call(clamped);
+      widget.onChanged?.call(targetQty);
     } else {
-      setState(() => _localValue = clamped);
-      _controller.text = '$clamped';
+      setState(() => _localValue = targetQty);
+      _controller.text = '$targetQty';
     }
   }
 
@@ -2923,7 +3092,7 @@ class _QuantityInputState extends State<_QuantityInput> {
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             icon: const Icon(Icons.add_circle_outline),
-            onPressed: _displayValue >= widget.maxQuantity
+            onPressed: (!widget.allowDeficit && _displayValue >= widget.maxQuantity)
                 ? null
                 : () => _apply(_displayValue + 1),
           ),
@@ -2934,6 +3103,7 @@ class _QuantityInputState extends State<_QuantityInput> {
 
 class _ProductCartControls extends StatefulWidget {
   const _ProductCartControls({
+    super.key,
     required this.product,
     required this.cartLine,
     required this.outOfStock,
@@ -2948,10 +3118,59 @@ class _ProductCartControls extends StatefulWidget {
 }
 
 class _ProductCartControlsState extends State<_ProductCartControls> {
-  final _pendingQtyKey = GlobalKey<_QuantityInputState>();
+  int _pendingQuantity = 1;
 
   void _addToCart() {
-    final qty = _pendingQtyKey.currentState?.commitAndRead() ?? 1;
+    final qty = _pendingQuantity;
+    final mode = context.read<NewSaleBloc>().state.negativeStockMode;
+    if (qty > widget.product.quantityInStock) {
+      if (mode == 'forbidden') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Stock insuffisant pour « ${widget.product.name} ». Vente en déficit interdite.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      if (mode == 'allowed') {
+        context.read<NewSaleBloc>().add(
+              NewSaleProductAdded(
+                widget.product,
+                quantity: qty,
+                allowDeficit: true,
+              ),
+            );
+        return;
+      }
+      DeficitArbitrationDialog.show(
+        context: context,
+        productName: widget.product.name,
+        availableStock: widget.product.quantityInStock,
+        requestedQuantity: qty,
+        onAuthorizeDeficit: (q, reason) {
+          context.read<NewSaleBloc>().add(
+                NewSaleProductAdded(
+                  widget.product,
+                  quantity: q,
+                  allowDeficit: true,
+                  deficitReason: reason,
+                ),
+              );
+        },
+        onAdjustQuantity: (adj) {
+          context.read<NewSaleBloc>().add(
+                NewSaleProductAdded(
+                  widget.product,
+                  quantity: adj,
+                ),
+              );
+        },
+      );
+      return;
+    }
     context.read<NewSaleBloc>().add(
           NewSaleProductAdded(widget.product, quantity: qty),
         );
@@ -2959,17 +3178,71 @@ class _ProductCartControlsState extends State<_ProductCartControls> {
 
   @override
   Widget build(BuildContext context) {
+    final mode = context.read<NewSaleBloc>().state.negativeStockMode;
+    final allowDeficit = mode != 'forbidden';
     final cartLine = widget.cartLine;
     if (cartLine != null) {
       return _QuantityInput(
         value: cartLine.quantity,
-        maxQuantity: cartLine.stockAvailable,
-        onChanged: (quantity) => context.read<NewSaleBloc>().add(
-              NewSaleLineQuantityChanged(
-                productId: widget.product.id,
-                quantity: quantity,
-              ),
-            ),
+        maxQuantity: allowDeficit ? 999999 : cartLine.stockAvailable,
+        allowDeficit: allowDeficit,
+        onChanged: (quantity) {
+          if (quantity > cartLine.stockAvailable) {
+            if (mode == 'forbidden') {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Stock insuffisant pour « ${widget.product.name} ». Vente en déficit interdite.',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+            if (mode == 'allowed') {
+              context.read<NewSaleBloc>().add(
+                    NewSaleLineQuantityChanged(
+                      productId: widget.product.id,
+                      quantity: quantity,
+                      allowDeficit: true,
+                    ),
+                  );
+              return;
+            }
+            DeficitArbitrationDialog.show(
+              context: context,
+              productName: widget.product.name,
+              availableStock: widget.product.quantityInStock,
+              requestedQuantity: quantity,
+              onAuthorizeDeficit: (qty, reason) {
+                context.read<NewSaleBloc>().add(
+                      NewSaleLineQuantityChanged(
+                        productId: widget.product.id,
+                        quantity: qty,
+                        allowDeficit: true,
+                        deficitReason: reason,
+                      ),
+                    );
+              },
+              onAdjustQuantity: (adj) {
+                context.read<NewSaleBloc>().add(
+                      NewSaleLineQuantityChanged(
+                        productId: widget.product.id,
+                        quantity: adj,
+                      ),
+                    );
+              },
+            );
+          } else {
+            context.read<NewSaleBloc>().add(
+                  NewSaleLineQuantityChanged(
+                    productId: widget.product.id,
+                    quantity: quantity,
+                    allowDeficit: allowDeficit,
+                  ),
+                );
+          }
+        },
       );
     }
 
@@ -2977,10 +3250,18 @@ class _ProductCartControlsState extends State<_ProductCartControls> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _QuantityInput(
-          key: _pendingQtyKey,
-          maxQuantity: widget.product.quantityInStock,
+          value: _pendingQuantity,
+          maxQuantity: allowDeficit
+              ? 999999
+              : (widget.product.quantityInStock > 0
+                  ? widget.product.quantityInStock
+                  : 1),
+          allowDeficit: allowDeficit,
           showPlusButton: false,
           allowRemove: false,
+          onChanged: (val) {
+            setState(() => _pendingQuantity = val);
+          },
         ),
         IconButton(
           visualDensity: VisualDensity.compact,
@@ -2988,7 +3269,7 @@ class _ProductCartControlsState extends State<_ProductCartControls> {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           icon: const Icon(Icons.add_shopping_cart_outlined),
           tooltip: 'Ajouter au panier',
-          onPressed: widget.outOfStock ? null : _addToCart,
+          onPressed: (widget.outOfStock && !allowDeficit) ? null : _addToCart,
         ),
       ],
     );

@@ -61,7 +61,7 @@ void main() {
     );
   });
 
-  testWidgets('HeaderLockButton turns red when server connection is lost', (tester) async {
+  testWidgets('HeaderLockButton stays grey when server connection is lost without auth failure', (tester) async {
     // Re-register NetworkMonitor as localNetworkOnly (connected to wifi/radio, but backend unreachable)
     if (sl.isRegistered<NetworkMonitor>()) {
       await sl.unregister<NetworkMonitor>();
@@ -76,22 +76,17 @@ void main() {
       ),
     );
 
-    // Should display red locked icon indicating server disconnected
-    final redIconFinder = find.byIcon(Icons.lock_rounded);
-    expect(redIconFinder, findsOneWidget);
+    // Une simple perte de connexion réseau ne doit PAS faire rougir le cadenas (géré par SyncStatusIndicator)
+    final outlineIconFinder = find.byIcon(Icons.lock_outline_rounded);
+    expect(outlineIconFinder, findsOneWidget);
 
-    final iconButton = tester.widget<IconButton>(find.byType(IconButton));
-    expect(
-      iconButton.tooltip,
-      contains('Connexion au serveur perdue'),
-    );
+    final redIconFinder = find.byIcon(Icons.lock_rounded);
+    expect(redIconFinder, findsNothing);
   });
 
   testWidgets('HeaderLockButton does not turn red if recent PIN proof is already present', (tester) async {
-    if (sl.isRegistered<NetworkMonitor>()) {
-      await sl.unregister<NetworkMonitor>();
-    }
-    sl.registerSingleton<NetworkMonitor>(NetworkMonitor.fixed(NetworkState.localNetworkOnly));
+    final repair = sl<CloudSessionRepairService>();
+    repair.markAwaitingPinUnlock();
 
     // Preuve PIN déjà en mémoire vive
     sl<RecentPinProof>().record(
@@ -114,6 +109,39 @@ void main() {
 
     final redIconFinder = find.byIcon(Icons.lock_rounded);
     expect(redIconFinder, findsNothing);
+  });
+
+  testWidgets('CloudSessionRepairService emits clear post-PIN feedback event on offline outcome', (tester) async {
+    final repair = sl<CloudSessionRepairService>();
+    PostPinFeedbackEvent? receivedEvent;
+
+    repair.postPinFeedbackNotifier.addListener(() {
+      receivedEvent = repair.postPinFeedbackNotifier.value;
+    });
+
+    repair.notifyPostPinFeedback(CloudRepairOutcome.offline);
+
+    expect(receivedEvent, isNotNull);
+    expect(receivedEvent!.isSuccess, isFalse);
+    expect(receivedEvent!.outcome, CloudRepairOutcome.offline);
+    expect(receivedEvent!.message, contains('sauvegardées sur cet appareil'));
+    expect(receivedEvent!.message, contains('synchronisées'));
+  });
+
+  testWidgets('CloudSessionRepairService emits success post-PIN feedback event on refreshed outcome', (tester) async {
+    final repair = sl<CloudSessionRepairService>();
+    PostPinFeedbackEvent? receivedEvent;
+
+    repair.postPinFeedbackNotifier.addListener(() {
+      receivedEvent = repair.postPinFeedbackNotifier.value;
+    });
+
+    repair.notifyPostPinFeedback(CloudRepairOutcome.refreshed);
+
+    expect(receivedEvent, isNotNull);
+    expect(receivedEvent!.isSuccess, isTrue);
+    expect(receivedEvent!.outcome, CloudRepairOutcome.refreshed);
+    expect(receivedEvent!.message, contains('rétablie avec succès'));
   });
 }
 

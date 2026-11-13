@@ -96,6 +96,29 @@ class SettingsLocalDatasource {
           defaultValue: false,
         ),
         pricingGridMode: gridMode,
+        negativeStockMode: _prefs?.getString('setting_negative_stock_mode') ?? 'warning',
+        confirmBeforeValidation: _prefs?.getBool('setting_confirm_before_validation') ?? true,
+        allowCreditSales: _prefs?.getBool('setting_allow_credit_sales') ?? true,
+        autoPrintReceipt: _prefs?.getBool('setting_auto_print_receipt') ?? false,
+        allowPriceModification: _prefs?.getBool('setting_allow_price_modification') ?? false,
+        maxCancelDelayHours: _prefs?.getInt('setting_max_cancel_delay_hours') ?? 24,
+        requireOpeningSession: _prefs?.getBool('setting_require_opening_session') ?? true,
+        allowedDiscrepancyFcfa: _prefs?.getInt('setting_allowed_discrepancy_fcfa') ?? 500,
+        discrepancyAction: _prefs?.getString('setting_discrepancy_action') ?? 'reason',
+        defaultCreditLimit: _prefs?.getInt('setting_default_credit_limit') ?? 100000,
+        blockOverlimitClients: _prefs?.getBool('setting_block_overlimit_clients') ?? true,
+        warnBeforeDueDate: _prefs?.getBool('setting_warn_before_due_date') ?? true,
+        requireReasonForForgiveness: _prefs?.getBool('setting_require_reason_for_forgiveness') ?? true,
+        requireReceptionValidation: _prefs?.getBool('setting_require_reception_validation') ?? true,
+        updateWeightedAverageCost: _prefs?.getBool('setting_update_weighted_average_cost') ?? true,
+        createSupplierDebtAutomatically: _prefs?.getBool('setting_create_supplier_debt_automatically') ?? true,
+        replacementPolicy: _prefs?.getString('setting_replacement_policy') ?? 'with_validation',
+        requirePreparationStep: _prefs?.getBool('setting_require_preparation_step') ?? true,
+        allowPartialDeliveries: _prefs?.getBool('setting_allow_partial_deliveries') ?? true,
+        requireProofOfDelivery: _prefs?.getBool('setting_require_proof_of_delivery') ?? false,
+        paperFormat: _prefs?.getString('setting_paper_format') ?? '58mm',
+        showQrCode: _prefs?.getBool('setting_show_qr_code') ?? true,
+        showSellerName: _prefs?.getBool('setting_show_seller_name') ?? true,
         enabledModules: modules,
       ),
       security: SecuritySettings(
@@ -206,6 +229,75 @@ class SettingsLocalDatasource {
     }
     if (input.toggledModuleKey != null && input.isModuleEnabled != null) {
       await _prefs?.setBool('setting_module_${input.toggledModuleKey}', input.isModuleEnabled!);
+    }
+    if (input.negativeStockMode != null) {
+      await _prefs?.setString('setting_negative_stock_mode', input.negativeStockMode!);
+    }
+    if (input.confirmBeforeValidation != null) {
+      await _prefs?.setBool('setting_confirm_before_validation', input.confirmBeforeValidation!);
+    }
+    if (input.allowCreditSales != null) {
+      await _prefs?.setBool('setting_allow_credit_sales', input.allowCreditSales!);
+    }
+    if (input.autoPrintReceipt != null) {
+      await _prefs?.setBool('setting_auto_print_receipt', input.autoPrintReceipt!);
+    }
+    if (input.allowPriceModification != null) {
+      await _prefs?.setBool('setting_allow_price_modification', input.allowPriceModification!);
+    }
+    if (input.maxCancelDelayHours != null) {
+      await _prefs?.setInt('setting_max_cancel_delay_hours', input.maxCancelDelayHours!);
+    }
+    if (input.requireOpeningSession != null) {
+      await _prefs?.setBool('setting_require_opening_session', input.requireOpeningSession!);
+    }
+    if (input.allowedDiscrepancyFcfa != null) {
+      await _prefs?.setInt('setting_allowed_discrepancy_fcfa', input.allowedDiscrepancyFcfa!);
+    }
+    if (input.discrepancyAction != null) {
+      await _prefs?.setString('setting_discrepancy_action', input.discrepancyAction!);
+    }
+    if (input.defaultCreditLimit != null) {
+      await _prefs?.setInt('setting_default_credit_limit', input.defaultCreditLimit!);
+    }
+    if (input.blockOverlimitClients != null) {
+      await _prefs?.setBool('setting_block_overlimit_clients', input.blockOverlimitClients!);
+    }
+    if (input.warnBeforeDueDate != null) {
+      await _prefs?.setBool('setting_warn_before_due_date', input.warnBeforeDueDate!);
+    }
+    if (input.requireReasonForForgiveness != null) {
+      await _prefs?.setBool('setting_require_reason_for_forgiveness', input.requireReasonForForgiveness!);
+    }
+    if (input.requireReceptionValidation != null) {
+      await _prefs?.setBool('setting_require_reception_validation', input.requireReceptionValidation!);
+    }
+    if (input.updateWeightedAverageCost != null) {
+      await _prefs?.setBool('setting_update_weighted_average_cost', input.updateWeightedAverageCost!);
+    }
+    if (input.createSupplierDebtAutomatically != null) {
+      await _prefs?.setBool('setting_create_supplier_debt_automatically', input.createSupplierDebtAutomatically!);
+    }
+    if (input.replacementPolicy != null) {
+      await _prefs?.setString('setting_replacement_policy', input.replacementPolicy!);
+    }
+    if (input.requirePreparationStep != null) {
+      await _prefs?.setBool('setting_require_preparation_step', input.requirePreparationStep!);
+    }
+    if (input.allowPartialDeliveries != null) {
+      await _prefs?.setBool('setting_allow_partial_deliveries', input.allowPartialDeliveries!);
+    }
+    if (input.requireProofOfDelivery != null) {
+      await _prefs?.setBool('setting_require_proof_of_delivery', input.requireProofOfDelivery!);
+    }
+    if (input.paperFormat != null) {
+      await _prefs?.setString('setting_paper_format', input.paperFormat!);
+    }
+    if (input.showQrCode != null) {
+      await _prefs?.setBool('setting_show_qr_code', input.showQrCode!);
+    }
+    if (input.showSellerName != null) {
+      await _prefs?.setBool('setting_show_seller_name', input.showSellerName!);
     }
 
     if (input.shopName != null ||

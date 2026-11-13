@@ -36,18 +36,24 @@ class ProductCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: product.isLowStock
-                      ? AppColors.warning.withValues(alpha: 0.12)
-                      : colorScheme.primaryContainer.withValues(alpha: 0.5),
+                  color: product.quantityInStock < 0
+                      ? AppColors.danger.withValues(alpha: 0.15)
+                      : (product.isLowStock
+                          ? AppColors.warning.withValues(alpha: 0.12)
+                          : colorScheme.primaryContainer.withValues(alpha: 0.5)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  product.isLowStock
-                      ? Icons.warning_amber_rounded
-                      : Icons.inventory_2_outlined,
-                  color: product.isLowStock
-                      ? AppColors.warning
-                      : colorScheme.primary,
+                  product.quantityInStock < 0
+                      ? Icons.error_outline_rounded
+                      : (product.isLowStock
+                          ? Icons.warning_amber_rounded
+                          : Icons.inventory_2_outlined),
+                  color: product.quantityInStock < 0
+                      ? AppColors.danger
+                      : (product.isLowStock
+                          ? AppColors.warning
+                          : colorScheme.primary),
                   size: 22,
                 ),
               ),
@@ -70,9 +76,20 @@ class ProductCard extends StatelessWidget {
                     Text(
                       [
                         if (product.categoryName != null) product.categoryName!,
-                        'Stock : ${product.quantityInStock}',
+                        product.quantityInStock < 0
+                            ? 'Déficit : ${product.quantityInStock}'
+                            : (product.quantityInStock == 0
+                                ? 'Épuisé'
+                                : 'Stock : ${product.quantityInStock}'),
                       ].join(' · '),
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: product.quantityInStock < 0
+                                ? AppColors.danger
+                                : null,
+                            fontWeight: product.quantityInStock < 0
+                                ? FontWeight.w700
+                                : null,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

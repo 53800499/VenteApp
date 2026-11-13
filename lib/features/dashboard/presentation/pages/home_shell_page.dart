@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/cloud_session_repair_service.dart';
 import '../../../../core/auth/widgets/cloud_session_notice.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
@@ -34,9 +35,13 @@ import '../../../fx_exchange/presentation/fx_workspace_mode_controller.dart';
 import '../../../fx_exchange/presentation/pages/fx_exchange_page.dart';
 import '../../../fx_exchange/domain/usecases/fx_exchange_usecases.dart';
 import '../../../help/presentation/widgets/module_help_button.dart';
+import '../../../subscription/domain/entities/subscription_details.dart';
 import '../../../subscription/domain/services/subscription_controller.dart';
 import '../../../subscription/presentation/pages/subscription_page.dart';
 import '../../../subscription/presentation/widgets/data_security_upgrade_modal.dart';
+import '../../../subscription/presentation/widgets/module_locked_view.dart';
+import '../../../subscription/presentation/widgets/pending_approval_view.dart';
+import '../../../../core/licensing/domain/module_access_guard.dart';
 import '../../../voice_input/presentation/widgets/voice_assistant_fab.dart';
 import '../../../audit/presentation/pages/audit_journal_page.dart';
 import '../../../calculators/presentation/pages/calculators_page.dart';
@@ -81,6 +86,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
       _canViewFx && (_fxWorkspace?.useFxPrimaryShell ?? false);
 
   SubscriptionController? _subController;
+  CloudSessionRepairService? _repairService;
 
   late final DashboardBloc _dashboardBloc;
   late final SaleListBloc _saleListBloc;
@@ -145,6 +151,13 @@ class _HomeShellPageState extends State<HomeShellPage> {
       _subController = subCtrl;
       subCtrl.addListener(_onSubscriptionChanged);
     } catch (_) {}
+    try {
+      final repair = sl.isRegistered<CloudSessionRepairService>()
+          ? sl<CloudSessionRepairService>()
+          : null;
+      _repairService = repair;
+      repair?.postPinFeedbackNotifier.addListener(_onPostPinFeedback);
+    } catch (_) {}
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _bootstrapNotifications();
       await _loadFxWorkspaceMode();
@@ -153,6 +166,45 @@ class _HomeShellPageState extends State<HomeShellPage> {
         await _verifyMandatorySubscription();
       }
     });
+  }
+
+  void _onPostPinFeedback() {
+    if (!mounted) return;
+    final event = _repairService?.postPinFeedbackNotifier.value;
+    if (event == null) return;
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              event.isSuccess
+                  ? Icons.cloud_done_rounded
+                  : Icons.cloud_off_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                event.message,
+                style: const TextStyle(fontSize: 13, height: 1.3),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: event.isSuccess
+            ? const Color(0xFF2E7D32)
+            : const Color(0xFFE65100),
+        duration: Duration(seconds: event.isSuccess ? 3 : 6),
+        behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
+      ),
+    );
   }
 
   void _onSubscriptionChanged() {
@@ -170,7 +222,10 @@ class _HomeShellPageState extends State<HomeShellPage> {
     if ((!controller.details.isActive || controller.details.isRevoked) && mounted) {
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const SubscriptionPage(mandatoryGate: true),
+          builder: (_) => SubscriptionPage(
+            mandatoryGate: true,
+            shopName: widget.session.shop.name,
+          ),
         ),
       );
     } else if (controller.details.isDataAtRisk && mounted) {
@@ -181,6 +236,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
   @override
   void dispose() {
+    _repairService?.postPinFeedbackNotifier.removeListener(_onPostPinFeedback);
     _fxWorkspace?.removeListener(_onFxWorkspaceChanged);
     _subController?.removeListener(_onSubscriptionChanged);
     _dashboardBloc.close();
@@ -376,6 +432,28 @@ class _HomeShellPageState extends State<HomeShellPage> {
   }
 
   Widget _buildDestinationWidget(SidebarDestination destination) {
+    ensureSubscriptionDependencies();
+    final subCtrl = sl<SubscriptionController>();
+
+    Widget checkModuleAccess({
+      required ArikeModule module,
+      required String moduleTitle,
+      required Widget child,
+      String? description,
+      IconData? icon,
+    }) {
+      if (subCtrl.isModuleGranted(module)) {
+        return child;
+      }
+      return ModuleLockedView(
+        moduleName: moduleTitle,
+        requiredPlanName: subCtrl.getRequiredPlanForModule(module),
+        currentPlanName: subCtrl.details.planName,
+        description: description,
+        icon: icon,
+      );
+    }
+
     return switch (destination) {
       SidebarDestination.dashboard => _SubpageNavigator(
           key: const ValueKey('desktop_dashboard'),
@@ -415,27 +493,57 @@ class _HomeShellPageState extends State<HomeShellPage> {
         ),
       SidebarDestination.expenses => _SubpageNavigator(
           key: const ValueKey('expenses'),
-          child: ExpensesPage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.expenses,
+            moduleTitle: 'Dépenses & Charges',
+            icon: Icons.payments_rounded,
+            child: ExpensesPage(session: widget.session),
+          ),
         ),
       SidebarDestination.procurement => _SubpageNavigator(
           key: const ValueKey('procurement'),
-          child: ProcurementPage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.purchases,
+            moduleTitle: 'Approvisionnements & Achats',
+            icon: Icons.local_shipping_rounded,
+            child: ProcurementPage(session: widget.session),
+          ),
         ),
       SidebarDestination.salesOrders => _SubpageNavigator(
           key: const ValueKey('salesOrders'),
-          child: SalesOrdersPage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.salesOrders,
+            moduleTitle: 'Commandes Clients & Livraisons',
+            icon: Icons.receipt_long_rounded,
+            child: SalesOrdersPage(session: widget.session),
+          ),
         ),
       SidebarDestination.stockTransfer => _SubpageNavigator(
           key: const ValueKey('stockTransfer'),
-          child: StockTransferPage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.multiShop,
+            moduleTitle: 'Transferts de Stock Inter-Boutiques',
+            icon: Icons.swap_horiz_rounded,
+            child: StockTransferPage(session: widget.session),
+          ),
         ),
       SidebarDestination.reports => _SubpageNavigator(
           key: const ValueKey('reports'),
-          child: ReportsPage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.reports,
+            moduleTitle: 'Statistiques & Rapports de Ventes',
+            icon: Icons.insights_rounded,
+            child: ReportsPage(session: widget.session),
+          ),
         ),
       SidebarDestination.salesAnalysis => _SubpageNavigator(
           key: const ValueKey('salesAnalysis'),
-          child: SalesAnalysisPage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.reports,
+            moduleTitle: 'Analyse Avancée des Ventes',
+            icon: Icons.analytics_rounded,
+            child: SalesAnalysisPage(session: widget.session),
+          ),
         ),
       SidebarDestination.calculators => _SubpageNavigator(
           key: const ValueKey('calculators'),
@@ -443,7 +551,12 @@ class _HomeShellPageState extends State<HomeShellPage> {
         ),
       SidebarDestination.fxExchange => _SubpageNavigator(
           key: const ValueKey('fxExchange'),
-          child: FxExchangePage(session: widget.session),
+          child: checkModuleAccess(
+            module: ArikeModule.fxExchange,
+            moduleTitle: 'Bureau de Change FX',
+            icon: Icons.currency_exchange_rounded,
+            child: FxExchangePage(session: widget.session),
+          ),
         ),
       SidebarDestination.users => _SubpageNavigator(
           key: const ValueKey('users'),
@@ -457,9 +570,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
           key: const ValueKey('shops'),
           child: ShopListPage(session: widget.session),
         ),
-      SidebarDestination.subscription => const _SubpageNavigator(
-          key: ValueKey('subscription'),
-          child: SubscriptionPage(),
+      SidebarDestination.subscription => _SubpageNavigator(
+          key: const ValueKey('subscription'),
+          child: SubscriptionPage(shopName: widget.session.shop.name),
         ),
       SidebarDestination.settings => _SubpageNavigator(
           key: const ValueKey('settings'),
@@ -479,10 +592,6 @@ class _HomeShellPageState extends State<HomeShellPage> {
         _activeDestination == SidebarDestination.stockValuation ||
         _activeDestination == SidebarDestination.customers;
 
-    if (!isCore) {
-      return _buildDestinationWidget(_activeDestination);
-    }
-
     final coreIndex = switch (_activeDestination) {
       SidebarDestination.dashboard => 0,
       SidebarDestination.sales => 1,
@@ -492,7 +601,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
       _ => 0,
     };
 
-    return IndexedStack(
+    final coreStack = IndexedStack(
+      key: const ValueKey('desktop_core_indexed_stack'),
       index: coreIndex,
       children: [
         _buildDestinationWidget(SidebarDestination.dashboard),
@@ -500,6 +610,21 @@ class _HomeShellPageState extends State<HomeShellPage> {
         _buildDestinationWidget(SidebarDestination.inventory),
         _buildDestinationWidget(SidebarDestination.stockValuation),
         _buildDestinationWidget(SidebarDestination.customers),
+      ],
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Offstage(
+          offstage: !isCore,
+          child: coreStack,
+        ),
+        if (!isCore)
+          KeyedSubtree(
+            key: ValueKey('non_core_${_activeDestination.name}'),
+            child: _buildDestinationWidget(_activeDestination),
+          ),
       ],
     );
   }
@@ -588,7 +713,26 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
     final safeIndex = _currentIndex.clamp(0, destinations.length - 1);
 
-    return MultiBlocProvider(
+    ensureSubscriptionDependencies();
+    final subCtrl = sl<SubscriptionController>();
+
+    return ValueListenableBuilder<SubscriptionDetails>(
+      valueListenable: subCtrl,
+      builder: (context, subDetails, _) {
+        if (subDetails.isPendingActivation) {
+          return PendingApprovalView(
+            shopName: widget.session.shop.name,
+            ownerName: widget.session.user.name,
+            onRefresh: () async {
+              await subCtrl.refreshFromRemote();
+            },
+            onLogout: () {
+              context.read<AuthBloc>().add(const AuthLogoutRequested());
+            },
+          );
+        }
+
+        return MultiBlocProvider(
       providers: [
         BlocProvider.value(value: _dashboardBloc),
         BlocProvider.value(value: _saleListBloc),
@@ -753,6 +897,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
           );
         },
       ),
+    );
+      },
     );
   }
 }

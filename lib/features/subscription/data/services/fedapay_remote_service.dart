@@ -41,6 +41,8 @@ class FedaPayRemoteService {
     String? planCode,
     int? durationDays,
     String? addonCode,
+    String? customerName,
+    String? customerEmail,
   }) async {
     try {
       final res = await _client.post(
@@ -53,6 +55,10 @@ class FedaPayRemoteService {
           'planCode': planCode,
           'durationDays': durationDays,
           'addonCode': addonCode,
+          if (customerName != null && customerName.trim().isNotEmpty)
+            'customerName': customerName.trim(),
+          if (customerEmail != null && customerEmail.trim().isNotEmpty)
+            'customerEmail': customerEmail.trim(),
         },
       );
       return FedaPayInitializeResult.fromJson(res.data as Map<String, dynamic>);

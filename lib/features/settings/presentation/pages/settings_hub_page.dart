@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../app/di/injection_container.dart';
+import '../../../../core/updates/app_update_dialog.dart';
+import '../../../../core/updates/app_update_service.dart';
 import '../../../../shared/components/app_header_actions.dart';
 import '../../../auth/domain/entities/auth_entities.dart';
 import '../../../notifications/presentation/pages/notification_settings_page.dart';
@@ -270,11 +273,32 @@ class _SettingsHubPageState extends State<SettingsHubPage> {
                     context,
                     icon: Icons.palette_outlined,
                     title: 'Apparence & utilisation',
-                    subtitle: 'Thème clair/sombre, langue, assistant vocal, formats',
-                    tags: ['thème', 'sombre', 'langue', 'voix', 'format'],
+                    subtitle: 'Taille des écritures, thème clair/sombre, langue, assistant vocal',
+                    tags: [
+                      'thème',
+                      'sombre',
+                      'langue',
+                      'voix',
+                      'format',
+                      'taille',
+                      'police',
+                      'texte',
+                      'écriture',
+                      'écritures',
+                      'zoom',
+                      'grand',
+                    ],
                     onTap: () => _openPage(
                       AppearanceSettingsPage(session: widget.session),
                     ),
+                  ),
+                  _buildCategoryTile(
+                    context,
+                    icon: Icons.system_update_rounded,
+                    title: 'Mises à jour du logiciel',
+                    subtitle: 'Version ${AppUpdateService.currentVersion} · Vérifier les mises à jour',
+                    tags: ['mise à jour', 'version', 'update', 'apk', 'installer', 'téléchargement', 'logiciel'],
+                    onTap: () => _checkForUpdate(context),
                   ),
 
                   const SizedBox(height: AppSpacing.md),
@@ -383,6 +407,45 @@ class _SettingsHubPageState extends State<SettingsHubPage> {
         onTap: onTap,
       ),
     );
+  }
+
+  Future<void> _checkForUpdate(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Recherche de mise à jour en cours...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    final service = sl<AppUpdateService>();
+    final update = await service.checkForUpdate();
+    if (!context.mounted) return;
+
+    if (update != null) {
+      await AppUpdateDialog.show(
+        context: context,
+        update: update,
+        service: service,
+      );
+    } else {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('Votre application ARIKE est à jour (Version ${AppUpdateService.currentVersion}).'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   void _openPage(Widget page) {

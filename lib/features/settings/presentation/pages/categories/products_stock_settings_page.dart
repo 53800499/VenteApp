@@ -5,6 +5,8 @@ import '../../../../../app/theme/app_tokens.dart';
 import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../../domain/entities/settings_entities.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class ProductsStockSettingsPage extends StatefulWidget {
   const ProductsStockSettingsPage({
@@ -39,6 +41,7 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
             return const Center(child: CircularProgressIndicator());
           }
           _alertThreshold = config.inventory.defaultAlertThreshold;
+          _negativeStockMode = config.commerce.negativeStockMode;
 
           return AppPageContainer(
             child: SingleChildScrollView(
@@ -87,7 +90,7 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                   color: config.commerce.isModuleActive('INVENTORY')
                       ? theme.colorScheme.surface
                       : theme.colorScheme.errorContainer.withValues(alpha: 0.2),
-                  child: SwitchListTile(
+                  child: SettingsSwitchListTile(
                     secondary: Icon(
                       Icons.power_settings_new,
                       color: config.commerce.isModuleActive('INVENTORY')
@@ -104,6 +107,10 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                           : 'Module désactivé : les fonctions d\'inventaire sont restreintes',
                     ),
                     value: config.commerce.isModuleActive('INVENTORY'),
+                    confirmationTitle: 'Modifier l\'activité du module Produits & Stock',
+                    confirmationMessage: config.commerce.isModuleActive('INVENTORY')
+                        ? 'Êtes-vous sûr de vouloir désactiver le module Produits & Stock ? Les fonctions de stock seront restreintes.'
+                        : 'Êtes-vous sûr de vouloir activer le module Produits & Stock ?',
                     onChanged: widget.canWrite
                         ? (val) {
                             context.read<SettingsBloc>().add(
@@ -138,11 +145,13 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                           style: theme.textTheme.bodySmall,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Prix fixe unique (Standard)'),
                           subtitle: const Text('Un seul prix de vente appliqué par défaut à chaque produit'),
                           value: 'STANDARD',
                           groupValue: config.commerce.pricingGridMode,
+                          confirmationTitle: 'Changer la grille tarifaire',
+                          confirmationMessage: 'Appliquer le mode "Prix fixe unique" pour tous les produits ?',
                           onChanged: widget.canWrite
                               ? (mode) {
                                   if (mode != null) {
@@ -153,11 +162,13 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                                 }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Bi-Tarif (Détail / Gros)'),
                           subtitle: const Text('Prix de détail à l\'unité et prix de gros par carton / emballage'),
                           value: 'RETAIL_WHOLESALE',
                           groupValue: config.commerce.pricingGridMode,
+                          confirmationTitle: 'Changer la grille tarifaire',
+                          confirmationMessage: 'Activer le mode "Bi-Tarif (Détail / Gros)" pour les ventes ?',
                           onChanged: widget.canWrite
                               ? (mode) {
                                   if (mode != null) {
@@ -168,11 +179,13 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                                 }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Grille Multi-Niveaux (Détail, Demi-Gros, Gros, VIP)'),
                           subtitle: const Text('Choix dynamique de la grille tarifaire selon le profil client ou quantité'),
                           value: 'MULTI_TIER',
                           groupValue: config.commerce.pricingGridMode,
+                          confirmationTitle: 'Changer la grille tarifaire',
+                          confirmationMessage: 'Activer la grille multi-niveaux (Détail, Demi-Gros, Gros, VIP) ?',
                           onChanged: widget.canWrite
                               ? (mode) {
                                   if (mode != null) {
@@ -203,31 +216,64 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                           style: theme.textTheme.bodySmall,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Interdit'),
                           subtitle: const Text('Bloque la vente si la quantité est insuffisante'),
                           value: 'forbidden',
                           groupValue: _negativeStockMode,
+                          confirmationTitle: 'Politique de stock',
+                          confirmationMessage: 'Interdire strictement les ventes avec stock insuffisant ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _negativeStockMode = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(negativeStockMode: v),
+                                            successMessage: 'Politique de stock : Ventes en déficit interdites.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Autorisé avec avertissement (Recommandé)'),
                           subtitle: const Text('Permet la vente mais alerte le caissier'),
                           value: 'warning',
                           groupValue: _negativeStockMode,
+                          confirmationTitle: 'Politique de stock',
+                          confirmationMessage: 'Autoriser les ventes en déficit avec alerte et arbitrage ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _negativeStockMode = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(negativeStockMode: v),
+                                            successMessage: 'Politique de stock : Ventes en déficit avec avertissement.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Autorisé sans avertissement'),
                           subtitle: const Text('Ventes fluides même avant saisie des approvisionnements'),
                           value: 'allowed',
                           groupValue: _negativeStockMode,
+                          confirmationTitle: 'Politique de stock',
+                          confirmationMessage: 'Autoriser les ventes en déficit sans avertissement préalable ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _negativeStockMode = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(negativeStockMode: v),
+                                            successMessage: 'Politique de stock : Ventes en déficit autorisées.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
                       ],
@@ -258,22 +304,36 @@ class _ProductsStockSettingsPageState extends State<ProductsStockSettingsPage> {
                             IconButton(
                               icon: const Icon(Icons.remove_circle_outline),
                               onPressed: (widget.canWrite && _alertThreshold > 1)
-                                  ? () {
+                                  ? () async {
                                       final newThreshold = _alertThreshold - 1;
-                                      context.read<SettingsBloc>().add(
-                                            SettingsThresholdChanged(newThreshold),
-                                          );
+                                      final ok = await SettingsConfirmation.confirm(
+                                        context,
+                                        title: 'Modifier le seuil d\'alerte',
+                                        message: 'Passer le seuil d\'alerte de stock à $newThreshold unités ?',
+                                      );
+                                      if (ok && context.mounted) {
+                                        context.read<SettingsBloc>().add(
+                                              SettingsThresholdChanged(newThreshold),
+                                            );
+                                      }
                                     }
                                   : null,
                             ),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline),
                               onPressed: widget.canWrite
-                                  ? () {
+                                  ? () async {
                                       final newThreshold = _alertThreshold + 1;
-                                      context.read<SettingsBloc>().add(
-                                            SettingsThresholdChanged(newThreshold),
-                                          );
+                                      final ok = await SettingsConfirmation.confirm(
+                                        context,
+                                        title: 'Modifier le seuil d\'alerte',
+                                        message: 'Passer le seuil d\'alerte de stock à $newThreshold unités ?',
+                                      );
+                                      if (ok && context.mounted) {
+                                        context.read<SettingsBloc>().add(
+                                              SettingsThresholdChanged(newThreshold),
+                                            );
+                                      }
                                     }
                                   : null,
                             ),

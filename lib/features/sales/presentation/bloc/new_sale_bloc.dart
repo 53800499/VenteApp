@@ -138,6 +138,10 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
             Permission.salesPriceOverride,
           ),
           cashSessionOpen: cashSessionOpen,
+          negativeStockMode: config.commerce.negativeStockMode,
+          allowCreditSales: config.commerce.allowCreditSales,
+          confirmBeforeValidation: config.commerce.confirmBeforeValidation,
+          autoPrintReceipt: config.commerce.autoPrintReceipt,
         ),
         ),
       );
@@ -192,6 +196,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     required int quantity,
     int? unitPrice,
     bool isManualPrice = false,
+    String? deficitReason,
   }) {
     final resolved = unitPrice ?? _resolveUnitPrice(product);
     final catalog = product.catalogPrice(state.selectedPricingTier);
@@ -205,6 +210,7 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       isManualPrice: isManualPrice,
       usedRememberedPrice:
           _usesRememberedPrice(product, resolved) && !isManualPrice,
+      deficitReason: deficitReason,
     );
   }
 
@@ -259,19 +265,30 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
     NewSaleProductAdded event,
     Emitter<NewSaleState> emit,
   ) {
+    final isAllowed = state.negativeStockMode == 'allowed';
+    final effectiveAllowDeficit = event.allowDeficit || isAllowed;
     final stock = event.product.quantityInStock;
-    if (stock <= 0) return;
+    if (stock <= 0 && !effectiveAllowDeficit) return;
 
-    final addQty = event.quantity.clamp(1, stock);
+    final addQty = effectiveAllowDeficit
+        ? event.quantity
+        : (stock > 0 ? event.quantity.clamp(1, stock) : event.quantity);
     final existing = state.cart.indexWhere(
       (l) => l.productId == event.product.id,
     );
     if (existing >= 0) {
       final line = state.cart[existing];
-      final newQty = (line.quantity + addQty).clamp(1, line.stockAvailable);
+      final newQty = effectiveAllowDeficit
+          ? line.quantity + addQty
+          : (line.stockAvailable > 0
+              ? (line.quantity + addQty).clamp(1, line.stockAvailable)
+              : line.quantity + addQty);
       if (newQty == line.quantity) return;
       final updated = List<CartLine>.from(state.cart);
-      updated[existing] = line.copyWith(quantity: newQty);
+      updated[existing] = line.copyWith(
+        quantity: newQty,
+        deficitReason: event.deficitReason ?? line.deficitReason,
+      );
       emit(state.copyWith(cart: updated, clearError: true));
       return;
     }
@@ -280,7 +297,11 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       state.copyWith(
         cart: [
           ...state.cart,
-          _buildCartLine(product: event.product, quantity: addQty),
+          _buildCartLine(
+            product: event.product,
+            quantity: addQty,
+            deficitReason: event.deficitReason,
+          ),
         ],
         clearError: true,
       ),
@@ -338,10 +359,19 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       add(NewSaleLineRemoved(event.productId));
       return;
     }
+    final isAllowed = state.negativeStockMode == 'allowed';
+    final effectiveAllowDeficit = event.allowDeficit || isAllowed;
     final updated = state.cart.map((line) {
       if (line.productId != event.productId) return line;
-      final qty = event.quantity.clamp(1, line.stockAvailable);
-      return line.copyWith(quantity: qty);
+      final qty = effectiveAllowDeficit
+          ? event.quantity
+          : (line.stockAvailable > 0
+              ? event.quantity.clamp(1, line.stockAvailable)
+              : event.quantity);
+      return line.copyWith(
+        quantity: qty,
+        deficitReason: event.deficitReason ?? line.deficitReason,
+      );
     }).toList();
     emit(state.copyWith(cart: updated));
   }
@@ -537,6 +567,17 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
       return;
     }
 
+    if (state.negativeStockMode == 'forbidden' &&
+        state.cart.any((l) => l.hasDeficit)) {
+      emit(
+        state.copyWith(
+          errorMessage:
+              'Certains produits sont en rupture de stock. La vente en déficit est interdite.',
+        ),
+      );
+      return;
+    }
+
     emit(state.copyWith(status: NewSaleStatus.submitting, clearError: true));
 
     try {
@@ -566,6 +607,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
                     productId: line.productId,
                     quantity: line.quantity,
                     unitPrice: line.unitPrice,
+                    allowDeficit: line.hasDeficit || state.negativeStockMode == 'allowed',
+                    deficitReason: line.deficitReason,
                   ),
                 )
                 .toList(),
@@ -595,6 +638,8 @@ class NewSaleBloc extends Bloc<NewSaleEvent, NewSaleState> {
                   productId: line.productId,
                   quantity: line.quantity,
                   unitPrice: line.unitPrice,
+                  allowDeficit: line.hasDeficit || state.negativeStockMode == 'allowed',
+                  deficitReason: line.deficitReason,
                 ),
               )
               .toList(),

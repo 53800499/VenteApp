@@ -814,11 +814,14 @@ class SalesLocalDatasource {
   }) async {
     final qty = line.quantity;
     final quantityBefore = product.quantityInStock;
+    final deficit = qty > quantityBefore ? qty - quantityBefore : 0;
 
     final slices = await lotDs.allocateFifo(
       shopId: shopId,
       productId: product.id,
       quantity: qty,
+      allowDeficit: true,
+      estimatedUnitCost: product.priceBuy ?? 0,
     );
     final unitCost = InventoryLotLocalDatasource.weightedUnitCost(slices);
 
@@ -857,6 +860,10 @@ class SalesLocalDatasource {
       );
     }
 
+    final movementReason = deficit > 0
+        ? 'Vente en déficit ($deficit unité(s))'
+        : null;
+
     await _db.into(_db.stockMovements).insert(
           db.StockMovementsCompanion.insert(
             shopId: shopId,
@@ -866,6 +873,7 @@ class SalesLocalDatasource {
             quantityChange: -qty,
             quantityBefore: quantityBefore,
             quantityAfter: quantityAfter,
+            reason: Value(movementReason),
             saleId: Value(saleId),
             unitCost: Value(unitCost),
             createdAt: ts,

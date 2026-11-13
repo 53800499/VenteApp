@@ -75,6 +75,16 @@ void applyDatabaseKey(sqlite.Database rawDb, String passphrase) {
   rawDb.execute("PRAGMA key = '${escapeSqlString(passphrase)}';");
 }
 
+void createSafetyBackupBeforeMigration(File dbFile) {
+  if (!dbFile.existsSync() || dbFile.lengthSync() == 0) return;
+  try {
+    final backup = File('${dbFile.path}.pre_migration.bak');
+    dbFile.copySync(backup.path);
+  } catch (_) {
+    // Non-bloquant
+  }
+}
+
 void ensureDatabaseAccessible({
   required File dbFile,
   required String passphrase,
@@ -119,6 +129,8 @@ QueryExecutor openEncryptedConnection(DatabaseKeyStorage keyStorage) {
     final dir = await getApplicationDocumentsDirectory();
     final file = File(p.join(dir.path, databaseFileName));
     final passphrase = await keyStorage.getOrCreatePassphrase();
+
+    createSafetyBackupBeforeMigration(file);
 
     sqlite.sqlite3.tempDirectory = (await getTemporaryDirectory()).path;
 

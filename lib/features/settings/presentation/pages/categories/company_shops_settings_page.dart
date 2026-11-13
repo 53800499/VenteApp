@@ -7,6 +7,7 @@ import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../../../shop/presentation/pages/shop_list_page.dart';
 import '../../../domain/entities/settings_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class CompanyShopsSettingsPage extends StatefulWidget {
   const CompanyShopsSettingsPage({
@@ -166,8 +167,15 @@ class _CompanyShopsSettingsPageState extends State<CompanyShopsSettingsPage> {
                               child: FilledButton.icon(
                                 onPressed: state.isSaving
                                     ? null
-                                    : () {
+                                    : () async {
                                         if (_formKey.currentState?.validate() ?? false) {
+                                          final ok = await SettingsConfirmation.confirm(
+                                            context,
+                                            title: 'Enregistrer les informations de l\'entreprise',
+                                            message: 'Confirmer la mise à jour des coordonnées et de l\'adresse de la boutique ?',
+                                            confirmLabel: 'Enregistrer',
+                                          );
+                                          if (!ok || !context.mounted) return;
                                           context.read<SettingsBloc>().add(
                                                 SettingsShopSaveRequested(
                                                   name: _nameController.text.trim(),

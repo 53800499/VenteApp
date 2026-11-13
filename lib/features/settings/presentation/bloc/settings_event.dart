@@ -102,6 +102,19 @@ class SettingsSyncToggled extends SettingsEvent {
   List<Object?> get props => [enabled];
 }
 
+class SettingsOptionUpdated extends SettingsEvent {
+  const SettingsOptionUpdated({
+    required this.input,
+    this.successMessage,
+  });
+
+  final UpdateShopSettingsInput input;
+  final String? successMessage;
+
+  @override
+  List<Object?> get props => [input, successMessage];
+}
+
 class SettingsFeedbackDismissed extends SettingsEvent {
   const SettingsFeedbackDismissed();
 }

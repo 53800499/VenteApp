@@ -30,6 +30,16 @@ class InventoryLotLocalDatasource {
     }
 
     final timestamp = nowMs();
+    final product = await (_db.select(_db.products)..where((p) => p.id.equals(productId))).getSingleOrNull();
+    final currentStock = product?.quantityInStock ?? 0;
+
+    var remainingForLot = quantity;
+    if (currentStock < 0) {
+      final deficit = currentStock.abs();
+      final compensation = quantity < deficit ? quantity : deficit;
+      remainingForLot = quantity - compensation;
+    }
+
     final lotId = await _db.into(_db.inventoryLots).insert(
           InventoryLotsCompanion.insert(
             shopId: shopId,
@@ -40,16 +50,28 @@ class InventoryLotLocalDatasource {
             supplierId: Value(supplierId),
             unitCost: unitCost,
             quantityReceived: quantity,
-            quantityRemaining: quantity,
+            quantityRemaining: remainingForLot,
             batchNumber: Value(batchNumber),
             expiryDate: Value(expiryDate),
             receivedAt: receivedAt ?? timestamp,
-            status: const Value(lot_entity.InventoryLotStatus.active),
+            status: Value(remainingForLot <= 0
+                ? lot_entity.InventoryLotStatus.depleted
+                : lot_entity.InventoryLotStatus.active),
             createdAt: timestamp,
           ),
         );
 
-    await refreshProductStockFromLots(shopId: shopId, productId: productId);
+    final newStock = currentStock + quantity;
+    if (product != null) {
+      await (_db.update(_db.products)..where((p) => p.id.equals(productId))).write(
+        ProductsCompanion(
+          quantityInStock: Value(newStock),
+          priceBuy: Value(unitCost),
+          updatedAt: Value(timestamp),
+          version: Value(product.version + 1),
+        ),
+      );
+    }
     return lotId;
   }
 
@@ -58,6 +80,8 @@ class InventoryLotLocalDatasource {
     required int shopId,
     required int productId,
     required int quantity,
+    bool allowDeficit = false,
+    int? estimatedUnitCost,
   }) async {
     if (quantity <= 0) return const [];
 
@@ -110,13 +134,33 @@ class InventoryLotLocalDatasource {
     }
 
     if (remaining > 0) {
-      throw ValidationFailure(
-        'Stock lot insuffisant pour le produit #$productId '
-        '(manque $remaining unité(s)).',
+      if (!allowDeficit) {
+        throw ValidationFailure(
+          'Stock lot insuffisant pour le produit #$productId '
+          '(manque $remaining unité(s)).',
+        );
+      }
+      slices.add(
+        lot_entity.LotAllocationSlice(
+          lotId: -1,
+          quantity: remaining,
+          unitCost: estimatedUnitCost ?? 0,
+        ),
       );
     }
 
-    await refreshProductStockFromLots(shopId: shopId, productId: productId);
+    final product = await (_db.select(_db.products)..where((p) => p.id.equals(productId))).getSingleOrNull();
+    if (product != null) {
+      final newStock = product.quantityInStock - quantity;
+      await (_db.update(_db.products)..where((p) => p.id.equals(productId))).write(
+        ProductsCompanion(
+          quantityInStock: Value(newStock),
+          updatedAt: Value(nowMs()),
+          version: Value(product.version + 1),
+        ),
+      );
+    }
+
     return slices;
   }
 
@@ -128,6 +172,7 @@ class InventoryLotLocalDatasource {
   }) async {
     final timestamp = nowMs();
     for (final slice in slices) {
+      if (slice.lotId <= 0) continue; // Ignorer les tranches virtuelles de déficit
       await _db.into(_db.saleItemLotAllocations).insert(
             SaleItemLotAllocationsCompanion.insert(
               shopId: shopId,
@@ -199,11 +244,15 @@ class InventoryLotLocalDatasource {
     }
   }
 
-  /// Recalcule `quantityInStock` à partir des lots actifs.
+  /// Recalcule `quantityInStock` à partir des lots actifs (sans écraser un déficit négatif).
   Future<void> refreshProductStockFromLots({
     required int shopId,
     required int productId,
   }) async {
+    final product = await (_db.select(_db.products)..where((p) => p.id.equals(productId))).getSingleOrNull();
+    if (product == null) return;
+    if (product.quantityInStock < 0) return; // Ne pas écraser le stock en déficit négatif
+
     final lots = await (_db.select(_db.inventoryLots)
           ..where(
             (l) => l.shopId.equals(shopId) & l.productId.equals(productId),

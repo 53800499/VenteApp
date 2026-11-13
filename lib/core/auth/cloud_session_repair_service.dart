@@ -9,6 +9,7 @@ import '../network/api_client.dart';
 import '../network/network_info.dart';
 import '../storage/auth_credentials_storage.dart';
 import '../security/device_identity_service.dart';
+import 'cloud_session_status.dart';
 import 'recent_pin_proof.dart';
 
 /// Résultat d'une tentative de réparation de session cloud.
@@ -33,6 +34,21 @@ enum CloudRepairOutcome {
 
   /// Hors ligne — réparation reportée.
   offline,
+}
+
+/// Événement de retour d'information émis après une tentative de réparation par PIN.
+class PostPinFeedbackEvent {
+  const PostPinFeedbackEvent({
+    required this.outcome,
+    required this.message,
+    required this.isSuccess,
+    required this.timestamp,
+  });
+
+  final CloudRepairOutcome outcome;
+  final String message;
+  final bool isSuccess;
+  final int timestamp;
 }
 
 typedef PinLoginRepairCallback = Future<bool> Function(RecentPinCredential proof);
@@ -76,6 +92,33 @@ class CloudSessionRepairService {
   bool get isAwaitingPinUnlock => _awaitingPinUnlock;
   bool get isAwaitingCloudReconnect => _awaitingPinUnlock;
 
+  /// Indique si une action d'authentification PIN est obligatoire pour rétablir
+  /// la session cloud.
+  ///
+  /// Renvoie `false` si une preuve PIN récente est déjà présente en RAM, ou si
+  /// aucun blocage d'authentification n'est actif.
+  bool isCloudReconnectRequired({
+    String? syncBlockReason,
+    CloudSessionLevel? sessionLevel,
+  }) {
+    if (_recentPinProof.hasRecentProof) return false;
+    if (_awaitingPinUnlock) return true;
+    if (sessionLevel == CloudSessionLevel.actionRequired) return true;
+    if (syncBlockReason != null) {
+      final lower = syncBlockReason.toLowerCase();
+      if (lower.contains('session') ||
+          lower.contains('authentification') ||
+          lower.contains('reconnecter') ||
+          lower.contains('token') ||
+          lower.contains('jeton') ||
+          lower.contains('non autorisé') ||
+          lower.contains('pin')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Notifie la UI quand l'état « en attente de reconnexion cloud » change.
   final ValueNotifier<bool> awaitingPinUnlockNotifier = ValueNotifier(false);
   ValueNotifier<bool> get awaitingCloudReconnectNotifier => awaitingPinUnlockNotifier;
@@ -83,10 +126,31 @@ class CloudSessionRepairService {
   /// Notifie la UI quand la réparation/reconnexion de session est en cours.
   final ValueNotifier<bool> repairInProgressNotifier = ValueNotifier(false);
 
+  /// Notifie la UI du résultat après une saisie de code PIN (succès ou serveur injoignable avec données sécurisées localement).
+  final ValueNotifier<PostPinFeedbackEvent?> postPinFeedbackNotifier =
+      ValueNotifier(null);
+
   Future<CloudRepairOutcome>? _inFlightRepair;
 
   void registerPinLoginRepair(PinLoginRepairCallback callback) {
     onPinLoginRepair = callback;
+  }
+
+  void notifyPostPinFeedback(CloudRepairOutcome outcome) {
+    final bool isSuccess = outcome == CloudRepairOutcome.alreadyValid ||
+        outcome == CloudRepairOutcome.refreshed ||
+        outcome == CloudRepairOutcome.pinLogin;
+
+    final String message = isSuccess
+        ? 'Connexion au serveur rétablie avec succès.'
+        : 'Session locale déverrouillée. Serveur cloud momentanément injoignable : vos données restent sauvegardées sur cet appareil et seront synchronisées automatiquement dès le retour de la connexion.';
+
+    postPinFeedbackNotifier.value = PostPinFeedbackEvent(
+      outcome: outcome,
+      message: message,
+      isSuccess: isSuccess,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
   }
 
   /// Refresh rejeté (401 sur `/auth/refresh`) — vérifie d'abord si un refresh
@@ -102,8 +166,10 @@ class CloudSessionRepairService {
   }
 
   /// Réparation complète après déverrouillage PIN (PIN cloud puis refresh).
-  Future<CloudRepairOutcome> repairAfterPinUnlock() {
-    return _runSerialized(() => repair(attemptRefresh: true));
+  Future<CloudRepairOutcome> repairAfterPinUnlock() async {
+    final outcome = await _runSerialized(() => repair(attemptRefresh: true));
+    notifyPostPinFeedback(outcome);
+    return outcome;
   }
 
   Future<CloudRepairOutcome> repair({required bool attemptRefresh}) async {

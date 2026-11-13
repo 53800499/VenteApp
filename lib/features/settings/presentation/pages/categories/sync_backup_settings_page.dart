@@ -8,6 +8,7 @@ import '../../../../../shared/components/app_page_container.dart';
 import '../../../../../core/backup/google_drive_backup_service.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class SyncBackupSettingsPage extends StatefulWidget {
   const SyncBackupSettingsPage({
@@ -26,6 +27,7 @@ class SyncBackupSettingsPage extends StatefulWidget {
 class _SyncBackupSettingsPageState extends State<SyncBackupSettingsPage> {
   String? _driveEmail;
   bool _driveAutoBackup = false;
+  bool _isDriveLoading = false;
 
   @override
   void initState() {
@@ -108,10 +110,14 @@ class _SyncBackupSettingsPageState extends State<SyncBackupSettingsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SwitchListTile(
+                        SettingsSwitchListTile(
                           title: const Text('Synchronisation cloud automatique'),
                           subtitle: const Text('Envoie et récupère les données dès qu\'une connexion est disponible'),
                           value: syncEnabled,
+                          confirmationTitle: 'Synchronisation Cloud',
+                          confirmationMessage: syncEnabled
+                              ? 'Désactiver la synchronisation cloud automatique ? L\'application fonctionnera exclusivement hors ligne sans envoi distant.'
+                              : 'Activer la synchronisation cloud automatique ?',
                           onChanged: widget.canWrite
                               ? (enabled) {
                                   context.read<SettingsBloc>().add(
@@ -191,25 +197,85 @@ class _SyncBackupSettingsPageState extends State<SyncBackupSettingsPage> {
                         const SizedBox(height: AppSpacing.md),
                         if (_driveEmail == null)
                           FilledButton.icon(
-                            onPressed: () async {
-                              final drive = sl<GoogleDriveBackupService>();
-                              final account = await drive.signIn();
-                              if (account != null && context.mounted) {
-                                await _loadDriveState();
-                              }
-                            },
-                            icon: const Icon(Icons.login),
-                            label: const Text('Connecter Google Drive'),
+                            onPressed: _isDriveLoading
+                                ? null
+                                : () async {
+                                    setState(() => _isDriveLoading = true);
+                                    try {
+                                      final drive = sl<GoogleDriveBackupService>();
+                                      final account = await drive.signIn();
+                                      if (mounted) {
+                                        await _loadDriveState();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('Compte Google Drive connecté : $account'),
+                                            backgroundColor: Colors.green,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        final msg = e.toString()
+                                            .replaceAll('Exception: ', '')
+                                            .replaceAll('StateError: ', '');
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(msg),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() => _isDriveLoading = false);
+                                      }
+                                    }
+                                  },
+                            icon: _isDriveLoading
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.login),
+                            label: Text(_isDriveLoading ? 'Connexion en cours...' : 'Connecter Google Drive'),
                           )
                         else
                           Row(
                             children: [
                               OutlinedButton(
-                                onPressed: () async {
-                                  final drive = sl<GoogleDriveBackupService>();
-                                  await drive.signOut();
-                                  await _loadDriveState();
-                                },
+                                onPressed: _isDriveLoading
+                                    ? null
+                                    : () async {
+                                        final ok = await SettingsConfirmation.confirm(
+                                          context,
+                                          title: 'Déconnexion Google Drive',
+                                          message: 'Déconnecter votre compte Google Drive de cette boutique ?',
+                                          confirmLabel: 'Déconnecter',
+                                          isDestructive: true,
+                                        );
+                                        if (!ok || !context.mounted) return;
+                                        setState(() => _isDriveLoading = true);
+                                        try {
+                                          final drive = sl<GoogleDriveBackupService>();
+                                          await drive.signOut();
+                                          if (mounted) {
+                                            await _loadDriveState();
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text('Compte Google Drive déconnecté.'),
+                                              ),
+                                            );
+                                          }
+                                        } finally {
+                                          if (mounted) {
+                                            setState(() => _isDriveLoading = false);
+                                          }
+                                        }
+                                      },
                                 child: const Text('Déconnecter'),
                               ),
                               const SizedBox(width: AppSpacing.md),

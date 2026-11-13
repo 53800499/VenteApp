@@ -22,6 +22,7 @@ enum _StockAnalysisFilter {
   topMargin,
   lowStock,
   deadStock,
+  deficitStock,
 }
 
 /// Écran complet d'analyse et de valorisation du stock d'ARIKE.
@@ -102,6 +103,10 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
       case _StockAnalysisFilter.deadStock:
         result = result.where((i) => i.isDeadStock).toList();
         result.sort((a, b) => b.purchaseValue.compareTo(a.purchaseValue));
+        break;
+      case _StockAnalysisFilter.deficitStock:
+        result = result.where((i) => i.quantityInStock < 0).toList();
+        result.sort((a, b) => a.quantityInStock.compareTo(b.quantityInStock));
         break;
     }
 
@@ -401,6 +406,12 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
                 label: 'Dormant (${summary.deadStockCount})',
                 filter: _StockAnalysisFilter.deadStock,
                 badgeColor: Colors.orange.shade800,
+              ),
+              const SizedBox(width: 6),
+              _buildChip(
+                label: 'En déficit (${summary.items.where((i) => i.quantityInStock < 0).length})',
+                filter: _StockAnalysisFilter.deficitStock,
+                badgeColor: Colors.redAccent,
               ),
             ],
           ),
@@ -776,7 +787,26 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
       );
     }
 
-    if (item.quantityInStock <= 0) {
+    if (item.quantityInStock < 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.red.shade900.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: Colors.red.shade300),
+        ),
+        child: Text(
+          'Déficit (${item.quantityInStock})',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Colors.red.shade700,
+          ),
+        ),
+      );
+    }
+
+    if (item.quantityInStock == 0) {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
@@ -1072,6 +1102,12 @@ class _StockAnalysisPageState extends State<StockAnalysisPage> {
             filter: _StockAnalysisFilter.deadStock,
             badgeColor: Colors.orange.shade800,
           ),
+          const SizedBox(width: 6),
+          _buildChip(
+            label: 'En déficit (${summary.items.where((i) => i.quantityInStock < 0).length})',
+            filter: _StockAnalysisFilter.deficitStock,
+            badgeColor: Colors.redAccent,
+          ),
         ],
       ),
     );
@@ -1322,9 +1358,11 @@ class _ProductValuationCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadius.pill),
                     ),
                     child: Text(
-                      isOut
-                          ? 'Épuisé'
-                          : 'Stock : ${valuation.quantityInStock}',
+                      valuation.quantityInStock < 0
+                          ? 'Déficit : ${valuation.quantityInStock}'
+                          : (isOut
+                              ? 'Épuisé'
+                              : 'Stock : ${valuation.quantityInStock}'),
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,

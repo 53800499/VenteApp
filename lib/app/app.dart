@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,6 +14,7 @@ import '../core/network/online_session_policy.dart';
 import 'pages/app_bootstrap_page.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
+import '../core/theme/ui_scale_controller.dart';
 import '../features/auth/presentation/bloc/auth_bloc.dart';
 import '../features/auth/presentation/pages/lock_screen_page.dart';
 import 'di/injection_container.dart';
@@ -167,33 +169,92 @@ class _ArikeAppState extends State<ArikeApp> with WidgetsBindingObserver {
 
 
   @override
-
   Widget build(BuildContext context) {
+    ensureUiScaleDependencies();
+    final uiScaleController = sl<UiScaleController>();
 
     return BlocProvider.value(
-
       value: _authBloc,
+      child: ListenableBuilder(
+        listenable: uiScaleController,
+        builder: (context, _) {
+          return Shortcuts(
+            shortcuts: <ShortcutActivator, Intent>{
+              // Zoom avant : Ctrl + Plus / Ctrl + Add (pavé numérique) / Ctrl + Equal
+              const SingleActivator(LogicalKeyboardKey.equal, control: true):
+                  const _ZoomInIntent(),
+              const SingleActivator(LogicalKeyboardKey.add, control: true):
+                  const _ZoomInIntent(),
+              const SingleActivator(LogicalKeyboardKey.numpadAdd, control: true):
+                  const _ZoomInIntent(),
 
-      child: MaterialApp(
+              // Zoom arrière : Ctrl + Minus / Ctrl + NumpadSubtract
+              const SingleActivator(LogicalKeyboardKey.minus, control: true):
+                  const _ZoomOutIntent(),
+              const SingleActivator(LogicalKeyboardKey.numpadSubtract, control: true):
+                  const _ZoomOutIntent(),
 
-        navigatorKey: _navigatorKey,
-
-        title: 'ARIKE',
-
-        debugShowCheckedModeBanner: false,
-
-        theme: AppTheme.light,
-
-        home: const AppBootstrapPage(),
-
-        routes: AppRouter.routes(),
-
-        onGenerateRoute: AppRouter.onGenerateRoute,
-
+              // Réinitialisation : Ctrl + 0 / Ctrl + Numpad 0
+              const SingleActivator(LogicalKeyboardKey.digit0, control: true):
+                  const _ResetZoomIntent(),
+              const SingleActivator(LogicalKeyboardKey.numpad0, control: true):
+                  const _ResetZoomIntent(),
+            },
+            child: Actions(
+              actions: <Type, Action<Intent>>{
+                _ZoomInIntent: CallbackAction<_ZoomInIntent>(
+                  onInvoke: (_) {
+                    uiScaleController.zoomIn();
+                    return null;
+                  },
+                ),
+                _ZoomOutIntent: CallbackAction<_ZoomOutIntent>(
+                  onInvoke: (_) {
+                    uiScaleController.zoomOut();
+                    return null;
+                  },
+                ),
+                _ResetZoomIntent: CallbackAction<_ResetZoomIntent>(
+                  onInvoke: (_) {
+                    uiScaleController.reset();
+                    return null;
+                  },
+                ),
+              },
+              child: MaterialApp(
+                navigatorKey: _navigatorKey,
+                title: 'ARIKE',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.light,
+                home: const AppBootstrapPage(),
+                routes: AppRouter.routes(),
+                onGenerateRoute: AppRouter.onGenerateRoute,
+                builder: (context, child) {
+                  final mediaQuery = MediaQuery.of(context);
+                  return MediaQuery(
+                    data: mediaQuery.copyWith(
+                      textScaler: TextScaler.linear(uiScaleController.scaleFactor),
+                    ),
+                    child: child ?? const SizedBox.shrink(),
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
-
     );
-
   }
+}
 
+class _ZoomInIntent extends Intent {
+  const _ZoomInIntent();
+}
+
+class _ZoomOutIntent extends Intent {
+  const _ZoomOutIntent();
+}
+
+class _ResetZoomIntent extends Intent {
+  const _ResetZoomIntent();
 }

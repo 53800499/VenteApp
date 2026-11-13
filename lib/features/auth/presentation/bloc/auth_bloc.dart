@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/auth/app_lock_controller.dart';
+import '../../../../core/auth/cloud_session_controller.dart';
+import '../../../../core/auth/cloud_session_repair_service.dart';
 import '../../../../core/errors/auth_error_humanizer.dart';
 import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/errors/failures.dart';
@@ -43,6 +45,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     required LastShopStorage lastShopStorage,
     required SyncService syncService,
     required AppLockController appLockController,
+    CloudSessionRepairService? cloudSessionRepairService,
+    CloudSessionController? cloudSessionController,
   }) : _isSetupComplete = isSetupComplete,
        _wasLoggedOut = wasLoggedOut,
        _hasRestorableSession = hasRestorableSession,
@@ -66,6 +70,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
        _lastShopStorage = lastShopStorage,
        _syncService = syncService,
        _appLockController = appLockController,
+       _cloudSessionRepairService = cloudSessionRepairService,
+       _cloudSessionController = cloudSessionController,
        super(const AuthInitial()) {
     on<AuthBootstrapRequested>(_onBootstrap);
     on<AuthProceedToLoginRequested>(_onProceedToLogin);
@@ -116,6 +122,8 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
   final LastShopStorage _lastShopStorage;
   final SyncService _syncService;
   final AppLockController _appLockController;
+  final CloudSessionRepairService? _cloudSessionRepairService;
+  final CloudSessionController? _cloudSessionController;
 
   int get _defaultShopId => _lastShopStorage.lastShopId;
 
@@ -575,6 +583,33 @@ class AppSessionBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     final current = state;
+
+    final repair = _cloudSessionRepairService;
+    if (repair != null &&
+        repair.isCloudReconnectRequired(
+          syncBlockReason: _syncService.currentSnapshot.blockReason,
+          sessionLevel: _cloudSessionController?.status.level,
+        )) {
+      if (current is AuthLocked) {
+        emit(
+          AuthLocked(
+            current.lockScreen,
+            errorMessage:
+                'Reconnexion cloud requise : veuillez entrer votre code PIN.',
+            canGoBack: current.canGoBack,
+            isUnlockOnly: current.isUnlockOnly,
+          ),
+        );
+      } else {
+        emit(
+          const AuthFailure(
+            'Reconnexion cloud requise : veuillez entrer votre code PIN.',
+          ),
+        );
+      }
+      return;
+    }
+
     if (current is AuthLocked) {
       emit(
         AuthLocked(

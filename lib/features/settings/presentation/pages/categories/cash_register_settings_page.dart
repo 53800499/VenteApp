@@ -5,6 +5,8 @@ import '../../../../../app/theme/app_tokens.dart';
 import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../../domain/entities/settings_entities.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class CashRegisterSettingsPage extends StatefulWidget {
   const CashRegisterSettingsPage({
@@ -37,6 +39,11 @@ class _CashRegisterSettingsPageState extends State<CashRegisterSettingsPage> {
         builder: (context, state) {
           final config = state.configuration;
           final isCashActive = config?.commerce.isModuleActive('CASH_SESSIONS') ?? true;
+          if (config != null) {
+            _requireOpeningSession = config.commerce.requireOpeningSession;
+            _allowedDiscrepancyFcfa = config.commerce.allowedDiscrepancyFcfa;
+            _discrepancyAction = config.commerce.discrepancyAction;
+          }
 
           return AppPageContainer(
             child: SingleChildScrollView(
@@ -84,7 +91,7 @@ class _CashRegisterSettingsPageState extends State<CashRegisterSettingsPage> {
                   color: isCashActive
                       ? theme.colorScheme.surface
                       : theme.colorScheme.errorContainer.withValues(alpha: 0.2),
-                  child: SwitchListTile(
+                  child: SettingsSwitchListTile(
                     secondary: Icon(
                       Icons.power_settings_new,
                       color: isCashActive ? Colors.green : theme.colorScheme.error,
@@ -99,6 +106,10 @@ class _CashRegisterSettingsPageState extends State<CashRegisterSettingsPage> {
                           : 'Module désactivé : le suivi strict des entrées/sorties de fond de caisse est restreint',
                     ),
                     value: isCashActive,
+                    confirmationTitle: 'Activité Sessions de Caisse',
+                    confirmationMessage: isCashActive
+                        ? 'Désactiver le module Sessions de Caisse ? Les comptages d\'ouverture/fermeture ne seront plus requis.'
+                        : 'Activer le module Sessions de Caisse ?',
                     onChanged: widget.canWrite
                         ? (val) {
                             context.read<SettingsBloc>().add(
@@ -116,12 +127,25 @@ class _CashRegisterSettingsPageState extends State<CashRegisterSettingsPage> {
                 Card(
                   child: Column(
                     children: [
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Ouverture et clôture de caisse obligatoires'),
                         subtitle: const Text('Bloque les encaissements si aucune session n\'est ouverte'),
                         value: _requireOpeningSession,
+                        confirmationTitle: 'Sessions obligatoires',
+                        confirmationMessage: _requireOpeningSession
+                            ? 'Rendre l\'ouverture de session facultative pour les ventes ?'
+                            : 'Rendre l\'ouverture de session obligatoire avant toute vente ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _requireOpeningSession = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(requireOpeningSession: v),
+                                        successMessage: v
+                                            ? 'Ouverture de caisse obligatoire activée.'
+                                            : 'Ouverture de caisse rendue facultative.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                     ],
@@ -150,31 +174,74 @@ class _CashRegisterSettingsPageState extends State<CashRegisterSettingsPage> {
                           onChanged: widget.canWrite
                               ? (v) => setState(() => _allowedDiscrepancyFcfa = v.toInt())
                               : null,
+                          onChangeEnd: widget.canWrite
+                              ? (v) {
+                                  context.read<SettingsBloc>().add(
+                                        SettingsOptionUpdated(
+                                          input: UpdateShopSettingsInput(allowedDiscrepancyFcfa: v.toInt()),
+                                          successMessage: 'Écart de caisse toléré fixé à ${v.toInt()} FCFA.',
+                                        ),
+                                      );
+                                }
+                              : null,
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Text('En cas de dépassement de l\'écart :', style: theme.textTheme.bodyMedium),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Demander un motif détaillé au caissier'),
                           value: 'reason',
                           groupValue: _discrepancyAction,
+                          confirmationTitle: 'Action écart de caisse',
+                          confirmationMessage: 'Appliquer l\'action "Demander un motif détaillé au caissier" ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _discrepancyAction = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(discrepancyAction: v),
+                                            successMessage: 'Action écart : Justification détaillée requise.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Demander la validation immédiate du patron/gérant'),
                           value: 'admin_approval',
                           groupValue: _discrepancyAction,
+                          confirmationTitle: 'Action écart de caisse',
+                          confirmationMessage: 'Exiger la validation immédiate du patron ou gérant en cas d\'écart ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _discrepancyAction = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(discrepancyAction: v),
+                                            successMessage: 'Action écart : Validation patron/gérant requise.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Bloquer la clôture tant que l\'erreur persiste'),
                           value: 'block_closing',
                           groupValue: _discrepancyAction,
+                          confirmationTitle: 'Action écart de caisse',
+                          confirmationMessage: 'Bloquer strictement la clôture de caisse en cas de dépassement d\'écart ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _discrepancyAction = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(discrepancyAction: v),
+                                            successMessage: 'Action écart : Clôture bloquée en cas d\'erreur.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
                       ],

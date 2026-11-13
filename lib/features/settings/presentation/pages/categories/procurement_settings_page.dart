@@ -5,6 +5,8 @@ import '../../../../../app/theme/app_tokens.dart';
 import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../../domain/entities/settings_entities.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class ProcurementSettingsPage extends StatefulWidget {
   const ProcurementSettingsPage({
@@ -37,6 +39,11 @@ class _ProcurementSettingsPageState extends State<ProcurementSettingsPage> {
         builder: (context, state) {
           final config = state.configuration;
           final isProcurementActive = config?.commerce.isModuleActive('PROCUREMENT') ?? true;
+          if (config != null) {
+            _requireReceptionValidation = config.commerce.requireReceptionValidation;
+            _updateWeightedAverageCost = config.commerce.updateWeightedAverageCost;
+            _createSupplierDebtAutomatically = config.commerce.createSupplierDebtAutomatically;
+          }
 
           return AppPageContainer(
             child: SingleChildScrollView(
@@ -84,7 +91,7 @@ class _ProcurementSettingsPageState extends State<ProcurementSettingsPage> {
                   color: isProcurementActive
                       ? theme.colorScheme.surface
                       : theme.colorScheme.errorContainer.withValues(alpha: 0.2),
-                  child: SwitchListTile(
+                  child: SettingsSwitchListTile(
                     secondary: Icon(
                       Icons.power_settings_new,
                       color: isProcurementActive ? Colors.green : theme.colorScheme.error,
@@ -99,6 +106,10 @@ class _ProcurementSettingsPageState extends State<ProcurementSettingsPage> {
                           : 'Module désactivé : les achats et commandes fournisseurs sont temporairement masqués',
                     ),
                     value: isProcurementActive,
+                    confirmationTitle: 'Activité Achats & Approvisionnements',
+                    confirmationMessage: isProcurementActive
+                        ? 'Désactiver le module Achats & Approvisionnements ? Les réceptions et factures fournisseurs seront masquées.'
+                        : 'Activer le module Achats & Approvisionnements ?',
                     onChanged: widget.canWrite
                         ? (val) {
                             context.read<SettingsBloc>().add(
@@ -116,30 +127,69 @@ class _ProcurementSettingsPageState extends State<ProcurementSettingsPage> {
                 Card(
                   child: Column(
                     children: [
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Validation obligatoire des réceptions'),
                         subtitle: const Text('Exige une vérification physique avant de faire entrer le stock'),
                         value: _requireReceptionValidation,
+                        confirmationTitle: 'Validation des réceptions',
+                        confirmationMessage: _requireReceptionValidation
+                            ? 'Désactiver la validation obligatoire des réceptions ?'
+                            : 'Exiger la vérification physique avant toute entrée de stock ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _requireReceptionValidation = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(requireReceptionValidation: v),
+                                        successMessage: v
+                                            ? 'Validation obligatoire des réceptions activée.'
+                                            : 'Validation des réceptions rendue facultative.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                       const Divider(height: 1),
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Mettre à jour le coût unitaire moyen (PUMP)'),
                         subtitle: const Text('Recalcule automatiquement la valeur du stock à chaque réception'),
                         value: _updateWeightedAverageCost,
+                        confirmationTitle: 'Calcul du PUMP',
+                        confirmationMessage: _updateWeightedAverageCost
+                            ? 'Désactiver le recalcul automatique du prix unitaire moyen pondéré (PUMP) ?'
+                            : 'Recalculer automatiquement le coût moyen pondéré du stock à chaque réception ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _updateWeightedAverageCost = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(updateWeightedAverageCost: v),
+                                        successMessage: v
+                                            ? 'Recalcul automatique du PUMP activé.'
+                                            : 'Recalcul automatique du PUMP désactivé.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                       const Divider(height: 1),
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Créer automatiquement une dette fournisseur'),
                         subtitle: const Text('Génère un reste à payer si la facture n\'est pas réglée au comptant'),
                         value: _createSupplierDebtAutomatically,
+                        confirmationTitle: 'Dettes fournisseurs',
+                        confirmationMessage: _createSupplierDebtAutomatically
+                            ? 'Désactiver la génération automatique des dettes fournisseurs ?'
+                            : 'Générer automatiquement une créance fournisseur en cas de reste à payer ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _createSupplierDebtAutomatically = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(createSupplierDebtAutomatically: v),
+                                        successMessage: v
+                                            ? 'Dettes fournisseurs automatiques activées.'
+                                            : 'Dettes fournisseurs automatiques désactivées.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                     ],

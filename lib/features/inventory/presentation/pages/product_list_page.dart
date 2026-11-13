@@ -528,16 +528,16 @@ class _ProductListView extends StatelessWidget {
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               onPressed: () {
-                final deficit =
-                    (product.alertThreshold - product.quantityInStock)
-                        .clamp(1, product.alertThreshold);
+                final threshold = product.alertThreshold > 0 ? product.alertThreshold : 5;
+                final needed = (threshold - product.quantityInStock);
+                final suggested = needed > 0 ? needed : threshold;
                 openPoFormPage(
                   context,
                   session,
                   prefill: PoFormPrefill(
                     productId: product.id,
                     productName: product.name,
-                    suggestedQuantity: product.alertThreshold + deficit,
+                    suggestedQuantity: suggested,
                     unitCost: product.priceBuy,
                   ),
                 );

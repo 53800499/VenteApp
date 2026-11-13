@@ -3,11 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/auth_entities.dart';
+import '../../../../app/di/injection_container.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/auth/cloud_session_controller.dart';
+import '../../../../core/auth/cloud_session_repair_service.dart';
 import '../../../../core/responsive/breakpoints.dart';
 import '../../../../core/responsive/responsive_builder.dart';
+import '../../../../core/sync/sync_service.dart';
 import '../../../../shared/components/ui_primitives.dart';
 import '../../../../features/onboarding/presentation/pages/splash_page.dart';
 import '../bloc/auth_bloc.dart';
@@ -169,65 +173,93 @@ class _LockScreenPageState extends State<LockScreenPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthLocked && state.errorMessage != null) {
-          setState(() => _pin = '');
-        }
-        if (state is AuthAuthenticated && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop(true);
-        }
-      },
-      builder: (context, state) {
-        if (state is! AuthLocked) {
-          return const SplashPage();
-        }
+    final repair = sl.isRegistered<CloudSessionRepairService>()
+        ? sl<CloudSessionRepairService>()
+        : null;
+    final cloudSession = sl.isRegistered<CloudSessionController>()
+        ? sl<CloudSessionController>()
+        : null;
+    final syncService = sl.isRegistered<SyncService>()
+        ? sl<SyncService>()
+        : null;
 
-        final lockScreen = state.lockScreen;
-        _syncSelectedUser(lockScreen);
-        final selectedUser = lockScreen.users
-            .where((user) => user.id == _selectedUserId)
-            .firstOrNull;
+    final listenables = <Listenable>[
+      if (repair != null) repair.awaitingPinUnlockNotifier,
+      if (cloudSession != null) cloudSession.notifier,
+    ];
 
-        return Scaffold(
-          body: GradientBackground(
-            child: SafeArea(
-              child: Focus(
-                focusNode: _focusNode,
-                autofocus: true,
-                onKeyEvent: _handleKeyEvent,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isDesktop = Breakpoints.isDesktopWidth(
-                      constraints.maxWidth,
-                    );
+    return AnimatedBuilder(
+      animation: Listenable.merge(listenables),
+      builder: (context, _) {
+        final isCloudReconnectRequired = repair?.isCloudReconnectRequired(
+              syncBlockReason: syncService?.currentSnapshot.blockReason,
+              sessionLevel: cloudSession?.status.level,
+            ) ??
+            false;
 
-                    if (isDesktop) {
-                      return _buildDesktopLayout(
-                        context,
-                        state,
-                        lockScreen,
-                        selectedUser,
-                        constraints,
-                      );
-                    }
+        return BlocConsumer<AuthBloc, AuthState>(
+          listener: (context, state) {
+            if (state is AuthLocked && state.errorMessage != null) {
+              setState(() => _pin = '');
+            }
+            if (state is AuthAuthenticated && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop(true);
+            }
+          },
+          builder: (context, state) {
+            if (state is! AuthLocked) {
+              return const SplashPage();
+            }
 
-                    return ResponsivePage(
-                      maxWidth: Breakpoints.authMaxWidth,
-                      padding: EdgeInsets.zero,
-                      child: _buildMobileLayout(
-                        context,
-                        state,
-                        lockScreen,
-                        selectedUser,
-                        constraints,
-                      ),
-                    );
-                  },
+            final lockScreen = state.lockScreen;
+            _syncSelectedUser(lockScreen);
+            final selectedUser = lockScreen.users
+                .where((user) => user.id == _selectedUserId)
+                .firstOrNull;
+
+            return Scaffold(
+              body: GradientBackground(
+                child: SafeArea(
+                  child: Focus(
+                    focusNode: _focusNode,
+                    autofocus: true,
+                    onKeyEvent: _handleKeyEvent,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isDesktop = Breakpoints.isDesktopWidth(
+                          constraints.maxWidth,
+                        );
+
+                        if (isDesktop) {
+                          return _buildDesktopLayout(
+                            context,
+                            state,
+                            lockScreen,
+                            selectedUser,
+                            constraints,
+                            isCloudReconnectRequired,
+                          );
+                        }
+
+                        return ResponsivePage(
+                          maxWidth: Breakpoints.authMaxWidth,
+                          padding: EdgeInsets.zero,
+                          child: _buildMobileLayout(
+                            context,
+                            state,
+                            lockScreen,
+                            selectedUser,
+                            constraints,
+                            isCloudReconnectRequired,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -239,6 +271,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     LockScreenData lockScreen,
     LockScreenUser? selectedUser,
     BoxConstraints constraints,
+    bool isCloudReconnectRequired,
   ) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -495,6 +528,41 @@ class _LockScreenPageState extends State<LockScreenPage> {
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
+                      if (isCloudReconnectRequired) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: Colors.amber.shade300),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.sync_problem_rounded,
+                                size: 16,
+                                color: Colors.amber.shade900,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Flexible(
+                                child: Text(
+                                  'Reconnexion cloud requise : saisissez votre code PIN',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.amber.shade900,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       if (state.errorMessage != null) ...[
                         const SizedBox(height: AppSpacing.md),
                         ErrorBanner(message: state.errorMessage!),
@@ -534,7 +602,8 @@ class _LockScreenPageState extends State<LockScreenPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (selectedUser?.biometricEnabled == true) ...[
+                          if (selectedUser?.biometricEnabled == true &&
+                              !isCloudReconnectRequired) ...[
                             TextButton.icon(
                               onPressed: state.isSubmitting
                                   ? null
@@ -635,6 +704,7 @@ class _LockScreenPageState extends State<LockScreenPage> {
     LockScreenData lockScreen,
     LockScreenUser? selectedUser,
     BoxConstraints constraints,
+    bool isCloudReconnectRequired,
   ) {
     final compact = constraints.maxHeight < 720;
 
@@ -675,6 +745,42 @@ class _LockScreenPageState extends State<LockScreenPage> {
           if (selectedUser != null) ...[
             const SizedBox(height: AppSpacing.sm),
             _UserChip(name: selectedUser.name, role: selectedUser.role.label),
+          ],
+          if (isCloudReconnectRequired) ...[
+            SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.sync_problem_rounded,
+                    size: 16,
+                    color: Colors.amber.shade900,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      'Reconnexion cloud requise : saisissez votre code PIN',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.amber.shade900,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
           if (state.errorMessage != null) ...[
             SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
@@ -731,7 +837,8 @@ class _LockScreenPageState extends State<LockScreenPage> {
               padding: EdgeInsets.only(top: AppSpacing.sm),
               child: CircularProgressIndicator(),
             ),
-          if (selectedUser?.biometricEnabled == true) ...[
+          if (selectedUser?.biometricEnabled == true &&
+              !isCloudReconnectRequired) ...[
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: state.isSubmitting

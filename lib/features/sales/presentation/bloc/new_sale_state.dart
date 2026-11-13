@@ -45,6 +45,7 @@ class CartLine extends Equatable {
     required this.stockAvailable,
     this.isManualPrice = false,
     this.usedRememberedPrice = false,
+    this.deficitReason,
   });
 
   final int productId;
@@ -55,8 +56,12 @@ class CartLine extends Equatable {
   final int stockAvailable;
   final bool isManualPrice;
   final bool usedRememberedPrice;
+  final String? deficitReason;
 
   int get lineTotal => unitPrice * quantity;
+  int get deficitQuantity =>
+      quantity > stockAvailable ? (quantity - (stockAvailable > 0 ? stockAvailable : 0)) : 0;
+  bool get hasDeficit => deficitQuantity > 0;
 
   CartLine copyWith({
     int? quantity,
@@ -64,6 +69,7 @@ class CartLine extends Equatable {
     int? unitPrice,
     bool? isManualPrice,
     bool? usedRememberedPrice,
+    String? deficitReason,
   }) {
     return CartLine(
       productId: productId,
@@ -74,6 +80,7 @@ class CartLine extends Equatable {
       stockAvailable: stockAvailable,
       isManualPrice: isManualPrice ?? this.isManualPrice,
       usedRememberedPrice: usedRememberedPrice ?? this.usedRememberedPrice,
+      deficitReason: deficitReason ?? this.deficitReason,
     );
   }
 
@@ -87,6 +94,7 @@ class CartLine extends Equatable {
         stockAvailable,
         isManualPrice,
         usedRememberedPrice,
+        deficitReason,
       ];
 }
 
@@ -112,6 +120,10 @@ class NewSaleState extends Equatable {
     this.canOverridePrice = false,
     this.customerRememberedPrices = const {},
     this.cashSessionOpen = true,
+    this.negativeStockMode = 'warning',
+    this.allowCreditSales = true,
+    this.confirmBeforeValidation = true,
+    this.autoPrintReceipt = false,
   });
 
   final NewSaleStatus status;
@@ -132,6 +144,10 @@ class NewSaleState extends Equatable {
   final bool canOverridePrice;
   final Map<int, int> customerRememberedPrices;
   final bool cashSessionOpen;
+  final String negativeStockMode;
+  final bool allowCreditSales;
+  final bool confirmBeforeValidation;
+  final bool autoPrintReceipt;
 
   int get subtotal => cart.fold<int>(0, (sum, line) => sum + line.lineTotal);
 
@@ -173,6 +189,10 @@ class NewSaleState extends Equatable {
     Map<int, int>? customerRememberedPrices,
     bool clearRememberedPrices = false,
     bool? cashSessionOpen,
+    String? negativeStockMode,
+    bool? allowCreditSales,
+    bool? confirmBeforeValidation,
+    bool? autoPrintReceipt,
   }) {
     return NewSaleState(
       status: status ?? this.status,
@@ -196,6 +216,10 @@ class NewSaleState extends Equatable {
           ? const {}
           : (customerRememberedPrices ?? this.customerRememberedPrices),
       cashSessionOpen: cashSessionOpen ?? this.cashSessionOpen,
+      negativeStockMode: negativeStockMode ?? this.negativeStockMode,
+      allowCreditSales: allowCreditSales ?? this.allowCreditSales,
+      confirmBeforeValidation: confirmBeforeValidation ?? this.confirmBeforeValidation,
+      autoPrintReceipt: autoPrintReceipt ?? this.autoPrintReceipt,
     );
   }
 
@@ -219,5 +243,9 @@ class NewSaleState extends Equatable {
         canOverridePrice,
         customerRememberedPrices,
         cashSessionOpen,
+        negativeStockMode,
+        allowCreditSales,
+        confirmBeforeValidation,
+        autoPrintReceipt,
       ];
 }

@@ -121,9 +121,10 @@ class SaleValidationService {
   void assertStockAvailable(
     String productName,
     int available,
-    int requested,
-  ) {
-    if (requested > available) {
+    int requested, {
+    bool allowDeficit = false,
+  }) {
+    if (!allowDeficit && requested > available) {
       throw ValidationFailure(
         'Stock insuffisant pour « $productName » (disponible : $available).',
       );

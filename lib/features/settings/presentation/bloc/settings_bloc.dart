@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/errors/exception_mapper.dart';
 import '../../domain/entities/settings_entities.dart';
+export '../../domain/entities/settings_entities.dart';
 import '../../domain/usecases/settings_usecases.dart';
 
 part 'settings_event.dart';
@@ -31,6 +32,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     on<SettingsReceiptSaveRequested>(_onReceiptSave);
     on<SettingsBackupRecordRequested>(_onBackupRecord);
     on<SettingsSyncToggled>(_onSyncToggled);
+    on<SettingsOptionUpdated>(_onOptionUpdated);
     on<SettingsFeedbackDismissed>(_onFeedbackDismissed);
     on<SettingsSessionRefreshAcknowledged>(_onSessionRefreshAcknowledged);
   }
@@ -211,6 +213,17 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
         ),
       );
     }
+  }
+
+  Future<void> _onOptionUpdated(
+    SettingsOptionUpdated event,
+    Emitter<SettingsState> emit,
+  ) async {
+    await _save(
+      emit,
+      event.input,
+      successMessage: event.successMessage ?? 'Paramètre enregistré.',
+    );
   }
 
   Future<void> _save(

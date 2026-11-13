@@ -12,26 +12,37 @@ final class NewSaleLoadRequested extends NewSaleEvent {
 }
 
 final class NewSaleProductAdded extends NewSaleEvent {
-  const NewSaleProductAdded(this.product, {this.quantity = 1});
+  const NewSaleProductAdded(
+    this.product, {
+    this.quantity = 1,
+    this.allowDeficit = false,
+    this.deficitReason,
+  });
 
   final SaleProductOption product;
   final int quantity;
+  final bool allowDeficit;
+  final String? deficitReason;
 
   @override
-  List<Object?> get props => [product, quantity];
+  List<Object?> get props => [product, quantity, allowDeficit, deficitReason];
 }
 
 final class NewSaleLineQuantityChanged extends NewSaleEvent {
   const NewSaleLineQuantityChanged({
     required this.productId,
     required this.quantity,
+    this.allowDeficit = false,
+    this.deficitReason,
   });
 
   final int productId;
   final int quantity;
+  final bool allowDeficit;
+  final String? deficitReason;
 
   @override
-  List<Object?> get props => [productId, quantity];
+  List<Object?> get props => [productId, quantity, allowDeficit, deficitReason];
 }
 
 final class NewSaleLineRemoved extends NewSaleEvent {

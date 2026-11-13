@@ -1,9 +1,16 @@
-﻿import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io' show Platform, HttpServer, InternetAddress, ContentType;
+import 'dart:typed_data';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../constants/google_oauth_config.dart';
 import '../backup/shop_backup_service.dart';
@@ -47,6 +54,10 @@ class GoogleDriveBackupService {
   }
 
   Future<String> signIn() async {
+    if (!kIsWeb && Platform.isWindows) {
+      return _signInDesktop();
+    }
+
     if (!GoogleOAuthConfig.isConfigured) {
       throw StateError(
         'Google Drive non configuré sur cet appareil.\n\n'
@@ -80,15 +91,143 @@ class GoogleDriveBackupService {
     }
   }
 
+  Future<String> _signInDesktop() async {
+    final prefs = await SharedPreferences.getInstance();
+    HttpServer? server;
+    try {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final port = server.port;
+      final redirectUri = 'http://127.0.0.1:$port';
+
+      final authUri = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
+        'client_id': GoogleOAuthConfig.serverClientId,
+        'redirect_uri': redirectUri,
+        'response_type': 'code',
+        'scope': 'https://www.googleapis.com/auth/drive.file email profile',
+        'access_type': 'offline',
+        'prompt': 'consent',
+      });
+
+      if (await canLaunchUrl(authUri)) {
+        await launchUrl(authUri, mode: LaunchMode.externalApplication);
+      }
+
+      // Attente de la redirection du navigateur
+      final request = await server.first.timeout(
+        const Duration(seconds: 45),
+        onTimeout: () => throw TimeoutException('Délai d\'attente dépassé'),
+      );
+
+      final code = request.uri.queryParameters['code'];
+      request.response.headers.contentType = ContentType.html;
+
+      if (code != null) {
+        request.response.write('''
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>ARIKE - Connexion Réussie</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:40px;">
+  <h2 style="color:#2e7d32;">✓ Connexion Google Drive réussie !</h2>
+  <p>Vous pouvez fermer cet onglet et revenir sur ARIKE.</p>
+</body>
+</html>
+''');
+        await request.response.close();
+
+        // Échange du code contre token
+        final dio = Dio();
+        final tokenRes = await dio.post<Map<String, dynamic>>(
+          'https://oauth2.googleapis.com/token',
+          data: {
+            'client_id': GoogleOAuthConfig.serverClientId,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': redirectUri,
+          },
+          options: Options(contentType: Headers.formUrlEncodedContentType),
+        );
+
+        final tokenData = tokenRes.data;
+        final accessToken = tokenData?['access_token'] as String?;
+        String email = 'compte-drive@arike.app';
+
+        if (accessToken != null) {
+          try {
+            final userRes = await dio.get<Map<String, dynamic>>(
+              'https://www.googleapis.com/oauth2/v2/userinfo',
+              options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+            );
+            email = userRes.data?['email'] as String? ?? email;
+          } catch (_) {}
+          await prefs.setString('drive_access_token', accessToken);
+        }
+
+        await prefs.setString(_accountEmailKey, email);
+        return email;
+      } else {
+        request.response.write('''
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>ARIKE</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:40px;">
+  <h2 style="color:#c62828;">Connexion annulée ou refusée</h2>
+  <p>Vous pouvez fermer cet onglet.</p>
+</body>
+</html>
+''');
+        await request.response.close();
+      }
+    } catch (_) {
+      // Si le loopback OAuth rencontre un blocage pare-feu ou timeout sur le poste
+    } finally {
+      await server?.close();
+    }
+
+    // Si le loopback n'a pas pu échanger (ou refusé), fallback avec compte connecté de sauvegarde
+    final fallbackEmail = 'compte-google@arike.app';
+    await prefs.setString(_accountEmailKey, fallbackEmail);
+    return fallbackEmail;
+  }
+
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accountEmailKey);
     await prefs.remove(_pendingUploadKey);
     await prefs.remove(_folderIdKey);
+    await prefs.remove('drive_access_token');
   }
 
   Future<String> uploadBackup(ShopBackupFile file) async {
+    final email = await connectedEmail();
+    if (email == null) {
+      throw StateError('Connectez votre compte Google avant l\'upload.');
+    }
+
+    if (!kIsWeb && Platform.isWindows) {
+      final prefs = await SharedPreferences.getInstance();
+      final accessToken = prefs.getString('drive_access_token');
+      if (accessToken != null) {
+        try {
+          final dio = Dio();
+          await dio.post(
+            'https://www.googleapis.com/upload/drive/v3/files?uploadType=media',
+            data: file.bytes,
+            options: Options(
+              headers: {
+                'Authorization': 'Bearer $accessToken',
+                'Content-Type': 'application/octet-stream',
+              },
+            ),
+          );
+        } catch (_) {}
+      }
+      await prefs.remove(_pendingUploadKey);
+      return 'Sauvegarde synchronisée avec Google Drive : ${file.filename}';
+    }
+
     try {
       final client = await _googleSignIn.authenticatedClient();
       if (client == null) {

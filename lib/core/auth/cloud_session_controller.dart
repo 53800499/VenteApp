@@ -75,7 +75,9 @@ class CloudSessionController {
 
     try {
       if (await _credentials.hasValidRefreshToken()) {
-        await apiClient.refreshTokensIfNeeded();
+        await apiClient.refreshTokensIfNeeded(
+          threshold: const Duration(minutes: 3),
+        );
       } else {
         final refresh = await _credentials.getRefreshToken();
         if (refresh != null &&

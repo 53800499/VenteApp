@@ -40,15 +40,26 @@ class SaleLineDraft extends Equatable {
     required this.quantity,
     required this.unitPrice,
     this.lineDiscountAmount = 0,
+    this.allowDeficit = false,
+    this.deficitReason,
   });
 
   final int productId;
   final int quantity;
   final int unitPrice;
   final int lineDiscountAmount;
+  final bool allowDeficit;
+  final String? deficitReason;
 
   @override
-  List<Object?> get props => [productId, quantity, unitPrice, lineDiscountAmount];
+  List<Object?> get props => [
+        productId,
+        quantity,
+        unitPrice,
+        lineDiscountAmount,
+        allowDeficit,
+        deficitReason,
+      ];
 }
 
 class PaymentDraft extends Equatable {

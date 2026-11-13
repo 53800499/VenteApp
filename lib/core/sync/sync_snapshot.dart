@@ -18,6 +18,7 @@ enum SyncTrigger {
   manualRefresh,
   outboxEnqueued,
   periodicFallback,
+  periodicPolling,
 }
 
 /// État indicateur SFD §13.3 (V2/V3 uniquement si cloud activé).

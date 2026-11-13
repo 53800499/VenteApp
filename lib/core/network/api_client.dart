@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import '../constants/api_config.dart';
 import '../security/production_message_policy.dart';
 import '../storage/auth_credentials_storage.dart';
+import '../utils/time.dart';
 import '../../features/auth/data/models/auth_api_models.dart';
 import 'active_shop_context.dart';
 
@@ -214,6 +215,7 @@ class ApiClient {
     '/auth/setup/validate',
     '/auth/lock-screen',
     '/auth/whatsapp',
+    '/auth/refresh',
   ];
 
   bool _isPublicAuthRequest(RequestOptions options) {
@@ -259,11 +261,18 @@ class ApiClient {
     }
   }
 
-  /// Rafraîchit les jetons si l'accès est expiré mais le refresh encore valide.
-  Future<void> refreshTokensIfNeeded() async {
+  /// Rafraîchit les jetons si l'accès est expiré (ou expire sous [threshold]) mais le refresh encore valide.
+  Future<void> refreshTokensIfNeeded({Duration? threshold}) async {
     final credentials = _credentials;
     if (credentials == null) return;
-    if (await credentials.hasValidAccessToken()) return;
+    if (threshold != null) {
+      final expiresAt = await credentials.getAccessExpiresAt();
+      if (expiresAt != null && expiresAt > nowMs() + threshold.inMilliseconds) {
+        return;
+      }
+    } else {
+      if (await credentials.hasValidAccessToken()) return;
+    }
     if (!await credentials.hasValidRefreshToken()) {
       throw DioException(
         requestOptions: RequestOptions(path: '/auth/refresh'),

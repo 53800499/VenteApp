@@ -169,9 +169,13 @@ class MorePage extends StatelessWidget {
 
             return SizedBox(
               width: double.infinity,
-              child: ListView(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await subController.refreshFromRemote();
+                },
+                child: ListView(
                   padding: const EdgeInsets.all(AppSpacing.md),
-                    children: [
+                  children: [
                       IdentityContextCard(
                         session: activeSession,
                         onChangeIdentity: () => _confirmChangeIdentity(context),
@@ -192,7 +196,9 @@ class MorePage extends StatelessWidget {
                           : 'Offre active : ${subDetails.planName} (${subDetails.status}) · Expire le ${subDetails.expiresAt.day}/${subDetails.expiresAt.month}/${subDetails.expiresAt.year}',
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => const SubscriptionPage(),
+                          builder: (_) => SubscriptionPage(
+                            shopName: session.shop.name,
+                          ),
                         ),
                       ),
                     ),
@@ -527,7 +533,8 @@ class MorePage extends StatelessWidget {
                   ),
                 ],
               ),
-            );
+            ),
+          );
       },
     );
   },

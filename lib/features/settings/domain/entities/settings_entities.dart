@@ -34,6 +34,29 @@ class CommerceSettings {
   const CommerceSettings({
     this.pricingTiersEnabled = false,
     this.pricingGridMode = 'STANDARD', // 'STANDARD', 'RETAIL_WHOLESALE', 'MULTI_TIER'
+    this.negativeStockMode = 'warning', // 'forbidden', 'warning', 'allowed'
+    this.confirmBeforeValidation = true,
+    this.allowCreditSales = true,
+    this.autoPrintReceipt = false,
+    this.allowPriceModification = false,
+    this.maxCancelDelayHours = 24,
+    this.requireOpeningSession = true,
+    this.allowedDiscrepancyFcfa = 500,
+    this.discrepancyAction = 'reason', // 'reason', 'admin_approval', 'block_closing'
+    this.defaultCreditLimit = 100000,
+    this.blockOverlimitClients = true,
+    this.warnBeforeDueDate = true,
+    this.requireReasonForForgiveness = true,
+    this.requireReceptionValidation = true,
+    this.updateWeightedAverageCost = true,
+    this.createSupplierDebtAutomatically = true,
+    this.replacementPolicy = 'with_validation', // 'with_validation', 'automatic', 'disabled'
+    this.requirePreparationStep = true,
+    this.allowPartialDeliveries = true,
+    this.requireProofOfDelivery = false,
+    this.paperFormat = '58mm', // '58mm', '80mm', 'A4'
+    this.showQrCode = true,
+    this.showSellerName = true,
     this.enabledModules = const {
       'SALES': true,
       'INVENTORY': true,
@@ -47,6 +70,29 @@ class CommerceSettings {
 
   final bool pricingTiersEnabled;
   final String pricingGridMode;
+  final String negativeStockMode;
+  final bool confirmBeforeValidation;
+  final bool allowCreditSales;
+  final bool autoPrintReceipt;
+  final bool allowPriceModification;
+  final int maxCancelDelayHours;
+  final bool requireOpeningSession;
+  final int allowedDiscrepancyFcfa;
+  final String discrepancyAction;
+  final int defaultCreditLimit;
+  final bool blockOverlimitClients;
+  final bool warnBeforeDueDate;
+  final bool requireReasonForForgiveness;
+  final bool requireReceptionValidation;
+  final bool updateWeightedAverageCost;
+  final bool createSupplierDebtAutomatically;
+  final String replacementPolicy;
+  final bool requirePreparationStep;
+  final bool allowPartialDeliveries;
+  final bool requireProofOfDelivery;
+  final String paperFormat;
+  final bool showQrCode;
+  final bool showSellerName;
   final Map<String, bool> enabledModules;
 
   bool isModuleActive(String moduleKey) => enabledModules[moduleKey] ?? true;
@@ -123,6 +169,29 @@ class UpdateShopSettingsInput {
     this.pricingGridMode,
     this.toggledModuleKey,
     this.isModuleEnabled,
+    this.negativeStockMode,
+    this.confirmBeforeValidation,
+    this.allowCreditSales,
+    this.autoPrintReceipt,
+    this.allowPriceModification,
+    this.maxCancelDelayHours,
+    this.requireOpeningSession,
+    this.allowedDiscrepancyFcfa,
+    this.discrepancyAction,
+    this.defaultCreditLimit,
+    this.blockOverlimitClients,
+    this.warnBeforeDueDate,
+    this.requireReasonForForgiveness,
+    this.requireReceptionValidation,
+    this.updateWeightedAverageCost,
+    this.createSupplierDebtAutomatically,
+    this.replacementPolicy,
+    this.requirePreparationStep,
+    this.allowPartialDeliveries,
+    this.requireProofOfDelivery,
+    this.paperFormat,
+    this.showQrCode,
+    this.showSellerName,
   });
 
   final String? shopName;
@@ -136,6 +205,29 @@ class UpdateShopSettingsInput {
   final String? pricingGridMode;
   final String? toggledModuleKey;
   final bool? isModuleEnabled;
+  final String? negativeStockMode;
+  final bool? confirmBeforeValidation;
+  final bool? allowCreditSales;
+  final bool? autoPrintReceipt;
+  final bool? allowPriceModification;
+  final int? maxCancelDelayHours;
+  final bool? requireOpeningSession;
+  final int? allowedDiscrepancyFcfa;
+  final String? discrepancyAction;
+  final int? defaultCreditLimit;
+  final bool? blockOverlimitClients;
+  final bool? warnBeforeDueDate;
+  final bool? requireReasonForForgiveness;
+  final bool? requireReceptionValidation;
+  final bool? updateWeightedAverageCost;
+  final bool? createSupplierDebtAutomatically;
+  final String? replacementPolicy;
+  final bool? requirePreparationStep;
+  final bool? allowPartialDeliveries;
+  final bool? requireProofOfDelivery;
+  final String? paperFormat;
+  final bool? showQrCode;
+  final bool? showSellerName;
 
   bool get isEmpty =>
       shopName == null &&
@@ -148,7 +240,30 @@ class UpdateShopSettingsInput {
       pricingTiersEnabled == null &&
       pricingGridMode == null &&
       toggledModuleKey == null &&
-      isModuleEnabled == null;
+      isModuleEnabled == null &&
+      negativeStockMode == null &&
+      confirmBeforeValidation == null &&
+      allowCreditSales == null &&
+      autoPrintReceipt == null &&
+      allowPriceModification == null &&
+      maxCancelDelayHours == null &&
+      requireOpeningSession == null &&
+      allowedDiscrepancyFcfa == null &&
+      discrepancyAction == null &&
+      defaultCreditLimit == null &&
+      blockOverlimitClients == null &&
+      warnBeforeDueDate == null &&
+      requireReasonForForgiveness == null &&
+      requireReceptionValidation == null &&
+      updateWeightedAverageCost == null &&
+      createSupplierDebtAutomatically == null &&
+      replacementPolicy == null &&
+      requirePreparationStep == null &&
+      allowPartialDeliveries == null &&
+      requireProofOfDelivery == null &&
+      paperFormat == null &&
+      showQrCode == null &&
+      showSellerName == null;
 
   /// Champs synchronisés avec l'API cloud (hors préférences locales).
   bool get hasRemoteFields =>

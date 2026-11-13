@@ -5,6 +5,8 @@ import '../../../../../app/theme/app_tokens.dart';
 import '../../../../../shared/components/app_page_container.dart';
 import '../../../../auth/domain/entities/auth_entities.dart';
 import '../../bloc/settings_bloc.dart';
+import '../../../domain/entities/settings_entities.dart';
+import '../../widgets/settings_confirmation.dart';
 
 class OrdersDeliveriesSettingsPage extends StatefulWidget {
   const OrdersDeliveriesSettingsPage({
@@ -38,6 +40,12 @@ class _OrdersDeliveriesSettingsPageState extends State<OrdersDeliveriesSettingsP
         builder: (context, state) {
           final config = state.configuration;
           final isOrdersActive = config?.commerce.isModuleActive('ORDERS_DELIVERIES') ?? true;
+          if (config != null) {
+            _replacementPolicy = config.commerce.replacementPolicy;
+            _requirePreparationStep = config.commerce.requirePreparationStep;
+            _allowPartialDeliveries = config.commerce.allowPartialDeliveries;
+            _requireProofOfDelivery = config.commerce.requireProofOfDelivery;
+          }
 
           return AppPageContainer(
             child: SingleChildScrollView(
@@ -86,7 +94,7 @@ class _OrdersDeliveriesSettingsPageState extends State<OrdersDeliveriesSettingsP
                   color: isOrdersActive
                       ? theme.colorScheme.surface
                       : theme.colorScheme.errorContainer.withValues(alpha: 0.2),
-                  child: SwitchListTile(
+                  child: SettingsSwitchListTile(
                     secondary: Icon(
                       Icons.power_settings_new,
                       color: isOrdersActive ? Colors.green : theme.colorScheme.error,
@@ -101,6 +109,10 @@ class _OrdersDeliveriesSettingsPageState extends State<OrdersDeliveriesSettingsP
                           : 'Module désactivé : la gestion des commandes différées et bons de livraison est masquée',
                     ),
                     value: isOrdersActive,
+                    confirmationTitle: 'Activité Commandes & Livraisons',
+                    confirmationMessage: isOrdersActive
+                        ? 'Désactiver le module Commandes & Livraisons ? Les prises de commande différées seront bloquées.'
+                        : 'Activer le module Commandes & Livraisons ?',
                     onChanged: widget.canWrite
                         ? (val) {
                             context.read<SettingsBloc>().add(
@@ -128,28 +140,61 @@ class _OrdersDeliveriesSettingsPageState extends State<OrdersDeliveriesSettingsP
                           style: theme.textTheme.bodySmall,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Autorisé avec validation client / gérant'),
                           value: 'with_validation',
                           groupValue: _replacementPolicy,
+                          confirmationTitle: 'Politique de remplacement',
+                          confirmationMessage: 'Exiger la validation du client ou gérant avant tout remplacement d\'article ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _replacementPolicy = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(replacementPolicy: v),
+                                            successMessage: 'Remplacement d\'article : Validation requise.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Autorisé automatiquement (Équivalent direct)'),
                           value: 'automatic',
                           groupValue: _replacementPolicy,
+                          confirmationTitle: 'Politique de remplacement',
+                          confirmationMessage: 'Autoriser automatiquement le remplacement par un produit équivalent direct ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _replacementPolicy = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(replacementPolicy: v),
+                                            successMessage: 'Remplacement d\'article : Automatique par équivalent.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
-                        RadioListTile<String>(
+                        SettingsRadioListTile<String>(
                           title: const Text('Désactivé'),
                           value: 'disabled',
                           groupValue: _replacementPolicy,
+                          confirmationTitle: 'Politique de remplacement',
+                          confirmationMessage: 'Désactiver tout remplacement d\'article dans les commandes ?',
                           onChanged: widget.canWrite
-                              ? (v) => setState(() => _replacementPolicy = v!)
+                              ? (v) {
+                                  if (v != null) {
+                                    context.read<SettingsBloc>().add(
+                                          SettingsOptionUpdated(
+                                            input: UpdateShopSettingsInput(replacementPolicy: v),
+                                            successMessage: 'Remplacement d\'article : Désactivé.',
+                                          ),
+                                        );
+                                  }
+                                }
                               : null,
                         ),
                       ],
@@ -161,30 +206,69 @@ class _OrdersDeliveriesSettingsPageState extends State<OrdersDeliveriesSettingsP
                 Card(
                   child: Column(
                     children: [
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Étape « Préparation » obligatoire'),
                         subtitle: const Text('Sépare la validation de la livraison effective'),
                         value: _requirePreparationStep,
+                        confirmationTitle: 'Étape préparation',
+                        confirmationMessage: _requirePreparationStep
+                            ? 'Rendre l\'étape de préparation facultative ?'
+                            : 'Exiger l\'étape de préparation avant validation de la livraison ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _requirePreparationStep = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(requirePreparationStep: v),
+                                        successMessage: v
+                                            ? 'Étape de préparation obligatoire activée.'
+                                            : 'Étape de préparation rendue facultative.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                       const Divider(height: 1),
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Autoriser les livraisons partielles'),
                         subtitle: const Text('Génère un reliquat pour les produits manquants'),
                         value: _allowPartialDeliveries,
+                        confirmationTitle: 'Livraisons partielles',
+                        confirmationMessage: _allowPartialDeliveries
+                            ? 'Interdire les livraisons partielles (livraison intégrale requise) ?'
+                            : 'Autoriser la livraison partielle avec reliquat pour les articles manquants ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _allowPartialDeliveries = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(allowPartialDeliveries: v),
+                                        successMessage: v
+                                            ? 'Livraisons partielles autorisées.'
+                                            : 'Livraisons intégrales obligatoires.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                       const Divider(height: 1),
-                      SwitchListTile(
+                      SettingsSwitchListTile(
                         title: const Text('Exiger une preuve de livraison (Photo / Signature)'),
                         subtitle: const Text('Demande une confirmation à la réception'),
                         value: _requireProofOfDelivery,
+                        confirmationTitle: 'Preuve de livraison',
+                        confirmationMessage: _requireProofOfDelivery
+                            ? 'Rendre la preuve de livraison facultative ?'
+                            : 'Exiger une signature ou photo pour clore la livraison ?',
                         onChanged: widget.canWrite
-                            ? (v) => setState(() => _requireProofOfDelivery = v)
+                            ? (v) {
+                                context.read<SettingsBloc>().add(
+                                      SettingsOptionUpdated(
+                                        input: UpdateShopSettingsInput(requireProofOfDelivery: v),
+                                        successMessage: v
+                                            ? 'Preuve de livraison obligatoire activée.'
+                                            : 'Preuve de livraison rendue facultative.',
+                                      ),
+                                    );
+                              }
                             : null,
                       ),
                     ],

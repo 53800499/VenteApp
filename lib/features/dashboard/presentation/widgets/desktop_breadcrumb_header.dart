@@ -38,8 +38,11 @@ class DesktopBreadcrumbHeader extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      height: 58,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(

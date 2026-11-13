@@ -256,6 +256,7 @@ class _AppDesktopDataTableState extends State<AppDesktopDataTable> {
                                           final isHovered = _hoveredIndex == index;
 
                                           return MouseRegion(
+                                            key: ValueKey('table_row_${startIndex + index}'),
                                             cursor: row.onTap != null
                                                 ? SystemMouseCursors.click
                                                 : SystemMouseCursors.basic,
