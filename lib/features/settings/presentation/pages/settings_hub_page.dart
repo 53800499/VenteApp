@@ -23,6 +23,7 @@ import 'categories/security_device_settings_page.dart';
 import 'categories/subscription_plan_settings_page.dart';
 import 'categories/sync_backup_settings_page.dart';
 import 'categories/team_access_settings_page.dart';
+import 'categories/software_updates_page.dart';
 
 class SettingsHubPage extends StatefulWidget {
   const SettingsHubPage({
@@ -298,7 +299,7 @@ class _SettingsHubPageState extends State<SettingsHubPage> {
                     title: 'Mises à jour du logiciel',
                     subtitle: 'Version ${AppUpdateService.currentVersion} · Vérifier les mises à jour',
                     tags: ['mise à jour', 'version', 'update', 'apk', 'installer', 'téléchargement', 'logiciel'],
-                    onTap: () => _checkForUpdate(context),
+                    onTap: () => _openPage(const SoftwareUpdatesPage()),
                   ),
 
                   const SizedBox(height: AppSpacing.md),

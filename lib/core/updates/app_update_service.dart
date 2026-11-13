@@ -13,9 +13,9 @@ class AppUpdateService {
 
   final ApiClient _apiClient;
 
-  // Version locale de l'application (correspondant à pubspec.yaml 1.0.0+1)
-  static const currentVersion = '1.0.0';
-  static const currentBuild = 1;
+  // Version locale de l'application (correspondant à pubspec.yaml 1.0.1+2)
+  static const currentVersion = '1.0.1';
+  static const currentBuild = 2;
 
   String get currentPlatform {
     if (kIsWeb) return 'WEB';

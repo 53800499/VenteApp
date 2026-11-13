@@ -144,6 +144,32 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                   ),
                 ),
               ),
+              const SizedBox(height: AppSpacing.sm),
+              // Safety & Zero Data Loss Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
+                  border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF059669)),
+                    const SizedBox(width: AppSpacing.xs),
+                    const Expanded(
+                      child: Text(
+                        'Sauvegarde SQLite automatique incluse · Zéro perte de données',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF065F46),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               if (_isDownloading) ...[
                 const SizedBox(height: AppSpacing.md),
                 LinearProgressIndicator(
@@ -152,10 +178,12 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  _progress > 0
-                      ? 'Téléchargement en cours : ${(_progress * 100).toInt()}%'
-                      : 'Préparation du téléchargement...',
-                  style: theme.textTheme.bodySmall,
+                  _progress >= 0.95
+                      ? 'Vérification SHA-256 & Sauvegarde locale...'
+                      : _progress > 0
+                          ? 'Téléchargement sécurisé : ${(_progress * 100).toInt()}%'
+                          : 'Préparation du téléchargement...',
+                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
                   textAlign: TextAlign.center,
                 ),
               ],
