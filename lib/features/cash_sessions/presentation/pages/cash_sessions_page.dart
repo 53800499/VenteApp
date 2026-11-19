@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../app/di/injection_container.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_tokens.dart';
+import '../../../../core/errors/exception_mapper.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../shared/components/app_header_actions.dart';
@@ -65,10 +66,12 @@ class _CashSessionsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<CashSessionsBloc>();
+    final isOwner = bloc.session.user.role == UserRole.owner;
     final perms = bloc.session.user.permissions;
-    final canOpen = PermissionGuard.can(perms, Permission.cashSessionsOpen);
-    final canClose = PermissionGuard.can(perms, Permission.cashSessionsClose);
-    final canAdjust = PermissionGuard.can(perms, Permission.cashSessionsAdjust);
+    final canOpen = isOwner || PermissionGuard.can(perms, Permission.cashSessionsOpen);
+    final canClose = isOwner || PermissionGuard.can(perms, Permission.cashSessionsClose);
+    final canAdjust = isOwner || PermissionGuard.can(perms, Permission.cashSessionsAdjust);
+    final canApprove = isOwner || PermissionGuard.can(perms, Permission.cashSessionsApprove);
 
     return Scaffold(
       appBar: AppBar(
@@ -87,12 +90,36 @@ class _CashSessionsView extends StatelessWidget {
       ),
       body: BlocConsumer<CashSessionsBloc, CashSessionsState>(
         listenWhen: (p, c) =>
-            c.errorMessage != null && p.errorMessage != c.errorMessage,
+            (c.errorMessage != null && p.errorMessage != c.errorMessage) ||
+            (c.successMessage != null && p.successMessage != c.successMessage),
         listener: (context, state) {
-          final msg = state.errorMessage;
-          if (msg != null) {
+          if (state.errorMessage != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(msg)),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.errorMessage!)),
+                  ],
+                ),
+                backgroundColor: Colors.red.shade700,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          } else if (state.successMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.successMessage!)),
+                  ],
+                ),
+                backgroundColor: Colors.green.shade700,
+                behavior: SnackBarBehavior.floating,
+              ),
             );
           }
         },
@@ -102,6 +129,12 @@ class _CashSessionsView extends StatelessWidget {
               state.history.isEmpty) {
             return const SaleListSkeleton();
           }
+
+          final pendingSession = state.history.isNotEmpty &&
+                  (state.history.first.status == CashSessionStatus.submitted ||
+                      state.history.first.status == CashSessionStatus.reviewRequired)
+              ? state.history.first
+              : null;
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -128,6 +161,16 @@ class _CashSessionsView extends StatelessWidget {
                             padding: EdgeInsets.only(bottom: AppSpacing.sm),
                             child: LinearProgressIndicator(minHeight: 2),
                           ),
+
+                        // Bannière alerte session en attente d'approbation
+                        if (pendingSession != null && state.openSession == null) ...[
+                          _PendingApprovalCard(
+                            row: pendingSession,
+                            session: bloc.session,
+                            canApprove: canApprove,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                        ],
 
                         // Bannière KPI sur grand écran (Windows Desktop)
                         if (isDesktop && state.openSession != null) ...[
@@ -161,6 +204,7 @@ class _CashSessionsView extends StatelessWidget {
                                     : _OpenSessionCard(
                                         canOpen: canOpen,
                                         isDesktop: true,
+                                        isSubmitting: state.isSubmitting,
                                       ),
                               ),
                               const SizedBox(width: AppSpacing.lg),
@@ -177,7 +221,11 @@ class _CashSessionsView extends StatelessWidget {
                         else ...[
                           // Vue compacte (Mobile / tablette portrait)
                           if (state.openSession == null) ...[
-                            _OpenSessionCard(canOpen: canOpen, isDesktop: false),
+                            _OpenSessionCard(
+                              canOpen: canOpen,
+                              isDesktop: false,
+                              isSubmitting: state.isSubmitting,
+                            ),
                             const SizedBox(height: AppSpacing.lg),
                           ] else ...[
                             _ActiveSessionCard(
@@ -392,18 +440,23 @@ class _DesktopKpiCard extends StatelessWidget {
 
 /// Formulaire d'ouverture avec raccourcis de montants sur Windows
 class _OpenSessionCard extends StatefulWidget {
-  const _OpenSessionCard({required this.canOpen, required this.isDesktop});
+  const _OpenSessionCard({
+    required this.canOpen,
+    required this.isDesktop,
+    required this.isSubmitting,
+  });
 
   final bool canOpen;
   final bool isDesktop;
+  final bool isSubmitting;
 
   @override
   State<_OpenSessionCard> createState() => _OpenSessionCardState();
 }
 
 class _OpenSessionCardState extends State<_OpenSessionCard> {
-  final _cashCtrl = TextEditingController();
-  final _momoCtrl = TextEditingController();
+  final _cashCtrl = TextEditingController(text: '0');
+  final _momoCtrl = TextEditingController(text: '0');
 
   static const _presets = [0, 20000, 50000, 100000];
 
@@ -415,6 +468,7 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
   }
 
   void _submit() {
+    if (widget.isSubmitting) return;
     final cash = int.tryParse(_cashCtrl.text.trim()) ?? 0;
     final momo = int.tryParse(_momoCtrl.text.trim()) ?? 0;
     context.read<CashSessionsBloc>().add(
@@ -426,6 +480,8 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
 
   @override
   Widget build(BuildContext context) {
+    final currentCash = int.tryParse(_cashCtrl.text.trim()) ?? 0;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
@@ -469,10 +525,12 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
             Wrap(
               spacing: AppSpacing.sm,
               children: _presets.map((val) {
-                return ActionChip(
+                final isSelected = currentCash == val;
+                return ChoiceChip(
                   label: Text(val == 0 ? '0 F' : formatFcfa(val)),
-                  onPressed: widget.canOpen
-                      ? () => setState(() => _cashCtrl.text = '$val')
+                  selected: isSelected,
+                  onSelected: widget.canOpen && !widget.isSubmitting
+                      ? (_) => setState(() => _cashCtrl.text = '$val')
                       : null,
                 );
               }).toList(),
@@ -486,7 +544,7 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
                   Expanded(
                     child: TextField(
                       controller: _cashCtrl,
-                      enabled: widget.canOpen,
+                      enabled: widget.canOpen && !widget.isSubmitting,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
@@ -494,13 +552,14 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
                         prefixIcon: Icon(Icons.payments_outlined),
                         border: OutlineInputBorder(),
                       ),
+                      onChanged: (_) => setState(() {}),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: TextField(
                       controller: _momoCtrl,
-                      enabled: widget.canOpen,
+                      enabled: widget.canOpen && !widget.isSubmitting,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
@@ -515,7 +574,7 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
             else ...[
               TextField(
                 controller: _cashCtrl,
-                enabled: widget.canOpen,
+                enabled: widget.canOpen && !widget.isSubmitting,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
@@ -523,11 +582,12 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
                   prefixIcon: Icon(Icons.payments_outlined),
                   border: OutlineInputBorder(),
                 ),
+                onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: _momoCtrl,
-                enabled: widget.canOpen,
+                enabled: widget.canOpen && !widget.isSubmitting,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: const InputDecoration(
@@ -539,12 +599,137 @@ class _OpenSessionCardState extends State<_OpenSessionCard> {
             ],
             const SizedBox(height: AppSpacing.lg),
             FilledButton.icon(
-              onPressed: widget.canOpen ? _submit : null,
-              icon: const Icon(Icons.lock_open_outlined),
-              label: const Text('Ouvrir la session de caisse'),
+              onPressed: (widget.canOpen && !widget.isSubmitting) ? _submit : null,
+              icon: widget.isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.lock_open_outlined),
+              label: Text(
+                widget.isSubmitting
+                    ? 'Ouverture en cours...'
+                    : 'Ouvrir la session de caisse',
+              ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Carte d'alerte pour une clôture de session en attente d'approbation par le patron
+class _PendingApprovalCard extends StatelessWidget {
+  const _PendingApprovalCard({
+    required this.row,
+    required this.session,
+    required this.canApprove,
+  });
+
+  final CashSessionListRow row;
+  final AuthSession session;
+  final bool canApprove;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDiff = row.differenceCash != 0 || row.differenceMomo != 0;
+    final totalDiff = row.differenceCash + row.differenceMomo;
+
+    return Card(
+      color: Colors.amber.shade50,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.amber.shade400, width: 1.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.amber.shade200,
+                  child: const Icon(Icons.pending_actions, color: Colors.brown),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Clôture de caisse en attente d\'approbation',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown,
+                        ),
+                      ),
+                      Text(
+                        'Soumise par ${row.openedByName} · ${row.saleCount} vente(s) conclue(s)',
+                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+                Chip(
+                  label: Text(
+                    hasDiff
+                        ? 'Écart : ${totalDiff > 0 ? '+' : ''}${formatFcfa(totalDiff)}'
+                        : 'Équilibré (0 F)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: hasDiff ? Colors.deepOrange.shade900 : Colors.green.shade900,
+                    ),
+                  ),
+                  backgroundColor: hasDiff ? Colors.amber.shade100 : Colors.green.shade100,
+                ),
+              ],
+            ),
+            const Divider(height: AppSpacing.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CashSessionDetailPage(
+                        session: session,
+                        sessionId: row.id,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  label: const Text('Examiner en détail'),
+                ),
+                if (canApprove) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => CashSessionDetailPage(
+                          session: session,
+                          sessionId: row.id,
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Approuver la clôture'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.teal.shade700,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ],
         ),
@@ -735,7 +920,10 @@ class _ActiveSessionCard extends StatelessWidget {
                       ),
                       Text(
                         'Responsable : ${session.openedByName}',
-                        style: const TextStyle(fontSize: 13, color: Colors.black54),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -763,7 +951,10 @@ class _ActiveSessionCard extends StatelessWidget {
               ...movements.take(4).map(
                     (m) => Card(
                       margin: const EdgeInsets.only(bottom: 4),
-                      color: Colors.grey.shade50,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.4),
                       elevation: 0,
                       child: ListTile(
                         dense: true,
@@ -786,7 +977,12 @@ class _ActiveSessionCard extends StatelessWidget {
                           '${m.movementType.label} · ${m.registerType.label}',
                           style: const TextStyle(fontWeight: FontWeight.w500),
                         ),
-                        subtitle: Text(m.note ?? 'Aucune note'),
+                        subtitle: Text(
+                          m.note ?? 'Aucune note',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                         trailing: Text(
                           formatFcfa(m.amount),
                           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -796,7 +992,16 @@ class _ActiveSessionCard extends StatelessWidget {
                   ),
             ],
 
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
+
+            // Bouton d'accès aux articles vendus durant cette session
+            OutlinedButton.icon(
+              onPressed: () => _showSoldProductsSheet(context),
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: const Text('Articles vendus dans cette caisse'),
+            ),
+
+            const SizedBox(height: AppSpacing.sm),
 
             // Barre d'actions Desktop / Mobile
             if (canAdjust) ...[
@@ -835,8 +1040,21 @@ class _ActiveSessionCard extends StatelessWidget {
                   onPressed: isSubmitting
                       ? null
                       : () => _showCloseDialog(context),
-                  icon: const Icon(Icons.lock_outline),
-                  label: const Text('Clôturer la caisse & Rapprocher'),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.lock_outline),
+                  label: Text(
+                    isSubmitting
+                        ? 'Traitement en cours...'
+                        : 'Clôturer la caisse & Rapprocher',
+                  ),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                     backgroundColor: AppColors.seed,
@@ -912,6 +1130,9 @@ class _ActiveSessionCard extends StatelessWidget {
     var register = CashRegisterType.cash;
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
+    String? localError;
+
+    final presets = const [5000, 10000, 20000, 50000, 100000];
 
     final ok = await showDialog<bool>(
       context: context,
@@ -961,15 +1182,35 @@ class _ActiveSessionCard extends StatelessWidget {
                     onChanged: (v) => setLocal(() => register = v ?? register),
                   ),
                   const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: presets.map((p) {
+                      return ActionChip(
+                        label: Text(formatFcfa(p)),
+                        onPressed: () {
+                          setLocal(() {
+                            amountCtrl.text = '$p';
+                            localError = null;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: amountCtrl,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Montant prélevé (FCFA) *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.payments_outlined),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.payments_outlined),
+                      errorText: localError,
                     ),
+                    onChanged: (_) {
+                      if (localError != null) setLocal(() => localError = null);
+                    },
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextField(
@@ -992,7 +1233,10 @@ class _ActiveSessionCard extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 final amt = int.tryParse(amountCtrl.text.trim()) ?? 0;
-                if (amt <= 0) return;
+                if (amt <= 0) {
+                  setLocal(() => localError = 'Veuillez saisir un montant supérieur à 0');
+                  return;
+                }
                 Navigator.pop(ctx, true);
               },
               child: const Text('Valider le prélèvement'),
@@ -1022,6 +1266,9 @@ class _ActiveSessionCard extends StatelessWidget {
     var register = CashRegisterType.cash;
     final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
+    String? localError;
+
+    final presets = const [1000, 2000, 5000, 10000, 20000, 50000];
 
     final ok = await showDialog<bool>(
       context: context,
@@ -1075,20 +1322,41 @@ class _ActiveSessionCard extends StatelessWidget {
                     onChanged: (v) => setLocal(() => register = v ?? register),
                   ),
                   const SizedBox(height: AppSpacing.sm),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: presets.map((p) {
+                      return ActionChip(
+                        label: Text(formatFcfa(p)),
+                        onPressed: () {
+                          setLocal(() {
+                            amountCtrl.text = '$p';
+                            localError = null;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: amountCtrl,
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Montant (FCFA) *',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      errorText: localError,
                     ),
+                    onChanged: (_) {
+                      if (localError != null) setLocal(() => localError = null);
+                    },
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   TextField(
                     controller: noteCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Note / motif (optionnel)',
+                      hintText: 'Ex: Facture livraison, dépannage...',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -1104,7 +1372,10 @@ class _ActiveSessionCard extends StatelessWidget {
             FilledButton(
               onPressed: () {
                 final amt = int.tryParse(amountCtrl.text.trim()) ?? 0;
-                if (amt <= 0) return;
+                if (amt <= 0) {
+                  setLocal(() => localError = 'Veuillez saisir un montant supérieur à 0');
+                  return;
+                }
                 Navigator.pop(ctx, true);
               },
               child: const Text('Enregistrer'),
@@ -1142,15 +1413,33 @@ class _ActiveSessionCard extends StatelessWidget {
     }
   }
 
+  void _showSoldProductsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _SoldProductsSheet(
+        authSession: authSession,
+        session: session,
+      ),
+    );
+  }
+
   Future<void> _showCloseDialog(BuildContext context) async {
-    final cashCtrl = TextEditingController();
-    final momoCtrl = TextEditingController();
+    final cashCtrl = TextEditingController(text: '$_expectedCash');
+    final momoCtrl = TextEditingController(text: '$_expectedMomo');
     final noteCtrl = TextEditingController();
     final justificationNoteCtrl = TextEditingController();
     var justificationCategory = 'unconfirmed_payment';
     var ownerPin = '';
     var validateWithPinOnSite = false;
     final isOwner = authSession.user.role == UserRole.owner;
+    final canApprove = isOwner ||
+        PermissionGuard.can(
+          authSession.user.permissions,
+          Permission.cashSessionsApprove,
+        );
+    String? localError;
 
     final categories = const [
       ('unconfirmed_payment', 'Paiement Mobile Money non confirmé'),
@@ -1167,6 +1456,8 @@ class _ActiveSessionCard extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) {
           final isWide = MediaQuery.sizeOf(ctx).width >= 680;
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          final colorScheme = Theme.of(ctx).colorScheme;
           final countedCash = int.tryParse(cashCtrl.text.trim()) ?? 0;
           final countedMomo = int.tryParse(momoCtrl.text.trim()) ?? 0;
           final hasEnteredCount =
@@ -1178,13 +1469,34 @@ class _ActiveSessionCard extends StatelessWidget {
           final hasDiscrepancy =
               hasEnteredCount && (diffCash != 0 || diffMomo != 0);
 
-          final canSubmit = hasEnteredCount &&
-              (!hasDiscrepancy ||
-                  justificationNoteCtrl.text.trim().isNotEmpty);
-
-          final canCloseDirect = canSubmit &&
-              (isOwner ||
-                  (validateWithPinOnSite && ownerPin.length >= 4));
+          void trySubmit(bool isSubmitOnly) {
+            if (!hasEnteredCount) {
+              setLocal(() => localError = 'Veuillez saisir les montants comptés.');
+              return;
+            }
+            if (hasDiscrepancy && justificationNoteCtrl.text.trim().isEmpty) {
+              setLocal(() => localError =
+                  'Un écart de ${totalDiff > 0 ? "+" : ""}${formatFcfa(totalDiff)} est détecté. Veuillez obligatoirement saisir une explication.');
+              return;
+            }
+            if (!isSubmitOnly && !isOwner && !canApprove && ownerPin.length < 4) {
+              setLocal(() => localError = 'Veuillez saisir les 4 chiffres du code PIN patron.');
+              return;
+            }
+            Navigator.pop(
+              ctx,
+              _CloseDialogResult(
+                isSubmitOnly: isSubmitOnly,
+                countedCash: countedCash,
+                countedMomo: countedMomo,
+                closingNote: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+                ownerPin: (isOwner || canApprove) ? null : (ownerPin.isEmpty ? null : ownerPin),
+                justificationCategory: hasDiscrepancy ? justificationCategory : null,
+                justificationNote:
+                    hasDiscrepancy ? justificationNoteCtrl.text.trim() : null,
+              ),
+            );
+          }
 
           // Colonne Saisie physique
           final inputForm = Column(
@@ -1193,17 +1505,42 @@ class _ActiveSessionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: isDark
+                      ? colorScheme.surfaceContainerHighest
+                      : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade200),
+                  border: Border.all(
+                    color: isDark
+                        ? colorScheme.outlineVariant
+                        : Colors.blue.shade200,
+                  ),
                 ),
-                child: const Text(
-                  'Comptage à l\'aveugle : saisissez vos montants réels en espèces et Mobile Money. '
-                  'Le système calculera automatiquement les écarts.',
-                  style: TextStyle(fontSize: 12, color: Colors.blueGrey),
+                child: Text(
+                  'Comptage & Rapprochement : vérifiez les soldes réels dans le tiroir espèces et sur vos comptes Mobile Money.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? colorScheme.onSurfaceVariant
+                        : Colors.blueGrey,
+                  ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: () {
+                  setLocal(() {
+                    cashCtrl.text = '$_expectedCash';
+                    momoCtrl.text = '$_expectedMomo';
+                    localError = null;
+                  });
+                },
+                icon: const Icon(Icons.auto_fix_high, size: 16),
+                label: const Text('Remplir avec les soldes théoriques attendus'),
+                style: OutlinedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
               TextField(
                 controller: cashCtrl,
                 keyboardType: TextInputType.number,
@@ -1214,7 +1551,7 @@ class _ActiveSessionCard extends StatelessWidget {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.payments_outlined),
                 ),
-                onChanged: (_) => setLocal(() {}),
+                onChanged: (_) => setLocal(() => localError = null),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
@@ -1227,7 +1564,7 @@ class _ActiveSessionCard extends StatelessWidget {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone_android_outlined),
                 ),
-                onChanged: (_) => setLocal(() {}),
+                onChanged: (_) => setLocal(() => localError = null),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextField(
@@ -1237,15 +1574,18 @@ class _ActiveSessionCard extends StatelessWidget {
                   border: OutlineInputBorder(),
                 ),
               ),
-              if (!isOwner) ...[
+              if (!isOwner && !canApprove) ...[
                 const SizedBox(height: AppSpacing.sm),
                 SwitchListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Validation sur place par le patron'),
-                  subtitle: const Text('Activer si le patron est au magasin'),
+                  subtitle: const Text('Activer si le patron est au magasin pour valider directement'),
                   value: validateWithPinOnSite,
-                  onChanged: (v) => setLocal(() => validateWithPinOnSite = v),
+                  onChanged: (v) => setLocal(() {
+                    validateWithPinOnSite = v;
+                    localError = null;
+                  }),
                 ),
                 if (validateWithPinOnSite) ...[
                   const SizedBox(height: AppSpacing.xs),
@@ -1260,14 +1600,17 @@ class _ActiveSessionCard extends StatelessWidget {
                     compact: true,
                     onDigit: (d) {
                       if (ownerPin.length >= 6) return;
-                      setLocal(() => ownerPin += d);
+                      setLocal(() {
+                        ownerPin += d;
+                        localError = null;
+                      });
                     },
                     onBackspace: () {
                       if (ownerPin.isEmpty) return;
-                      setLocal(
-                        () => ownerPin =
-                            ownerPin.substring(0, ownerPin.length - 1),
-                      );
+                      setLocal(() {
+                        ownerPin = ownerPin.substring(0, ownerPin.length - 1);
+                        localError = null;
+                      });
                     },
                   ),
                 ],
@@ -1284,13 +1627,21 @@ class _ActiveSessionCard extends StatelessWidget {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
                     color: hasDiscrepancy
-                        ? Colors.amber.shade50
-                        : Colors.green.shade50,
+                        ? (isDark
+                            ? Colors.amber.shade900.withValues(alpha: 0.25)
+                            : Colors.amber.shade50)
+                        : (isDark
+                            ? Colors.green.shade900.withValues(alpha: 0.25)
+                            : Colors.green.shade50),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: hasDiscrepancy
-                          ? Colors.amber.shade400
-                          : Colors.green.shade300,
+                          ? (isDark
+                              ? Colors.amber.shade700
+                              : Colors.amber.shade400)
+                          : (isDark
+                              ? Colors.green.shade700
+                              : Colors.green.shade300),
                     ),
                   ),
                   child: Column(
@@ -1302,8 +1653,12 @@ class _ActiveSessionCard extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                           color: hasDiscrepancy
-                              ? Colors.brown.shade800
-                              : Colors.green.shade900,
+                              ? (isDark
+                                  ? Colors.amber.shade200
+                                  : Colors.brown.shade800)
+                              : (isDark
+                                  ? Colors.green.shade200
+                                  : Colors.green.shade900),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -1347,28 +1702,45 @@ class _ActiveSessionCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
+                    color: isDark
+                        ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+                        : Colors.grey.shade50,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
+                    border: Border.all(color: colorScheme.outlineVariant),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
                       'Saisissez les montants comptés à gauche pour révéler le rapprochement.',
-                      style: TextStyle(color: Colors.black45, fontSize: 13),
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 13,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 ),
               if (hasDiscrepancy) ...[
                 const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Justification obligatoire de l\'écart',
-                  style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.bold,
-                      ),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.red.shade900.withValues(alpha: 0.25)
+                        : Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? Colors.red.shade700 : Colors.red.shade200,
+                    ),
+                  ),
+                  child: Text(
+                    '⚠️ Un écart de ${totalDiff > 0 ? "+" : ""}${formatFcfa(totalDiff)} nécessite obligatoirement une cause et une explication pour finaliser la clôture.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.red.shade200 : Colors.red.shade900,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.xs),
+                const SizedBox(height: AppSpacing.sm),
                 DropdownButtonFormField<String>(
                   initialValue: justificationCategory,
                   isExpanded: true,
@@ -1388,7 +1760,10 @@ class _ActiveSessionCard extends StatelessWidget {
                       )
                       .toList(),
                   onChanged: (v) => setLocal(
-                    () => justificationCategory = v ?? justificationCategory,
+                    () {
+                      justificationCategory = v ?? justificationCategory;
+                      localError = null;
+                    },
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -1401,7 +1776,40 @@ class _ActiveSessionCard extends StatelessWidget {
                         'Précisez d\'où provient cette différence (n° transaction, client, contexte)...',
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (_) => setLocal(() {}),
+                  onChanged: (_) => setLocal(() => localError = null),
+                ),
+              ],
+              if (localError != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.red.shade900.withValues(alpha: 0.35)
+                        : Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? Colors.red.shade700 : Colors.red.shade300,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          localError!,
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.red.shade100
+                                : Colors.red.shade900,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ],
@@ -1439,54 +1847,24 @@ class _ActiveSessionCard extends StatelessWidget {
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('Annuler'),
               ),
-              if (!isOwner && !validateWithPinOnSite)
+              if (!isOwner && !canApprove && !validateWithPinOnSite)
                 FilledButton.icon(
-                  onPressed: canSubmit
-                      ? () => Navigator.pop(
-                            ctx,
-                            _CloseDialogResult(
-                              isSubmitOnly: true,
-                              countedCash: countedCash,
-                              countedMomo: countedMomo,
-                              closingNote: noteCtrl.text.trim().isEmpty
-                                  ? null
-                                  : noteCtrl.text.trim(),
-                              justificationCategory: hasDiscrepancy
-                                  ? justificationCategory
-                                  : null,
-                              justificationNote: hasDiscrepancy
-                                  ? justificationNoteCtrl.text.trim()
-                                  : null,
-                            ),
-                          )
-                      : null,
+                  onPressed: () => trySubmit(true),
                   icon: const Icon(Icons.send_outlined),
                   label: const Text('Soumettre au patron'),
                 )
               else
                 FilledButton.icon(
-                  onPressed: canCloseDirect
-                      ? () => Navigator.pop(
-                            ctx,
-                            _CloseDialogResult(
-                              isSubmitOnly: false,
-                              countedCash: countedCash,
-                              countedMomo: countedMomo,
-                              closingNote: noteCtrl.text.trim().isEmpty
-                                  ? null
-                                  : noteCtrl.text.trim(),
-                              ownerPin: isOwner ? null : ownerPin,
-                              justificationCategory: hasDiscrepancy
-                                  ? justificationCategory
-                                  : null,
-                              justificationNote: hasDiscrepancy
-                                  ? justificationNoteCtrl.text.trim()
-                                  : null,
-                            ),
-                          )
-                      : null,
+                  onPressed: () => trySubmit(false),
                   icon: const Icon(Icons.lock_outline),
-                  label: const Text('Valider la clôture'),
+                  label: Text(
+                    (!isOwner && !canApprove && validateWithPinOnSite)
+                        ? 'Valider avec PIN patron'
+                        : 'Valider la clôture',
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.teal.shade700,
+                  ),
                 ),
             ],
           );
@@ -1805,6 +2183,183 @@ class _HistoryTile extends StatelessWidget {
             color: diffColor,
             fontWeight: FontWeight.bold,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SoldProductsSheet extends StatefulWidget {
+  const _SoldProductsSheet({
+    required this.authSession,
+    required this.session,
+  });
+
+  final AuthSession authSession;
+  final CashSession session;
+
+  @override
+  State<_SoldProductsSheet> createState() => _SoldProductsSheetState();
+}
+
+class _SoldProductsSheetState extends State<_SoldProductsSheet> {
+  List<CashSessionSoldProduct> _items = const [];
+  bool _loading = true;
+  String? _error;
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    ensureCashSessionDependencies();
+    try {
+      final items = await sl<GetCashSessionSoldProducts>()(
+        session: widget.authSession,
+        openedAt: widget.session.openedAt,
+        closedAt: widget.session.closedAt,
+      );
+      if (!mounted) return;
+      setState(() {
+        _items = items;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = friendlyErrorMessage(e);
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final query = _searchCtrl.text.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? _items
+        : _items.where((i) => i.productName.toLowerCase().contains(query)).toList();
+
+    final totalRevenue = _items.fold<int>(0, (sum, i) => sum + i.totalRevenue);
+    final totalUnits = _items.fold<double>(0, (sum, i) => sum + i.quantity);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (ctx, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined, color: AppColors.seed),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Articles vendus dans la caisse en cours',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                Chip(label: Text('${_items.length} réf.')),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Cumul : ${formatFcfa(totalRevenue)} · ${totalUnits % 1 == 0 ? totalUnits.toInt() : totalUnits} article(s)',
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              controller: _searchCtrl,
+              decoration: InputDecoration(
+                hintText: 'Filtrer un article...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () => setState(() => _searchCtrl.clear()),
+                      )
+                    : null,
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(child: Text(_error!))
+                      : filtered.isEmpty
+                          ? Center(
+                              child: Text(
+                                query.isNotEmpty
+                                    ? 'Aucun résultat pour "$query"'
+                                    : 'Aucune vente conclue pour le moment dans cette session.',
+                                style: TextStyle(color: colorScheme.onSurfaceVariant),
+                              ),
+                            )
+                          : ListView.separated(
+                              controller: scrollController,
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => const Divider(height: 1),
+                              itemBuilder: (ctx, index) {
+                                final p = filtered[index];
+                                return ListTile(
+                                  dense: true,
+                                  title: Text(
+                                    p.productName,
+                                    style: const TextStyle(fontWeight: FontWeight.w600),
+                                  ),
+                                  subtitle: Text(
+                                    '${p.quantity % 1 == 0 ? p.quantity.toInt() : p.quantity} vendus à ${formatFcfa(p.unitPrice)} (${p.saleCount} vente(s))',
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                  trailing: Text(
+                                    formatFcfa(p.totalRevenue),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+            ),
+          ],
         ),
       ),
     );

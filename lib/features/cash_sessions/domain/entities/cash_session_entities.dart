@@ -416,3 +416,31 @@ extension CashDiscrepancyCategoryX on String {
         _ => this,
       };
 }
+
+class CashSessionSoldProduct extends Equatable {
+  const CashSessionSoldProduct({
+    this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.totalRevenue,
+    required this.saleCount,
+  });
+
+  final int? productId;
+  final String productName;
+  final double quantity;
+  final int unitPrice;
+  final int totalRevenue;
+  final int saleCount;
+
+  @override
+  List<Object?> get props => [
+        productId,
+        productName,
+        quantity,
+        unitPrice,
+        totalRevenue,
+        saleCount,
+      ];
+}

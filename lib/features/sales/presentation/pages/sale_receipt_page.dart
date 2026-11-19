@@ -269,8 +269,8 @@ class _SaleReceiptPageState extends State<SaleReceiptPage> {
                           color: colorScheme.primaryContainer.withValues(alpha: 0.35),
                           borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
-                        child: Text(
-                          sale.receiptNumber?.replaceAll('/', '') ?? 'Vente #${sale.id}',
+                        child: SelectableText(
+                          sale.receiptNumber ?? 'Vente #${sale.id}',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -285,6 +285,25 @@ class _SaleReceiptPageState extends State<SaleReceiptPage> {
                           color: AppColors.onSurfaceMuted,
                         ),
                       ),
+                      if (sale.customerName != null && sale.customerName!.trim().isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            'Client : ${sale.customerName!}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       const _DashedDivider(),
                       if (sale.items.isNotEmpty) ...[

@@ -44,6 +44,8 @@ class DesktopSaleListView extends StatefulWidget {
 class _DesktopSaleListViewState extends State<DesktopSaleListView> {
   SaleType? _filterType;
   SaleStatus? _filterStatus;
+  int _sortColumnIndex = 1; // 1 = Date & Heure
+  bool _sortAscending = false; // Du plus récent au plus ancien par défaut (décroissant)
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +59,32 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
       if (_filterStatus != null && s.status != _filterStatus) return false;
       return true;
     }).toList();
+
+    // Tri explicite par colonne sélectionnée (par défaut Date & Heure, plus récent au plus ancien)
+    filteredSales.sort((a, b) {
+      int cmp = 0;
+      switch (_sortColumnIndex) {
+        case 0:
+          final refA = a.receiptNumber ?? '#${a.id}';
+          final refB = b.receiptNumber ?? '#${b.id}';
+          cmp = refA.compareTo(refB);
+          break;
+        case 2:
+          cmp = (a.customerName ?? '').compareTo(b.customerName ?? '');
+          break;
+        case 4:
+          cmp = a.totalAmount.compareTo(b.totalAmount);
+          break;
+        case 1:
+        default:
+          cmp = a.createdAt.compareTo(b.createdAt);
+          break;
+      }
+      if (cmp != 0) {
+        return _sortAscending ? cmp : -cmp;
+      }
+      return _sortAscending ? a.id.compareTo(b.id) : b.id.compareTo(a.id);
+    });
 
     // Calculs de synthèse
     final completedSales = allSales.where((s) => s.status != SaleStatus.cancelled);
@@ -418,33 +446,82 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
     }
 
     final columns = [
-      const AppTableColumn(
-        label: 'Reçu / ID',
+      AppTableColumn(
+        label: 'Réf. Vente',
         icon: Icons.tag_rounded,
-        width: 130,
+        width: 230,
+        minWidth: 210,
+        isSorted: _sortColumnIndex == 0,
+        sortAscending: _sortAscending,
+        onSort: () {
+          setState(() {
+            if (_sortColumnIndex == 0) {
+              _sortAscending = !_sortAscending;
+            } else {
+              _sortColumnIndex = 0;
+              _sortAscending = true;
+            }
+          });
+        },
       ),
-      const AppTableColumn(
+      AppTableColumn(
         label: 'Date & Heure',
         icon: Icons.access_time_rounded,
-        width: 150,
+        width: 170,
+        isSorted: _sortColumnIndex == 1,
+        sortAscending: _sortAscending,
+        onSort: () {
+          setState(() {
+            if (_sortColumnIndex == 1) {
+              _sortAscending = !_sortAscending;
+            } else {
+              _sortColumnIndex = 1;
+              _sortAscending = false; // Plus récent d'abord !
+            }
+          });
+        },
       ),
-      const AppTableColumn(
+      AppTableColumn(
         label: 'Client',
         icon: Icons.person_outline_rounded,
         flex: 2,
         minWidth: 180,
+        isSorted: _sortColumnIndex == 2,
+        sortAscending: _sortAscending,
+        onSort: () {
+          setState(() {
+            if (_sortColumnIndex == 2) {
+              _sortAscending = !_sortAscending;
+            } else {
+              _sortColumnIndex = 2;
+              _sortAscending = true;
+            }
+          });
+        },
       ),
       const AppTableColumn(
         label: 'Type',
         icon: Icons.category_outlined,
         width: 120,
       ),
-      const AppTableColumn(
+      AppTableColumn(
         label: 'Montant Total',
         icon: Icons.monetization_on_outlined,
         width: 150,
         alignment: Alignment.centerRight,
         textAlign: TextAlign.right,
+        isSorted: _sortColumnIndex == 4,
+        sortAscending: _sortAscending,
+        onSort: () {
+          setState(() {
+            if (_sortColumnIndex == 4) {
+              _sortAscending = !_sortAscending;
+            } else {
+              _sortColumnIndex = 4;
+              _sortAscending = false;
+            }
+          });
+        },
       ),
       const AppTableColumn(
         label: 'Statut',
@@ -463,7 +540,7 @@ class _DesktopSaleListViewState extends State<DesktopSaleListView> {
       final isCancelled = sale.status == SaleStatus.cancelled;
       final dt = DateTime.fromMillisecondsSinceEpoch(sale.createdAt);
       final formattedDate = AppDateFormatter.formatDateTime(dt);
-      final receiptLabel = sale.receiptNumber?.replaceAll('/', '') ?? '#${sale.id}';
+      final receiptLabel = sale.receiptNumber ?? '#${sale.id}';
 
       return AppTableRow(
         onTap: () => widget.onSaleTap(sale.id),

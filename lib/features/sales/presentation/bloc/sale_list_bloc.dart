@@ -113,10 +113,16 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
     bool localOnly = false,
   }) async {
     try {
-      final sales = await _listSales(
+      final rawSales = await _listSales(
         session: _session,
         filters: state.filters,
       );
+      final sales = List<SaleListRow>.from(rawSales)
+        ..sort((a, b) {
+          final cmp = b.createdAt.compareTo(a.createdAt);
+          if (cmp != 0) return cmp;
+          return b.id.compareTo(a.id);
+        });
 
       emit(
         state.copyWith(
@@ -152,10 +158,16 @@ class SaleListBloc extends Bloc<SaleListEvent, SaleListState> {
         // Timeout ou doublons locaux : ne pas bloquer la liste.
       }
 
-      final refreshedSales = await _listSales(
+      final rawRefreshed = await _listSales(
         session: _session,
         filters: state.filters,
       );
+      final refreshedSales = List<SaleListRow>.from(rawRefreshed)
+        ..sort((a, b) {
+          final cmp = b.createdAt.compareTo(a.createdAt);
+          if (cmp != 0) return cmp;
+          return b.id.compareTo(a.id);
+        });
 
       emit(
         state.copyWith(

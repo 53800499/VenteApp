@@ -57,7 +57,10 @@ class SalesLocalDatasource {
     }
 
     query
-      ..orderBy([OrderingTerm.desc(_db.sales.createdAt)])
+      ..orderBy([
+        OrderingTerm.desc(_db.sales.createdAt),
+        OrderingTerm.desc(_db.sales.id),
+      ])
       ..limit(filters.limit);
 
     final rows = await query.get();
@@ -553,6 +556,7 @@ class SalesLocalDatasource {
       paymentMethod: remote.paymentMethod != null
           ? Value(remote.paymentMethod)
           : const Value.absent(),
+      createdAt: Value(remote.createdAt),
       syncedAt: Value(timestamp),
       updatedAt: Value(timestamp),
       syncStatus: const Value('synced'),

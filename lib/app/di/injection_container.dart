@@ -540,6 +540,9 @@ void ensureCashSessionDependencies() {
   if (!sl.isRegistered<SyncCashSessionsFromRemote>()) {
     sl.registerLazySingleton(() => SyncCashSessionsFromRemote(sl()));
   }
+  if (!sl.isRegistered<GetCashSessionSoldProducts>()) {
+    sl.registerLazySingleton(() => GetCashSessionSoldProducts(sl()));
+  }
   if (!sl.isRegistered<CashSessionsRemoteSyncAdapter>()) {
     sl.registerLazySingleton(
       () => CashSessionsRemoteSyncAdapter(sl<CashSessionRepository>()),

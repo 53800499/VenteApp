@@ -305,6 +305,19 @@ class CashSessionRepositoryImpl implements CashSessionRepository {
   }
 
   @override
+  Future<List<CashSessionSoldProduct>> getSessionSoldProducts({
+    required int shopId,
+    required int openedAt,
+    int? closedAt,
+  }) {
+    return _local.getSessionSoldProducts(
+      shopId: shopId,
+      openedAt: openedAt,
+      closedAt: closedAt,
+    );
+  }
+
+  @override
   Future<void> syncFromRemote({required int shopId}) async {
     if (_remote == null || _apiGuard == null) return;
     try {

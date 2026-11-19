@@ -555,24 +555,46 @@ class CashSessionsLocalDatasource {
 
     if (existing == null) {
       final status = json['status'] as String? ?? 'closed';
-      if (status == 'open') {
-        final pendingOpen = await (_db.select(_db.cashSessions)
-              ..where(
-                (s) =>
-                    s.shopId.equals(shopId) &
-                    s.status.equals('open') &
-                    s.serverId.isNull(),
-              ))
-            .getSingleOrNull();
-        if (pendingOpen != null) {
-          await (_db.update(_db.cashSessions)
-                ..where((s) => s.id.equals(pendingOpen.id)))
-              .write(companion);
+      final localUnsynced = await (_db.select(_db.cashSessions)
+            ..where(
+              (s) => s.shopId.equals(shopId) & s.serverId.isNull(),
+            )
+            ..orderBy([(s) => OrderingTerm.desc(s.openedAt)])
+            ..limit(1))
+          .getSingleOrNull();
+
+      if (localUnsynced != null) {
+        if (localUnsynced.syncStatus == 'pending' && localUnsynced.status != 'open') {
+          await (_db.update(_db.cashSessions)..where((s) => s.id.equals(localUnsynced.id)))
+              .write(db.CashSessionsCompanion(
+                serverId: Value(serverId),
+                syncedAt: Value(nowMs()),
+              ));
           return;
         }
+        await (_db.update(_db.cashSessions)
+              ..where((s) => s.id.equals(localUnsynced.id)))
+            .write(companion);
+        return;
       }
+
+      final localPending = await (_db.select(_db.cashSessions)
+            ..where(
+              (s) =>
+                  s.shopId.equals(shopId) &
+                  s.syncStatus.equals('pending') &
+                  s.status.isIn(['closed', 'submitted', 'justified', 'review_required']),
+            ))
+          .getSingleOrNull();
+      if (localPending != null && status == 'open') {
+        return;
+      }
+
       await _db.into(_db.cashSessions).insert(companion);
     } else {
+      if (existing.syncStatus == 'pending' && existing.status != 'open') {
+        return;
+      }
       await (_db.update(_db.cashSessions)
             ..where((s) => s.id.equals(existing.id)))
           .write(companion);
@@ -581,6 +603,65 @@ class CashSessionsLocalDatasource {
         await (_db.delete(_db.cashSessions)..where((s) => s.id.isIn(duplicateIds))).go();
       }
     }
+  }
+
+  Future<List<CashSessionSoldProduct>> getSessionSoldProducts({
+    required int shopId,
+    required int openedAt,
+    int? closedAt,
+  }) async {
+    final toMs = closedAt ?? nowMs();
+    final query = _db.select(_db.saleItems).join([
+      innerJoin(
+        _db.sales,
+        _db.sales.id.equalsExp(_db.saleItems.saleId),
+      ),
+    ])
+      ..where(
+        _db.sales.shopId.equals(shopId) &
+            _db.sales.status.equals('completed') &
+            _db.sales.createdAt.isBiggerOrEqualValue(openedAt) &
+            _db.sales.createdAt.isSmallerOrEqualValue(toMs),
+      );
+
+    final rows = await query.get();
+    final productMap = <String, _SoldProductAccumulator>{};
+
+    for (final row in rows) {
+      final item = row.readTable(_db.saleItems);
+      final key = '${item.productId}_${item.productName}';
+      final existing = productMap[key];
+      if (existing == null) {
+        productMap[key] = _SoldProductAccumulator(
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalRevenue: item.lineTotal,
+          saleCount: 1,
+        );
+      } else {
+        existing.quantity += item.quantity;
+        existing.totalRevenue += item.lineTotal;
+        existing.saleCount += 1;
+      }
+    }
+
+    final list = productMap.values
+        .map(
+          (acc) => CashSessionSoldProduct(
+            productId: acc.productId,
+            productName: acc.productName,
+            quantity: acc.quantity,
+            unitPrice: acc.unitPrice,
+            totalRevenue: acc.totalRevenue,
+            saleCount: acc.saleCount,
+          ),
+        )
+        .toList();
+
+    list.sort((a, b) => b.totalRevenue.compareTo(a.totalRevenue));
+    return list;
   }
 
   Future<CashSession> _mapSession(db.CashSession row) async {
@@ -631,4 +712,22 @@ class CashSessionsLocalDatasource {
         .getSingleOrNull();
     return user?.name ?? 'Utilisateur #$userId';
   }
+}
+
+class _SoldProductAccumulator {
+  _SoldProductAccumulator({
+    required this.productId,
+    required this.productName,
+    required this.quantity,
+    required this.unitPrice,
+    required this.totalRevenue,
+    required this.saleCount,
+  });
+
+  final int? productId;
+  final String productName;
+  double quantity;
+  final int unitPrice;
+  int totalRevenue;
+  int saleCount;
 }

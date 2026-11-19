@@ -66,5 +66,11 @@ abstract class CashSessionRepository {
     required RecordOwnerDropInput input,
   });
 
+  Future<List<CashSessionSoldProduct>> getSessionSoldProducts({
+    required int shopId,
+    required int openedAt,
+    int? closedAt,
+  });
+
   Future<void> syncFromRemote({required int shopId});
 }

@@ -12,6 +12,7 @@ class CashSessionsState extends Equatable {
     this.isRefreshing = false,
     this.isSubmitting = false,
     this.errorMessage,
+    this.successMessage,
   });
 
   final CashSessionsStatus status;
@@ -22,29 +23,35 @@ class CashSessionsState extends Equatable {
   final bool isRefreshing;
   final bool isSubmitting;
   final String? errorMessage;
+  final String? successMessage;
 
   CashSessionsState copyWith({
     CashSessionsStatus? status,
     CashSession? openSession,
     bool clearOpenSession = false,
     CashSessionLiveTotals? liveTotals,
+    bool clearLiveTotals = false,
     List<CashSessionListRow>? history,
     List<CashMovement>? movements,
     bool? isRefreshing,
     bool? isSubmitting,
     String? errorMessage,
     bool clearError = false,
+    String? successMessage,
+    bool clearSuccess = false,
   }) {
     return CashSessionsState(
       status: status ?? this.status,
       openSession:
           clearOpenSession ? null : (openSession ?? this.openSession),
-      liveTotals: liveTotals ?? this.liveTotals,
+      liveTotals:
+          (clearOpenSession || clearLiveTotals) ? null : (liveTotals ?? this.liveTotals),
       history: history ?? this.history,
-      movements: movements ?? this.movements,
+      movements: clearOpenSession ? const [] : (movements ?? this.movements),
       isRefreshing: isRefreshing ?? this.isRefreshing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
     );
   }
 
@@ -58,5 +65,6 @@ class CashSessionsState extends Equatable {
         isRefreshing,
         isSubmitting,
         errorMessage,
+        successMessage,
       ];
 }

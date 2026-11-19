@@ -191,33 +191,50 @@ class _SaleListPageState extends State<SaleListPage> {
                                         !s.isRefreshing,
                                   );
                             },
-                            child: state.sales.isEmpty
-                                ? EmptyListPlaceholder(
+                            child: Builder(
+                              builder: (context) {
+                                final sortedSales =
+                                    List<SaleListRow>.from(state.sales)
+                                      ..sort((a, b) {
+                                        final cmp =
+                                            b.createdAt.compareTo(a.createdAt);
+                                        if (cmp != 0) return cmp;
+                                        return b.id.compareTo(a.id);
+                                      });
+
+                                if (sortedSales.isEmpty) {
+                                  return const EmptyListPlaceholder(
                                     embedded: true,
                                     icon: Icons.receipt_long_outlined,
                                     title: 'Aucune vente enregistrée',
-                                  )
-                                : ListView.separated(
-                                    padding: EdgeInsets.fromLTRB(
-                                      AppSpacing.md,
-                                      AppSpacing.sm,
-                                      AppSpacing.md,
-                                      context.isCompactScreen ? 110.0 : AppSpacing.md,
-                                    ),
-                                    itemCount: state.sales.length,
-                                    separatorBuilder: (_, _) =>
-                                        const SizedBox(height: AppSpacing.sm),
-                                    itemBuilder: (context, index) {
-                                      final sale = state.sales[index];
-                                      return _SaleListTile(
-                                        sale: sale,
-                                        onTap: () => _openDetail(
-                                          context,
-                                          sale.id,
-                                        ),
-                                      );
-                                    },
+                                  );
+                                }
+
+                                return ListView.separated(
+                                  padding: EdgeInsets.fromLTRB(
+                                    AppSpacing.md,
+                                    AppSpacing.sm,
+                                    AppSpacing.md,
+                                    context.isCompactScreen
+                                        ? 110.0
+                                        : AppSpacing.md,
                                   ),
+                                  itemCount: sortedSales.length,
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: AppSpacing.sm),
+                                  itemBuilder: (context, index) {
+                                    final sale = sortedSales[index];
+                                    return _SaleListTile(
+                                      sale: sale,
+                                      onTap: () => _openDetail(
+                                        context,
+                                        sale.id,
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                           ),
                         SaleListStatus.initial =>
                           const Center(child: CircularProgressIndicator()),
@@ -313,11 +330,12 @@ class _SaleListTile extends StatelessWidget {
     final isCancelled = sale.status == SaleStatus.cancelled;
     final isCompact = context.isCompactScreen;
 
+    final receipt = sale.receiptNumber ?? 'Vente #${sale.id}';
     final titleWidget = Text(
-      sale.receiptNumber?.replaceAll('/', '') ?? 'Vente #${sale.id}',
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      receipt,
+      softWrap: true,
       style: TextStyle(
+        fontWeight: FontWeight.w600,
         decoration: isCancelled ? TextDecoration.lineThrough : null,
       ),
     );

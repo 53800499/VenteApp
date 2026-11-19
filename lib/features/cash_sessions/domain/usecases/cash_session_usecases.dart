@@ -161,11 +161,17 @@ class CloseCashSession {
     required int sessionId,
     required CloseCashSessionInput input,
   }) async {
-    if (session.user.role != UserRole.owner) {
+    final canDirectClose = session.user.role == UserRole.owner ||
+        PermissionGuard.can(
+          session.user.permissions,
+          Permission.cashSessionsApprove,
+        );
+
+    if (!canDirectClose) {
       final pin = input.ownerPin?.trim() ?? '';
       if (pin.length < 4) {
         throw const ValidationFailure(
-          'Le PIN du patron est requis pour clôturer la caisse directement.',
+          'Le PIN du patron est requis pour clôturer la caisse directement sans soumission.',
         );
       }
       await _verifyOwnerPin(shopId: session.shop.id, pin: pin);
@@ -204,4 +210,21 @@ class SyncCashSessionsFromRemote {
 
   Future<void> call({required AuthSession session}) =>
       _repository.syncFromRemote(shopId: session.shop.id);
+}
+
+class GetCashSessionSoldProducts {
+  const GetCashSessionSoldProducts(this._repository);
+
+  final CashSessionRepository _repository;
+
+  Future<List<CashSessionSoldProduct>> call({
+    required AuthSession session,
+    required int openedAt,
+    int? closedAt,
+  }) =>
+      _repository.getSessionSoldProducts(
+        shopId: session.shop.id,
+        openedAt: openedAt,
+        closedAt: closedAt,
+      );
 }

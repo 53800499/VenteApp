@@ -908,39 +908,82 @@ class SyncQueueProcessor {
             serverId: serverId,
           );
         }
+        final isSubmitted = session.status == 'submitted' ||
+            session.status == 'justified' ||
+            session.status == 'review_required';
         try {
-          await _cashSessionsRemote.closeSession(
-            int.parse(serverId),
-            CloseCashSessionApiRequest(
-              countedCash: (payload['countedCash'] as num?)?.toInt() ??
-                  session.countedCash ??
-                  0,
-              countedMomo: (payload['countedMomo'] as num?)?.toInt() ??
-                  session.countedMomo ??
-                  0,
-              closingNote:
-                  payload['closingNote'] as String? ?? session.closingNote,
-              ownerPin: payload['ownerPin'] as String?,
-              salesCash: (payload['salesCash'] as num?)?.toInt() ??
-                  session.salesCash,
-              salesMomo: (payload['salesMomo'] as num?)?.toInt() ??
-                  session.salesMomo,
-              expensesCash: (payload['expensesCash'] as num?)?.toInt() ??
-                  session.expensesCash,
-              expensesMomo: (payload['expensesMomo'] as num?)?.toInt() ??
-                  session.expensesMomo,
-              depositsCash: (payload['depositsCash'] as num?)?.toInt() ??
-                  session.depositsCash,
-              depositsMomo: (payload['depositsMomo'] as num?)?.toInt() ??
-                  session.depositsMomo,
-              withdrawalsCash: (payload['withdrawalsCash'] as num?)?.toInt() ??
-                  session.withdrawalsCash,
-              withdrawalsMomo: (payload['withdrawalsMomo'] as num?)?.toInt() ??
-                  session.withdrawalsMomo,
-              saleCount: (payload['saleCount'] as num?)?.toInt() ??
-                  session.saleCount,
-            ),
-          );
+          if (isSubmitted) {
+            await _cashSessionsRemote.submitClosing(
+              int.parse(serverId),
+              SubmitCashSessionApiRequest(
+                countedCash: (payload['countedCash'] as num?)?.toInt() ??
+                    session.countedCash ??
+                    0,
+                countedMomo: (payload['countedMomo'] as num?)?.toInt() ??
+                    session.countedMomo ??
+                    0,
+                closingNote:
+                    payload['closingNote'] as String? ?? session.closingNote,
+                justificationCategory:
+                    payload['justificationCategory'] as String? ??
+                        session.justificationCategory,
+                justificationNote:
+                    payload['justificationNote'] as String? ??
+                        session.justificationNote,
+                salesCash: (payload['salesCash'] as num?)?.toInt() ??
+                    session.salesCash,
+                salesMomo: (payload['salesMomo'] as num?)?.toInt() ??
+                    session.salesMomo,
+                expensesCash: (payload['expensesCash'] as num?)?.toInt() ??
+                    session.expensesCash,
+                expensesMomo: (payload['expensesMomo'] as num?)?.toInt() ??
+                    session.expensesMomo,
+                depositsCash: (payload['depositsCash'] as num?)?.toInt() ??
+                    session.depositsCash,
+                depositsMomo: (payload['depositsMomo'] as num?)?.toInt() ??
+                    session.depositsMomo,
+                withdrawalsCash: (payload['withdrawalsCash'] as num?)?.toInt() ??
+                    session.withdrawalsCash,
+                withdrawalsMomo: (payload['withdrawalsMomo'] as num?)?.toInt() ??
+                    session.withdrawalsMomo,
+                saleCount: (payload['saleCount'] as num?)?.toInt() ??
+                    session.saleCount,
+              ),
+            );
+          } else {
+            await _cashSessionsRemote.closeSession(
+              int.parse(serverId),
+              CloseCashSessionApiRequest(
+                countedCash: (payload['countedCash'] as num?)?.toInt() ??
+                    session.countedCash ??
+                    0,
+                countedMomo: (payload['countedMomo'] as num?)?.toInt() ??
+                    session.countedMomo ??
+                    0,
+                closingNote:
+                    payload['closingNote'] as String? ?? session.closingNote,
+                ownerPin: payload['ownerPin'] as String?,
+                salesCash: (payload['salesCash'] as num?)?.toInt() ??
+                    session.salesCash,
+                salesMomo: (payload['salesMomo'] as num?)?.toInt() ??
+                    session.salesMomo,
+                expensesCash: (payload['expensesCash'] as num?)?.toInt() ??
+                    session.expensesCash,
+                expensesMomo: (payload['expensesMomo'] as num?)?.toInt() ??
+                    session.expensesMomo,
+                depositsCash: (payload['depositsCash'] as num?)?.toInt() ??
+                    session.depositsCash,
+                depositsMomo: (payload['depositsMomo'] as num?)?.toInt() ??
+                    session.depositsMomo,
+                withdrawalsCash: (payload['withdrawalsCash'] as num?)?.toInt() ??
+                    session.withdrawalsCash,
+                withdrawalsMomo: (payload['withdrawalsMomo'] as num?)?.toInt() ??
+                    session.withdrawalsMomo,
+                saleCount: (payload['saleCount'] as num?)?.toInt() ??
+                    session.saleCount,
+              ),
+            );
+          }
         } on ConflictFailure catch (error) {
           if (!_isCashSessionAlreadyClosed(error)) rethrow;
         }

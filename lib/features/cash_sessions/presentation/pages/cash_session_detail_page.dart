@@ -32,15 +32,24 @@ class CashSessionDetailPage extends StatefulWidget {
 class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
   CashSession? _session;
   List<CashMovement> _movements = const [];
+  List<CashSessionSoldProduct> _soldProducts = const [];
   String? _error;
   bool _loading = true;
   bool _exporting = false;
   bool _approving = false;
+  int _selectedTabIndex = 0;
+  final TextEditingController _productSearchCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _productSearchCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -58,10 +67,16 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
         session: widget.session,
         sessionId: widget.sessionId,
       );
+      final soldProducts = await sl<GetCashSessionSoldProducts>()(
+        session: widget.session,
+        openedAt: session.openedAt,
+        closedAt: session.closedAt,
+      );
       if (!mounted) return;
       setState(() {
         _session = session;
         _movements = movements;
+        _soldProducts = soldProducts;
         _loading = false;
       });
     } catch (e) {
@@ -188,8 +203,17 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rapport de clôture'),
+        title: Text(
+          _session != null
+              ? 'Rapport de caisse #${_session!.id}'
+              : 'Détails de caisse',
+        ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Actualiser',
+            onPressed: _loading ? null : _load,
+          ),
           if (_session != null && !_loading)
             IconButton(
               icon: _exporting
@@ -207,12 +231,32 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!))
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton(
+                          onPressed: _load,
+                          child: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               : _buildBody(context, _session!),
     );
   }
 
   Widget _buildBody(BuildContext context, CashSession s) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final statusColor = _statusColor(s.status);
     final canApprove = (widget.session.user.role == UserRole.owner ||
             PermissionGuard.can(
@@ -241,23 +285,28 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
+                    color: statusColor.withValues(alpha: isDark ? 0.2 : 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: statusColor.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: isDark ? 0.5 : 0.35),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        s.status == CashSessionStatus.approved
-                            ? Icons.verified_outlined
-                            : s.isPendingReview
-                                ? Icons.pending_actions
-                                : s.status == CashSessionStatus.open
-                                    ? Icons.lock_open
-                                    : Icons.lock,
-                        color: statusColor,
-                        size: 32,
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: statusColor.withValues(alpha: 0.15),
+                        child: Icon(
+                          s.status == CashSessionStatus.approved
+                              ? Icons.verified_outlined
+                              : s.isPendingReview
+                                  ? Icons.pending_actions
+                                  : s.status == CashSessionStatus.open
+                                      ? Icons.lock_open
+                                      : Icons.lock,
+                          color: statusColor,
+                          size: 26,
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
@@ -272,22 +321,20 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
                                 color: statusColor,
                               ),
                             ),
-                            if (s.isPendingReview)
-                              const Text(
-                                'Cette session a été soumise par l\'employé et attend la validation du patron.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
-                              )
-                            else if (s.status == CashSessionStatus.approved)
-                              const Text(
-                                'Clôture et rapprochement approuvés définitivement par le patron.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black54,
-                                ),
+                            const SizedBox(height: 2),
+                            Text(
+                              s.isPendingReview
+                                  ? 'Cette session a été soumise par l\'employé et attend la validation du patron.'
+                                  : s.status == CashSessionStatus.approved
+                                      ? 'Clôture et rapprochement approuvés définitivement par le patron.'
+                                      : s.status == CashSessionStatus.open
+                                          ? 'Session en cours d\'activité.'
+                                          : 'Session clôturée avec succès.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -304,7 +351,7 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
                                   ),
                                 )
                               : const Icon(Icons.check, size: 18),
-                          label: const Text('Approuver la clôture'),
+                          label: const Text('Approuver'),
                           style: FilledButton.styleFrom(
                             backgroundColor: Colors.teal.shade700,
                           ),
@@ -322,121 +369,95 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
 
                 const SizedBox(height: AppSpacing.md),
 
-                // Ligne de KPI Desktop
-                if (isDesktop) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatMiniCard(
-                          label: 'Ventes conclues',
-                          value: formatFcfa(totalSales),
-                          sub: '${s.saleCount} vente(s)',
-                          icon: Icons.trending_up,
-                          color: Colors.green.shade700,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _StatMiniCard(
-                          label: 'Dépenses & Sorties',
-                          value: formatFcfa(totalExpenses +
-                              s.withdrawalsCash +
-                              s.withdrawalsMomo),
-                          sub: 'Dépenses + sorties',
-                          icon: Icons.receipt_long_outlined,
-                          color: Colors.deepOrange.shade700,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _StatMiniCard(
-                          label: 'Solde attendu',
-                          value: formatFcfa(totalExpected),
-                          sub: 'Calcul théorique',
-                          icon: Icons.calculate_outlined,
-                          color: Colors.indigo.shade700,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _StatMiniCard(
-                          label: 'Compté par caissier',
-                          value: formatFcfa(totalCounted),
-                          sub: 'Comptage à l\'aveugle',
-                          icon: Icons.fact_check_outlined,
-                          color: Colors.blueGrey.shade800,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _StatMiniCard(
-                          label: 'Écart net global',
-                          value: totalDiff == 0
-                              ? '0 FCFA'
-                              : '${totalDiff > 0 ? '+' : ''}${formatFcfa(totalDiff)}',
-                          sub: totalDiff == 0
-                              ? 'Équilibré'
-                              : totalDiff > 0
-                                  ? 'Excédent'
-                                  : 'Déficit',
-                          icon: totalDiff == 0
-                              ? Icons.check_circle_outline
-                              : Icons.warning_amber_rounded,
-                          color: totalDiff == 0
-                              ? Colors.green.shade700
-                              : totalDiff > 0
-                                  ? Colors.blue.shade700
-                                  : Colors.red.shade700,
-                          isAccent: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
+                // Sélecteur d'onglets (SegmentedButton)
+                SegmentedButton<int>(
+                  segments: [
+                    const ButtonSegment<int>(
+                      value: 0,
+                      icon: Icon(Icons.analytics_outlined),
+                      label: Text('Rapprochement & Flux'),
+                    ),
+                    ButtonSegment<int>(
+                      value: 1,
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      label: Text('Articles vendus (${_soldProducts.length})'),
+                    ),
+                  ],
+                  selected: {_selectedTabIndex},
+                  onSelectionChanged: (newSelection) {
+                    setState(() {
+                      _selectedTabIndex = newSelection.first;
+                    });
+                  },
+                ),
 
-                // Contenu : 2 Colonnes sur Desktop vs 1 Colonne sur Mobile
-                if (isDesktop)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Colonne Gauche : Synthèse financière complète
-                      Expanded(
-                        flex: 6,
-                        child: _buildFinancialCard(context, s, totalDiff),
-                      ),
-                      const SizedBox(width: AppSpacing.lg),
-                      // Colonne Droite : Justifications, Arbitrage & Mouvements
-                      Expanded(
-                        flex: 5,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (s.justificationCategory != null ||
-                                s.justificationNote != null)
-                              _buildJustificationCard(s),
-                            if (s.reviewNote?.isNotEmpty == true)
-                              _buildReviewCard(s),
-                            _buildMovementsCard(),
-                          ],
+                const SizedBox(height: AppSpacing.md),
+
+                // VUE ONGLETS
+                if (_selectedTabIndex == 1) ...[
+                  // Vue 2 : Articles vendus de la caisse
+                  _buildSoldProductsView(context, s, totalSales),
+                ] else ...[
+                  // Vue 1 : Rapprochement financier & mouvements
+                  // KPI Cards
+                  _buildKpiSection(
+                    context,
+                    totalSales: totalSales,
+                    saleCount: s.saleCount,
+                    totalExpenses: totalExpenses +
+                        s.withdrawalsCash +
+                        s.withdrawalsMomo,
+                    totalExpected: totalExpected,
+                    totalCounted: totalCounted,
+                    totalDiff: totalDiff,
+                    isDesktop: isDesktop,
+                  ),
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Disposition 2 colonnes desktop vs 1 colonne mobile
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Colonne gauche : Synthèse financière complète
+                        Expanded(
+                          flex: 6,
+                          child: _buildFinancialCard(context, s, totalDiff),
                         ),
-                      ),
+                        const SizedBox(width: AppSpacing.lg),
+                        // Colonne droite : Justifications, Arbitrage & Mouvements
+                        Expanded(
+                          flex: 5,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (s.justificationCategory != null ||
+                                  s.justificationNote != null)
+                                _buildJustificationCard(context, s),
+                              if (s.reviewNote?.isNotEmpty == true)
+                                _buildReviewCard(context, s),
+                              _buildMovementsCard(context),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    _buildFinancialCard(context, s, totalDiff),
+                    if (s.justificationCategory != null ||
+                        s.justificationNote != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      _buildJustificationCard(context, s),
                     ],
-                  )
-                else ...[
-                  _buildFinancialCard(context, s, totalDiff),
-                  if (s.justificationCategory != null ||
-                      s.justificationNote != null) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _buildJustificationCard(s),
-                  ],
-                  if (s.reviewNote?.isNotEmpty == true) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _buildReviewCard(s),
-                  ],
-                  if (_movements.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    _buildMovementsCard(),
+                    if (s.reviewNote?.isNotEmpty == true) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      _buildReviewCard(context, s),
+                    ],
+                    if (_movements.isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      _buildMovementsCard(context),
+                    ],
                   ],
                 ],
               ],
@@ -447,7 +468,100 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     );
   }
 
+  Widget _buildKpiSection(
+    BuildContext context, {
+    required int totalSales,
+    required int saleCount,
+    required int totalExpenses,
+    required int totalExpected,
+    required int totalCounted,
+    required int totalDiff,
+    required bool isDesktop,
+  }) {
+    final kpis = [
+      _StatMiniCard(
+        label: 'Ventes conclues',
+        value: formatFcfa(totalSales),
+        sub: '$saleCount vente(s)',
+        icon: Icons.trending_up,
+        color: Colors.green.shade700,
+      ),
+      _StatMiniCard(
+        label: 'Dépenses & Sorties',
+        value: formatFcfa(totalExpenses),
+        sub: 'Dépenses + remises',
+        icon: Icons.receipt_long_outlined,
+        color: Colors.deepOrange.shade700,
+      ),
+      _StatMiniCard(
+        label: 'Solde attendu',
+        value: formatFcfa(totalExpected),
+        sub: 'Calcul théorique',
+        icon: Icons.calculate_outlined,
+        color: Colors.indigo.shade700,
+      ),
+      _StatMiniCard(
+        label: 'Compté réel',
+        value: formatFcfa(totalCounted),
+        sub: 'Comptage physique',
+        icon: Icons.fact_check_outlined,
+        color: Colors.blueGrey.shade800,
+      ),
+      _StatMiniCard(
+        label: 'Écart net global',
+        value: totalDiff == 0
+            ? '0 FCFA'
+            : '${totalDiff > 0 ? '+' : ''}${formatFcfa(totalDiff)}',
+        sub: totalDiff == 0
+            ? 'Équilibré'
+            : totalDiff > 0
+                ? 'Excédent'
+                : 'Déficit',
+        icon: totalDiff == 0
+            ? Icons.check_circle_outline
+            : Icons.warning_amber_rounded,
+        color: totalDiff == 0
+            ? Colors.green.shade700
+            : totalDiff > 0
+                ? Colors.blue.shade700
+                : Colors.red.shade700,
+        isAccent: true,
+      ),
+    ];
+
+    if (isDesktop) {
+      return Row(
+        children: kpis
+            .map(
+              (kpi) => Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: kpi,
+                ),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = (constraints.maxWidth - 8) / 2;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: kpis
+              .map((kpi) => SizedBox(width: itemWidth, child: kpi))
+              .toList(),
+        );
+      },
+    );
+  }
+
   Widget _buildFinancialCard(BuildContext context, CashSession s, int totalDiff) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -461,26 +575,26 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
                 Expanded(
                   child: Text(
                     'Rapprochement financier',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: theme.textTheme.titleLarge,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               'Session ouverte par ${s.openedByName} le '
               '${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.openedAt))}',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
             ),
             if (s.submittedAt != null)
               Text(
                 'Soumise le ${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.submittedAt!))}',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
               ),
             if (s.closedByName != null && s.closedAt != null)
               Text(
                 'Clôturée le ${AppDateFormatter.formatDateTime(DateTime.fromMillisecondsSinceEpoch(s.closedAt!))} par ${s.closedByName}',
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
               ),
             if (s.approvedAt != null)
               Text(
@@ -492,37 +606,40 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
                 ),
               ),
             const Divider(height: AppSpacing.lg),
-            _row('Fond initial espèces', s.openingCash),
-            _row('Fond initial MoMo', s.openingMomo),
+            _row(context, 'Fond initial espèces', s.openingCash),
+            _row(context, 'Fond initial MoMo', s.openingMomo),
             const Divider(),
-            _row('Ventes espèces', s.salesCash, positive: true),
-            _row('Ventes MoMo', s.salesMomo, positive: true),
-            _row('Dépenses espèces', s.expensesCash, negative: true),
-            _row('Dépenses MoMo', s.expensesMomo, negative: true),
-            _row('Entrées diverses espèces', s.depositsCash, positive: true),
-            _row('Entrées diverses MoMo', s.depositsMomo, positive: true),
-            _row('Retraits / Remises espèces', s.withdrawalsCash, negative: true),
-            _row('Retraits / Remises MoMo', s.withdrawalsMomo, negative: true),
-            _row('Nombre de ventes', s.saleCount, money: false),
+            _row(context, 'Ventes espèces', s.salesCash, positive: true),
+            _row(context, 'Ventes MoMo', s.salesMomo, positive: true),
+            _row(context, 'Dépenses espèces', s.expensesCash, negative: true),
+            _row(context, 'Dépenses MoMo', s.expensesMomo, negative: true),
+            _row(context, 'Entrées diverses espèces', s.depositsCash, positive: true),
+            _row(context, 'Entrées diverses MoMo', s.depositsMomo, positive: true),
+            _row(context, 'Retraits / Remises espèces', s.withdrawalsCash, negative: true),
+            _row(context, 'Retraits / Remises MoMo', s.withdrawalsMomo, negative: true),
+            _row(context, 'Nombre de ventes conclues', s.saleCount, money: false),
             const Divider(height: AppSpacing.lg),
-            _row('Attendu espèces (théorique)', s.expectedCash ?? 0, bold: true),
-            _row('Attendu MoMo (théorique)', s.expectedMomo ?? 0, bold: true),
-            _row('Compté espèces (réel)', s.countedCash ?? 0, bold: true),
-            _row('Compté MoMo (réel)', s.countedMomo ?? 0, bold: true),
+            _row(context, 'Attendu espèces (théorique)', s.expectedCash ?? 0, bold: true),
+            _row(context, 'Attendu MoMo (théorique)', s.expectedMomo ?? 0, bold: true),
+            _row(context, 'Compté espèces (réel)', s.countedCash ?? 0, bold: true),
+            _row(context, 'Compté MoMo (réel)', s.countedMomo ?? 0, bold: true),
             const Divider(height: AppSpacing.md),
             _row(
+              context,
               'Écart espèces',
               s.differenceCash ?? 0,
               bold: true,
               highlight: true,
             ),
             _row(
+              context,
               'Écart Mobile Money',
               s.differenceMomo ?? 0,
               bold: true,
               highlight: true,
             ),
             _row(
+              context,
               'Écart net global',
               totalDiff,
               bold: true,
@@ -530,12 +647,15 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
             ),
             if (s.closingNote?.isNotEmpty == true) ...[
               const Divider(height: AppSpacing.md),
-              const Text(
+              Text(
                 'Note de clôture générale :',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 2),
-              Text(s.closingNote!),
+              Text(
+                s.closingNote!,
+                style: TextStyle(color: colorScheme.onSurfaceVariant),
+              ),
             ],
           ],
         ),
@@ -543,13 +663,20 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     );
   }
 
-  Widget _buildJustificationCard(CashSession s) {
+  Widget _buildJustificationCard(BuildContext context, CashSession s) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Card(
-      color: Colors.amber.shade50,
+      color: isDark
+          ? Colors.amber.shade900.withValues(alpha: 0.15)
+          : Colors.amber.shade50,
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.amber.shade300),
+        side: BorderSide(
+          color: isDark ? Colors.amber.shade700 : Colors.amber.shade300,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -558,14 +685,17 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: isDark ? Colors.amber.shade300 : Colors.amber.shade900,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   'Justification de l\'écart de caisse',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade900,
+                    color: isDark ? Colors.amber.shade200 : Colors.amber.shade900,
                   ),
                 ),
               ],
@@ -579,9 +709,12 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
               const SizedBox(height: 4),
             ],
             if (s.justificationNote != null) ...[
-              const Text(
+              Text(
                 'Explication fournie par l\'employé :',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -595,13 +728,20 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     );
   }
 
-  Widget _buildReviewCard(CashSession s) {
+  Widget _buildReviewCard(BuildContext context, CashSession s) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Card(
-      color: Colors.teal.shade50,
+      color: isDark
+          ? Colors.teal.shade900.withValues(alpha: 0.15)
+          : Colors.teal.shade50,
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.teal.shade300),
+        side: BorderSide(
+          color: isDark ? Colors.teal.shade700 : Colors.teal.shade300,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -610,14 +750,17 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
           children: [
             Row(
               children: [
-                Icon(Icons.check_circle_outline, color: Colors.teal.shade900),
+                Icon(
+                  Icons.check_circle_outline,
+                  color: isDark ? Colors.teal.shade300 : Colors.teal.shade900,
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(
                   'Décision du responsable',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.teal.shade900,
+                    color: isDark ? Colors.teal.shade200 : Colors.teal.shade900,
                   ),
                 ),
               ],
@@ -630,7 +773,10 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     );
   }
 
-  Widget _buildMovementsCard() {
+  Widget _buildMovementsCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     if (_movements.isEmpty) {
       return Card(
         child: Padding(
@@ -640,12 +786,15 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
             children: [
               Text(
                 'Mouvements manuels enregistrés',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: theme.textTheme.titleMedium,
               ),
               const SizedBox(height: AppSpacing.sm),
-              const Text(
+              Text(
                 'Aucun mouvement manuel enregistré durant cette session.',
-                style: TextStyle(color: Colors.black45, fontSize: 13),
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 13,
+                ),
               ),
             ],
           ),
@@ -661,12 +810,12 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.swap_vert, color: Colors.blueGrey),
+                const Icon(Icons.swap_vert, color: AppColors.seed),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     'Mouvements manuels enregistrés',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: theme.textTheme.titleMedium,
                   ),
                 ),
                 Chip(label: Text('${_movements.length}')),
@@ -677,7 +826,7 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
               (m) => Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                 elevation: 0,
-                color: Colors.grey.shade50,
+                color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
                 child: ListTile(
                   dense: true,
                   leading: CircleAvatar(
@@ -701,12 +850,17 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
                       size: 18,
                     ),
                   ),
-                  title:
-                      Text('${m.movementType.label} · ${m.registerType.label}'),
-                  subtitle: Text(m.note ?? 'Par ${m.createdByName}'),
+                  title: Text(
+                    '${m.movementType.label} · ${m.registerType.label}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    m.note ?? 'Par ${m.createdByName}',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
                   trailing: Text(
                     formatFcfa(m.amount),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -717,7 +871,251 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     );
   }
 
+  /// Vue dédiée aux produits vendus durant cette session de caisse
+  Widget _buildSoldProductsView(
+    BuildContext context,
+    CashSession s,
+    int totalSessionSales,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final query = _productSearchCtrl.text.trim().toLowerCase();
+
+    final filtered = query.isEmpty
+        ? _soldProducts
+        : _soldProducts
+            .where((p) => p.productName.toLowerCase().contains(query))
+            .toList();
+
+    final totalUnits = _soldProducts.fold<double>(
+      0,
+      (sum, p) => sum + p.quantity,
+    );
+    final totalRevenue = _soldProducts.fold<int>(
+      0,
+      (sum, p) => sum + p.totalRevenue,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Synthèse rapide des produits vendus
+        Card(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Total unités vendues',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        totalUnits % 1 == 0
+                            ? '${totalUnits.toInt()} pièces'
+                            : '$totalUnits pièces',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: 36,
+                  width: 1,
+                  color: colorScheme.outlineVariant,
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Montant cumulé articles',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        formatFcfa(totalRevenue),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  height: 36,
+                  width: 1,
+                  color: colorScheme.outlineVariant,
+                ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Articles distincts',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_soldProducts.length} réf.',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.sm),
+
+        // Barre de recherche
+        TextField(
+          controller: _productSearchCtrl,
+          decoration: InputDecoration(
+            hintText: 'Rechercher un produit vendu...',
+            prefixIcon: const Icon(Icons.search, size: 20),
+            suffixIcon: query.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 18),
+                    onPressed: () => setState(() => _productSearchCtrl.clear()),
+                  )
+                : null,
+            border: const OutlineInputBorder(),
+            isDense: true,
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+
+        const SizedBox(height: AppSpacing.md),
+
+        // Liste des articles vendus
+        if (filtered.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 48,
+                      color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      query.isNotEmpty
+                          ? 'Aucun article trouvé pour "$query"'
+                          : 'Aucun article vendu enregistré sur cette caisse.',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filtered.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final p = filtered[index];
+                  final pct = totalRevenue > 0
+                      ? (p.totalRevenue / totalRevenue * 100).toStringAsFixed(1)
+                      : '0';
+
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          colorScheme.primary.withValues(alpha: 0.1),
+                      child: Text(
+                        '#${index + 1}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      p.productName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      '${p.quantity % 1 == 0 ? p.quantity.toInt() : p.quantity} vendu(s) · Prix unitaire : ${formatFcfa(p.unitPrice)} · ${p.saleCount} vente(s)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          formatFcfa(p.totalRevenue),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            '$pct % du CA',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _row(
+    BuildContext context,
     String label,
     int value, {
     bool money = true,
@@ -741,7 +1139,7 @@ class _CashSessionDetailPageState extends State<CashSessionDetailPage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Row(
         children: [
           Expanded(child: Text(label)),
@@ -777,6 +1175,9 @@ class _StatMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Card(
       elevation: isAccent ? 2 : 1,
       shape: RoundedRectangleBorder(
@@ -791,6 +1192,7 @@ class _StatMiniCard extends StatelessWidget {
           vertical: AppSpacing.md,
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
               radius: 18,
@@ -800,7 +1202,10 @@ class _StatMiniCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               label,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+              style: TextStyle(
+                fontSize: 11,
+                color: colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -811,7 +1216,7 @@ class _StatMiniCard extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
-                color: isAccent ? color : Colors.black87,
+                color: isAccent ? color : colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -819,7 +1224,10 @@ class _StatMiniCard extends StatelessWidget {
             ),
             Text(
               sub,
-              style: const TextStyle(fontSize: 10, color: Colors.black45),
+              style: TextStyle(
+                fontSize: 10,
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

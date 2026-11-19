@@ -3003,8 +3003,17 @@ class AuthRepositoryImpl implements AuthRepository {
           ))
         .getSingleOrNull();
 
+    // Fallback: chercher tout patron actif dans la base locale si non lié explicitement au shopId
+    owner ??= await (_db.select(_db.users)
+          ..where((u) => u.role.equals('owner') & u.isActive.equals(true))
+          ..limit(1))
+        .getSingleOrNull();
+
     if (owner == null) {
       throw const NotFoundFailure('Patron introuvable pour cette boutique.');
+    }
+    if (owner.pinHash.isEmpty) {
+      throw const ValidationFailure('Le patron n\'a pas encore configuré de code PIN.');
     }
     if (!_pinHasher.compare(pinVo.value, owner.pinHash)) {
       throw const UnauthorizedFailure('PIN du patron incorrect.');
